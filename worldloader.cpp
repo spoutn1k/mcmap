@@ -580,6 +580,13 @@ void calcBitmapOverdraw(int &left, int &right, int &top, int &bottom)
 	right = cropChunkRight * (CHUNKSIZE_X + CHUNKSIZE_Z);
 	top = cropChunkTop * CHUNKSIZE_X;
 	bottom = cropChunkBottom * CHUNKSIZE_X;
+	if (left < 0) left = 0;
+	if (right < 0) right = 0;
+	if (top < 0) top = 0;
+	if (bottom < 0) bottom = 0;
+#ifdef _DEBUG
+	printf("left: %d; right: %d; top: %d; bottom: %d\n", left, right, top, bottom);
+#endif
 }
 
 static void allocateTerrain()
