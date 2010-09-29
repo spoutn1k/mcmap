@@ -181,6 +181,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\globals.h"
+				>
+			</File>
+			<File
 				RelativePath=".\helper.h"
 				>
 			</File>
@@ -214,6 +218,10 @@
 			</File>
 			<File
 				RelativePath=".\filesystem.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\globals.cpp"
 				>
 			</File>
 			<File

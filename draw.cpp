@@ -1,7 +1,10 @@
 #include "draw.h"
 #include "helper.h"
 #include "colors.h"
+#include "globals.h"
 #include <cstring>
+#include <cstdio>
+#include <cstdlib>
 
 #pragma pack(1)
 
@@ -101,7 +104,7 @@ void setPixel(int x, int y, uint8_t color, float fsub)
 	// D D L L
 	// D D L L
 	//	D L
-	int sub = int(fsub * (float(colors[color][4]) / 323.0f + .21f)); // The brighter the color, the stronger the impact
+	int sub = int(fsub * (float(colors[color][BRIGHTNESS]) / 323.0f + .21f)); // The brighter the color, the stronger the impact
 	uint8_t L[4], D[4], c[4];
 	memcpy(c, colors[color], 4);
 	modColor(c, sub);
@@ -125,8 +128,8 @@ void setPixel(int x, int y, uint8_t color, float fsub)
 	// Ordinary blocks and special blocks which need the other two colors
 	memcpy(L, c, 4);
 	memcpy(D, c, 4);
-	modColor(L, -15);
-	modColor(D, -25);
+	modColor(L, -17);
+	modColor(D, -27);
 	// Insert special treatment here for blocks which still need L and D
 	if (color == GRASS) { // make grass look like dirt from the side
 		setGrass(x, y, c, L, D, sub);
@@ -140,43 +143,62 @@ void setPixel(int x, int y, uint8_t color, float fsub)
 		setStep(x, y, c, L, D);
 		return;
 	}
+	// consider noise
+	int noise = 0;
+	if (g_Noise && colors[color][NOISE]) {
+		noise = int(float(g_Noise * colors[color][NOISE]) * (float(GETBRIGHTNESS(c) + 10) / 2650.0f));
+	}
 	// Ordinary blocks
-	if (c[3] == 255) { // Fully opaque - faster
+	if (c[ALPHA] == 255) { // Fully opaque - faster
 		// Top row
 		uint8_t *pos = &PIXEL(x, y);
-		for (size_t i = 0; i < 10; i += 3) {
-			memcpy(pos+i, c, 3);
+		for (size_t i = 0; i < 4; ++i, pos += 3) {
+			memcpy(pos, c, 3);
+			if (noise) modColor(pos, rand() % (noise * 2) - noise);
 		}
-		// Second and third row
-		for (size_t i = 1; i < 3; ++i) {
-			pos = &PIXEL(x, y+i);
-			memcpy(pos, D, 3);
-			memcpy(pos+3, D, 3);
-			memcpy(pos+6, L, 3);
-			memcpy(pos+9, L, 3);
+		// Second row
+		pos = &PIXEL(x, y+1);
+		for (size_t i = 0; i < 4; ++i, pos += 3) {
+			memcpy(pos, (i < 2 ? D : L), 3);
+			if (noise) modColor(pos, rand() % (noise * 2) - noise * (i == 0 || i == 3 ? 1 : 2));
+		}
+		// Third row
+		pos = &PIXEL(x, y+2);
+		for (size_t i = 0; i < 4; ++i, pos += 3) {
+			memcpy(pos, (i < 2 ? D : L), 3);
+			if (noise) modColor(pos, rand() % (noise * 2) - noise * (i == 0 || i == 3 ? 2 : 1));
 		}
 		// Last row
 		pos = &PIXEL(x, y+3);
-		memcpy(pos+3, D, 3);
-		memcpy(pos+6, L, 3);
+		memcpy(pos+=3, D, 3);
+		if (noise) modColor(pos, -(rand() % noise) * 2);
+		memcpy(pos+=3, L, 3);
+		if (noise) modColor(pos, -(rand() % noise) * 2);
 	} else { // Not opaque, use slower blending code
 		// Top row
 		uint8_t *pos = &PIXEL(x, y);
-		for (size_t i = 0; i < 10; i += 3) {
-			blend(pos+i, c);
+		for (size_t i = 0; i < 4; ++i, pos += 3) {
+			blend(pos, c);
+			if (noise) modColor(pos, rand() % (noise * 2) - noise);
 		}
-		// Second and third row
-		for (size_t i = 1; i < 3; ++i) {
-			pos = &PIXEL(x, y+i);
-			blend(pos, D);
-			blend(pos+3, D);
-			blend(pos+6, L);
-			blend(pos+9, L);
+		// Second row
+		pos = &PIXEL(x, y+1);
+		for (size_t i = 0; i < 4; ++i, pos += 3) {
+			blend(pos, (i < 2 ? D : L));
+			if (noise) modColor(pos, rand() % (noise * 2) - noise * (i == 0 || i == 3 ? 1 : 2));
+		}
+		// Third row
+		pos = &PIXEL(x, y+2);
+		for (size_t i = 0; i < 4; ++i, pos += 3) {
+			blend(pos, (i < 2 ? D : L));
+			if (noise) modColor(pos, rand() % (noise * 2) - noise * (i == 0 || i == 3 ? 2 : 1));
 		}
 		// Last row
 		pos = &PIXEL(x, y+3);
-		blend(pos+3, D);
-		blend(pos+6, L);
+		blend(pos+=3, D);
+		if (noise) modColor(pos, -(rand() % noise) * 2);
+		blend(pos+=3, L);
+		if (noise) modColor(pos, -(rand() % noise) * 2);
 	}
 }
 
@@ -263,10 +285,16 @@ namespace {
 		memcpy(D, colors[DIRT], 4);
 		modColor(L, sub - 15);
 		modColor(D, sub - 25);
+		// consider noise
+		int noise = 0;
+		if (g_Noise && colors[GRASS][NOISE]) {
+			noise = int(float(g_Noise * colors[GRASS][NOISE]) * (float(GETBRIGHTNESS(color) + 10) / 2650.0f));
+		}
 		// Top row
 		uint8_t *pos = &PIXEL(x, y);
-		for (size_t i = 0; i < 10; i += 3) {
-			memcpy(pos+i, color, 3);
+		for (size_t i = 0; i < 4; ++i, pos += 3) {
+			memcpy(pos, color, 3);
+			if (noise) modColor(pos, rand() % (noise * 2) - noise);
 		}
 		// Second row
 		pos = &PIXEL(x, y+1);

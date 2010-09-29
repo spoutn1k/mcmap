@@ -8,6 +8,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <string>
+#include <cstdio>
 
 using std::string;
 typedef std::list<char*> filelist;
@@ -107,9 +108,6 @@ bool loadWorld(const char *fromPath)
 bool loadEntireTerrain()
 {
 	if (chunks.empty()) return false;
-	// Swap X and Z here cause the map needs to be rotated
-	MAPSIZE_X = (S_TOZ - S_FROMZ) * CHUNKSIZE_Z;
-	MAPSIZE_Z = (S_TOX - S_FROMX) * CHUNKSIZE_X;
 	allocateTerrain();
 	const int max = chunks.size();
 	int count = 0;

@@ -1,5 +1,12 @@
 #include "helper.h"
 #include <cstring>
+#include <ctime>
+#include <cstdio>
+#include <sys/types.h>
+#include <sys/stat.h>
+#ifndef S_ISREG
+#define	S_ISREG(m)	(((m) & S_IFMT) == S_IFREG)
+#endif
 
 uint8_t clamp(int32_t val)
 {
@@ -70,4 +77,24 @@ void printProgress(const int current, const int max)
 			lastp = proc;
 		}
 	}
+}
+
+bool fileExists(const char* strFilename) {
+  struct stat stFileInfo;
+  int ret;
+  ret = stat(strFilename, &stFileInfo);
+  if(ret == 0) {
+    return S_ISREG(stFileInfo.st_mode);
+  }
+  return false;
+}
+
+bool isNumeric(char* str)
+{
+	if (str[0] == '-' && str[1] != '\0') ++str;
+	while (*str != '\0') {
+		if (*str < '0' || *str > '9') return false;
+		++str;
+	}
+	return true;
 }

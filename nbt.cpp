@@ -77,24 +77,13 @@ NBT::NBT(const char* file, bool &success)
 {
 	_blob = NULL;
 	_filename = NULL;
-	if (file == NULL || *file == '\0') {
+	if (file == NULL || *file == '\0' || !fileExists(file)) {
 		success = false;
 		return;
 	}
 	_filename = strdup(file);
-	// The loops here are meant to tackle situations where the file is just being written
-	// out by the server. This makes it possible to draw maps while the server is running,
-	// without the need to do save-off & save-on. (You still should do "save-all")
-	// Currently this makes 2 retries with 5ms delay on earch try. In my experiments this
-	// was always long enough for the server to finish accessing the file. Maybe on slower
-	// machines you need to increase this. The reason why I limited this at all is that
-	// in contrast to Cartograph, I blindly try to access every chunk in the area specified
-	// to render, so making this an infinite loop will make mcmap hang in case parts of
-	// the given area do not exist (yet).
-	// This might change when I add a "render full map" feature, which would require a
-	// portable way to get all files/dirs in a directory. Too lazy for now.
 	gzFile fh = 0;
-	for (int i = 0; i < 4; ++i) {
+	for (int i = 0; i < 20; ++i) { // Give up eventually if you can't open the file....
 		if (fh = gzopen(file, "rb")) break;
 		usleep(5000); // sleep 5ms
 	}
@@ -103,14 +92,9 @@ NBT::NBT(const char* file, bool &success)
 	// File is open, read data
 	int length = 150000; // I checked a few chunk files in their decompressed form, I think they can't really get any bigger than 80~90KiB, but just to be sure...
 	_blob = new uint8_t[length];
-	int ret = -1;
-	for (int i = 0; i < 4; ++i) {
-		ret = gzread(fh, _blob, length);
-		if (ret > 0) break;
-		usleep(5000); // sleep 5ms
-	}
+	int ret = gzread(fh, _blob, length);
 	gzclose(fh);
-	if (_blob[0] != 10) { // Has to start with TAG_Compound
+	if (ret == -1 || _blob[0] != 10) { // Has to start with TAG_Compound
 		success = false;
 		return;
 	}

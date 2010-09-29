@@ -21,18 +21,17 @@
 
 
 
-#include <cstdio>
 #include <string>
-#include <ctime>
 
 #if defined(_WIN32) && !defined(__GNUC__)
-#include <windows.h>
-#define usleep(x) Sleep((x) / 1000);
-// See http://en.wikipedia.org/wiki/Stdint.h#External_links
-#include <stdint.h>
+#	include <windows.h>
+#	define usleep(x) Sleep((x) / 1000);
 #else
-#include <unistd.h>
+#	include <unistd.h>
 #endif
+
+// If this is missing for you in Visual Studio: See http://en.wikipedia.org/wiki/Stdint.h#External_links
+#include <stdint.h>
 
 using std::string;
 
@@ -40,5 +39,7 @@ string base36(int val);
 int base10(char* val);
 uint8_t clamp(int32_t val);
 void printProgress(const int current, const int max);
+bool fileExists(const char* strFilename);
+bool isNumeric(char* str);
 
 #endif

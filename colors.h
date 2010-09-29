@@ -2,6 +2,12 @@
 #define _COLORS_
 
 #include "helper.h"
+#include <cmath>
+
+#define GETBRIGHTNESS(c) sqrt( \
+			double(2[c] * 2[c]) * .236 + \
+			double(1[c] * 1[c]) * .661 + \
+			double(0[c] * 0[c]) * .103)
 
 // Byte order is: blue green red alpha brightness noise
 // Brightness is used to speed up calculations later
@@ -18,6 +24,8 @@ void loadColors();
 #define DIRT 3
 #define COBBLESTONE 4
 #define WOOD 5
+#define SAND 12
+#define GRAVEL 13
 #define LOG 17
 #define LEAVES 18
 #define FLOWERY 37

@@ -1,7 +1,9 @@
 /***
  * mcmap - create isometric maps of your minecraft alpha world
- * v1.0, 09-2010 by Zahl (spieleplanet.eu)
+ * v1.3, 09-2010 by Zahl (spieleplanet.eu)
  */
+
+#define VERSION "1.3"
 
 #include "helper.h"
 #include "draw.h"
@@ -24,41 +26,117 @@ void undergroundMode();
 
 int main(int argc, char** argv)
 {
+	// ########## command line parsing ##########
 	if (argc < 2 || (argc > 3 && argc < 7)) {
-		printf("Usage:\nFor a specific part of the world:\n%s <from chunk x> <from chunk z> <to chunk x> <to chunk z> <max height> <world path> [0=normal 1=night 2=cave]\n", argv[0]);
-		printf("For whole world:\n%s <world path> [0=normal 1=night 2=cave]\n", argv[0]);
+		printf(
+				"\nmcmap - an isometric minecraft alpha map rendering tool. Version " VERSION "\n\n"
+				"Usage: %s [-from X Z -to X Z] [-night] [-cave] [-noise VAL] WORLDPATH\n\n"
+				"  -from X Z    sets the coordinate of the chunk to start rendering at\n"
+				"  -to X Z      sets the coordinate of the chunk to end rendering at\n"
+				"  -night       renders the world at night\n"
+				"  -cave        renders a map of all caves that have been explored by players\n"
+				"  -noise VAL   adds some noise to certain blocks, reasonable values are 0-20\n\n"
+				"  -height VAL  maximum height at which blocks will be rendered (1-128)\n"
+				"    WORLDPATH is the path the desired alpha world.\n\n"
+				"Examples:\n\n"
+#ifdef _WIN32
+				"%s %%APPDATA%%\\.minecraft\\saves\\World1\n"
+				"  - This would render your entire singleplayer world in slot 1\n"
+				"%s -night -from -10 -10 -to 10 10 %%APPDATA%%\\.minecraft\\saves\\World1\n"
+				"  - This would render the same world but at night, and only\n"
+				"    from chunk (-10 -10) to chunk (10 10)\n"
+#else
+				"%s ~/.minecraft/saves/World1\n"
+				"  - This would render your entire singleplayer world in slot 1\n"
+				"%s -night -from -10 -10 -to 10 10 ~/.minecraft/saves/World1\n"
+				"  - This would render the same world but at night, and only\n"
+				"    from chunk (-10 -10) to chunk (10 10)\n"
+#endif
+				, argv[0], argv[0], argv[0], argv[0], argv[0], argv[0], argv[0]);
+
+
 		return 1;
 	}
-	if (argc >= 7) { // Specific area of world
+	bool wholeworld = false;
+	char *filename = NULL;
+	// First, for the sake of backward compatibility, try to parse command line arguments the old way
+	if (argc >= 7
+			&& isNumeric(argv[1]) && isNumeric(argv[2]) && isNumeric(argv[3]) && isNumeric(argv[4])) { // Specific area of world
 		S_FROMX = atoi(argv[1]);
 		S_FROMZ = atoi(argv[2]);
 		S_TOX	= atoi(argv[3])+1;
 		S_TOZ	= atoi(argv[4])+1;
 		MAPSIZE_Y = atoi(argv[5]);
-		// Swap X and Z here cause the map needs to be rotated
-		MAPSIZE_X = (S_TOZ - S_FROMZ) * CHUNKSIZE_Z;
-		MAPSIZE_Z = (S_TOX - S_FROMX) * CHUNKSIZE_X;
-		char *filename = argv[6];
-		if (MAPSIZE_Y < 1 || S_TOX <= S_FROMX || S_TOZ <= S_FROMZ) {
-			printf("What to doooo, yeah, what to doooo... (English: max height < 1 or X/Z-width <= 0)\n");
-			return 1;
-		}
-		if (MAPSIZE_Y > 128) MAPSIZE_Y = 128;
+		filename = argv[6];
 		if (argc > 7) {
 			g_Nightmode = (atoi(argv[7]) == 1);
 			g_Underground = (atoi(argv[7]) == 2);
 		}
-		if (!loadTerrain(filename)) {
-			printf("Error loading terrain from '%s'\n", filename);
-			return 1;
+	} else if (argc == 3 && isNumeric(argv[2])) { // Whole world - old way
+		filename = argv[1];
+		g_Nightmode = (atoi(argv[2]) == 1);
+		g_Underground = (atoi(argv[2]) == 2);
+	} else { // -- New command line parsing --
+#		define MOREARGS(x) (argpos + (x) < argc)
+#		define NEXTARG argv[++argpos]
+#		define POLLARG(x) argv[argpos + (x)]
+		int argpos = 0;
+		bool havefrom = false, haveto = false;
+		while (MOREARGS(1)) {
+			const char *option = NEXTARG;
+			if (strcmp(option, "-from") == 0) {
+				if (!MOREARGS(2) || !isNumeric(POLLARG(1)) || !isNumeric(POLLARG(2))) {
+					printf("Error: %s needs two integer arguments, ie: %s -10 5\n", option, option);
+					return 1;
+				}
+				S_FROMX = atoi(NEXTARG);
+				S_FROMZ = atoi(NEXTARG);
+				havefrom = true;
+			} else if (strcmp(option, "-to") == 0) {
+				if (!MOREARGS(2) || !isNumeric(POLLARG(1)) || !isNumeric(POLLARG(2))) {
+					printf("Error: %s needs two integer arguments, ie: %s -5 20\n", option, option);
+					return 1;
+				}
+				S_TOX = atoi(NEXTARG)+1;
+				S_TOZ = atoi(NEXTARG)+1;
+				haveto = true;
+			} else if (strcmp(option, "-night") == 0) {
+				g_Nightmode = true;
+			} else if (strcmp(option, "-cave") == 0 || strcmp(option, "-underground") == 0) {
+				g_Underground = true;
+			} else if (strcmp(option, "-noise") == 0 || strcmp(option, "-dither") == 0) {
+				if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
+					printf("Error: %s needs an integer argument, ie: %s 10\n", option, option);
+					return 1;
+				}
+				g_Noise = atoi(NEXTARG);
+			} else if (strcmp(option, "-height") == 0) {
+				if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
+					printf("Error: %s needs two integer arguments, ie: %s 100\n", option, option);
+					return 1;
+				}
+				MAPSIZE_Y = atoi(NEXTARG);
+			} else {
+				filename = (char*)option;
+			}
 		}
-	} else { // Whole world
-		char *filename = argv[1];
-		MAPSIZE_Y = 128;
-		if (argc > 2) {
-			g_Nightmode = (atoi(argv[2]) == 1);
-			g_Underground = (atoi(argv[2]) == 2);
-		}
+		wholeworld = !(havefrom && haveto);
+	}
+	if (filename == NULL) {
+		printf("Error: No world given. Please add the path to your world to the command line.\n");
+		return 1;
+	}
+	if (MAPSIZE_Y < 1 || S_TOX <= S_FROMX || S_TOZ <= S_FROMZ) {
+		printf("What to doooo, yeah, what to doooo... (English: max height < 1 or X/Z-width <= 0)\n");
+		return 1;
+	}
+	if (MAPSIZE_Y > 128) MAPSIZE_Y = 128;
+	// Swap X and Z here cause the map needs to be rotated
+	MAPSIZE_X = (S_TOZ - S_FROMZ) * CHUNKSIZE_Z;
+	MAPSIZE_Z = (S_TOX - S_FROMX) * CHUNKSIZE_X;
+	// ########## end of command line parsing ##########
+	// Load world or part of world
+	if (wholeworld) {
 		if (!loadWorld(filename)) {
 			printf("Error accessing terrain at '%s'\n", filename);
 			return 1;
@@ -67,16 +145,23 @@ int main(int argc, char** argv)
 			printf("Error loading terrain from '%s'\n", filename);
 			return 1;
 		}
+	} else {
+		if (!loadTerrain(filename)) {
+			printf("Error loading terrain from '%s'\n", filename);
+			return 1;
+		}
 	}
+	srand(1337);
 	// Arguments initialized, now allocate mem
 	createBitmap((MAPSIZE_Z + MAPSIZE_X) * 2 + 10, (MAPSIZE_Z + MAPSIZE_X + MAPSIZE_Y * 2) + 10);
 	// Colormap from file
 	loadColors();
-	// Remove invisible blocks from map (covered by other blocks from isometric pov)
-	// Do so by "raytracing" every block from front to back.. somehow
+	// If underground mode, remove blocks that don't seem to belong to caves
 	if (g_Underground) {
 		undergroundMode();
 	}
+	// Remove invisible blocks from map (covered by other blocks from isometric pov)
+	// Do so by "raytracing" every block from front to back.. somehow
 	printf("Optimizing terrain...\n");
 	int removed = 0;
 	printProgress(0, 10);
@@ -118,11 +203,12 @@ int main(int argc, char** argv)
 						if (l == 0 && z+1 < MAPSIZE_Z) l = GETLIGHTAT(x, y, z+1);
 						col -= (125 - l * 9);
 					}
+					// Edge detection:
 					if ((x && y && z && y+1 < MAPSIZE_Y) // In bounds?
 						&& BLOCKAT(x,y+1,z) == AIR // Only if block above is air
 						&& (BLOCKAT(x-1,y-1,z-1) == c || BLOCKAT(x-1,y-1,z-1) == AIR) // block behind (from pov) this one is same type or air
 						&& (BLOCKAT(x-1,y,z) == AIR || BLOCKAT(x,y,z-1) == AIR)) { // block TL/TR from this one is air = edge
-							col += 10;
+							col += 12;
 					}
 					setPixel(startx, starty, c, col);
 				}

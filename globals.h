@@ -6,6 +6,7 @@ extern int MAPSIZE_Y, MAPSIZE_Z, MAPSIZE_X;
 
 extern bool g_Nightmode;
 extern bool g_Underground;
+extern int g_Noise;
 
 extern uint8_t *g_Terrain, *g_Light;
 
