@@ -6,8 +6,8 @@
 
 #define GETBRIGHTNESS(c) sqrt( \
 			double(2[c] * 2[c]) * .236 + \
-			double(1[c] * 1[c]) * .661 + \
-			double(0[c] * 0[c]) * .103)
+			double(1[c] * 1[c]) * .601 + \
+			double(0[c] * 0[c]) * .163)
 
 // Byte order is: blue green red alpha brightness noise
 // Brightness is used to speed up calculations later

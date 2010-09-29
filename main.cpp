@@ -20,6 +20,7 @@
 
 using std::string;
 
+static bool gBrightEdge = false;
 
 inline void blockCulling(const int x, const int y, const int z, int &removed);
 void undergroundMode();
@@ -27,7 +28,7 @@ void undergroundMode();
 int main(int argc, char** argv)
 {
 	// ########## command line parsing ##########
-	if (argc < 2 || (argc > 3 && argc < 7)) {
+	if (argc < 2) {
 		printf(
 				"\nmcmap - an isometric minecraft alpha map rendering tool. Version " VERSION "\n\n"
 				"Usage: %s [-from X Z -to X Z] [-night] [-cave] [-noise VAL] WORLDPATH\n\n"
@@ -35,6 +36,8 @@ int main(int argc, char** argv)
 				"  -to X Z      sets the coordinate of the chunk to end rendering at\n"
 				"  -night       renders the world at night\n"
 				"  -cave        renders a map of all caves that have been explored by players\n"
+				"  -skylight    use skylight when rendering map (shadows below trees etc.)\n"
+				"  -brightedge  still draw the ege of the map bright when using -skylight\n"
 				"  -noise VAL   adds some noise to certain blocks, reasonable values are 0-20\n\n"
 				"  -height VAL  maximum height at which blocks will be rendered (1-128)\n"
 				"    WORLDPATH is the path the desired alpha world.\n\n"
@@ -59,7 +62,7 @@ int main(int argc, char** argv)
 	}
 	bool wholeworld = false;
 	char *filename = NULL;
-	// First, for the sake of backward compatibility, try to parse command line arguments the old way
+	// First, for the sake of backward compatibility, try to parse command line arguments the old way first
 	if (argc >= 7
 			&& isNumeric(argv[1]) && isNumeric(argv[2]) && isNumeric(argv[3]) && isNumeric(argv[4])) { // Specific area of world
 		S_FROMX = atoi(argv[1]);
@@ -81,7 +84,6 @@ int main(int argc, char** argv)
 #		define NEXTARG argv[++argpos]
 #		define POLLARG(x) argv[argpos + (x)]
 		int argpos = 0;
-		bool havefrom = false, haveto = false;
 		while (MOREARGS(1)) {
 			const char *option = NEXTARG;
 			if (strcmp(option, "-from") == 0) {
@@ -91,7 +93,6 @@ int main(int argc, char** argv)
 				}
 				S_FROMX = atoi(NEXTARG);
 				S_FROMZ = atoi(NEXTARG);
-				havefrom = true;
 			} else if (strcmp(option, "-to") == 0) {
 				if (!MOREARGS(2) || !isNumeric(POLLARG(1)) || !isNumeric(POLLARG(2))) {
 					printf("Error: %s needs two integer arguments, ie: %s -5 20\n", option, option);
@@ -99,11 +100,14 @@ int main(int argc, char** argv)
 				}
 				S_TOX = atoi(NEXTARG)+1;
 				S_TOZ = atoi(NEXTARG)+1;
-				haveto = true;
 			} else if (strcmp(option, "-night") == 0) {
 				g_Nightmode = true;
 			} else if (strcmp(option, "-cave") == 0 || strcmp(option, "-underground") == 0) {
 				g_Underground = true;
+			} else if (strcmp(option, "-skylight") == 0) {
+				g_Skylight = true;
+			} else if (strcmp(option, "-brightedge") == 0) {
+				gBrightEdge = true;
 			} else if (strcmp(option, "-noise") == 0 || strcmp(option, "-dither") == 0) {
 				if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
 					printf("Error: %s needs an integer argument, ie: %s 10\n", option, option);
@@ -120,14 +124,18 @@ int main(int argc, char** argv)
 				filename = (char*)option;
 			}
 		}
-		wholeworld = !(havefrom && haveto);
+		wholeworld = (S_FROMX == UNDEFINED || S_TOX == UNDEFINED);
 	}
 	if (filename == NULL) {
 		printf("Error: No world given. Please add the path to your world to the command line.\n");
 		return 1;
 	}
+	if (wholeworld && !loadWorld(filename)) {
+		printf("Error accessing terrain at '%s'\n", filename);
+		return 1;
+	}
 	if (MAPSIZE_Y < 1 || S_TOX <= S_FROMX || S_TOZ <= S_FROMZ) {
-		printf("What to doooo, yeah, what to doooo... (English: max height < 1 or X/Z-width <= 0)\n");
+		printf("What to doooo, yeah, what to doooo... (English: max height < 1 or X/Z-width <= 0) %d %d %d\n", MAPSIZE_Y, MAPSIZE_X, MAPSIZE_Z);
 		return 1;
 	}
 	if (MAPSIZE_Y > 128) MAPSIZE_Y = 128;
@@ -136,16 +144,10 @@ int main(int argc, char** argv)
 	MAPSIZE_Z = (S_TOX - S_FROMX) * CHUNKSIZE_X;
 	// ########## end of command line parsing ##########
 	// Load world or part of world
-	if (wholeworld) {
-		if (!loadWorld(filename)) {
-			printf("Error accessing terrain at '%s'\n", filename);
-			return 1;
-		}
-		if (!loadEntireTerrain()) {
-			printf("Error loading terrain from '%s'\n", filename);
-			return 1;
-		}
-	} else {
+	if (wholeworld && !loadEntireTerrain()) {
+		printf("Error loading terrain from '%s'\n", filename);
+		return 1;
+	} else if (!wholeworld) {
 		if (!loadTerrain(filename)) {
 			printf("Error loading terrain from '%s'\n", filename);
 			return 1;
@@ -165,24 +167,21 @@ int main(int argc, char** argv)
 	printf("Optimizing terrain...\n");
 	int removed = 0;
 	printProgress(0, 10);
-	for (int y = 2; y < MAPSIZE_Y; ++y) {
+	for (int y = 1; y < MAPSIZE_Y; ++y) {
 		for (int z = 1; z < MAPSIZE_Z; ++z) {
 			blockCulling(MAPSIZE_X-1, y, z, removed);
-			blockCulling(MAPSIZE_X-2, y, z, removed);
 		}
-		for (int x = 1; x < MAPSIZE_X-2; ++x) {
+		for (int x = 1; x < MAPSIZE_X-1; ++x) {
 			blockCulling(x, y, MAPSIZE_Z-1, removed);
-			blockCulling(x, y, MAPSIZE_Z-2, removed);
 		}
 		printProgress(y, MAPSIZE_Y + MAPSIZE_Z - 2);
 	}
-	for (int z = 1; z < MAPSIZE_Z-2; ++z) {
-		for (int x = 1; x < MAPSIZE_X-2; ++x) {
+	for (int z = 1; z < MAPSIZE_Z-1; ++z) {
+		for (int x = 1; x < MAPSIZE_X-1; ++x) {
 			blockCulling(x, MAPSIZE_Y-1, z, removed);
-			blockCulling(x, MAPSIZE_Y-2, z, removed);
 		}
 		printProgress(z + MAPSIZE_Y, MAPSIZE_Y + MAPSIZE_Z - 2);
-	} // There is actually one more possibility where a block can be hidden, but this should cover most cases
+	}
 	printProgress(10, 10);
 	printf("Removed %d blocks\n", removed);
 	// Render terrain to file
@@ -196,12 +195,16 @@ int main(int argc, char** argv)
 				uint8_t c = BLOCKAT(x,y,z);
 				if (c != AIR) { // If block is not air (colors[c][3] != 0)
 					float col = float(y) * .78f - 91;
-					if (g_Nightmode) {
+					if (g_Nightmode || (g_Skylight && (!gBrightEdge || (z+1 != MAPSIZE_Z && x+1 != MAPSIZE_X) || (y+1 != MAPSIZE_Y && BLOCKAT(x,y+1,z) == AIR)))) {
 						int l = 0;
 						if (l == 0 && y+1 < MAPSIZE_Y) l = GETLIGHTAT(x, y+1, z);
 						if (l == 0 && x+1 < MAPSIZE_X) l = GETLIGHTAT(x+1, y, z);
 						if (l == 0 && z+1 < MAPSIZE_Z) l = GETLIGHTAT(x, y, z+1);
-						col -= (125 - l * 9);
+						if (!g_Skylight) {
+							col -= (125 - l * 9);
+						} else {
+							col -= (210 - l * 14);
+						}
 					}
 					// Edge detection:
 					if ((x && y && z && y+1 < MAPSIZE_Y) // In bounds?

@@ -8,8 +8,8 @@
 	colors[col][3] = a; \
 	colors[col][4] = (uint8_t)sqrt( \
 			double(r * r) * .236 + \
-			double(g * g) * .661 + \
-			double(b * b) * .103); \
+			double(g * g) * .601 + \
+			double(b * b) * .163); \
 } while (false)
 
 #define SETCOLORNOISE(col,r,g,b,a,n) do { \
@@ -40,8 +40,8 @@ void loadColors()
 	SETCOLORNOISE(WOOD, 157,128,79,255, 11);
 	SETCOLOR(6, 120,120,120,0);
 	SETCOLOR(7, 84,84,84,255);
-	SETCOLOR(8, 38,92,255,41);
-	SETCOLOR(9, 38,92,255,41);
+	SETCOLOR(8, 38,92,225,41);
+	SETCOLOR(9, 38,92,225,41);
 	SETCOLOR(10, 255,90,0,255);
 	SETCOLOR(11, 255,90,0,255);
 	SETCOLORNOISE(SAND, 220,212,160,255, 14);

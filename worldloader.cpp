@@ -10,6 +10,8 @@
 #include <string>
 #include <cstdio>
 
+#define MAX(a,b) ((a) > (b) ? (a) : (b))
+
 using std::string;
 typedef std::list<char*> filelist;
 
@@ -21,6 +23,10 @@ static void allocateTerrain();
 
 bool loadWorld(const char *fromPath)
 {
+	if (!isAlphaWorld(string(fromPath) + "/")) {
+		return false;
+	}
+
 	filelist subdirs;
 	myFile file;
 	DIRHANDLE d = Dir::open((char*)fromPath, file);
@@ -65,27 +71,27 @@ bool loadWorld(const char *fromPath)
 					do { // Here we finally arrived at the chunk files
 						if (!chunk.isdir && chunk.name[0] == 'c' && chunk.name[1] == '.') { // Make sure filename is a chunk
 							string full = path + "/" + chunk.name;
-							char *s = strdup(full.c_str());
-							chunks.push_back(s);
-							s = chunk.name;
+							char *s = chunk.name;
 							// Extract x coordinate from chunk filename
 							s += 2;
-							int val = base10(s);
-							if (val < S_FROMX) {
-								S_FROMX = val;
-							}
-							if (val > S_TOX) {
-								S_TOX = val;
-							}
+							int valX = base10(s);
 							// Extract z coordinate from chunk filename
 							while (*s != '.' && *s != '\0') ++s;
-							val = base10(s+1);
-							if (val < S_FROMZ) {
-								S_FROMZ = val;
+							int valZ = base10(s+1);
+							// Update bounds
+							if (valX < S_FROMX) {
+								S_FROMX = valX;
 							}
-							if (val > S_TOZ) {
-								S_TOZ = val;
+							if (valX > S_TOX) {
+								S_TOX = valX;
 							}
+							if (valZ < S_FROMZ) {
+								S_FROMZ = valZ;
+							}
+							if (valZ > S_TOZ) {
+								S_TOZ = valZ;
+							}
+							chunks.push_back(strdup(full.c_str()));
 						}
 					} while (Dir::next(sd, (char*)path.c_str(), chunk));
 					Dir::close(sd);
@@ -164,12 +170,16 @@ static void loadChunk(const char *file)
 	if (chunkX < S_FROMX || chunkX >= S_TOX || chunkZ < S_FROMZ || chunkZ >= S_TOZ) {
 		return; // Nope, its not...
 	}
-	uint8_t *blockdata, *lightdata;
+	uint8_t *blockdata, *lightdata, *skydata;
 	int32_t len;
 	ok = level->getByteArray("Blocks", blockdata, len);
 	if (!ok || len < 32768) return;
-	if (g_Nightmode) { // If nightmode, we need the light information too
+	if (g_Nightmode || g_Skylight) { // If nightmode, we need the light information too
 		ok = level->getByteArray("BlockLight", lightdata, len);
+		if (!ok || len < 16384) return;
+	}
+	if (g_Skylight) { // Skylight desired - wish granted
+		ok = level->getByteArray("SkyLight", skydata, len);
 		if (!ok || len < 16384) return;
 	}
 	const int offsetz = (chunkZ - S_FROMZ) * CHUNKSIZE_Z;
@@ -179,9 +189,7 @@ static void loadChunk(const char *file)
 		for (int z = 0; z < CHUNKSIZE_Z; ++z) {
 			for (int y = 0; y < MAPSIZE_Y; ++y) { // Using this macro, the world gets rotated and flipped properly (I hope)
 				BLOCKROTATED(x + offsetx, y, z + offsetz) = blockdata[y + (z + (x * CHUNKSIZE_Z)) * SLICESIZE_Y];
-				if (g_Nightmode && y % 2 == 0) { // In night mode, copy light info too. Only every other time, since light info is 4 bits
-					SETLIGHTROTATED(x + offsetx, y, z + offsetz) = lightdata[(y / 2) + (z + (x * CHUNKSIZE_Z)) * (SLICESIZE_Y / 2)];
-				} else if (g_Underground && blockdata[y + (z + (x * CHUNKSIZE_Z)) * SLICESIZE_Y] == TORCH) {
+				if (g_Underground && blockdata[y + (z + (x * CHUNKSIZE_Z)) * SLICESIZE_Y] == TORCH) {
 					// In underground mode, the lightmap is also used, but the values are calculated manually, to only show
 					// caves the players have discovered yet. It's not perfect of course, but works ok.
 					for (int ty = y - 9; ty < y + 9; ++ty) { // The trick here is to only take into account
@@ -197,6 +205,20 @@ static void loadChunk(const char *file)
 							}
 						}
 					}
+				} else if (g_Skylight && y % 2 == 0) { // copy light info too. Only every other time, since light info is 4 bits
+					uint8_t light = lightdata[(y / 2) + (z + (x * CHUNKSIZE_Z)) * (SLICESIZE_Y / 2)];
+					uint8_t highlight = (light >> 4) & 0x0F;
+					uint8_t lowlight =  (light & 0x0F);
+					uint8_t sky = skydata[(y / 2) + (z + (x * CHUNKSIZE_Z)) * (SLICESIZE_Y / 2)];
+					uint8_t highsky = ((sky >> 4) & 0x0F);
+					uint8_t lowsky =  (sky & 0x0F);
+					if (g_Nightmode) {
+						highsky = clamp(highsky / 3 - 2);
+						lowsky = clamp(lowsky / 3 - 2);
+					}
+					SETLIGHTROTATED(x + offsetx, y, z + offsetz) = MAX(highlight, highsky) << 4 | (MAX(lowlight, lowsky) & 0x0F);
+				} else if (g_Nightmode && y % 2 == 0) {
+					SETLIGHTROTATED(x + offsetx, y, z + offsetz) = lightdata[(y / 2) + (z + (x * CHUNKSIZE_Z)) * (SLICESIZE_Y / 2)];
 				}
 			} // <--- This is a closing curly brace
 		}
@@ -206,17 +228,7 @@ static void loadChunk(const char *file)
 static bool isAlphaWorld(string path)
 {
 	// Check if this path is a valid minecraft world... in a pretty sloppy way
-	FILE *f = NULL;
-	string lvl = path + "level.dat";
-	for (int i = 0; i < 10; ++i) {
-		if (f = fopen(lvl.c_str(), "rb")) break;
-		usleep(5000);
-	}
-	if (f == NULL) {
-		return false;
-	}
-	fclose(f);
-	return true;
+	return fileExists((path + "level.dat").c_str());
 }
 
 static void allocateTerrain()
@@ -225,7 +237,7 @@ static void allocateTerrain()
 	g_Terrain = new uint8_t[terrainsize];
 	memset(g_Terrain, 0, terrainsize);
 	printf("Terrain takes up %.2fMiB", float(terrainsize / float(1024 * 1024)));
-	if (g_Nightmode || g_Underground) {
+	if (g_Nightmode || g_Underground || g_Skylight) {
 		g_Light = new uint8_t[terrainsize / 2 + 1]; // terrainsize should never be an odd number, but just to be safe, add 1 byte
 		memset(g_Light, 0, terrainsize / 2 + 1);
 		printf(", lightmap %.2fMiB", float((terrainsize / 2 + 1) / float(1024 * 1024)));
