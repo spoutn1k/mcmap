@@ -1,30 +1,32 @@
 #include "colors.h"
 #include <cstring>
+#include <cstdio>
+#include <cstdlib>
 
 #define SETCOLOR(col,r,g,b,a) do { \
-	colors[col][0] = b; \
-	colors[col][1] = g; \
-	colors[col][2] = r; \
-	colors[col][3] = a; \
-	colors[col][4] = (uint8_t)sqrt( \
+	colors[col][BLUE] 		= b; \
+	colors[col][GREEN] 		= g; \
+	colors[col][RED] 			= r; \
+	colors[col][ALPHA] 		= a; \
+	colors[col][BRIGHTNESS]	= (uint8_t)sqrt( \
 			double(r * r) * .236 + \
 			double(g * g) * .601 + \
 			double(b * b) * .163); \
 } while (false)
 
 #define SETCOLORNOISE(col,r,g,b,a,n) do { \
-	colors[col][0] = b; \
-	colors[col][1] = g; \
-	colors[col][2] = r; \
-	colors[col][3] = a; \
-	colors[col][4] = (uint8_t)sqrt( \
+	colors[col][BLUE] 		= b; \
+	colors[col][GREEN] 		= g; \
+	colors[col][RED] 			= r; \
+	colors[col][ALPHA] 		= a; \
+	colors[col][NOISE]		= n; \
+	colors[col][BRIGHTNESS]	= (uint8_t)sqrt( \
 			double(r * r) * .236 + \
 			double(g * g) * .661 + \
 			double(b * b) * .103); \
-	colors[col][5] = n; \
 } while (false)
 
-// Byte order is: blue green red alpha brightness noise
+// Byte order is: blue green red alpha noise brightness
 // Brightness is used to speed up calculations later
 uint8_t colors[256][6];
 
@@ -111,4 +113,60 @@ void loadColors()
 	SETCOLOR(83, 183,234,150,255);
 	SETCOLOR(84, 100,67,50,255);
 	SETCOLOR(FENCE, 137,112,65,225); // Not fully opaque to prevent culling on this one
+}
+
+
+bool loadColorsFromFile(const char* file)
+{
+	FILE *f = fopen(file, "r");
+	if (f == NULL) return false;
+	while (!feof(f)) {
+		char buffer[500];
+		if (fgets(buffer, 500, f) == NULL) break;
+		char *ptr = buffer;
+		while (*ptr == ' ' || *ptr == '\t') ++ptr;
+		if (*ptr == '\0' || *ptr == '#') continue; // This is a comment or empty line, skip
+		int blockid = atoi(ptr);
+		if (blockid < 1 || blockid > 255) {
+			printf("Skipping invalid blockid %d in colors file\n", blockid);
+			continue;
+		}
+		while (*ptr != ' ' && *ptr != '\t' && *ptr != '\0') ++ptr;
+		uint8_t vals[5];
+		bool valid = true;
+		for (int i = 0; i < 5; ++i) {
+			while (*ptr == ' ' || *ptr == '\t') ++ptr;
+			if (*ptr == '\0') {
+				printf("Too few arguments for block %d, ignoring line.\n", blockid);
+				valid = false;
+				break;
+			}
+			if (i == 0) vals[RED] = uint8_t(atoi(ptr));
+			else if (i == 2) vals[BLUE] = uint8_t(atoi(ptr));
+			else vals[i] = uint8_t(atoi(ptr));
+			while (*ptr != ' ' && *ptr != '\t' && *ptr != '\0') ++ptr;
+		}
+		if (!valid) continue;
+		memcpy(colors[blockid], vals, 5);
+		colors[blockid][BRIGHTNESS] = GETBRIGHTNESS(colors[blockid]);
+	}
+	fclose(f);
+	return true;
+}
+
+bool dumpColorsToFile(const char* file)
+{
+	FILE *f = fopen(file, "w");
+	if (f == NULL) return false;
+	fprintf(f, "# For Block IDs see http://minecraftwiki.net/wiki/Data_values\n"
+			"# Note that noise or alpha (or both) do not work for a few blocks like snow, torches, fences, ...\n\n");
+	for (size_t i = 1; i < 256; ++i) {
+		uint8_t *c = colors[i];
+		if (i % 15 == 1) {
+			fprintf(f, "#ID    R   G   B    A  Noise\n");
+		}
+		fprintf(f, "%3d  %3d %3d %3d  %3d  %3d\n", int(i), int(c[2]), int(c[1]), int(c[0]), int(c[3]), int(c[4]));
+	}
+	fclose(f);
+	return true;
 }

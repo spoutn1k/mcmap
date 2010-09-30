@@ -1,9 +1,11 @@
 #ifndef _WORLDLOADER_H_
 #define _WORLDLOADER_H_
 
+#include <cstdlib>
 
-bool loadWorld(const char *fromPath);
+bool scanWorldDirectory(const char *fromPath);
 bool loadTerrain(const char *fromPath);
 bool loadEntireTerrain();
+size_t calcTerrainSize();
 
 #endif

@@ -69,6 +69,11 @@ namespace {
 	}
 }
 
+size_t calcBitmapSize(size_t width, size_t height)
+{
+	return (size_t(width * 3 + 3) & ~size_t(3)) * height;
+}
+
 bool createBitmap(size_t width, size_t height)
 {
 	gBmpWidth = width;

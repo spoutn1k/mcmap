@@ -6,7 +6,6 @@
 #include "globals.h"
 #include <list>
 #include <cstring>
-#include <cstdlib>
 #include <string>
 #include <cstdio>
 
@@ -21,7 +20,7 @@ static void loadChunk(const char *file);
 static bool isAlphaWorld(string path);
 static void allocateTerrain();
 
-bool loadWorld(const char *fromPath)
+bool scanWorldDirectory(const char *fromPath)
 {
 	if (!isAlphaWorld(string(fromPath) + "/")) {
 		return false;
@@ -223,6 +222,15 @@ static void loadChunk(const char *file)
 			} // <--- This is a closing curly brace
 		}
 	}
+}
+
+size_t calcTerrainSize()
+{
+	if (g_Nightmode || g_Underground || g_Skylight) {
+		return (MAPSIZE_Z * MAPSIZE_X * MAPSIZE_Y)
+				+ (MAPSIZE_Z * MAPSIZE_X * MAPSIZE_Y) / 2;
+	}
+	return MAPSIZE_Z * MAPSIZE_X * MAPSIZE_Y;
 }
 
 static bool isAlphaWorld(string path)

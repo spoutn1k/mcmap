@@ -3,7 +3,7 @@
  * v1.3, 09-2010 by Zahl (spieleplanet.eu)
  */
 
-#define VERSION "1.3"
+#define VERSION "1.3+"
 
 #include "helper.h"
 #include "draw.h"
@@ -30,17 +30,29 @@ int main(int argc, char** argv)
 	// ########## command line parsing ##########
 	if (argc < 2) {
 		printf(
+				////////////////////////////////////////////////////////////////////////////////
 				"\nmcmap - an isometric minecraft alpha map rendering tool. Version " VERSION "\n\n"
 				"Usage: %s [-from X Z -to X Z] [-night] [-cave] [-noise VAL] WORLDPATH\n\n"
-				"  -from X Z    sets the coordinate of the chunk to start rendering at\n"
-				"  -to X Z      sets the coordinate of the chunk to end rendering at\n"
-				"  -night       renders the world at night\n"
-				"  -cave        renders a map of all caves that have been explored by players\n"
-				"  -skylight    use skylight when rendering map (shadows below trees etc.)\n"
-				"  -brightedge  still draw the ege of the map bright when using -skylight\n"
-				"  -noise VAL   adds some noise to certain blocks, reasonable values are 0-20\n\n"
-				"  -height VAL  maximum height at which blocks will be rendered (1-128)\n"
-				"    WORLDPATH is the path the desired alpha world.\n\n"
+				"  -from X Z     sets the coordinate of the chunk to start rendering at\n"
+				"  -to X Z       sets the coordinate of the chunk to end rendering at\n"
+				"                Note: Currently you need both -from and -to to define\n"
+				"                bounds, otherwise the entire world will be rendered.\n"
+				"  -night        renders the world at night\n"
+				"  -cave         renders a map of all caves that have been explored by players\n"
+				"  -skylight     use skylight when rendering map (shadows below trees etc.)\n"
+				"  -brightedge   still draw the ege of the map bright when using -skylight\n"
+				"  -noise VAL    adds some noise to certain blocks, reasonable values are 0-20\n"
+				"  -height VAL   maximum height at which blocks will be rendered (1-128)\n"
+				"  -file NAME    sets the output filename to 'NAME'; default is output.bmp\n"
+				"  -mem VAL      if set, rendering will not happen if it would need more\n"
+				"                than VAL MiB of RAM. You can use that to prevent mcmap from\n"
+				"                trying to use more memory than you have. Always leave some\n"
+				"                headroom for the OS, e.g. if you have 4GiB RAM, use -mem 3100\n"
+				"  -colors NAME  loads user defined colors from file 'NAME'\n"
+				"  -dumpcolors   creates a file which contains the default colors being used\n"
+				"                for rendering. Can be used to modify them and then use -colors\n"
+				"\n    WORLDPATH is the path of the desired alpha world.\n\n"
+				////////////////////////////////////////////////////////////////////////////////
 				"Examples:\n\n"
 #ifdef _WIN32
 				"%s %%APPDATA%%\\.minecraft\\saves\\World1\n"
@@ -61,7 +73,8 @@ int main(int argc, char** argv)
 		return 1;
 	}
 	bool wholeworld = false;
-	char *filename = NULL;
+	char *filename = NULL, *outfile = NULL, *colorfile = NULL;
+	size_t memlimit = 0;
 	// First, for the sake of backward compatibility, try to parse command line arguments the old way first
 	if (argc >= 7
 			&& isNumeric(argv[1]) && isNumeric(argv[2]) && isNumeric(argv[3]) && isNumeric(argv[4])) { // Specific area of world
@@ -116,21 +129,48 @@ int main(int argc, char** argv)
 				g_Noise = atoi(NEXTARG);
 			} else if (strcmp(option, "-height") == 0) {
 				if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
-					printf("Error: %s needs two integer arguments, ie: %s 100\n", option, option);
+					printf("Error: %s needs an integer arguments, ie: %s 100\n", option, option);
 					return 1;
 				}
 				MAPSIZE_Y = atoi(NEXTARG);
+			} else if (strcmp(option, "-mem") == 0) {
+				if (!MOREARGS(1) || !isNumeric(POLLARG(1)) || atoi(POLLARG(1)) <= 0) {
+					printf("Error: %s needs a positive integer argument, ie: %s 1000\n", option, option);
+					return 1;
+				}
+				memlimit = size_t(atoi(NEXTARG)) * 1024ll * 1024ll;
+			} else if (strcmp(option, "-file") == 0) {
+				if (!MOREARGS(1)) {
+					printf("Error: %s needs one argument, ie: %s myworld.bmp\n", option, option);
+					return 1;
+				}
+				outfile = NEXTARG;
+			} else if (strcmp(option, "-colors") == 0) {
+				if (!MOREARGS(1)) {
+					printf("Error: %s needs one argument, ie: %s colors.txt\n", option, option);
+					return 1;
+				}
+				colorfile = NEXTARG;
+			} else if (strcmp(option, "-dumpcolors") == 0) {
+				loadColors();
+				if (!dumpColorsToFile("defaultcolors.txt")) {
+					printf("Could not dump colors to defaultcolors.txt, error opening file.\n");
+					return 1;
+				}
+				printf("Colors written to defaultcolors.txt\n");
+				return 0;
 			} else {
 				filename = (char*)option;
 			}
 		}
 		wholeworld = (S_FROMX == UNDEFINED || S_TOX == UNDEFINED);
 	}
+	// ########## end of command line parsing ##########
 	if (filename == NULL) {
 		printf("Error: No world given. Please add the path to your world to the command line.\n");
 		return 1;
 	}
-	if (wholeworld && !loadWorld(filename)) {
+	if (wholeworld && !scanWorldDirectory(filename)) {
 		printf("Error accessing terrain at '%s'\n", filename);
 		return 1;
 	}
@@ -142,7 +182,19 @@ int main(int argc, char** argv)
 	// Swap X and Z here cause the map needs to be rotated
 	MAPSIZE_X = (S_TOZ - S_FROMZ) * CHUNKSIZE_Z;
 	MAPSIZE_Z = (S_TOX - S_FROMX) * CHUNKSIZE_X;
-	// ########## end of command line parsing ##########
+	// Mem check
+	size_t bitmapX = (MAPSIZE_Z + MAPSIZE_X) * 2 + 10;
+	size_t bitmapY = (MAPSIZE_Z + MAPSIZE_X + MAPSIZE_Y * 2) + 10;
+	if (memlimit && memlimit < calcBitmapSize(bitmapX, bitmapY) + calcTerrainSize()) {
+		int amount = (calcBitmapSize(bitmapX, bitmapY) + calcTerrainSize()) / (1024 * 1024);
+		printf("Aborting because rendering would consume about %d MiB of RAM.\n"
+				"Your world goes from chunk %d %d to %d %d, so you might use -from and -to for limiting the area to be rendered.\n"
+				"Call %s without any arguments to get more help.\n",
+				amount, S_FROMX, S_FROMZ, S_TOX, S_TOZ, argv[0]);
+		return 1;
+	}
+	// Now that we know we're safe memory-wise, just allocate and load everything
+	createBitmap(bitmapX, bitmapY);
 	// Load world or part of world
 	if (wholeworld && !loadEntireTerrain()) {
 		printf("Error loading terrain from '%s'\n", filename);
@@ -154,10 +206,17 @@ int main(int argc, char** argv)
 		}
 	}
 	srand(1337);
-	// Arguments initialized, now allocate mem
-	createBitmap((MAPSIZE_Z + MAPSIZE_X) * 2 + 10, (MAPSIZE_Z + MAPSIZE_X + MAPSIZE_Y * 2) + 10);
-	// Colormap from file
-	loadColors();
+	// Load colormap from file
+	loadColors(); // first load internal list, overwrite specific colors from file later if desired
+	if (colorfile != NULL && fileExists(colorfile)) {
+		if (!loadColorsFromFile(colorfile)) {
+			printf("Error loading colors from %s: Opening failed.\n", colorfile);
+			return 1;
+		}
+	} else if (colorfile != NULL) {
+		printf("Error loading colors from %s: File not found.\n", colorfile);
+		return 1;
+	}
 	// If underground mode, remove blocks that don't seem to belong to caves
 	if (g_Underground) {
 		undergroundMode();
@@ -184,7 +243,7 @@ int main(int argc, char** argv)
 	}
 	printProgress(10, 10);
 	printf("Removed %d blocks\n", removed);
-	// Render terrain to file
+	// Finally, render terrain to file
 	printf("Creating bitmap...\n");
 	for (int y = 0; y < MAPSIZE_Y; ++y) {
 		printProgress(y, MAPSIZE_Y);
@@ -224,10 +283,14 @@ int main(int argc, char** argv)
 	printf("Writing to file...\n");
 	fflush(stdout);
 	// write file
-	if (!saveBitmap("output.bmp")) {
+	if (outfile == NULL && !saveBitmap("output.bmp")) {
+		printf("Error writing image to output.bmp.\n");
+		return 1;
+	} else if (outfile != NULL && !saveBitmap(outfile)) {
+		printf("Error writing image to %s\n", outfile);
 		return 1;
 	}
-	printf("Job complete\n");
+	printf("Job complete.\n");
 	return 0;
 }
 

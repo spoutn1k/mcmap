@@ -9,14 +9,19 @@
 			double(1[c] * 1[c]) * .601 + \
 			double(0[c] * 0[c]) * .163)
 
-// Byte order is: blue green red alpha brightness noise
+// Byte order is: blue green red alpha noise brightness
 // Brightness is used to speed up calculations later
 extern uint8_t colors[256][6];
+#define BLUE 0
+#define GREEN 1
+#define RED 2
 #define ALPHA 3
-#define BRIGHTNESS 4
-#define NOISE 5
+#define NOISE 4
+#define BRIGHTNESS 5
 
 void loadColors();
+bool loadColorsFromFile(const char* file);
+bool dumpColorsToFile(const char* file);
 
 #define AIR 0
 #define STONE 1
