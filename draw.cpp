@@ -35,8 +35,8 @@ namespace {
 	uint8_t *gBitmap = NULL;
 	size_t gBmpLineWidth = 0, gBmpWidth = 0, gBmpHeight = 0, gBmpSize = 0;
 
-	void blend(uint8_t* c1, const uint8_t* c2);
-	void modColor(uint8_t* color, const int mod);
+	inline void blend(uint8_t* c1, const uint8_t* c2);
+	inline void modColor(uint8_t* color, const int mod);
 
 	// Split them up so setPixel won't be one hell of a mess
 	void setSnow(const int &x, const int &y, const uint8_t *color);
@@ -103,12 +103,14 @@ void setPixel(int x, int y, uint8_t color, float fsub)
 	// A T T T
 	// D D L L
 	// D D L L
-	//	D L
+	//	  D L
+	// First determine how much the color has to be lightened up or darkened
 	int sub = int(fsub * (float(colors[color][BRIGHTNESS]) / 323.0f + .21f)); // The brighter the color, the stronger the impact
 	uint8_t L[4], D[4], c[4];
+	// Now make a local copy of the color that we can modify just for this one block
 	memcpy(c, colors[color], 4);
 	modColor(c, sub);
-	// Blocks with different treatment
+	// Then check the block type, as some types will be drawn differently
 	if (color == SNOW) {
 		setSnow(x, y, c);
 		return;
@@ -125,13 +127,14 @@ void setPixel(int x, int y, uint8_t color, float fsub)
 		setFence(x, y, c);
 		return;
 	}
-	// Ordinary blocks and special blocks which need the other two colors
+	// All the above blocks didn't need the shaded down versions of the color, so we only calc them here
+	// They are for the sides of blocks
 	memcpy(L, c, 4);
 	memcpy(D, c, 4);
 	modColor(L, -17);
 	modColor(D, -27);
-	// Insert special treatment here for blocks which still need L and D
-	if (color == GRASS) { // make grass look like dirt from the side
+	// A few more blocks with special handling... Those need the two colors we just mixed
+	if (color == GRASS) {
 		setGrass(x, y, c, L, D, sub);
 		return;
 	}
@@ -143,12 +146,12 @@ void setPixel(int x, int y, uint8_t color, float fsub)
 		setStep(x, y, c, L, D);
 		return;
 	}
-	// consider noise
+	// In case the user wants noise, calc the strength now, depending on the desired intensity and the block's brightness
 	int noise = 0;
 	if (g_Noise && colors[color][NOISE]) {
 		noise = int(float(g_Noise * colors[color][NOISE]) * (float(GETBRIGHTNESS(c) + 10) / 2650.0f));
 	}
-	// Ordinary blocks
+	// Ordinary blocks are all rendered the same way
 	if (c[ALPHA] == 255) { // Fully opaque - faster
 		// Top row
 		uint8_t *pos = &PIXEL(x, y);
@@ -160,6 +163,8 @@ void setPixel(int x, int y, uint8_t color, float fsub)
 		pos = &PIXEL(x, y+1);
 		for (size_t i = 0; i < 4; ++i, pos += 3) {
 			memcpy(pos, (i < 2 ? D : L), 3);
+			// The weird check here is to get the pattern right, as the noise should be stronger
+			// every other row, but take into account the isometric perspective
 			if (noise) modColor(pos, rand() % (noise * 2) - noise * (i == 0 || i == 3 ? 1 : 2));
 		}
 		// Third row
@@ -200,11 +205,12 @@ void setPixel(int x, int y, uint8_t color, float fsub)
 		blend(pos+=3, L);
 		if (noise) modColor(pos, -(rand() % noise) * 2);
 	}
+	// The above two branches are almost the same, maybe one could just create a function pointer and...
 }
 
 namespace {
 
-	void blend(uint8_t* c1, const uint8_t* c2)
+	inline void blend(uint8_t* c1, const uint8_t* c2)
 	{
 		const float v2 = (float(c2[3]) / 255.0f);
 		const float v1 = (1.0f - v2);
@@ -213,7 +219,7 @@ namespace {
 		c1[2] = uint8_t(float(c1[2]) * v1 + float(c2[2]) * v2);
 	}
 
-	void modColor(uint8_t* color, const int mod)
+	inline void modColor(uint8_t* color, const int mod)
 	{
 		color[0] = clamp(color[0] + mod);
 		color[1] = clamp(color[1] + mod);
@@ -279,7 +285,7 @@ namespace {
 	}
 
 	void setGrass(const int &x, const int &y, const uint8_t *color, const uint8_t *light, const uint8_t *dark, const int &sub)
-	{
+	{	// this will make grass look like dirt from the side
 		uint8_t L[4], D[4];
 		memcpy(L, colors[DIRT], 4);
 		memcpy(D, colors[DIRT], 4);

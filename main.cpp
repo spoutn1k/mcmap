@@ -174,13 +174,13 @@ int main(int argc, char** argv)
 		for (int x = 1; x < MAPSIZE_X-1; ++x) {
 			blockCulling(x, y, MAPSIZE_Z-1, removed);
 		}
-		printProgress(y, MAPSIZE_Y + MAPSIZE_Z - 2);
+		printProgress(y, MAPSIZE_Y + MAPSIZE_Z);
 	}
 	for (int z = 1; z < MAPSIZE_Z-1; ++z) {
 		for (int x = 1; x < MAPSIZE_X-1; ++x) {
 			blockCulling(x, MAPSIZE_Y-1, z, removed);
 		}
-		printProgress(z + MAPSIZE_Y, MAPSIZE_Y + MAPSIZE_Z - 2);
+		printProgress(z + MAPSIZE_Y, MAPSIZE_Y + MAPSIZE_Z);
 	}
 	printProgress(10, 10);
 	printf("Removed %d blocks\n", removed);

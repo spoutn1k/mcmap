@@ -7,6 +7,7 @@ SOURCES=main.cpp helper.cpp nbt.cpp draw.cpp colors.cpp worldloader.cpp filesyst
 OBJECTS=$(SOURCES:.cpp=.default.o)
 OBJECTS_TURBO=$(SOURCES:.cpp=.turbo.o)
 DOBJECTS=$(SOURCES:.cpp=.debug.o)
+OBJECTS64=$(SOURCES:.cpp=.64.o)
 EXECUTABLE=mcmap
 
 # default, zlib shared
@@ -16,6 +17,10 @@ all: $(OBJECTS)
 # use this one on windows so you don't have to supply zlib1.dll
 static: $(OBJECTS)
 	$(CC) $(OBJECTS) $(LDFLAGS) -static -o $(EXECUTABLE)
+
+# crosscompile static version for 64bit (using this one on windows)
+x64: $(OBJECTS64)
+	x86_64-w64-mingw32-g++ $(OBJECTS64) $(LDFLAGS) -m64 -static -o $(EXECUTABLE)
 
 # debug, zlib shared
 debug: $(DOBJECTS)
@@ -36,3 +41,6 @@ clean:
 
 %.debug.o: %.cpp
 	$(CC) $(DCFLAGS) $< -o $@
+
+%.64.o: %.cpp
+	x86_64-w64-mingw32-g++ $(CFLAGS) -m64 $< -o $@

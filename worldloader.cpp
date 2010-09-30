@@ -234,13 +234,14 @@ static bool isAlphaWorld(string path)
 static void allocateTerrain()
 {
 	const size_t terrainsize = MAPSIZE_Z * MAPSIZE_X * MAPSIZE_Y;
+	printf("Terrain takes up %.2fMiB", float(terrainsize / float(1024 * 1024)));
+	fflush(stdout);
 	g_Terrain = new uint8_t[terrainsize];
 	memset(g_Terrain, 0, terrainsize);
-	printf("Terrain takes up %.2fMiB", float(terrainsize / float(1024 * 1024)));
 	if (g_Nightmode || g_Underground || g_Skylight) {
+		printf(", lightmap %.2fMiB", float((terrainsize / 2 + 1) / float(1024 * 1024)));
 		g_Light = new uint8_t[terrainsize / 2 + 1]; // terrainsize should never be an odd number, but just to be safe, add 1 byte
 		memset(g_Light, 0, terrainsize / 2 + 1);
-		printf(", lightmap %.2fMiB", float((terrainsize / 2 + 1) / float(1024 * 1024)));
 	}
 	printf("\n");
 }

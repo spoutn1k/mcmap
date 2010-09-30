@@ -2,11 +2,12 @@
 #define _GLOBALS_H_
 
 #include <stdint.h>
+#include <cstdlib>
 
 #define UNDEFINED 0x7FFFFFFF
 
 extern int S_FROMX, S_FROMZ, S_TOX, S_TOZ;
-extern int MAPSIZE_Y, MAPSIZE_Z, MAPSIZE_X;
+extern size_t MAPSIZE_Y, MAPSIZE_Z, MAPSIZE_X;
 
 extern bool g_Nightmode;
 extern bool g_Underground;
