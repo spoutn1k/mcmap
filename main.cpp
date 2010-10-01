@@ -1,9 +1,9 @@
 /***
  * mcmap - create isometric maps of your minecraft alpha world
- * v1.3, 09-2010 by Zahl (spieleplanet.eu)
+ * v1.4, 09-2010 by Zahl (spieleplanet.eu)
  */
 
-#define VERSION "1.3+"
+#define VERSION "1.4"
 
 #include "helper.h"
 #include "draw.h"
@@ -303,7 +303,7 @@ inline void blockCulling(const int x, const int y, const int z, int &removed)
 		if (cull && BLOCKAT(x-i, y-i, z-i) != AIR) {
 			BLOCKAT(x-i, y-i, z-i) = AIR;
 			++removed;
-		} else if (colors[BLOCKAT(x-i, y-i, z-i)][3] == 255) {
+		} else if (colors[BLOCKAT(x-i, y-i, z-i)][ALPHA] == 255) {
 			cull = true;
 		}
 	}

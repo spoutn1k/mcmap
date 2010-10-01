@@ -69,7 +69,6 @@ bool scanWorldDirectory(const char *fromPath)
 				if (sd != NULL) {
 					do { // Here we finally arrived at the chunk files
 						if (!chunk.isdir && chunk.name[0] == 'c' && chunk.name[1] == '.') { // Make sure filename is a chunk
-							string full = path + "/" + chunk.name;
 							char *s = chunk.name;
 							// Extract x coordinate from chunk filename
 							s += 2;
@@ -77,20 +76,25 @@ bool scanWorldDirectory(const char *fromPath)
 							// Extract z coordinate from chunk filename
 							while (*s != '.' && *s != '\0') ++s;
 							int valZ = base10(s+1);
-							// Update bounds
-							if (valX < S_FROMX) {
-								S_FROMX = valX;
+							if (valX > -1000 && valX < 1000 && valZ > -1000 && valZ < 1000) {
+								// Update bounds
+								if (valX < S_FROMX) {
+									S_FROMX = valX;
+								}
+								if (valX > S_TOX) {
+									S_TOX = valX;
+								}
+								if (valZ < S_FROMZ) {
+									S_FROMZ = valZ;
+								}
+								if (valZ > S_TOZ) {
+									S_TOZ = valZ;
+								}
+								string full = path + "/" + chunk.name;
+								chunks.push_back(strdup(full.c_str()));
+							} else {
+								printf("Ignoring bad chunk at %d %d\n", valX, valZ);
 							}
-							if (valX > S_TOX) {
-								S_TOX = valX;
-							}
-							if (valZ < S_FROMZ) {
-								S_FROMZ = valZ;
-							}
-							if (valZ > S_TOZ) {
-								S_TOZ = valZ;
-							}
-							chunks.push_back(strdup(full.c_str()));
 						}
 					} while (Dir::next(sd, (char*)path.c_str(), chunk));
 					Dir::close(sd);
