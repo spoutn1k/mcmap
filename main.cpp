@@ -3,7 +3,7 @@
  * v1.4, 09-2010 by Zahl (spieleplanet.eu)
  */
 
-#define VERSION "1.4"
+#define VERSION "1.4+"
 
 #include "helper.h"
 #include "draw.h"
