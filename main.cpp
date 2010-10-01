@@ -245,17 +245,16 @@ int main(int argc, char** argv)
 		for (size_t z = 1; z < MAPSIZE_Z; ++z) {
 			blockCulling(x, MIN(MAPSIZE_Y, 100), z, removed); // Some cheating here, as in most cases there is little to nothing up that high, and the few things that are won't slow down rendering too much
 		}
-		printProgress(x, MAPSIZE_X + MAPSIZE_X + MAPSIZE_Z);
 		for (size_t y = MIN(MAPSIZE_Y, 100) - 1; y > 0; --y) {
 			blockCulling(x, y, MAPSIZE_Z-1, removed);
 		}
-		printProgress(x + MAPSIZE_X, MAPSIZE_X + MAPSIZE_X + MAPSIZE_Z);
+		printProgress(x, MAPSIZE_X + MAPSIZE_Z);
 	}
 	for (size_t z = 1; z < MAPSIZE_Z-1; ++z) {
 		for (size_t y = MIN(MAPSIZE_Y, 100) - 1; y > 0; --y) {
 			blockCulling(MAPSIZE_X-1, y, z, removed);
 		}
-		printProgress(z + MAPSIZE_X + MAPSIZE_X, MAPSIZE_X + MAPSIZE_X + MAPSIZE_Z);
+		printProgress(z + MAPSIZE_X, MAPSIZE_X + MAPSIZE_Z);
 	}
 	printProgress(10, 10);
 	printf("Removed %lu blocks\n", (unsigned long)removed);
