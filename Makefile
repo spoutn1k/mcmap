@@ -24,7 +24,7 @@ x64: $(OBJECTS64)
 
 # debug, zlib shared
 debug: $(DOBJECTS)
-	$(CC) $(DOBJECTS) $(DLDFLAGS) -o $(EXECUTABLE)
+	$(CC) $(DOBJECTS) $(DLDFLAGS) -static -o $(EXECUTABLE)
 
 # use this to build a binary optimized for your cpu - not recommended for distribution
 turbo: $(OBJECTS_TURBO)

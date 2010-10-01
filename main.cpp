@@ -22,7 +22,7 @@ using std::string;
 
 static bool gBrightEdge = false;
 
-inline void blockCulling(const int x, const int y, const int z, int &removed);
+inline void blockCulling(const size_t x, const size_t y, const size_t z, size_t &removed);
 void undergroundMode();
 
 int main(int argc, char** argv)
@@ -51,6 +51,9 @@ int main(int argc, char** argv)
 				"  -colors NAME  loads user defined colors from file 'NAME'\n"
 				"  -dumpcolors   creates a file which contains the default colors being used\n"
 				"                for rendering. Can be used to modify them and then use -colors\n"
+				"  -north -east -south -west\n"
+				"                controls which direction will point to the *top left* corner\n"
+				"                it only makes sense to pass one of them; East is default\n"
 				"\n    WORLDPATH is the path of the desired alpha world.\n\n"
 				////////////////////////////////////////////////////////////////////////////////
 				"Examples:\n\n"
@@ -159,6 +162,14 @@ int main(int argc, char** argv)
 				}
 				printf("Colors written to defaultcolors.txt\n");
 				return 0;
+			} else if (strcmp(option, "-north") == 0) {
+				g_Orientation = North;
+			} else if (strcmp(option, "-south") == 0) {
+				g_Orientation = South;
+			} else if (strcmp(option, "-east") == 0) {
+				g_Orientation = East;
+			} else if (strcmp(option, "-west") == 0) {
+				g_Orientation = West;
 			} else {
 				filename = (char*)option;
 			}
@@ -179,14 +190,18 @@ int main(int argc, char** argv)
 		return 1;
 	}
 	if (MAPSIZE_Y > 128) MAPSIZE_Y = 128;
-	// Swap X and Z here cause the map needs to be rotated
-	MAPSIZE_X = (S_TOZ - S_FROMZ) * CHUNKSIZE_Z;
-	MAPSIZE_Z = (S_TOX - S_FROMX) * CHUNKSIZE_X;
+	if (g_Orientation == North || g_Orientation == South) {
+		MAPSIZE_Z = (S_TOZ - S_FROMZ) * CHUNKSIZE_Z;
+		MAPSIZE_X = (S_TOX - S_FROMX) * CHUNKSIZE_X;
+	} else {
+		MAPSIZE_X = (S_TOZ - S_FROMZ) * CHUNKSIZE_Z;
+		MAPSIZE_Z = (S_TOX - S_FROMX) * CHUNKSIZE_X;
+	}
 	// Mem check
 	size_t bitmapX = (MAPSIZE_Z + MAPSIZE_X) * 2 + 10;
 	size_t bitmapY = (MAPSIZE_Z + MAPSIZE_X + MAPSIZE_Y * 2) + 10;
 	if (memlimit && memlimit < calcBitmapSize(bitmapX, bitmapY) + calcTerrainSize()) {
-		int amount = (calcBitmapSize(bitmapX, bitmapY) + calcTerrainSize()) / (1024 * 1024);
+		int amount = int((calcBitmapSize(bitmapX, bitmapY) + calcTerrainSize()) / (1024 * 1024));
 		printf("Aborting because rendering would consume about %d MiB of RAM.\n"
 				"Your world goes from chunk %d %d to %d %d, so you might use -from and -to for limiting the area to be rendered.\n"
 				"Call %s without any arguments to get more help.\n",
@@ -224,33 +239,34 @@ int main(int argc, char** argv)
 	// Remove invisible blocks from map (covered by other blocks from isometric pov)
 	// Do so by "raytracing" every block from front to back.. somehow
 	printf("Optimizing terrain...\n");
-	int removed = 0;
+	size_t removed = 0;
 	printProgress(0, 10);
-	for (int y = 1; y < MAPSIZE_Y; ++y) {
-		for (int z = 1; z < MAPSIZE_Z; ++z) {
-			blockCulling(MAPSIZE_X-1, y, z, removed);
+	for (size_t x = 1; x < MAPSIZE_X; ++x) {
+		for (size_t z = 1; z < MAPSIZE_Z; ++z) {
+			blockCulling(x, MIN(MAPSIZE_Y, 100), z, removed); // Some cheating here, as in most cases there is little to nothing up that high, and the few things that are won't slow down rendering too much
 		}
-		for (int x = 1; x < MAPSIZE_X-1; ++x) {
+		printProgress(x, MAPSIZE_X + MAPSIZE_X + MAPSIZE_Z);
+		for (size_t y = MIN(MAPSIZE_Y, 100) - 1; y > 0; --y) {
 			blockCulling(x, y, MAPSIZE_Z-1, removed);
 		}
-		printProgress(y, MAPSIZE_Y + MAPSIZE_Z);
+		printProgress(x + MAPSIZE_X, MAPSIZE_X + MAPSIZE_X + MAPSIZE_Z);
 	}
-	for (int z = 1; z < MAPSIZE_Z-1; ++z) {
-		for (int x = 1; x < MAPSIZE_X-1; ++x) {
-			blockCulling(x, MAPSIZE_Y-1, z, removed);
+	for (size_t z = 1; z < MAPSIZE_Z-1; ++z) {
+		for (size_t y = MIN(MAPSIZE_Y, 100) - 1; y > 0; --y) {
+			blockCulling(MAPSIZE_X-1, y, z, removed);
 		}
-		printProgress(z + MAPSIZE_Y, MAPSIZE_Y + MAPSIZE_Z);
+		printProgress(z + MAPSIZE_X + MAPSIZE_X, MAPSIZE_X + MAPSIZE_X + MAPSIZE_Z);
 	}
 	printProgress(10, 10);
-	printf("Removed %d blocks\n", removed);
+	printf("Removed %lu blocks\n", (unsigned long)removed);
 	// Finally, render terrain to file
 	printf("Creating bitmap...\n");
-	for (int y = 0; y < MAPSIZE_Y; ++y) {
-		printProgress(y, MAPSIZE_Y);
-		for (int z = 0; z < MAPSIZE_Z; ++z) {
-			int startx = (MAPSIZE_Z - z) * 2 + 3;
-			int starty = 5 + (MAPSIZE_Y - y) * 2 + z;
-			for (int x = 0; x < MAPSIZE_X; ++x) {
+	for (size_t x = 0; x < MAPSIZE_X; ++x) {
+		printProgress(x, MAPSIZE_X);
+		for (size_t z = 0; z < MAPSIZE_Z; ++z) {
+			const size_t startx = (MAPSIZE_Z - z) * 2 + 3 + x * 2;
+			size_t starty = 5 + MAPSIZE_Y * 2 + z + x;
+			for (size_t y = 0; y < MAPSIZE_Y; ++y) {
 				uint8_t c = BLOCKAT(x,y,z);
 				if (c != AIR) { // If block is not air (colors[c][3] != 0)
 					float col = float(y) * .78f - 91;
@@ -274,8 +290,7 @@ int main(int argc, char** argv)
 					}
 					setPixel(startx, starty, c, col);
 				}
-				startx += 2;
-				starty += 1;
+				starty -= 2;
 			}
 		}
 	}
@@ -294,11 +309,11 @@ int main(int argc, char** argv)
 	return 0;
 }
 
-inline void blockCulling(const int x, const int y, const int z, int &removed)
+inline void blockCulling(const size_t x, const size_t y, const size_t z, size_t &removed)
 {	// Actually I just used 'removed' for debugging, but removing it
 	// gives no speed increase at all, so why bother?
 	bool cull = false; // Culling active?
-	for (int i = 0; i < MAPSIZE_Y; ++i) {
+	for (size_t i = 0; i < MAPSIZE_Y; ++i) {
 		if (x < i || y < i || z < i) break;
 		if (cull && BLOCKAT(x-i, y-i, z-i) != AIR) {
 			BLOCKAT(x-i, y-i, z-i) = AIR;
@@ -314,12 +329,12 @@ void undergroundMode()
 	//int cnt[256];
 	//memset(cnt, 0, sizeof(cnt));
 	printf("Exploring underground...\n");
-	for (int x = 0; x < MAPSIZE_X; ++x) {
+	for (size_t x = 0; x < MAPSIZE_X; ++x) {
 		printProgress(x, MAPSIZE_X);
-		for (int z = 0; z < MAPSIZE_Z; ++z) {
+		for (size_t z = 0; z < MAPSIZE_Z; ++z) {
 			size_t ground = 0;
 			size_t cave = 0;
-			for (int y = MAPSIZE_Y-1; y >= 0; --y) {
+			for (size_t y = MAPSIZE_Y-1; y >= 0; --y) {
 				uint8_t *c = &BLOCKAT(x,y,z);
 				if (*c != AIR && cave > 0) {
 					if (*c == GRASS || *c == LEAVES || *c == SNOW || GETLIGHTAT(x,y,z) == 0) {

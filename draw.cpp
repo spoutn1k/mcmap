@@ -39,13 +39,13 @@ namespace {
 	inline void modColor(uint8_t* color, const int mod);
 
 	// Split them up so setPixel won't be one hell of a mess
-	void setSnow(const int &x, const int &y, const uint8_t *color);
-	void setTorch(const int &x, const int &y, const uint8_t *color);
-	void setFlower(const int &x, const int &y, const uint8_t *color);
-	void setFire(const int &x, const int &y, uint8_t *color, uint8_t *light, uint8_t *dark);
-	void setGrass(const int &x, const int &y, const uint8_t *color, const uint8_t *light, const uint8_t *dark, const int &sub);
-	void setFence(const int &x, const int &y, const uint8_t *color);
-	void setStep(const int &x, const int &y, const uint8_t *color, const uint8_t *light, const uint8_t *dark);
+	void setSnow(const size_t &x, const size_t &y, const uint8_t *color);
+	void setTorch(const size_t &x, const size_t &y, const uint8_t *color);
+	void setFlower(const size_t &x, const size_t &y, const uint8_t *color);
+	void setFire(const size_t &x, const size_t &y, uint8_t *color, uint8_t *light, uint8_t *dark);
+	void setGrass(const size_t &x, const size_t &y, const uint8_t *color, const uint8_t *light, const uint8_t *dark, const int &sub);
+	void setFence(const size_t &x, const size_t &y, const uint8_t *color);
+	void setStep(const size_t &x, const size_t &y, const uint8_t *color, const uint8_t *light, const uint8_t *dark);
 
 	void writeBitmapHeader24(FILE* fh, const int width, const int height)
 	{
@@ -94,14 +94,14 @@ bool saveBitmap(char* filename)
 		return false;
 	}
 	// write header
-	writeBitmapHeader24(fh, gBmpWidth, gBmpHeight);
+	writeBitmapHeader24(fh, (int)gBmpWidth, (int)gBmpHeight);
 	// write data
 	fwrite(gBitmap, gBmpSize, 1, fh);
 	fclose(fh);
 	return true;
 }
 
-void setPixel(int x, int y, uint8_t color, float fsub)
+void setPixel(size_t x, size_t y, uint8_t color, float fsub)
 {
 	// Sets pixels around x,y where A is the anchor
 	// T = given color, D = darker, L = lighter
@@ -231,7 +231,7 @@ namespace {
 		color[2] = clamp(color[2] + mod);
 	}
 
-	void setSnow(const int &x, const int &y, const uint8_t *color)
+	void setSnow(const size_t &x, const size_t &y, const uint8_t *color)
 	{
 		// Top row (second row)
 		uint8_t *pos = &PIXEL(x, y+1);
@@ -251,7 +251,7 @@ namespace {
 		*/
 	}
 
-	void setTorch(const int &x, const int &y, const uint8_t *color)
+	void setTorch(const size_t &x, const size_t &y, const uint8_t *color)
 	{ // Maybe the orientation should be considered when drawing, but it probably isn't worth the efford
 		uint8_t *pos = &PIXEL(x+2, y+1);
 		memcpy(pos, color, 3);
@@ -259,7 +259,7 @@ namespace {
 		memcpy(pos, color, 3);
 	}
 
-	void setFlower(const int &x, const int &y, const uint8_t *color)
+	void setFlower(const size_t &x, const size_t &y, const uint8_t *color)
 	{
 		uint8_t *pos = &PIXEL(x, y+1);
 		memcpy(pos+3, color, 3);
@@ -270,7 +270,7 @@ namespace {
 		memcpy(pos, color, 3);
 	}
 
-	void setFire(const int &x, const int &y, uint8_t *color, uint8_t *light, uint8_t *dark)
+	void setFire(const size_t &x, const size_t &y, uint8_t *color, uint8_t *light, uint8_t *dark)
 	{	// This basically just leaves out a few pixels
 		// Top row
 		uint8_t *pos = &PIXEL(x, y);
@@ -289,7 +289,7 @@ namespace {
 		blend(pos+6, light);
 	}
 
-	void setGrass(const int &x, const int &y, const uint8_t *color, const uint8_t *light, const uint8_t *dark, const int &sub)
+	void setGrass(const size_t &x, const size_t &y, const uint8_t *color, const uint8_t *light, const uint8_t *dark, const int &sub)
 	{	// this will make grass look like dirt from the side
 		uint8_t L[4], D[4];
 		memcpy(L, colors[DIRT], 4);
@@ -325,7 +325,7 @@ namespace {
 		memcpy(pos+6, L, 3);
 	}
 
-	void setFence(const int &x, const int &y, const uint8_t *color)
+	void setFence(const size_t &x, const size_t &y, const uint8_t *color)
 	{
 		// First row
 		uint8_t *pos = &PIXEL(x, y);
@@ -343,7 +343,7 @@ namespace {
 		blend(pos, color);
 	}
 
-	void setStep(const int &x, const int &y, const uint8_t *color, const uint8_t *light, const uint8_t *dark)
+	void setStep(const size_t &x, const size_t &y, const uint8_t *color, const uint8_t *light, const uint8_t *dark)
 	{
 		uint8_t *pos = &PIXEL(x, y+2);
 		for (size_t i = 0; i < 10; i += 3) {

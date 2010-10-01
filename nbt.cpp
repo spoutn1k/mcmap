@@ -135,7 +135,7 @@ bool NBT::save()
 		delete[] tmpfile;
 		return false;
 	}
-	ret = gzwrite(fh, _blob, _bloblen);
+	ret = gzwrite(fh, _blob, (unsigned int)_bloblen);
 	gzclose(fh);
 	if (ret != _bloblen) {
 		rename(tmpfile, _filename);

@@ -4,7 +4,7 @@
 #include "helper.h"
 #include <cmath>
 
-#define GETBRIGHTNESS(c) sqrt( \
+#define GETBRIGHTNESS(c) (uint8_t)sqrt( \
 			double(2[c] * 2[c]) * .236 + \
 			double(1[c] * 1[c]) * .601 + \
 			double(0[c] * 0[c]) * .163)

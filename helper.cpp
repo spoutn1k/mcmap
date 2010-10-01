@@ -58,7 +58,7 @@ int base10(char* val)
 	return res;
 }
 
-void printProgress(const int current, const int max)
+void printProgress(const size_t current, const size_t max)
 {
 	static float lastp = -10;
 	static time_t lastt = 0;

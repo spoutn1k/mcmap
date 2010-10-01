@@ -9,8 +9,6 @@
 #include <string>
 #include <cstdio>
 
-#define MAX(a,b) ((a) > (b) ? (a) : (b))
-
 using std::string;
 typedef std::list<char*> filelist;
 
@@ -52,8 +50,8 @@ bool scanWorldDirectory(const char *fromPath)
 	// Read subdirs now
 	string base(fromPath);
 	base.append("/");
-	const int max = subdirs.size();
-	int count = 0;
+	const size_t max = subdirs.size();
+	size_t count = 0;
 	printf("Scanning world...\n");
 	for (filelist::iterator it = subdirs.begin(); it != subdirs.end(); it++) {
 		string base2 = base + *it;
@@ -118,8 +116,8 @@ bool loadEntireTerrain()
 {
 	if (chunks.empty()) return false;
 	allocateTerrain();
-	const int max = chunks.size();
-	int count = 0;
+	const size_t max = chunks.size();
+	size_t count = 0;
 	printf("Loading all chunks..\n");
 	for (filelist::iterator it = chunks.begin(); it != chunks.end(); it++) {
 		printProgress(count++, max);
@@ -188,42 +186,77 @@ static void loadChunk(const char *file)
 	const int offsetz = (chunkZ - S_FROMZ) * CHUNKSIZE_Z;
 	const int offsetx = (chunkX - S_FROMX) * CHUNKSIZE_X;
 	// Now read all blocks from this chunk and copy them to the world array
+	// Rotation introduces lots of if-else blocks here :-(
+	// Maybe make the macros functions and then use pointers....
 	for (int x = 0; x < CHUNKSIZE_X; ++x) {
 		for (int z = 0; z < CHUNKSIZE_Z; ++z) {
-			for (int y = 0; y < MAPSIZE_Y; ++y) { // Using this macro, the world gets rotated and flipped properly (I hope)
-				BLOCKROTATED(x + offsetx, y, z + offsetz) = blockdata[y + (z + (x * CHUNKSIZE_Z)) * SLICESIZE_Y];
-				if (g_Underground && blockdata[y + (z + (x * CHUNKSIZE_Z)) * SLICESIZE_Y] == TORCH) {
+			if (g_Orientation == East) {
+				memcpy(&BLOCKEAST(x + offsetx, 0, z + offsetz), &blockdata[(z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y], MAPSIZE_Y);
+			} else if (g_Orientation == North) {
+				memcpy(&BLOCKNORTH(x + offsetx, 0, z + offsetz), &blockdata[(z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y], MAPSIZE_Y);
+			} else if (g_Orientation == South) {
+				memcpy(&BLOCKSOUTH(x + offsetx, 0, z + offsetz), &blockdata[(z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y], MAPSIZE_Y);
+			} else {
+				memcpy(&BLOCKWEST(x + offsetx, 0, z + offsetz), &blockdata[(z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y], MAPSIZE_Y);
+			}
+			if (!(g_Nightmode || g_Skylight || g_Underground)) continue;
+			for (size_t y = 0; y < MAPSIZE_Y; ++y) { // Using this macro, the world gets rotated and flipped properly (I hope)
+				if (g_Underground && blockdata[y + (z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y] == TORCH) {
 					// In underground mode, the lightmap is also used, but the values are calculated manually, to only show
 					// caves the players have discovered yet. It's not perfect of course, but works ok.
-					for (int ty = y - 9; ty < y + 9; ++ty) { // The trick here is to only take into account
+					for (int ty = int(y) - 9; ty < int(y) + 9; ++ty) { // The trick here is to only take into account
 						if (ty < 0) continue; // areas around torches.
-						if (ty >= MAPSIZE_Y/2) break;
-						for (int tz = z - 18; tz < z + 18; ++tz) {
+						if (ty >= int(MAPSIZE_Y/2)) break;
+						for (int tz = int(z) - 18; tz < int(z) + 18; ++tz) {
 							if (tz < 0) continue;
-							if (tz >= MAPSIZE_Z) break;
-							for (int tx = x - 18; tx < x + 18; ++tx) {
+							if (tz >= int(MAPSIZE_Z)) break;
+							for (int tx = int(x) - 18; tx < int(x) + 18; ++tx) {
 								if (tx < 0) continue;
-								if (tx >= MAPSIZE_X) break;
-								SETLIGHTROTATED(tx + offsetx, ty, tz + offsetz) = 0xFF;
+								if (tx >= int(MAPSIZE_X)) break;
+								if (g_Orientation == East) {
+									SETLIGHTEAST(tx + offsetx, ty, tz + offsetz) = 0xFF;
+								} else if (g_Orientation == North) {
+									SETLIGHTNORTH(tx + offsetx, ty, tz + offsetz) = 0xFF;
+								} else if (g_Orientation == South) {
+									SETLIGHTSOUTH(tx + offsetx, ty, tz + offsetz) = 0xFF;
+								} else {
+									SETLIGHTWEST(tx + offsetx, ty, tz + offsetz) = 0xFF;
+								}
 							}
 						}
 					}
 				} else if (g_Skylight && y % 2 == 0) { // copy light info too. Only every other time, since light info is 4 bits
-					uint8_t light = lightdata[(y / 2) + (z + (x * CHUNKSIZE_Z)) * (SLICESIZE_Y / 2)];
+					uint8_t light = lightdata[(y / 2) + (z + (x * CHUNKSIZE_Z)) * (CHUNKSIZE_Y / 2)];
 					uint8_t highlight = (light >> 4) & 0x0F;
 					uint8_t lowlight =  (light & 0x0F);
-					uint8_t sky = skydata[(y / 2) + (z + (x * CHUNKSIZE_Z)) * (SLICESIZE_Y / 2)];
+					uint8_t sky = skydata[(y / 2) + (z + (x * CHUNKSIZE_Z)) * (CHUNKSIZE_Y / 2)];
 					uint8_t highsky = ((sky >> 4) & 0x0F);
 					uint8_t lowsky =  (sky & 0x0F);
 					if (g_Nightmode) {
 						highsky = clamp(highsky / 3 - 2);
 						lowsky = clamp(lowsky / 3 - 2);
 					}
-					SETLIGHTROTATED(x + offsetx, y, z + offsetz) = MAX(highlight, highsky) << 4 | (MAX(lowlight, lowsky) & 0x0F);
+					if (g_Orientation == East) {
+						SETLIGHTEAST(x + offsetx, y, z + offsetz) = (MAX(highlight, highsky) << 4) | (MAX(lowlight, lowsky) & 0x0F);
+					} else if (g_Orientation == North) {
+						SETLIGHTNORTH(x + offsetx, y, z + offsetz) = (MAX(highlight, highsky) << 4) | (MAX(lowlight, lowsky) & 0x0F);
+					} else if (g_Orientation == South) {
+						SETLIGHTSOUTH(x + offsetx, y, z + offsetz) = (MAX(highlight, highsky) << 4) | (MAX(lowlight, lowsky) & 0x0F);
+					} else {
+						SETLIGHTWEST(x + offsetx, y, z + offsetz) = (MAX(highlight, highsky) << 4) | (MAX(lowlight, lowsky) & 0x0F);
+					}
 				} else if (g_Nightmode && y % 2 == 0) {
-					SETLIGHTROTATED(x + offsetx, y, z + offsetz) = lightdata[(y / 2) + (z + (x * CHUNKSIZE_Z)) * (SLICESIZE_Y / 2)];
+					if (g_Orientation == East) {
+						SETLIGHTEAST(x + offsetx, y, z + offsetz) = lightdata[(y / 2) + (z + (x * CHUNKSIZE_Z)) * (CHUNKSIZE_Y / 2)];
+					} else if (g_Orientation == North) {
+						SETLIGHTNORTH(x + offsetx, y, z + offsetz) = lightdata[(y / 2) + (z + (x * CHUNKSIZE_Z)) * (CHUNKSIZE_Y / 2)];
+					} else if (g_Orientation == South) {
+						SETLIGHTSOUTH(x + offsetx, y, z + offsetz) = lightdata[(y / 2) + (z + (x * CHUNKSIZE_Z)) * (CHUNKSIZE_Y / 2)];
+					} else {
+						SETLIGHTWEST(x + offsetx, y, z + offsetz) = lightdata[(y / 2) + (z + (x * CHUNKSIZE_Z)) * (CHUNKSIZE_Y / 2)];
+					}
 				}
-			} // <--- This is a closing curly brace
+			}
 		}
 	}
 }
@@ -251,9 +284,10 @@ static void allocateTerrain()
 	g_Terrain = new uint8_t[terrainsize];
 	memset(g_Terrain, 0, terrainsize);
 	if (g_Nightmode || g_Underground || g_Skylight) {
-		printf(", lightmap %.2fMiB", float((terrainsize / 2 + 1) / float(1024 * 1024)));
-		g_Light = new uint8_t[terrainsize / 2 + 1]; // terrainsize should never be an odd number, but just to be safe, add 1 byte
-		memset(g_Light, 0, terrainsize / 2 + 1);
+		const size_t lightsize = MAPSIZE_Z * MAPSIZE_X * ((MAPSIZE_Y + 1) / 2);
+		printf(", lightmap %.2fMiB", float(lightsize / float(1024 * 1024)));
+		g_Light = new uint8_t[lightsize]; // terrainsize should never be an odd number, but just to be safe, add 1 byte
+		memset(g_Light, 0, lightsize);
 	}
 	printf("\n");
 }
