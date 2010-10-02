@@ -1,6 +1,6 @@
 /***
  * Tiny OO NBT parser for C++
- * v1.0, 09-2010 by Zahl (spieleplanet.eu)
+ * v1.0, 09-2010 by Zahl
  */
 #include <cstdio>
 #include <cstdlib>

@@ -200,27 +200,29 @@ static void loadChunk(const char *file)
 				memcpy(&BLOCKWEST(x + offsetx, 0, z + offsetz), &blockdata[(z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y], MAPSIZE_Y);
 			}
 			if (!(g_Nightmode || g_Skylight || g_Underground)) continue;
-			for (size_t y = 0; y < MAPSIZE_Y; ++y) { // Using this macro, the world gets rotated and flipped properly (I hope)
-				if (g_Underground && blockdata[y + (z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y] == TORCH) {
-					// In underground mode, the lightmap is also used, but the values are calculated manually, to only show
-					// caves the players have discovered yet. It's not perfect of course, but works ok.
-					for (int ty = int(y) - 9; ty < int(y) + 9; ++ty) { // The trick here is to only take into account
-						if (ty < 0) continue; // areas around torches.
-						if (ty >= int(MAPSIZE_Y/2)) break;
-						for (int tz = int(z) - 18; tz < int(z) + 18; ++tz) {
-							if (tz < 0) continue;
-							if (tz >= int(MAPSIZE_Z)) break;
-							for (int tx = int(x) - 18; tx < int(x) + 18; ++tx) {
-								if (tx < 0) continue;
-								if (tx >= int(MAPSIZE_X)) break;
-								if (g_Orientation == East) {
-									SETLIGHTEAST(tx + offsetx, ty, tz + offsetz) = 0xFF;
-								} else if (g_Orientation == North) {
-									SETLIGHTNORTH(tx + offsetx, ty, tz + offsetz) = 0xFF;
-								} else if (g_Orientation == South) {
-									SETLIGHTSOUTH(tx + offsetx, ty, tz + offsetz) = 0xFF;
-								} else {
-									SETLIGHTWEST(tx + offsetx, ty, tz + offsetz) = 0xFF;
+			for (size_t y = 0; y < MAPSIZE_Y; ++y) {
+				if (g_Underground) {
+					if (blockdata[y + (z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y] == TORCH) {
+						// In underground mode, the lightmap is also used, but the values are calculated manually, to only show
+						// caves the players have discovered yet. It's not perfect of course, but works ok.
+						for (int ty = int(y) - 9; ty < int(y) + 9; ++ty) { // The trick here is to only take into account
+							if (ty < 0) continue; // areas around torches.
+							if (ty >= int(MAPSIZE_Y/2)) break;
+							for (int tz = int(z) - 18; tz < int(z) + 18; ++tz) {
+								if (tz < 0) continue;
+								if (tz >= int(MAPSIZE_Z)) break;
+								for (int tx = int(x) - 18; tx < int(x) + 18; ++tx) {
+									if (tx < 0) continue;
+									if (tx >= int(MAPSIZE_X)) break;
+									if (g_Orientation == East) {
+										SETLIGHTEAST(tx + offsetx, ty, tz + offsetz) = 0xFF;
+									} else if (g_Orientation == North) {
+										SETLIGHTNORTH(tx + offsetx, ty, tz + offsetz) = 0xFF;
+									} else if (g_Orientation == South) {
+										SETLIGHTSOUTH(tx + offsetx, ty, tz + offsetz) = 0xFF;
+									} else {
+										SETLIGHTWEST(tx + offsetx, ty, tz + offsetz) = 0xFF;
+									}
 								}
 							}
 						}

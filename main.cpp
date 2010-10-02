@@ -1,6 +1,6 @@
 /***
  * mcmap - create isometric maps of your minecraft alpha world
- * v1.4, 09-2010 by Zahl (spieleplanet.eu)
+ * v1.4+, 09-2010 by Zahl
  */
 
 #define VERSION "1.4+"
@@ -333,7 +333,7 @@ void undergroundMode()
 		for (size_t z = 0; z < MAPSIZE_Z; ++z) {
 			size_t ground = 0;
 			size_t cave = 0;
-			for (size_t y = MAPSIZE_Y-1; y >= 0; --y) {
+			for (size_t y = MAPSIZE_Y-1; y < MAPSIZE_Y; --y) {
 				uint8_t *c = &BLOCKAT(x,y,z);
 				if (*c != AIR && cave > 0) {
 					if (*c == GRASS || *c == LEAVES || *c == SNOW || GETLIGHTAT(x,y,z) == 0) {
