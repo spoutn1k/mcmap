@@ -130,7 +130,7 @@ bool loadImagePart(FILE* fh, size_t startx, size_t starty, size_t width, size_t 
 		}
 		size_t fileLine = gBmpHeight - gBmpLocalY - gBmpLocalHeight;
 		for (size_t arrayLine = 0; arrayLine < gBmpLocalHeight; ++arrayLine) {
-			fseek(fh, (fileLine * gBmpLineWidth) + (gBmpLocalX * 3), SEEK_SET);
+			fseek(fh, (fileLine * gBmpLineWidth) + (gBmpLocalX * 3) + sizeof(BITMAP_INFOHEADER) + sizeof(BITMAP_FILEHEADER), SEEK_SET);
 			if (fread(gBitmap + (arrayLine * gBmpLocalLineWidth), 1, gBmpLocalLineWidth, fh) != gBmpLocalLineWidth) return false;
 			++fileLine;
 		}
@@ -142,7 +142,7 @@ bool saveImagePart(FILE* fh)
 {
 	size_t fileLine = gBmpHeight - gBmpLocalY - gBmpLocalHeight;
 	for (size_t arrayLine = 0; arrayLine < gBmpLocalHeight; ++arrayLine) {
-		fseek(fh, (fileLine * gBmpLineWidth) + (gBmpLocalX * 3), SEEK_SET);
+		fseek(fh, (fileLine * gBmpLineWidth) + (gBmpLocalX * 3) + sizeof(BITMAP_INFOHEADER) + sizeof(BITMAP_FILEHEADER), SEEK_SET);
 		if (fwrite(gBitmap + (arrayLine * gBmpLocalLineWidth), 1, gBmpLocalLineWidth, fh) != gBmpLocalLineWidth) return false;
 		++fileLine;
 	}

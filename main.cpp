@@ -288,7 +288,7 @@ int main(int argc, char** argv)
 			printf("Pass %d of %d...\n", int(currentAreaX + (currentAreaZ * splitX)), int(splitX * splitZ));
 			// This is some mess here because of the current way of rotating the map... needs a complete rethink
 			if (g_Orientation == North || g_Orientation == South) {
-				bitmapStartX = (((totalToZ - totalFromZ) * CHUNKSIZE_Z) * 2 + 3) // Center of image..
+				bitmapStartX = (((totalToZ - totalFromZ) * CHUNKSIZE_Z) * 2 + 5) // Center of image..
 						- ((S_TOZ - totalFromZ) * CHUNKSIZE_Z * 2) // increasing Z pos will move left in bitmap
 						+ ((S_FROMX - totalFromX) * CHUNKSIZE_X * 2); // increasing X pos will move right in bitmap
 			} else {
@@ -307,6 +307,8 @@ int main(int argc, char** argv)
 					printf("Error loading partial image to render to.\n");
 					return 1;
 				}
+			} else {
+				bitmapStartX -= 2;
 			}
 		}
 
@@ -359,7 +361,7 @@ int main(int argc, char** argv)
 		for (size_t x = 0; x < MAPSIZE_X; ++x) {
 			printProgress(x, MAPSIZE_X);
 			for (size_t z = 0; z < MAPSIZE_Z; ++z) {
-				const size_t startx = (MAPSIZE_Z - z) * 2 + x * 2 + (splitImage ? 0 : bitmapStartX);
+				const size_t startx = (MAPSIZE_Z - z) * 2 + x * 2 + (splitImage ? -2 : bitmapStartX);
 				size_t starty = MAPSIZE_Y * 2 + z + x + (splitImage ? 0 : bitmapStartY);
 				for (size_t y = 0; y < MAPSIZE_Y; ++y) {
 					uint8_t c = BLOCKAT(x,y,z);
