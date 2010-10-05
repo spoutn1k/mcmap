@@ -288,7 +288,7 @@ int main(int argc, char** argv)
 			printf("Pass %d of %d...\n", int(currentAreaX + (currentAreaZ * splitX)), int(splitX * splitZ));
 			// This is some mess here because of the current way of rotating the map... needs a complete rethink
 			if (g_Orientation == North || g_Orientation == South) {
-				bitmapStartX = (((totalToZ - totalFromZ) * CHUNKSIZE_Z) * 2 + 5) // Center of image..
+				bitmapStartX = (((totalToZ - totalFromZ) * CHUNKSIZE_Z) * 2 + 3) // Center of image..
 						- ((S_TOZ - totalFromZ) * CHUNKSIZE_Z * 2) // increasing Z pos will move left in bitmap
 						+ ((S_FROMX - totalFromX) * CHUNKSIZE_X * 2); // increasing X pos will move right in bitmap
 			} else {
@@ -299,16 +299,13 @@ int main(int argc, char** argv)
 			bitmapStartY = 5 + (S_FROMZ - totalFromZ) * CHUNKSIZE_Z + (S_FROMX - totalFromX) * CHUNKSIZE_X;
 			// if image is split up, prepare memory block for next part
 			if (splitImage) {
-				//const size_t startx = (MAPSIZE_Z - z) * 2 + 3 + x * 2;
-				//size_t starty = 5 + MAPSIZE_Y * 2 + z + x;
+				bitmapStartX += 2;
 				const size_t sizex = (S_TOX - S_FROMX) * CHUNKSIZE_X * 2 + (S_TOZ - S_FROMZ) * CHUNKSIZE_Z * 2;
 				const size_t sizey = MAPSIZE_Y * 2 + (S_TOX - S_FROMX) * CHUNKSIZE_X + (S_TOZ - S_FROMZ) * CHUNKSIZE_Z + 2;
 				if (!loadImagePart(fileHandle, bitmapStartX, bitmapStartY, sizex, sizey)) {
 					printf("Error loading partial image to render to.\n");
 					return 1;
 				}
-			} else {
-				bitmapStartX -= 2;
 			}
 		}
 
@@ -368,7 +365,7 @@ int main(int argc, char** argv)
 					if (c != AIR) { // If block is not air (colors[c][3] != 0)
 						//float col = float(y) * .78f - 91;
 						float brightnessAdjustment = (100.0f/(1.0f+exp(-(1.3f * float(y) / 16.0f)+6.0f))) - 91;
-						if (g_Nightmode || (g_Skylight && (!gBrightEdge || (z+1 != MAPSIZE_Z && x+1 != MAPSIZE_X) || (y+1 != MAPSIZE_Y && BLOCKAT(x,y+1,z) == AIR)))) {
+						if (g_Nightmode || (g_Skylight && ((z+1 != MAPSIZE_Z && x+1 != MAPSIZE_X) || (y+1 != MAPSIZE_Y && BLOCKAT(x,y+1,z) == AIR)))) {
 							int l = 0;
 							for (size_t i = 1; i < 10, l == 0; ++i) {
 								// Need to make this a loop to deal with half-steps, fences, flowers and other special blocks

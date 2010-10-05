@@ -280,7 +280,7 @@ size_t calcTerrainSize(int chunksX, int chunksZ)
 {
 	size_t size = size_t(chunksX) * CHUNKSIZE_X * size_t(chunksZ) * CHUNKSIZE_Z * MAPSIZE_Y;
 	if (g_Nightmode || g_Underground || g_Skylight) {
-		return size + size_t(chunksX) * CHUNKSIZE_X * size_t(chunksZ) * CHUNKSIZE_Z * (MAPSIZE_Y + 1) / 2;
+		return size + size_t(chunksX) * CHUNKSIZE_X * size_t(chunksZ) * CHUNKSIZE_Z * ((MAPSIZE_Y + 1) / 2);
 	}
 	return size;
 }
@@ -293,6 +293,8 @@ static bool isAlphaWorld(string path)
 
 static void allocateTerrain()
 {
+	if (g_Terrain != NULL) delete[] g_Terrain;
+	if (g_Light != NULL) delete[] g_Light;
 	const size_t terrainsize = MAPSIZE_Z * MAPSIZE_X * MAPSIZE_Y;
 	printf("Terrain takes up %.2fMiB", float(terrainsize / float(1024 * 1024)));
 	fflush(stdout);
@@ -302,7 +304,7 @@ static void allocateTerrain()
 		const size_t lightsize = MAPSIZE_Z * MAPSIZE_X * ((MAPSIZE_Y + 1) / 2);
 		printf(", lightmap %.2fMiB", float(lightsize / float(1024 * 1024)));
 		g_Light = new uint8_t[lightsize];
-		memset(g_Light, 0, lightsize);
+		memset(g_Light, 255, lightsize);
 	}
 	printf("\n");
 }
