@@ -59,7 +59,7 @@ private:
 public:
 	explicit NBT(const char* file, bool &success);
 	virtual ~NBT();
-	bool save();
+	//bool save();
 };
 
 #endif

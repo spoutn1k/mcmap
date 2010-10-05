@@ -1,3 +1,7 @@
+/**
+ * This file contains functions to create and draw to a bitmap image
+ */
+
 #include "draw.h"
 #include "helper.h"
 #include "colors.h"
@@ -29,10 +33,11 @@ typedef struct {
 	uint32_t ClrImportant;
 } BITMAP_INFOHEADER;
 
-#define PIXEL(x,y) (gBitmap[(x) * 3 + (gBmpHeight - ((y) + 1)) * gBmpLineWidth])
+#define PIXEL(x,y) (gBitmap[(x) * 3 + (gBmpLocalHeight - ((y) + 1)) * gBmpLocalLineWidth])
 
 namespace {
 	uint8_t *gBitmap = NULL;
+	size_t gBmpLocalLineWidth = 0, gBmpLocalWidth = 0, gBmpLocalHeight = 0, gBmpLocalSize = 0, gBmpLocalX = 0, gBmpLocalY = 0;
 	size_t gBmpLineWidth = 0, gBmpWidth = 0, gBmpHeight = 0, gBmpSize = 0;
 
 	inline void blend(uint8_t* c1, const uint8_t* c2);
@@ -47,7 +52,7 @@ namespace {
 	void setFence(const size_t &x, const size_t &y, const uint8_t *color);
 	void setStep(const size_t &x, const size_t &y, const uint8_t *color, const uint8_t *light, const uint8_t *dark);
 
-	void writeBitmapHeader24(FILE* fh, const int width, const int height)
+	bool writeBitmapHeader24(FILE* fh, const int width, const int height)
 	{
 		int datasize = (int(width * 3 + 3) & ~int(3)) * height;
 		BITMAP_FILEHEADER header;
@@ -64,40 +69,83 @@ namespace {
 		info.Width = width;
 		info.ImageByteCount = datasize;
 		info.Planes = 1;
-		fwrite(&header, 1, sizeof(header), fh);
-		fwrite(&info, 1, sizeof(info), fh);
+		return
+				(fwrite(&header, 1, sizeof(header), fh) == sizeof(header))
+				&& (fwrite(&info, 1, sizeof(info), fh) == sizeof(info));
 	}
 }
 
-size_t calcBitmapSize(size_t width, size_t height)
-{
-	return (size_t(width * 3 + 3) & ~size_t(3)) * height;
-}
-
-bool createBitmap(size_t width, size_t height)
+bool createBitmap(FILE* fh, size_t width, size_t height, bool splitUp)
 {
 	gBmpWidth = width;
 	gBmpHeight = height;
 	gBmpLineWidth = size_t(gBmpWidth * 3 + 3) & ~size_t(3); // The size in bytes of a line in a bitmap has to be a multiple of 4
 	gBmpSize = gBmpLineWidth * gBmpHeight;
-	gBitmap = new uint8_t[gBmpSize];
-	memset(gBitmap, 0, gBmpSize);
+	fseek(fh, 0, SEEK_SET);
+	if (!writeBitmapHeader24(fh, (int)width, (int)height)) return false;
+	if (splitUp) {
+		// Pre allocate disk space with zeroes
+		// Most OSes should automatically do that when seeking
+		// beyond the EOF, but just to be sure, do it manually
+		uint8_t *tmpdata = new uint8_t[gBmpLineWidth];
+		memset(tmpdata, 0, gBmpLineWidth);
+		for (size_t i = 0; i < gBmpHeight; ++i) {
+			if (fwrite(tmpdata, 1, gBmpLineWidth, fh) != gBmpLineWidth) return false;
+		}
+	} else {
+		gBitmap = new uint8_t[gBmpSize];
+		memset(gBitmap, 0, gBmpSize);
+		gBmpLocalHeight = gBmpHeight;
+		gBmpLocalLineWidth = gBmpLineWidth;
+		gBmpLocalWidth = gBmpWidth;
+	}
 	printf("Bitmap dimensions are %dx%d, 24bpp, %.2fMiB\n", gBmpWidth, gBmpHeight, float(gBmpSize / float(1024 * 1024)));
 	return true;
 }
 
-bool saveBitmap(char* filename)
+bool saveBitmap(FILE* fh)
 {
-	FILE *fh = fopen(filename, "wb");
-	if (fh == NULL) { // Could not open output file
-		printf("Error opening output bitmap\n");
-		return false;
+	return fwrite(gBitmap, 1, gBmpSize, fh) == gBmpSize;
+}
+
+bool loadImagePart(FILE* fh, size_t startx, size_t starty, size_t width, size_t height)
+{
+	gBmpLocalWidth = width;
+	gBmpLocalLineWidth = width * 3;
+	gBmpLocalHeight = height;
+	gBmpLocalX = startx;
+	gBmpLocalY = starty;
+	printf("* Loading area at %d, %d of size %d x %d\n", int(startx), int(starty), int(width), int(height));
+	if (gBitmap == NULL) {
+		// First call, no image created yet, just alloc mem
+		gBmpLocalSize = gBmpLocalLineWidth * gBmpHeight;
+		gBitmap = new uint8_t[gBmpLocalSize];
+		memset(gBitmap, 0, gBmpLocalSize);
+	} else {
+		// Need to load the area to render to from file, as it might contain some partially rendered stuff
+		if (gBmpLocalSize < gBmpLocalLineWidth * gBmpHeight) {
+			gBmpLocalSize = gBmpLocalLineWidth * gBmpHeight;
+			delete[] gBitmap;
+			gBitmap = new uint8_t[gBmpLocalSize];
+		}
+		size_t fileLine = gBmpHeight - gBmpLocalY - gBmpLocalHeight;
+		for (size_t arrayLine = 0; arrayLine < gBmpLocalHeight; ++arrayLine) {
+			fseek(fh, (fileLine * gBmpLineWidth) + (gBmpLocalX * 3), SEEK_SET);
+			if (fread(gBitmap + (arrayLine * gBmpLocalLineWidth), 1, gBmpLocalLineWidth, fh) != gBmpLocalLineWidth) return false;
+			++fileLine;
+		}
 	}
-	// write header
-	writeBitmapHeader24(fh, (int)gBmpWidth, (int)gBmpHeight);
-	// write data
-	fwrite(gBitmap, gBmpSize, 1, fh);
-	fclose(fh);
+	return true;
+}
+
+bool saveImagePart(FILE* fh)
+{
+	size_t fileLine = gBmpHeight - gBmpLocalY - gBmpLocalHeight;
+	for (size_t arrayLine = 0; arrayLine < gBmpLocalHeight; ++arrayLine) {
+		fseek(fh, (fileLine * gBmpLineWidth) + (gBmpLocalX * 3), SEEK_SET);
+		if (fwrite(gBitmap + (arrayLine * gBmpLocalLineWidth), 1, gBmpLocalLineWidth, fh) != gBmpLocalLineWidth) return false;
+		++fileLine;
+	}
 	return true;
 }
 

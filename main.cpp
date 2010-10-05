@@ -78,6 +78,7 @@ int main(int argc, char** argv)
 	bool wholeworld = false;
 	char *filename = NULL, *outfile = NULL, *colorfile = NULL;
 	size_t memlimit = 0;
+
 	// First, for the sake of backward compatibility, try to parse command line arguments the old way first
 	if (argc >= 7
 			&& isNumeric(argv[1]) && isNumeric(argv[2]) && isNumeric(argv[3]) && isNumeric(argv[4])) { // Specific area of world
@@ -177,6 +178,7 @@ int main(int argc, char** argv)
 		wholeworld = (S_FROMX == UNDEFINED || S_TOX == UNDEFINED);
 	}
 	// ########## end of command line parsing ##########
+
 	if (filename == NULL) {
 		printf("Error: No world given. Please add the path to your world to the command line.\n");
 		return 1;
@@ -189,37 +191,47 @@ int main(int argc, char** argv)
 		printf("What to doooo, yeah, what to doooo... (English: max height < 1 or X/Z-width <= 0) %d %d %d\n", MAPSIZE_Y, MAPSIZE_X, MAPSIZE_Z);
 		return 1;
 	}
-	if (MAPSIZE_Y > 128) MAPSIZE_Y = 128;
-	if (g_Orientation == North || g_Orientation == South) {
-		MAPSIZE_Z = (S_TOZ - S_FROMZ) * CHUNKSIZE_Z;
-		MAPSIZE_X = (S_TOX - S_FROMX) * CHUNKSIZE_X;
-	} else {
-		MAPSIZE_X = (S_TOZ - S_FROMZ) * CHUNKSIZE_Z;
-		MAPSIZE_Z = (S_TOX - S_FROMX) * CHUNKSIZE_X;
+	if (MAPSIZE_Y > CHUNKSIZE_Y) MAPSIZE_Y = CHUNKSIZE_Y;
+	// Whole area to be rendered, in chunks
+	// If -mem is omitted or high enough, this won't be needed
+	int totalFromX = S_FROMX, totalFromZ = S_FROMZ, totalToX = S_TOX, totalToZ = S_TOZ;
+	// Don't allow ridiculously small values for big maps
+	if (memlimit && memlimit < 200000000 && memlimit < MAPSIZE_X * MAPSIZE_Z * 150000) {
+		printf("Need at least %d MiB of RAM to render a map of that size.\n", int(float(MAPSIZE_X) * MAPSIZE_Z * .15f + 1));
+		return 1;
 	}
+
 	// Mem check
-	size_t bitmapX = (MAPSIZE_Z + MAPSIZE_X) * 2 + 10;
-	size_t bitmapY = (MAPSIZE_Z + MAPSIZE_X + MAPSIZE_Y * 2) + 10;
-	if (memlimit && memlimit < calcBitmapSize(bitmapX, bitmapY) + calcTerrainSize()) {
-		int amount = int((calcBitmapSize(bitmapX, bitmapY) + calcTerrainSize()) / (1024 * 1024));
-		printf("Aborting because rendering would consume about %d MiB of RAM.\n"
-				"Your world goes from chunk %d %d to %d %d, so you might use -from and -to for limiting the area to be rendered.\n"
-				"Call %s without any arguments to get more help.\n",
-				amount, S_FROMX, S_FROMZ, S_TOX, S_TOZ, argv[0]);
-		return 1;
-	}
-	// Now that we know we're safe memory-wise, just allocate and load everything
-	createBitmap(bitmapX, bitmapY);
-	// Load world or part of world
-	if (wholeworld && !loadEntireTerrain()) {
-		printf("Error loading terrain from '%s'\n", filename);
-		return 1;
-	} else if (!wholeworld) {
-		if (!loadTerrain(filename)) {
-			printf("Error loading terrain from '%s'\n", filename);
-			return 1;
+	size_t bitmapX, bitmapY;
+	size_t bitmapBytes = calcBitmapSize(S_TOX - S_FROMX, S_TOZ - S_FROMZ, MAPSIZE_Y, bitmapX, bitmapY);
+	bool splitImage = false;
+	int splitX = 0;
+	int splitZ = 0;
+	if (memlimit && memlimit < bitmapBytes + calcTerrainSize(S_TOX - S_FROMX, S_TOZ - S_FROMZ)) {
+		// If we'd need more mem than allowed, we have to render groups of chunks...
+		if (memlimit < bitmapBytes * 2) {
+			// ...or even use disk caching
+			splitImage = true;
+		}
+		// Split up map more and more, until the mem requirements are satisfied
+		for (splitX = 1, splitZ = 2;;) {
+			int subAreaX = ((totalToX - totalFromX) + (splitX - 1)) / splitX;
+			int subAreaZ = ((totalToZ - totalFromZ) + (splitZ - 1)) / splitZ;
+			size_t subBitmapX, subBitmapY;
+			if (splitImage && calcBitmapSize(subAreaX, subAreaZ, MAPSIZE_Y, subBitmapX, subBitmapY, true) + calcTerrainSize(subAreaX, subAreaZ) <= memlimit) {
+				break; // Found a suitable partitioning
+			} else if (!splitImage && bitmapBytes + calcTerrainSize(subAreaX, subAreaZ) <= memlimit) {
+				break; // Found a suitable partitioning
+			}
+			//
+			if (splitZ > splitX) {
+				++splitX;
+			} else {
+				++splitZ;
+			}
 		}
 	}
+
 	srand(1337);
 	// Load colormap from file
 	loadColors(); // first load internal list, overwrite specific colors from file later if desired
@@ -232,78 +244,168 @@ int main(int argc, char** argv)
 		printf("Error loading colors from %s: File not found.\n", colorfile);
 		return 1;
 	}
-	// If underground mode, remove blocks that don't seem to belong to caves
-	if (g_Underground) {
-		undergroundMode();
+
+	// open output file
+	FILE *fileHandle = fopen((outfile == NULL ? "output.bmp" : outfile), (splitImage ? "w+b" : "wb"));
+
+	if (fileHandle == NULL && outfile == NULL) {
+		printf("Error opening 'output.bmp' for writing.\n");
+		return 1;
+	} else if (fileHandle == NULL) {
+		printf("Error opening '%s' for writing.\n", outfile);
+		return 1;
 	}
-	// Remove invisible blocks from map (covered by other blocks from isometric pov)
-	// Do so by "raytracing" every block from front to back.. somehow
-	printf("Optimizing terrain...\n");
-	size_t removed = 0;
-	printProgress(0, 10);
-	for (size_t x = 1; x < MAPSIZE_X; ++x) {
-		for (size_t z = 1; z < MAPSIZE_Z; ++z) {
-			blockCulling(x, MIN(MAPSIZE_Y, 100), z, removed); // Some cheating here, as in most cases there is little to nothing up that high, and the few things that are won't slow down rendering too much
-		}
-		for (size_t y = MIN(MAPSIZE_Y, 100) - 1; y > 0; --y) {
-			blockCulling(x, y, MAPSIZE_Z-1, removed);
-		}
-		printProgress(x, MAPSIZE_X + MAPSIZE_Z);
-	}
-	for (size_t z = 1; z < MAPSIZE_Z-1; ++z) {
-		for (size_t y = MIN(MAPSIZE_Y, 100) - 1; y > 0; --y) {
-			blockCulling(MAPSIZE_X-1, y, z, removed);
-		}
-		printProgress(z + MAPSIZE_X, MAPSIZE_X + MAPSIZE_Z);
-	}
-	printProgress(10, 10);
-	printf("Removed %lu blocks\n", (unsigned long)removed);
-	// Finally, render terrain to file
-	printf("Creating bitmap...\n");
-	for (size_t x = 0; x < MAPSIZE_X; ++x) {
-		printProgress(x, MAPSIZE_X);
-		for (size_t z = 0; z < MAPSIZE_Z; ++z) {
-			const size_t startx = (MAPSIZE_Z - z) * 2 + 3 + x * 2;
-			size_t starty = 5 + MAPSIZE_Y * 2 + z + x;
-			for (size_t y = 0; y < MAPSIZE_Y; ++y) {
-				uint8_t c = BLOCKAT(x,y,z);
-				if (c != AIR) { // If block is not air (colors[c][3] != 0)
-					float col = float(y) * .78f - 91;
-					if (g_Nightmode || (g_Skylight && (!gBrightEdge || (z+1 != MAPSIZE_Z && x+1 != MAPSIZE_X) || (y+1 != MAPSIZE_Y && BLOCKAT(x,y+1,z) == AIR)))) {
-						int l = 0;
-						if (l == 0 && y+1 < MAPSIZE_Y) l = GETLIGHTAT(x, y+1, z);
-						if (l == 0 && x+1 < MAPSIZE_X) l = GETLIGHTAT(x+1, y, z);
-						if (l == 0 && z+1 < MAPSIZE_Z) l = GETLIGHTAT(x, y, z+1);
-						if (!g_Skylight) {
-							col -= (125 - l * 9);
-						} else {
-							col -= (210 - l * 14);
-						}
-					}
-					// Edge detection:
-					if ((x && y && z && y+1 < MAPSIZE_Y) // In bounds?
-						&& BLOCKAT(x,y+1,z) == AIR // Only if block above is air
-						&& (BLOCKAT(x-1,y-1,z-1) == c || BLOCKAT(x-1,y-1,z-1) == AIR) // block behind (from pov) this one is same type or air
-						&& (BLOCKAT(x-1,y,z) == AIR || BLOCKAT(x,y,z-1) == AIR)) { // block TL/TR from this one is air = edge
-							col += 12;
-					}
-					setPixel(startx, starty, c, col);
+
+	createBitmap(fileHandle, bitmapX, bitmapY, splitImage);
+
+	// Now here's a loop rendering all the required parts of the image.
+	// All the vars previously used to define bounds will be set on each loop,
+	// to create something like a virtual window inside the map.
+	int currentAreaX = 0;
+	int currentAreaZ = 0;
+	for (;;) {
+
+		size_t bitmapStartX = 3, bitmapStartY = 5;
+		if (splitX) {
+			// Tile based rendering going on
+			const int subAreaX = ((totalToX - totalFromX) + (splitX - 1)) / splitX;
+			const int subAreaZ = ((totalToZ - totalFromZ) + (splitZ - 1)) / splitZ;
+			// Adjust values for current frame
+			S_FROMX = totalFromX + subAreaX * currentAreaX;
+			S_FROMZ = totalFromZ + subAreaZ * currentAreaZ;
+			S_TOX = S_FROMX + subAreaX;
+			S_TOZ = S_FROMZ + subAreaZ;
+			if (S_TOX > totalToX) S_TOX = totalToX;
+			if (S_TOZ > totalToZ) S_TOZ = totalToZ;
+			// increase and stop if we're done
+			++currentAreaX;
+			if (currentAreaX >= splitX) {
+				currentAreaX = 0;
+				++currentAreaZ;
+			} else if (currentAreaZ >= splitZ) {
+				break; // We're all done
+			}
+			printf("Pass %d of %d...\n", int(currentAreaX + (currentAreaZ * splitX)), int(splitX * splitZ));
+			// This is some mess here because of the current way of rotating the map... needs a complete rethink
+			if (g_Orientation == North || g_Orientation == South) {
+				bitmapStartX = (((totalToZ - totalFromZ) * CHUNKSIZE_Z) * 2 + 3) // Center of image..
+						- ((S_TOZ - totalFromZ) * CHUNKSIZE_Z * 2) // increasing Z pos will move left in bitmap
+						+ ((S_FROMX - totalFromX) * CHUNKSIZE_X * 2); // increasing X pos will move right in bitmap
+			} else {
+				bitmapStartX = (((totalToZ - totalFromZ) * CHUNKSIZE_Z + (totalToX - totalFromX) * CHUNKSIZE_X) + 3) // Center of image..
+						- ((totalFromX - S_TOX) * CHUNKSIZE_X * 2) // increasing Z pos will move left in bitmap
+						+ ((totalFromZ - S_FROMZ) * CHUNKSIZE_Z * 2); // increasing X pos will move right in bitmap
+			}
+			bitmapStartY = 5 + (S_FROMZ - totalFromZ) * CHUNKSIZE_Z + (S_FROMX - totalFromX) * CHUNKSIZE_X;
+			// if image is split up, prepare memory block for next part
+			if (splitImage) {
+				//const size_t startx = (MAPSIZE_Z - z) * 2 + 3 + x * 2;
+				//size_t starty = 5 + MAPSIZE_Y * 2 + z + x;
+				const size_t sizex = (S_TOX - S_FROMX) * CHUNKSIZE_X * 2 + (S_TOZ - S_FROMZ) * CHUNKSIZE_Z * 2;
+				const size_t sizey = MAPSIZE_Y * 2 + (S_TOX - S_FROMX) * CHUNKSIZE_X + (S_TOZ - S_FROMZ) * CHUNKSIZE_Z + 2;
+				if (!loadImagePart(fileHandle, bitmapStartX, bitmapStartY, sizex, sizey)) {
+					printf("Error loading partial image to render to.\n");
+					return 1;
 				}
-				starty -= 2;
 			}
 		}
+
+		if (g_Orientation == North || g_Orientation == South) {
+			MAPSIZE_Z = (S_TOZ - S_FROMZ) * CHUNKSIZE_Z;
+			MAPSIZE_X = (S_TOX - S_FROMX) * CHUNKSIZE_X;
+		} else {
+			MAPSIZE_X = (S_TOZ - S_FROMZ) * CHUNKSIZE_Z;
+			MAPSIZE_Z = (S_TOX - S_FROMX) * CHUNKSIZE_X;
+		}
+
+		// Load world or part of world
+		if (splitX == 0 && wholeworld && !loadEntireTerrain()) {
+			printf("Error loading terrain from '%s'\n", filename);
+			return 1;
+		} else if (splitX != 0 || !wholeworld) {
+			if (!loadTerrain(filename)) {
+				printf("Error loading terrain from '%s'\n", filename);
+				return 1;
+			}
+		}
+		// If underground mode, remove blocks that don't seem to belong to caves
+		if (g_Underground) {
+			undergroundMode();
+		}
+		// Remove invisible blocks from map (covered by other blocks from isometric pov)
+		// Do so by "raytracing" every block from front to back.. somehow
+		printf("Optimizing terrain...\n");
+		size_t removed = 0;
+		printProgress(0, 10);
+		for (size_t x = 1; x < MAPSIZE_X; ++x) {
+			for (size_t z = 1; z < MAPSIZE_Z; ++z) {
+				blockCulling(x, MIN(MAPSIZE_Y, 100), z, removed); // Some cheating here, as in most cases there is little to nothing up that high, and the few things that are won't slow down rendering too much
+			}
+			for (size_t y = MIN(MAPSIZE_Y, 100) - 1; y > 0; --y) {
+				blockCulling(x, y, MAPSIZE_Z-1, removed);
+			}
+			printProgress(x, MAPSIZE_X + MAPSIZE_Z);
+		}
+		for (size_t z = 1; z < MAPSIZE_Z-1; ++z) {
+			for (size_t y = MIN(MAPSIZE_Y, 100) - 1; y > 0; --y) {
+				blockCulling(MAPSIZE_X-1, y, z, removed);
+			}
+			printProgress(z + MAPSIZE_X, MAPSIZE_X + MAPSIZE_Z);
+		}
+		printProgress(10, 10);
+		printf("Removed %lu blocks\n", (unsigned long)removed);
+		// Finally, render terrain to file
+		printf("Creating bitmap...\n");
+		for (size_t x = 0; x < MAPSIZE_X; ++x) {
+			printProgress(x, MAPSIZE_X);
+			for (size_t z = 0; z < MAPSIZE_Z; ++z) {
+				const size_t startx = (MAPSIZE_Z - z) * 2 + x * 2 + (splitImage ? 0 : bitmapStartX);
+				size_t starty = MAPSIZE_Y * 2 + z + x + (splitImage ? 0 : bitmapStartY);
+				for (size_t y = 0; y < MAPSIZE_Y; ++y) {
+					uint8_t c = BLOCKAT(x,y,z);
+					if (c != AIR) { // If block is not air (colors[c][3] != 0)
+						//float col = float(y) * .78f - 91;
+						float brightnessAdjustment = (100.0f/(1.0f+exp(-(1.3f * float(y) / 16.0f)+6.0f))) - 91;
+						if (g_Nightmode || (g_Skylight && (!gBrightEdge || (z+1 != MAPSIZE_Z && x+1 != MAPSIZE_X) || (y+1 != MAPSIZE_Y && BLOCKAT(x,y+1,z) == AIR)))) {
+							int l = 0;
+							for (size_t i = 1; i < 10, l == 0; ++i) {
+								// Need to make this a loop to deal with half-steps, fences, flowers and other special blocks
+								if (l == 0 && y+i < MAPSIZE_Y) l = GETLIGHTAT(x, y+i, z);
+								if (l == 0 && x+i < MAPSIZE_X) l = GETLIGHTAT(x+i, y, z);
+								if (l == 0 && z+i < MAPSIZE_Z) l = GETLIGHTAT(x, y, z+i);
+							}
+							if (!g_Skylight) {
+								brightnessAdjustment -= (125 - l * 9);
+							} else {
+								brightnessAdjustment -= (210 - l * 14);
+							}
+						}
+						// Edge detection:
+						if ((x && y && z && y+1 < MAPSIZE_Y) // In bounds?
+							&& BLOCKAT(x,y+1,z) == AIR // Only if block above is air
+							&& (BLOCKAT(x-1,y-1,z-1) == c || BLOCKAT(x-1,y-1,z-1) == AIR) // block behind (from pov) this one is same type or air
+							&& (BLOCKAT(x-1,y,z) == AIR || BLOCKAT(x,y,z-1) == AIR)) { // block TL/TR from this one is air = edge
+								brightnessAdjustment += 12;
+						}
+						setPixel(startx, starty, c, brightnessAdjustment);
+					}
+					starty -= 2;
+				}
+			}
+		}
+		printProgress(10, 10);
+		if (splitImage && !saveImagePart(fileHandle)) {
+			printf("Error saving partially rendered image.\n");
+			return 1;
+		}
+		if (splitX == 0) break;
 	}
-	printProgress(10, 10);
-	printf("Writing to file...\n");
-	fflush(stdout);
-	// write file
-	if (outfile == NULL && !saveBitmap("output.bmp")) {
-		printf("Error writing image to output.bmp.\n");
-		return 1;
-	} else if (outfile != NULL && !saveBitmap(outfile)) {
-		printf("Error writing image to %s\n", outfile);
-		return 1;
+	if (!splitImage) {
+		printf("Writing to file...\n");
+		saveBitmap(fileHandle);
 	}
+	fclose(fileHandle);
+
 	printf("Job complete.\n");
 	return 0;
 }

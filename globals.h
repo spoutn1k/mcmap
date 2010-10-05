@@ -13,8 +13,12 @@ enum Orientation {
 	West
 };
 
+// see globals.cpp
+
 extern int S_FROMX, S_FROMZ, S_TOX, S_TOZ;
 extern size_t MAPSIZE_Y, MAPSIZE_Z, MAPSIZE_X;
+
+extern int G_FROMX, G_FROMZ, G_TOX, G_TOZ;
 
 extern Orientation g_Orientation;
 extern bool g_Nightmode;

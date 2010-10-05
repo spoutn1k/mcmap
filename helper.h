@@ -45,5 +45,6 @@ uint8_t clamp(int32_t val);
 void printProgress(const size_t current, const size_t max);
 bool fileExists(const char* strFilename);
 bool isNumeric(char* str);
+size_t calcBitmapSize(int mapChunksX, int mapChunksZ, size_t mapHeight, size_t &pixelsX, size_t &pixelsY, bool tight = false);
 
 #endif

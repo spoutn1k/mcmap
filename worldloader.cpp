@@ -159,16 +159,29 @@ static void loadChunk(const char *file)
 {
 	bool ok = false; // Get path name for all required chunks
 	NBT chunk(file, ok);
-	if (!ok) return; // chunk does not exist
+	if (!ok) {
+#ifdef _DEBUG
+		printf("Error opening chunk at %s\n", file);
+#endif
+		return; // chunk does not exist
+	}
 	NBT_Tag *level = NULL;
 	ok = chunk.getCompound("Level", level);
-	if (!ok) return;
+	if (!ok) {
+#ifdef _DEBUG
+		printf("Error getting Level for %s\n", file);
+#endif
+		return;
+	}
 	int32_t chunkX, chunkZ;
 	ok = level->getInt("xPos", chunkX);
 	ok = ok && level->getInt("zPos", chunkZ);
 	if (!ok) return;
 	// Check if chunk is in desired bounds (not a chunk where the filename tells a different position)
 	if (chunkX < S_FROMX || chunkX >= S_TOX || chunkZ < S_FROMZ || chunkZ >= S_TOZ) {
+#ifdef _DEBUG
+		printf("Chunk %s is out of bounds. %d %d\n", file, chunkX, chunkZ);
+#endif
 		return; // Nope, its not...
 	}
 	uint8_t *blockdata, *lightdata, *skydata;
@@ -263,13 +276,13 @@ static void loadChunk(const char *file)
 	}
 }
 
-size_t calcTerrainSize()
+size_t calcTerrainSize(int chunksX, int chunksZ)
 {
+	size_t size = size_t(chunksX) * CHUNKSIZE_X * size_t(chunksZ) * CHUNKSIZE_Z * MAPSIZE_Y;
 	if (g_Nightmode || g_Underground || g_Skylight) {
-		return (MAPSIZE_Z * MAPSIZE_X * MAPSIZE_Y)
-				+ (MAPSIZE_Z * MAPSIZE_X * MAPSIZE_Y) / 2;
+		return size + size_t(chunksX) * CHUNKSIZE_X * size_t(chunksZ) * CHUNKSIZE_Z * (MAPSIZE_Y + 1) / 2;
 	}
-	return MAPSIZE_Z * MAPSIZE_X * MAPSIZE_Y;
+	return size;
 }
 
 static bool isAlphaWorld(string path)
@@ -288,7 +301,7 @@ static void allocateTerrain()
 	if (g_Nightmode || g_Underground || g_Skylight) {
 		const size_t lightsize = MAPSIZE_Z * MAPSIZE_X * ((MAPSIZE_Y + 1) / 2);
 		printf(", lightmap %.2fMiB", float(lightsize / float(1024 * 1024)));
-		g_Light = new uint8_t[lightsize]; // terrainsize should never be an odd number, but just to be safe, add 1 byte
+		g_Light = new uint8_t[lightsize];
 		memset(g_Light, 0, lightsize);
 	}
 	printf("\n");

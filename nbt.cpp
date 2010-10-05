@@ -117,6 +117,7 @@ NBT::~NBT()
 	}
 }
 
+/*
 bool NBT::save()
 {	// While loading nbt files while the server is running works in most
 	// cases, it is strongly advised that you only save map chunks while
@@ -147,6 +148,7 @@ bool NBT::save()
 	printf("Saved %s\n", _filename);
 	return true;
 }
+*/
 
 NBT_Tag::NBT_Tag()
 {
