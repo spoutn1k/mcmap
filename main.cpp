@@ -1,9 +1,9 @@
 /***
  * mcmap - create isometric maps of your minecraft alpha world
- * v1.4+, 09-2010 by Zahl
+ * v1.5+, 09-2010 by Zahl
  */
 
-#define VERSION "1.4+"
+#define VERSION "1.5+"
 
 #include "helper.h"
 #include "draw.h"
@@ -301,7 +301,7 @@ int main(int argc, char** argv)
 		printProgress(0, 10);
 		for (size_t x = CHUNKSIZE_X+1; x < g_MapsizeX - CHUNKSIZE_X; ++x) {
 			for (size_t z = CHUNKSIZE_Z+1; z < g_MapsizeZ - CHUNKSIZE_Z; ++z) {
-				blockCulling(x, MIN(g_MapsizeY, 100), z, removed); // Some cheating here, as in most cases there is little to nothing up that high, and the few things that are won't slow down rendering too much
+				blockCulling(x, MIN(g_MapsizeY, 100)-1, z, removed); // Some cheating here, as in most cases there is little to nothing up that high, and the few things that are won't slow down rendering too much
 			}
 			for (size_t y = MIN(g_MapsizeY, 100) - 1; y > 0; --y) {
 				blockCulling(x, y, g_MapsizeZ-1-CHUNKSIZE_Z, removed);
@@ -328,15 +328,15 @@ int main(int argc, char** argv)
 					uint8_t c = BLOCKAT(x,y,z);
 					if (c != AIR) { // If block is not air (colors[c][3] != 0)
 						//float col = float(y) * .78f - 91;
-						float brightnessAdjustment = (100.0f/(1.0f+exp(-(1.3f * float(y) / 16.0f)+6.0f))) - 91; // thx DopeGhoti
+						float brightnessAdjustment = (100.0f/(1.0f+exp(-(1.3f * float(y) / 16.0f)+6.0f))) - 91; // thx Donkey Kong
 						// we use light if...
 						if (g_Nightmode // nightmode is active, or
 								|| (g_Skylight // skylight is used and
-										&& (!BLOCK_AT_MAPEDGE(x, z) || (y+1 != g_MapsizeY && colors[BLOCKAT(x,y+1,z)][ALPHA] != 255)) // block is not edge of map (or if it is, has non-opaque block above)
+										&& (!BLOCK_AT_MAPEDGE(x, z)) // block is not edge of map (or if it is, has non-opaque block above)
 												)) {
 							int l = 0; // find out how much light hits that block
 							bool blocked[3] = {false, false, false}; // if light is blocked in one direction
-							for (size_t i = 1; i < 6 && l == 0; ++i) {
+							for (size_t i = 1; i < 12 && l == 0; ++i) {
 								// Need to make this a loop to deal with half-steps, fences, flowers and other special blocks
 								if (!blocked[2] && l == 0 && y+i < g_MapsizeY) l = GETLIGHTAT(x, y+i, z);
 								if (!blocked[0] && l == 0) l = GETLIGHTAT(x+i, y, z);
@@ -371,14 +371,8 @@ int main(int argc, char** argv)
 			printf("Error saving partially rendered image.\n");
 			return 1;
 		}
+		// No incremental rendering at all, so quit the loop
 		if (numSplitsX == 0) break;
-		/*
-		static int iii = 0;
-		if (++iii == 5) {
-			saveBitmap(fileHandle);
-			fclose(fileHandle);
-		}
-		*/
 	}
 	if (!splitImage) {
 		printf("Writing to file...\n");
