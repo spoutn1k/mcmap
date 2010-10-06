@@ -179,16 +179,16 @@ int main(int argc, char** argv)
 	int numSplitsX = 0;
 	int numSplitsZ = 0;
 	if (memlimit && memlimit < bitmapBytes + calcTerrainSize(g_ToChunkX - g_FromChunkX, g_ToChunkZ - g_FromChunkZ)) {
-		// Warn about using incremental rendering if user didn't set limit manually
-		if (!memlimitSet) {
-			printf(" ***** PLEASE NOTE *****\n"
-					"mcmap is using incremental rendering as it has a default memory limit\n"
-					"of 1800MiB. If you want to use more memory to render (=faster) use\n"
-					"the -mem switch followed by the amount of memory in MiB to use.\n"
-					"Start mcmap without any arguments to get more help.\n");
-		}
 		// If we'd need more mem than allowed, we have to render groups of chunks...
 		if (memlimit < bitmapBytes * 2) {
+			// Warn about using incremental rendering if user didn't set limit manually
+			if (!memlimitSet) {
+				printf(" ***** PLEASE NOTE *****\n"
+						"mcmap is using disk cached rendering as it has a default memory limit\n"
+						"of 1800MiB. If you want to use more memory to render (=faster) use\n"
+						"the -mem switch followed by the amount of memory in MiB to use.\n"
+						"Start mcmap without any arguments to get more help.\n");
+			}
 			// ...or even use disk caching
 			splitImage = true;
 		}
@@ -519,10 +519,9 @@ void printHelp(char* binary)
 			"  -noise VAL    adds some noise to certain blocks, reasonable values are 0-20\n"
 			"  -height VAL   maximum height at which blocks will be rendered (1-128)\n"
 			"  -file NAME    sets the output filename to 'NAME'; default is output.bmp\n"
-			"  -mem VAL      if set, rendering will not happen if it would need more\n"
-			"                than VAL MiB of RAM. You can use that to prevent mcmap from\n"
-			"                trying to use more memory than you have. Always leave some\n"
-			"                headroom for the OS, e.g. if you have 4GiB RAM, use -mem 3100\n"
+			"  -mem VAL      sets the amount of memory used for rendering. mcmap will use\n"
+			"                incremental rendering or disk caching to stick to this limit.\n"
+			"                default is 1800\n"
 			"  -colors NAME  loads user defined colors from file 'NAME'\n"
 			"  -dumpcolors   creates a file which contains the default colors being used\n"
 			"                for rendering. Can be used to modify them and then use -colors\n"
