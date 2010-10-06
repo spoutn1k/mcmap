@@ -7,19 +7,19 @@
 #define CHUNKSIZE_Y 128
 // Some macros for easier array access
 // First: Block array
-#define BLOCKAT(x,y,z) g_Terrain[(y) + ((z) + ((x) * MAPSIZE_Z)) * MAPSIZE_Y]
-#define BLOCKEAST(x,y,z) g_Terrain[(y) + ((MAPSIZE_Z - ((x) + 1)) + ((z) * MAPSIZE_Z)) * MAPSIZE_Y]
-#define BLOCKWEST(x,y,z) g_Terrain[(y) + ((x) + ((MAPSIZE_X - ((z) + 1)) * MAPSIZE_Z)) * MAPSIZE_Y]
-#define BLOCKNORTH(x,y,z) g_Terrain[(y) + ((z) + ((x) * MAPSIZE_Z)) * MAPSIZE_Y]
-#define BLOCKSOUTH(x,y,z) g_Terrain[(y) + ((MAPSIZE_Z - ((z) + 1)) + ((MAPSIZE_X - ((x) + 1)) * MAPSIZE_Z)) * MAPSIZE_Y]
-//#define BLOCKAT(x,y,z) g_Terrain[(x) + ((z) + ((y) * MAPSIZE_Z)) * MAPSIZE_X]
-//#define BLOCKEAST(x,y,z) g_Terrain[(z) + ((MAPSIZE_Z - ((x) + 1)) + ((y) * MAPSIZE_Z)) * MAPSIZE_X]
+#define BLOCKAT(x,y,z) g_Terrain[(y) + ((z) + ((x) * g_MapsizeZ)) * g_MapsizeY]
+#define BLOCKEAST(x,y,z) g_Terrain[(y) + ((g_MapsizeZ - ((x) + 1)) + ((z) * g_MapsizeZ)) * g_MapsizeY]
+#define BLOCKWEST(x,y,z) g_Terrain[(y) + ((x) + ((g_MapsizeX - ((z) + 1)) * g_MapsizeZ)) * g_MapsizeY]
+#define BLOCKNORTH(x,y,z) g_Terrain[(y) + ((z) + ((x) * g_MapsizeZ)) * g_MapsizeY]
+#define BLOCKSOUTH(x,y,z) g_Terrain[(y) + ((g_MapsizeZ - ((z) + 1)) + ((g_MapsizeX - ((x) + 1)) * g_MapsizeZ)) * g_MapsizeY]
+//#define BLOCKAT(x,y,z) g_Terrain[(x) + ((z) + ((y) * g_MapsizeZ)) * g_MapsizeX]
+//#define BLOCKEAST(x,y,z) g_Terrain[(z) + ((g_MapsizeZ - ((x) + 1)) + ((y) * g_MapsizeZ)) * g_MapsizeX]
 // Same for lightmap
-#define GETLIGHTAT(x,y,z) ((g_Light[((y) / 2) + ((z) + ((x) * MAPSIZE_Z)) * ((MAPSIZE_Y + 1) / 2)] >> (((y) % 2) * 4)) & 0xF)
-#define SETLIGHTEAST(x,y,z) g_Light[((y) / 2) + ((MAPSIZE_Z - ((x) + 1)) + ((z) * MAPSIZE_Z)) * ((MAPSIZE_Y + 1) / 2)]
-#define SETLIGHTWEST(x,y,z) g_Light[((y) / 2) + ((x) + ((MAPSIZE_X - ((z) + 1)) * MAPSIZE_Z)) * ((MAPSIZE_Y + 1) / 2)]
-#define SETLIGHTNORTH(x,y,z) g_Light[((y) / 2) + ((z) + ((x) * MAPSIZE_Z)) * ((MAPSIZE_Y + 1) / 2)]
-#define SETLIGHTSOUTH(x,y,z) g_Light[((y) / 2) + ((MAPSIZE_Z - ((z) + 1)) + ((MAPSIZE_X - ((x) + 1)) * MAPSIZE_Z)) * ((MAPSIZE_Y + 1) / 2)]
+#define GETLIGHTAT(x,y,z) ((g_Light[((y) / 2) + ((z) + ((x) * g_MapsizeZ)) * ((g_MapsizeY + 1) / 2)] >> (((y) % 2) * 4)) & 0xF)
+#define SETLIGHTEAST(x,y,z) g_Light[((y) / 2) + ((g_MapsizeZ - ((x) + 1)) + ((z) * g_MapsizeZ)) * ((g_MapsizeY + 1) / 2)]
+#define SETLIGHTWEST(x,y,z) g_Light[((y) / 2) + ((x) + ((g_MapsizeX - ((z) + 1)) * g_MapsizeZ)) * ((g_MapsizeY + 1) / 2)]
+#define SETLIGHTNORTH(x,y,z) g_Light[((y) / 2) + ((z) + ((x) * g_MapsizeZ)) * ((g_MapsizeY + 1) / 2)]
+#define SETLIGHTSOUTH(x,y,z) g_Light[((y) / 2) + ((g_MapsizeZ - ((z) + 1)) + ((g_MapsizeX - ((x) + 1)) * g_MapsizeZ)) * ((g_MapsizeY + 1) / 2)]
 
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
 #define MIN(a,b) ((a) < (b) ? (a) : (b))

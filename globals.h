@@ -15,8 +15,8 @@ enum Orientation {
 
 // see globals.cpp
 
-extern int S_FROMX, S_FROMZ, S_TOX, S_TOZ;
-extern size_t MAPSIZE_Y, MAPSIZE_Z, MAPSIZE_X;
+extern int g_FromChunkX, g_FromChunkZ, g_ToChunkX, g_ToChunkZ;
+extern size_t g_MapsizeY, g_MapsizeZ, g_MapsizeX;
 
 extern int G_FROMX, G_FROMZ, G_TOX, G_TOZ;
 

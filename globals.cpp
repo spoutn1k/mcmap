@@ -1,8 +1,8 @@
 #include "globals.h"
 
 // Current window of world being rendered
-int S_FROMX = UNDEFINED, S_FROMZ = UNDEFINED, S_TOX = UNDEFINED, S_TOZ = UNDEFINED;
-size_t MAPSIZE_Z = 0, MAPSIZE_Y = 128, MAPSIZE_X = 0;
+int g_FromChunkX = UNDEFINED, g_FromChunkZ = UNDEFINED, g_ToChunkX = UNDEFINED, g_ToChunkZ = UNDEFINED;
+size_t g_MapsizeZ = 0, g_MapsizeY = 128, g_MapsizeX = 0;
 
 Orientation g_Orientation = East;
 bool g_Nightmode = false;

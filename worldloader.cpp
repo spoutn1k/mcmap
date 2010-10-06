@@ -12,6 +12,7 @@
 using std::string;
 typedef std::list<char*> filelist;
 
+static size_t lightsize;
 
 static filelist chunks;
 static void loadChunk(const char *file);
@@ -45,8 +46,8 @@ bool scanWorldDirectory(const char *fromPath)
 		free(*it);
 	}
 	chunks.clear();
-	S_FROMX = S_FROMZ = 10000000;
-	S_TOX   = S_TOZ  = -10000000;
+	g_FromChunkX = g_FromChunkZ = 10000000;
+	g_ToChunkX   = g_ToChunkZ  = -10000000;
 	// Read subdirs now
 	string base(fromPath);
 	base.append("/");
@@ -76,17 +77,17 @@ bool scanWorldDirectory(const char *fromPath)
 							int valZ = base10(s+1);
 							if (valX > -1000 && valX < 1000 && valZ > -1000 && valZ < 1000) {
 								// Update bounds
-								if (valX < S_FROMX) {
-									S_FROMX = valX;
+								if (valX < g_FromChunkX) {
+									g_FromChunkX = valX;
 								}
-								if (valX > S_TOX) {
-									S_TOX = valX;
+								if (valX > g_ToChunkX) {
+									g_ToChunkX = valX;
 								}
-								if (valZ < S_FROMZ) {
-									S_FROMZ = valZ;
+								if (valZ < g_FromChunkZ) {
+									g_FromChunkZ = valZ;
 								}
-								if (valZ > S_TOZ) {
-									S_TOZ = valZ;
+								if (valZ > g_ToChunkZ) {
+									g_ToChunkZ = valZ;
 								}
 								string full = path + "/" + chunk.name;
 								chunks.push_back(strdup(full.c_str()));
@@ -102,13 +103,13 @@ bool scanWorldDirectory(const char *fromPath)
 		Dir::close(d);
 	}
 	printProgress(10, 10);
-	S_TOX++;
-	S_TOZ++;
+	g_ToChunkX++;
+	g_ToChunkZ++;
 	//
 	for (filelist::iterator it = subdirs.begin(); it != subdirs.end(); it++) {
 		free(*it);
 	}
-	printf("Min: (%d|%d) Max: (%d|%d)\n", S_FROMX, S_FROMZ, S_TOX, S_TOZ);
+	printf("Min: (%d|%d) Max: (%d|%d)\n", g_FromChunkX, g_FromChunkZ, g_ToChunkX, g_ToChunkZ);
 	return true;
 }
 
@@ -143,9 +144,9 @@ bool loadTerrain(const char* fromPath)
 	}
 
 	printf("Loading all chunks..\n");
-	for (int chunkZ = S_FROMZ; chunkZ < S_TOZ; ++chunkZ) {
-		printProgress(chunkZ - S_FROMZ, S_TOZ - S_FROMZ);
-		for (int chunkX = S_FROMX; chunkX < S_TOX; ++chunkX) {
+	for (int chunkZ = g_FromChunkZ; chunkZ < g_ToChunkZ; ++chunkZ) {
+		printProgress(chunkZ - g_FromChunkZ, g_ToChunkZ - g_FromChunkZ);
+		for (int chunkX = g_FromChunkX; chunkX < g_ToChunkX; ++chunkX) {
 			string thispath = path + base36((chunkX + 640000) % 64) + "/" + base36((chunkZ + 640000) % 64) + "/c." + base36(chunkX) + "." + base36(chunkZ) + ".dat";
 			loadChunk(thispath.c_str());
 		}
@@ -160,17 +161,11 @@ static void loadChunk(const char *file)
 	bool ok = false; // Get path name for all required chunks
 	NBT chunk(file, ok);
 	if (!ok) {
-#ifdef _DEBUG
-		printf("Error opening chunk at %s\n", file);
-#endif
 		return; // chunk does not exist
 	}
 	NBT_Tag *level = NULL;
 	ok = chunk.getCompound("Level", level);
 	if (!ok) {
-#ifdef _DEBUG
-		printf("Error getting Level for %s\n", file);
-#endif
 		return;
 	}
 	int32_t chunkX, chunkZ;
@@ -178,7 +173,7 @@ static void loadChunk(const char *file)
 	ok = ok && level->getInt("zPos", chunkZ);
 	if (!ok) return;
 	// Check if chunk is in desired bounds (not a chunk where the filename tells a different position)
-	if (chunkX < S_FROMX || chunkX >= S_TOX || chunkZ < S_FROMZ || chunkZ >= S_TOZ) {
+	if (chunkX < g_FromChunkX || chunkX >= g_ToChunkX || chunkZ < g_FromChunkZ || chunkZ >= g_ToChunkZ) {
 #ifdef _DEBUG
 		printf("Chunk %s is out of bounds. %d %d\n", file, chunkX, chunkZ);
 #endif
@@ -196,45 +191,49 @@ static void loadChunk(const char *file)
 		ok = level->getByteArray("SkyLight", skydata, len);
 		if (!ok || len < 16384) return;
 	}
-	const int offsetz = (chunkZ - S_FROMZ) * CHUNKSIZE_Z;
-	const int offsetx = (chunkX - S_FROMX) * CHUNKSIZE_X;
+	const int offsetz = (chunkZ - g_FromChunkZ) * CHUNKSIZE_Z;
+	const int offsetx = (chunkX - g_FromChunkX) * CHUNKSIZE_X;
 	// Now read all blocks from this chunk and copy them to the world array
 	// Rotation introduces lots of if-else blocks here :-(
 	// Maybe make the macros functions and then use pointers....
 	for (int x = 0; x < CHUNKSIZE_X; ++x) {
 		for (int z = 0; z < CHUNKSIZE_Z; ++z) {
 			if (g_Orientation == East) {
-				memcpy(&BLOCKEAST(x + offsetx, 0, z + offsetz), &blockdata[(z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y], MAPSIZE_Y);
+				memcpy(&BLOCKEAST(x + offsetx, 0, z + offsetz), &blockdata[(z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y], g_MapsizeY);
 			} else if (g_Orientation == North) {
-				memcpy(&BLOCKNORTH(x + offsetx, 0, z + offsetz), &blockdata[(z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y], MAPSIZE_Y);
+				memcpy(&BLOCKNORTH(x + offsetx, 0, z + offsetz), &blockdata[(z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y], g_MapsizeY);
 			} else if (g_Orientation == South) {
-				memcpy(&BLOCKSOUTH(x + offsetx, 0, z + offsetz), &blockdata[(z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y], MAPSIZE_Y);
+				memcpy(&BLOCKSOUTH(x + offsetx, 0, z + offsetz), &blockdata[(z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y], g_MapsizeY);
 			} else {
-				memcpy(&BLOCKWEST(x + offsetx, 0, z + offsetz), &blockdata[(z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y], MAPSIZE_Y);
+				memcpy(&BLOCKWEST(x + offsetx, 0, z + offsetz), &blockdata[(z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y], g_MapsizeY);
 			}
 			if (!(g_Nightmode || g_Skylight || g_Underground)) continue;
-			for (size_t y = 0; y < MAPSIZE_Y; ++y) {
+			for (size_t y = 0; y < g_MapsizeY; ++y) {
 				if (g_Underground) {
 					if (blockdata[y + (z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y] == TORCH) {
 						// In underground mode, the lightmap is also used, but the values are calculated manually, to only show
 						// caves the players have discovered yet. It's not perfect of course, but works ok.
 						for (int ty = int(y) - 9; ty < int(y) + 9; ++ty) { // The trick here is to only take into account
 							if (ty < 0) continue; // areas around torches.
-							if (ty >= int(MAPSIZE_Y/2)) break;
-							for (int tz = int(z) - 18; tz < int(z) + 18; ++tz) {
-								if (tz < 0) continue;
-								if (tz >= int(MAPSIZE_Z)) break;
-								for (int tx = int(x) - 18; tx < int(x) + 18; ++tx) {
-									if (tx < 0) continue;
-									if (tx >= int(MAPSIZE_X)) break;
+							if (ty >= int(g_MapsizeY/2)) break;
+							for (int tz = int(z) - 18 + offsetz; tz < int(z) + 18 + offsetz; ++tz) {
+								if (tz < CHUNKSIZE_Z) continue;
+								if (tz >= int(g_MapsizeZ)-CHUNKSIZE_Z) break;
+								for (int tx = int(x) - 18 + offsetx; tx < int(x) + 18 + offsetx; ++tx) {
+									if (tx < CHUNKSIZE_X) continue;
+									if (tx >= int(g_MapsizeX)-CHUNKSIZE_X) break;
 									if (g_Orientation == East) {
-										SETLIGHTEAST(tx + offsetx, ty, tz + offsetz) = 0xFF;
+										SETLIGHTEAST(tx, ty, tz) = 0xFF;
 									} else if (g_Orientation == North) {
-										SETLIGHTNORTH(tx + offsetx, ty, tz + offsetz) = 0xFF;
+										SETLIGHTNORTH(tx, ty, tz) = 0xFF;
 									} else if (g_Orientation == South) {
-										SETLIGHTSOUTH(tx + offsetx, ty, tz + offsetz) = 0xFF;
+										SETLIGHTSOUTH(tx, ty, tz) = 0xFF;
 									} else {
-										SETLIGHTWEST(tx + offsetx, ty, tz + offsetz) = 0xFF;
+										/*if (((ty) / 2) + ((tx) + ((g_MapsizeX - ((tz) + 1)) * g_MapsizeZ)) * ((g_MapsizeY + 1) / 2) >= lightsize) {
+											printf("Is too large for %d * %d * %d\n", int(tx), int((ty) / 2), int(g_MapsizeX - ((tz) + 1)));
+											fflush(stdout);
+										} else*/
+										SETLIGHTWEST(tx , ty, tz) = 0xFF;
 									}
 								}
 							}
@@ -278,9 +277,9 @@ static void loadChunk(const char *file)
 
 size_t calcTerrainSize(int chunksX, int chunksZ)
 {
-	size_t size = size_t(chunksX) * CHUNKSIZE_X * size_t(chunksZ) * CHUNKSIZE_Z * MAPSIZE_Y;
+	size_t size = size_t(chunksX+2) * CHUNKSIZE_X * size_t(chunksZ+2) * CHUNKSIZE_Z * g_MapsizeY;
 	if (g_Nightmode || g_Underground || g_Skylight) {
-		return size + size_t(chunksX) * CHUNKSIZE_X * size_t(chunksZ) * CHUNKSIZE_Z * ((MAPSIZE_Y + 1) / 2);
+		return size + size_t(chunksX+2) * CHUNKSIZE_X * size_t(chunksZ+2) * CHUNKSIZE_Z * ((g_MapsizeY + 1) / 2);
 	}
 	return size;
 }
@@ -295,16 +294,23 @@ static void allocateTerrain()
 {
 	if (g_Terrain != NULL) delete[] g_Terrain;
 	if (g_Light != NULL) delete[] g_Light;
-	const size_t terrainsize = MAPSIZE_Z * MAPSIZE_X * MAPSIZE_Y;
+	const size_t terrainsize = g_MapsizeZ * g_MapsizeX * g_MapsizeY;
 	printf("Terrain takes up %.2fMiB", float(terrainsize / float(1024 * 1024)));
 	fflush(stdout);
 	g_Terrain = new uint8_t[terrainsize];
-	memset(g_Terrain, 0, terrainsize);
+	memset(g_Terrain, 0, terrainsize); // Preset: Air
 	if (g_Nightmode || g_Underground || g_Skylight) {
-		const size_t lightsize = MAPSIZE_Z * MAPSIZE_X * ((MAPSIZE_Y + 1) / 2);
+		lightsize = g_MapsizeZ * g_MapsizeX * ((g_MapsizeY + 1) / 2);
 		printf(", lightmap %.2fMiB", float(lightsize / float(1024 * 1024)));
 		g_Light = new uint8_t[lightsize];
-		memset(g_Light, 255, lightsize);
+		// Preset: all bright / dark depending on night or day
+		if (g_Nightmode) {
+			memset(g_Light, 0x11, lightsize);
+		} else if (g_Underground) {
+			memset(g_Light, 0x00, lightsize);
+		} else {
+			memset(g_Light, 0xFF, lightsize);
+		}
 	}
 	printf("\n");
 }

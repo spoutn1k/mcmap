@@ -92,6 +92,7 @@ bool createBitmap(FILE* fh, size_t width, size_t height, bool splitUp)
 		for (size_t i = 0; i < gBmpHeight; ++i) {
 			if (fwrite(tmpdata, 1, gBmpLineWidth, fh) != gBmpLineWidth) return false;
 		}
+		delete[] tmpdata;
 	} else {
 		gBitmap = new uint8_t[gBmpSize];
 		memset(gBitmap, 0, gBmpSize);
