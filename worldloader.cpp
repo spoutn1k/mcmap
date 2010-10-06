@@ -75,7 +75,7 @@ bool scanWorldDirectory(const char *fromPath)
 							// Extract z coordinate from chunk filename
 							while (*s != '.' && *s != '\0') ++s;
 							int valZ = base10(s+1);
-							if (valX > -1000 && valX < 1000 && valZ > -1000 && valZ < 1000) {
+							if (valX > -4000 && valX < 4000 && valZ > -4000 && valZ < 4000) {
 								// Update bounds
 								if (valX < g_FromChunkX) {
 									g_FromChunkX = valX;
@@ -218,21 +218,23 @@ static void loadChunk(const char *file)
 							if (ty >= int(g_MapsizeY/2)) break;
 							for (int tz = int(z) - 18 + offsetz; tz < int(z) + 18 + offsetz; ++tz) {
 								if (tz < CHUNKSIZE_Z) continue;
-								if (tz >= int(g_MapsizeZ)-CHUNKSIZE_Z) break;
 								for (int tx = int(x) - 18 + offsetx; tx < int(x) + 18 + offsetx; ++tx) {
 									if (tx < CHUNKSIZE_X) continue;
-									if (tx >= int(g_MapsizeX)-CHUNKSIZE_X) break;
 									if (g_Orientation == East) {
+										if (tx >= int(g_MapsizeZ)-CHUNKSIZE_Z) break;
+										if (tz >= int(g_MapsizeX)-CHUNKSIZE_X) break;
 										SETLIGHTEAST(tx, ty, tz) = 0xFF;
 									} else if (g_Orientation == North) {
+										if (tx >= int(g_MapsizeX)-CHUNKSIZE_X) break;
+										if (tz >= int(g_MapsizeZ)-CHUNKSIZE_Z) break;
 										SETLIGHTNORTH(tx, ty, tz) = 0xFF;
 									} else if (g_Orientation == South) {
+										if (tx >= int(g_MapsizeX)-CHUNKSIZE_X) break;
+										if (tz >= int(g_MapsizeZ)-CHUNKSIZE_Z) break;
 										SETLIGHTSOUTH(tx, ty, tz) = 0xFF;
 									} else {
-										/*if (((ty) / 2) + ((tx) + ((g_MapsizeX - ((tz) + 1)) * g_MapsizeZ)) * ((g_MapsizeY + 1) / 2) >= lightsize) {
-											printf("Is too large for %d * %d * %d\n", int(tx), int((ty) / 2), int(g_MapsizeX - ((tz) + 1)));
-											fflush(stdout);
-										} else*/
+										if (tx >= int(g_MapsizeZ)-CHUNKSIZE_Z) break;
+										if (tz >= int(g_MapsizeX)-CHUNKSIZE_X) break;
 										SETLIGHTWEST(tx , ty, tz) = 0xFF;
 									}
 								}
@@ -296,7 +298,6 @@ static void allocateTerrain()
 	if (g_Light != NULL) delete[] g_Light;
 	const size_t terrainsize = g_MapsizeZ * g_MapsizeX * g_MapsizeY;
 	printf("Terrain takes up %.2fMiB", float(terrainsize / float(1024 * 1024)));
-	fflush(stdout);
 	g_Terrain = new uint8_t[terrainsize];
 	memset(g_Terrain, 0, terrainsize); // Preset: Air
 	if (g_Nightmode || g_Underground || g_Skylight) {

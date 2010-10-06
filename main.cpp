@@ -20,66 +20,30 @@
 
 using std::string;
 
-static bool gBrightEdge = false;
-static int totalFromChunkX, totalFromChunkZ, totalToChunkX, totalToChunkZ;
+// For bright edge
+static bool gAtBottomLeft = false, gAtBottomRight = false;
+
+static int gTotalFromChunkX, gTotalFromChunkZ, gTotalToChunkX, gTotalToChunkZ;
+
+// Macros to make code more readable
+#define BLOCK_AT_MAPEDGE(x,z) (((z)+1 == g_MapsizeZ-CHUNKSIZE_Z && gAtBottomLeft) || ((x)+1 == g_MapsizeX-CHUNKSIZE_X && gAtBottomRight))
 
 inline void blockCulling(const size_t x, const size_t y, const size_t z, size_t &removed);
 void undergroundMode();
 bool prepareNextArea(int splitX, int splitZ, size_t &bitmapStartX, size_t &bitmapStartY);
+void printHelp(char* binary);
 
 int main(int argc, char** argv)
 {
 	// ########## command line parsing ##########
 	if (argc < 2) {
-		printf(
-				////////////////////////////////////////////////////////////////////////////////
-				"\nmcmap - an isometric minecraft alpha map rendering tool. Version " VERSION "\n\n"
-				"Usage: %s [-from X Z -to X Z] [-night] [-cave] [-noise VAL] WORLDPATH\n\n"
-				"  -from X Z     sets the coordinate of the chunk to start rendering at\n"
-				"  -to X Z       sets the coordinate of the chunk to end rendering at\n"
-				"                Note: Currently you need both -from and -to to define\n"
-				"                bounds, otherwise the entire world will be rendered.\n"
-				"  -night        renders the world at night\n"
-				"  -cave         renders a map of all caves that have been explored by players\n"
-				"  -skylight     use skylight when rendering map (shadows below trees etc.)\n"
-				"  -brightedge   still draw the ege of the map bright when using -skylight\n"
-				"  -noise VAL    adds some noise to certain blocks, reasonable values are 0-20\n"
-				"  -height VAL   maximum height at which blocks will be rendered (1-128)\n"
-				"  -file NAME    sets the output filename to 'NAME'; default is output.bmp\n"
-				"  -mem VAL      if set, rendering will not happen if it would need more\n"
-				"                than VAL MiB of RAM. You can use that to prevent mcmap from\n"
-				"                trying to use more memory than you have. Always leave some\n"
-				"                headroom for the OS, e.g. if you have 4GiB RAM, use -mem 3100\n"
-				"  -colors NAME  loads user defined colors from file 'NAME'\n"
-				"  -dumpcolors   creates a file which contains the default colors being used\n"
-				"                for rendering. Can be used to modify them and then use -colors\n"
-				"  -north -east -south -west\n"
-				"                controls which direction will point to the *top left* corner\n"
-				"                it only makes sense to pass one of them; East is default\n"
-				"\n    WORLDPATH is the path of the desired alpha world.\n\n"
-				////////////////////////////////////////////////////////////////////////////////
-				"Examples:\n\n"
-#ifdef _WIN32
-				"%s %%APPDATA%%\\.minecraft\\saves\\World1\n"
-				"  - This would render your entire singleplayer world in slot 1\n"
-				"%s -night -from -10 -10 -to 10 10 %%APPDATA%%\\.minecraft\\saves\\World1\n"
-				"  - This would render the same world but at night, and only\n"
-				"    from chunk (-10 -10) to chunk (10 10)\n"
-#else
-				"%s ~/.minecraft/saves/World1\n"
-				"  - This would render your entire singleplayer world in slot 1\n"
-				"%s -night -from -10 -10 -to 10 10 ~/.minecraft/saves/World1\n"
-				"  - This would render the same world but at night, and only\n"
-				"    from chunk (-10 -10) to chunk (10 10)\n"
-#endif
-				, argv[0], argv[0], argv[0], argv[0], argv[0], argv[0], argv[0]);
-
-
+		printHelp(argv[0]);
 		return 1;
 	}
 	bool wholeworld = false;
 	char *filename = NULL, *outfile = NULL, *colorfile = NULL;
-	size_t memlimit = 0;
+	size_t memlimit = 1800 * (1024ll * 1024ll);
+	bool memlimitSet = false;
 
 	// First, for the sake of backward compatibility, try to parse command line arguments the old way first
 	if (argc >= 7
@@ -125,8 +89,6 @@ int main(int argc, char** argv)
 				g_Underground = true;
 			} else if (strcmp(option, "-skylight") == 0) {
 				g_Skylight = true;
-			} else if (strcmp(option, "-brightedge") == 0) {
-				gBrightEdge = true;
 			} else if (strcmp(option, "-noise") == 0 || strcmp(option, "-dither") == 0) {
 				if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
 					printf("Error: %s needs an integer argument, ie: %s 10\n", option, option);
@@ -144,6 +106,7 @@ int main(int argc, char** argv)
 					printf("Error: %s needs a positive integer argument, ie: %s 1000\n", option, option);
 					return 1;
 				}
+				memlimitSet = true;
 				memlimit = size_t(atoi(NEXTARG)) * 1024ll * 1024ll;
 			} else if (strcmp(option, "-file") == 0) {
 				if (!MOREARGS(1)) {
@@ -173,6 +136,9 @@ int main(int argc, char** argv)
 				g_Orientation = East;
 			} else if (strcmp(option, "-west") == 0) {
 				g_Orientation = West;
+			} else if (strcmp(option, "-help") == 0 || strcmp(option, "-h") == 0 || strcmp(option, "-?") == 0) {
+				printHelp(argv[0]);
+				return 0;
 			} else {
 				filename = (char*)option;
 			}
@@ -196,10 +162,10 @@ int main(int argc, char** argv)
 	if (g_MapsizeY > CHUNKSIZE_Y) g_MapsizeY = CHUNKSIZE_Y;
 	// Whole area to be rendered, in chunks
 	// If -mem is omitted or high enough, this won't be needed
-	totalFromChunkX = g_FromChunkX;
-	totalFromChunkZ = g_FromChunkZ;
-	totalToChunkX = g_ToChunkX;
-	totalToChunkZ = g_ToChunkZ;
+	gTotalFromChunkX = g_FromChunkX;
+	gTotalFromChunkZ = g_FromChunkZ;
+	gTotalToChunkX = g_ToChunkX;
+	gTotalToChunkZ = g_ToChunkZ;
 	// Don't allow ridiculously small values for big maps
 	if (memlimit && memlimit < 200000000 && memlimit < g_MapsizeX * g_MapsizeZ * 150000) {
 		printf("Need at least %d MiB of RAM to render a map of that size.\n", int(float(g_MapsizeX) * g_MapsizeZ * .15f + 1));
@@ -210,18 +176,26 @@ int main(int argc, char** argv)
 	size_t bitmapX, bitmapY;
 	size_t bitmapBytes = calcBitmapSize(g_ToChunkX - g_FromChunkX, g_ToChunkZ - g_FromChunkZ, g_MapsizeY, bitmapX, bitmapY);
 	bool splitImage = false;
-	int splitX = 0;
-	int splitZ = 0;
+	int numSplitsX = 0;
+	int numSplitsZ = 0;
 	if (memlimit && memlimit < bitmapBytes + calcTerrainSize(g_ToChunkX - g_FromChunkX, g_ToChunkZ - g_FromChunkZ)) {
+		// Warn about using incremental rendering if user didn't set limit manually
+		if (!memlimitSet) {
+			printf(" ***** PLEASE NOTE *****\n"
+					"mcmap is using incremental rendering as it has a default memory limit\n"
+					"of 1800MiB. If you want to use more memory to render (=faster) use\n"
+					"the -mem switch followed by the amount of memory in MiB to use.\n"
+					"Start mcmap without any arguments to get more help.\n");
+		}
 		// If we'd need more mem than allowed, we have to render groups of chunks...
 		if (memlimit < bitmapBytes * 2) {
 			// ...or even use disk caching
 			splitImage = true;
 		}
 		// Split up map more and more, until the mem requirements are satisfied
-		for (splitX = 1, splitZ = 2;;) {
-			int subAreaX = ((totalToChunkX - totalFromChunkX) + (splitX - 1)) / splitX;
-			int subAreaZ = ((totalToChunkZ - totalFromChunkZ) + (splitZ - 1)) / splitZ;
+		for (numSplitsX = 1, numSplitsZ = 2;;) {
+			int subAreaX = ((gTotalToChunkX - gTotalFromChunkX) + (numSplitsX - 1)) / numSplitsX;
+			int subAreaZ = ((gTotalToChunkZ - gTotalFromChunkZ) + (numSplitsZ - 1)) / numSplitsZ;
 			size_t subBitmapX, subBitmapY;
 			if (splitImage && calcBitmapSize(subAreaX, subAreaZ, g_MapsizeY, subBitmapX, subBitmapY, true) + calcTerrainSize(subAreaX, subAreaZ) <= memlimit) {
 				break; // Found a suitable partitioning
@@ -229,14 +203,15 @@ int main(int argc, char** argv)
 				break; // Found a suitable partitioning
 			}
 			//
-			if (splitZ > splitX) {
-				++splitX;
+			if (numSplitsZ > numSplitsX) {
+				++numSplitsX;
 			} else {
-				++splitZ;
+				++numSplitsZ;
 			}
 		}
 	}
 
+	// Always same random seed, as this is only used for block noise, which should give the same result for the same input every time
 	srand(1337);
 	// Load colormap from file
 	loadColors(); // first load internal list, overwrite specific colors from file later if desired
@@ -261,17 +236,20 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
+	// This write out the bitmap header and pre-allocate space if disk caching is used
 	createBitmap(fileHandle, bitmapX, bitmapY, splitImage);
 
-	// Now here's a loop rendering all the required parts of the image.
+	// Now here's the loop rendering all the required parts of the image.
 	// All the vars previously used to define bounds will be set on each loop,
 	// to create something like a virtual window inside the map.
 	for (;;) {
 
 		size_t bitmapStartX = 3, bitmapStartY = 5;
-		if (splitX) {
-			// Set current chunk bounds according to number of splits
-			if (prepareNextArea(splitX, splitZ, bitmapStartX, bitmapStartY)) break;
+		if (numSplitsX) { // virtual window is set here
+			// Set current chunk bounds according to number of splits. returns true if we're done
+			if (prepareNextArea(numSplitsX, numSplitsZ, bitmapStartX, bitmapStartY)) {
+				break;
+			}
 			// if image is split up, prepare memory block for next part
 			if (splitImage) {
 				bitmapStartX += 2;
@@ -292,6 +270,7 @@ int main(int argc, char** argv)
 		--g_FromChunkX;
 		--g_FromChunkZ;
 
+		// For rotation, X and Z have to be swapped (East and West)
 		if (g_Orientation == North || g_Orientation == South) {
 			g_MapsizeZ = (g_ToChunkZ - g_FromChunkZ) * CHUNKSIZE_Z;
 			g_MapsizeX = (g_ToChunkX - g_FromChunkX) * CHUNKSIZE_X;
@@ -301,10 +280,10 @@ int main(int argc, char** argv)
 		}
 
 		// Load world or part of world
-		if (splitX == 0 && wholeworld && !loadEntireTerrain()) {
+		if (numSplitsX == 0 && wholeworld && !loadEntireTerrain()) {
 			printf("Error loading terrain from '%s'\n", filename);
 			return 1;
-		} else if (splitX != 0 || !wholeworld) {
+		} else if (numSplitsX != 0 || !wholeworld) {
 			if (!loadTerrain(filename)) {
 				printf("Error loading terrain from '%s'\n", filename);
 				return 1;
@@ -316,7 +295,7 @@ int main(int argc, char** argv)
 			undergroundMode();
 		}
 		// Remove invisible blocks from map (covered by other blocks from isometric pov)
-		// Do so by "raytracing" every block from front to back.. somehow
+		// Do so by "raytracing" every block from front to back..
 		printf("Optimizing terrain...\n");
 		size_t removed = 0;
 		printProgress(0, 10);
@@ -337,51 +316,53 @@ int main(int argc, char** argv)
 		}
 		printProgress(10, 10);
 		printf("Removed %lu blocks\n", (unsigned long)removed);
+
 		// Finally, render terrain to file
 		printf("Creating bitmap...\n");
 		for (size_t x = CHUNKSIZE_X; x < g_MapsizeX - CHUNKSIZE_X; ++x) {
 			printProgress(x, g_MapsizeX);
 			for (size_t z = CHUNKSIZE_Z; z < g_MapsizeZ - CHUNKSIZE_Z; ++z) {
-				const size_t startx = (g_MapsizeZ - z - CHUNKSIZE_Z) * 2 + (x - CHUNKSIZE_X) * 2 + (splitImage ? -2 : bitmapStartX);
-				size_t starty = g_MapsizeY * 2 + z + x - CHUNKSIZE_Z - CHUNKSIZE_X + (splitImage ? 0 : bitmapStartY);
+				const size_t bmpPosX = (g_MapsizeZ - z - CHUNKSIZE_Z) * 2 + (x - CHUNKSIZE_X) * 2 + (splitImage ? -2 : bitmapStartX);
+				size_t bmpPosY = g_MapsizeY * 2 + z + x - CHUNKSIZE_Z - CHUNKSIZE_X + (splitImage ? 0 : bitmapStartY);
 				for (size_t y = 0; y < g_MapsizeY; ++y) {
 					uint8_t c = BLOCKAT(x,y,z);
 					if (c != AIR) { // If block is not air (colors[c][3] != 0)
 						//float col = float(y) * .78f - 91;
-						float brightnessAdjustment = (100.0f/(1.0f+exp(-(1.3f * float(y) / 16.0f)+6.0f))) - 91;
+						float brightnessAdjustment = (100.0f/(1.0f+exp(-(1.3f * float(y) / 16.0f)+6.0f))) - 91; // thx DopeGhoti
 						// we use light if...
 						if (g_Nightmode // nightmode is active, or
 								|| (g_Skylight // skylight is used and
-										//&& ((z+1 != g_MapsizeZ-CHUNKSIZE_Z && x+1 != g_MapsizeX-CHUNKSIZE_X && x*CHUNKSIZE_X != totalToChunkX+1 && z*CHUNKSIZE_Z != totalToChunkZ+1) // not edge of map or
-										//		|| (y+1 != g_MapsizeY && BLOCKAT(x,y+1,z) == AIR))
-												)) { // block above is air
-							int l = 0;
-							for (size_t i = 1; i < 10 && l == 0; ++i) {
+										&& (!BLOCK_AT_MAPEDGE(x, z) || (y+1 != g_MapsizeY && colors[BLOCKAT(x,y+1,z)][ALPHA] != 255)) // block is not edge of map (or if it is, has non-opaque block above)
+												)) {
+							int l = 0; // find out how much light hits that block
+							bool blocked[3] = {false, false, false}; // if light is blocked in one direction
+							for (size_t i = 1; i < 6 && l == 0; ++i) {
 								// Need to make this a loop to deal with half-steps, fences, flowers and other special blocks
-								if (l == 0 && y+i < g_MapsizeY) l = GETLIGHTAT(x, y+i, z);
-								if (l == 0) l = GETLIGHTAT(x+i, y, z);
-								if (l == 0) l = GETLIGHTAT(x, y, z+i);
-								if (l == 0
-										&& colors[BLOCKAT(x+i, y, z)][ALPHA] == 255
-										&& colors[BLOCKAT(x, y, z+i)][ALPHA] == 255
-										&& (y+i >= g_MapsizeY || colors[BLOCKAT(x, y+i, z)][ALPHA] == 255)) break;
+								if (!blocked[2] && l == 0 && y+i < g_MapsizeY) l = GETLIGHTAT(x, y+i, z);
+								if (!blocked[0] && l == 0) l = GETLIGHTAT(x+i, y, z);
+								if (!blocked[1] && l == 0) l = GETLIGHTAT(x, y, z+i);
+								blocked[0] |= (colors[BLOCKAT(x+i, y, z)][ALPHA] == 255);
+								blocked[1] |= (colors[BLOCKAT(x, y, z+i)][ALPHA] == 255);
+								blocked[2] |= (y+i >= g_MapsizeY || colors[BLOCKAT(x, y+i, z)][ALPHA] == 255);
+								if (l == 0 // if block is still dark and there are no translucent blocks around, stop
+										&& blocked[0] && blocked[1] && blocked[2]) break;
 							}
-							if (!g_Skylight) {
+							if (!g_Skylight) { // Night
 								brightnessAdjustment -= (125 - l * 9);
-							} else {
+							} else { // Day
 								brightnessAdjustment -= (210 - l * 14);
 							}
 						}
-						// Edge detection:
+						// Edge detection (this means where terrain goes 'down' and the side of the block is not visible)
 						if ((y && y+1 < g_MapsizeY) // In bounds?
 							&& BLOCKAT(x,y+1,z) == AIR // Only if block above is air
 							&& (BLOCKAT(x-1,y-1,z-1) == c || BLOCKAT(x-1,y-1,z-1) == AIR) // block behind (from pov) this one is same type or air
 							&& (BLOCKAT(x-1,y,z) == AIR || BLOCKAT(x,y,z-1) == AIR)) { // block TL/TR from this one is air = edge
 								brightnessAdjustment += 12;
 						}
-						setPixel(startx, starty, c, brightnessAdjustment);
+						setPixel(bmpPosX, bmpPosY, c, brightnessAdjustment);
 					}
-					starty -= 2;
+					bmpPosY -= 2;
 				}
 			}
 		}
@@ -390,7 +371,7 @@ int main(int argc, char** argv)
 			printf("Error saving partially rendered image.\n");
 			return 1;
 		}
-		if (splitX == 0) break;
+		if (numSplitsX == 0) break;
 		/*
 		static int iii = 0;
 		if (++iii == 5) {
@@ -465,7 +446,7 @@ bool prepareNextArea(int splitX, int splitZ, size_t &bitmapStartX, size_t &bitma
 {
 	static int currentAreaX = -1;
 	static int currentAreaZ = 0;
-	// increase and stop if we're done
+	// move on to next part and stop if we're done
 	++currentAreaX;
 	if (currentAreaX >= splitX) {
 		currentAreaX = 0;
@@ -474,47 +455,101 @@ bool prepareNextArea(int splitX, int splitZ, size_t &bitmapStartX, size_t &bitma
 	if (currentAreaZ >= splitZ) {
 		return true;
 	}
-	// Tile based rendering going on
-	const int subAreaX = ((totalToChunkX - totalFromChunkX) + (splitX - 1)) / splitX;
-	const int subAreaZ = ((totalToChunkZ - totalFromChunkZ) + (splitZ - 1)) / splitZ;
-	// Adjust values for current frame. These are orientation-independent
-	g_FromChunkX = totalFromChunkX + subAreaX * (g_Orientation == North || g_Orientation == West ? currentAreaX : splitX - (currentAreaX + 1));
-	g_FromChunkZ = totalFromChunkZ + subAreaZ * (g_Orientation == North || g_Orientation == East ? currentAreaZ : splitZ - (currentAreaZ + 1));
+	// For bright map edges
+	if (g_Orientation == West || g_Orientation == East) {
+		gAtBottomRight = (currentAreaZ + 1 == splitZ);
+		gAtBottomLeft = (currentAreaX + 1 == splitX);
+	} else {
+		gAtBottomLeft = (currentAreaZ + 1 == splitZ);
+		gAtBottomRight = (currentAreaX + 1 == splitX);
+	}
+	// Calc size of area to be rendered (in chunks)
+	const int subAreaX = ((gTotalToChunkX - gTotalFromChunkX) + (splitX - 1)) / splitX;
+	const int subAreaZ = ((gTotalToChunkZ - gTotalFromChunkZ) + (splitZ - 1)) / splitZ;
+	// Adjust values for current frame. order depends on map orientation
+	g_FromChunkX = gTotalFromChunkX + subAreaX * (g_Orientation == North || g_Orientation == West ? currentAreaX : splitX - (currentAreaX + 1));
+	g_FromChunkZ = gTotalFromChunkZ + subAreaZ * (g_Orientation == North || g_Orientation == East ? currentAreaZ : splitZ - (currentAreaZ + 1));
 	g_ToChunkX = g_FromChunkX + subAreaX;
 	g_ToChunkZ = g_FromChunkZ + subAreaZ;
 	// Bounds checking
-	if (g_ToChunkX > totalToChunkX) g_ToChunkX = totalToChunkX;
-	if (g_ToChunkZ > totalToChunkZ) g_ToChunkZ = totalToChunkZ;
+	if (g_ToChunkX > gTotalToChunkX) g_ToChunkX = gTotalToChunkX;
+	if (g_ToChunkZ > gTotalToChunkZ) g_ToChunkZ = gTotalToChunkZ;
 	printf("Pass %d of %d...\n", int(currentAreaX + (currentAreaZ * splitX) + 1), int(splitX * splitZ));
+	// Calulate pixel offsets in bitmap. Forgot how this works right after writing it, really.
 	if (g_Orientation == North) {
-		bitmapStartX = (((totalToChunkZ - totalFromChunkZ) * CHUNKSIZE_Z) * 2 + 3) // Center of image..
-				- ((g_ToChunkZ - totalFromChunkZ) * CHUNKSIZE_Z * 2) // increasing Z pos will move left in bitmap
-				+ ((g_FromChunkX - totalFromChunkX) * CHUNKSIZE_X * 2); // increasing X pos will move right in bitmap
-		bitmapStartY = 5 + (g_FromChunkZ - totalFromChunkZ) * CHUNKSIZE_Z + (g_FromChunkX - totalFromChunkX) * CHUNKSIZE_X;
+		bitmapStartX = (((gTotalToChunkZ - gTotalFromChunkZ) * CHUNKSIZE_Z) * 2 + 3) // Center of image..
+				- ((g_ToChunkZ - gTotalFromChunkZ) * CHUNKSIZE_Z * 2) // increasing Z pos will move left in bitmap
+				+ ((g_FromChunkX - gTotalFromChunkX) * CHUNKSIZE_X * 2); // increasing X pos will move right in bitmap
+		bitmapStartY = 5 + (g_FromChunkZ - gTotalFromChunkZ) * CHUNKSIZE_Z + (g_FromChunkX - gTotalFromChunkX) * CHUNKSIZE_X;
 	} else if (g_Orientation == South) {
-		const int tox = totalToChunkX - g_FromChunkX + totalFromChunkX;
-		const int toz = totalToChunkZ - g_FromChunkZ + totalFromChunkZ;
+		const int tox = gTotalToChunkX - g_FromChunkX + gTotalFromChunkX;
+		const int toz = gTotalToChunkZ - g_FromChunkZ + gTotalFromChunkZ;
 		const int fromx = tox - (g_ToChunkX - g_FromChunkX);
 		const int fromz = toz - (g_ToChunkZ - g_FromChunkZ);
-		printf("$$$$ x(%d %d) z(%d %d)\n", fromx, tox, fromz, toz);
-		bitmapStartX = (((totalToChunkZ - totalFromChunkZ) * CHUNKSIZE_Z) * 2 + 3) // Center of image..
-				- ((toz - totalFromChunkZ) * CHUNKSIZE_Z * 2) // increasing Z pos will move left in bitmap
-				+ ((fromx - totalFromChunkX) * CHUNKSIZE_X * 2); // increasing X pos will move right in bitmap
-		bitmapStartY = 5 + (fromz - totalFromChunkZ) * CHUNKSIZE_Z + (fromx - totalFromChunkX) * CHUNKSIZE_X;
+		bitmapStartX = (((gTotalToChunkZ - gTotalFromChunkZ) * CHUNKSIZE_Z) * 2 + 3) // Center of image..
+				- ((toz - gTotalFromChunkZ) * CHUNKSIZE_Z * 2) // increasing Z pos will move left in bitmap
+				+ ((fromx - gTotalFromChunkX) * CHUNKSIZE_X * 2); // increasing X pos will move right in bitmap
+		bitmapStartY = 5 + (fromz - gTotalFromChunkZ) * CHUNKSIZE_Z + (fromx - gTotalFromChunkX) * CHUNKSIZE_X;
 	} else if (g_Orientation == East) {
-		const int tox = totalToChunkX - g_FromChunkX + totalFromChunkX;
+		const int tox = gTotalToChunkX - g_FromChunkX + gTotalFromChunkX;
 		const int fromx = tox - (g_ToChunkX - g_FromChunkX);
-		bitmapStartX = (((totalToChunkX - totalFromChunkX) * CHUNKSIZE_X) * 2 + 3) // Center of image..
-				- ((tox - totalFromChunkX) * CHUNKSIZE_X * 2) // increasing Z pos will move left in bitmap
-				+ ((g_FromChunkZ - totalFromChunkZ) * CHUNKSIZE_Z * 2); // increasing X pos will move right in bitmap
-		bitmapStartY = 5 + (fromx - totalFromChunkX) * CHUNKSIZE_X + (g_FromChunkZ - totalFromChunkZ) * CHUNKSIZE_Z;
+		bitmapStartX = (((gTotalToChunkX - gTotalFromChunkX) * CHUNKSIZE_X) * 2 + 3) // Center of image..
+				- ((tox - gTotalFromChunkX) * CHUNKSIZE_X * 2) // increasing Z pos will move left in bitmap
+				+ ((g_FromChunkZ - gTotalFromChunkZ) * CHUNKSIZE_Z * 2); // increasing X pos will move right in bitmap
+		bitmapStartY = 5 + (fromx - gTotalFromChunkX) * CHUNKSIZE_X + (g_FromChunkZ - gTotalFromChunkZ) * CHUNKSIZE_Z;
 	} else {
-		const int toz = totalToChunkZ - g_FromChunkZ + totalFromChunkZ;
+		const int toz = gTotalToChunkZ - g_FromChunkZ + gTotalFromChunkZ;
 		const int fromz = toz - (g_ToChunkZ - g_FromChunkZ);
-		bitmapStartX = (((totalToChunkX - totalFromChunkX) * CHUNKSIZE_X) * 2 + 3) // Center of image..
-				- ((g_ToChunkX - totalFromChunkX) * CHUNKSIZE_X * 2) // increasing Z pos will move left in bitmap
-				+ ((fromz - totalFromChunkZ) * CHUNKSIZE_Z * 2); // increasing X pos will move right in bitmap
-		bitmapStartY = 5 + (g_FromChunkX - totalFromChunkX) * CHUNKSIZE_X + (fromz - totalFromChunkZ) * CHUNKSIZE_Z;
+		bitmapStartX = (((gTotalToChunkX - gTotalFromChunkX) * CHUNKSIZE_X) * 2 + 3) // Center of image..
+				- ((g_ToChunkX - gTotalFromChunkX) * CHUNKSIZE_X * 2) // increasing Z pos will move left in bitmap
+				+ ((fromz - gTotalFromChunkZ) * CHUNKSIZE_Z * 2); // increasing X pos will move right in bitmap
+		bitmapStartY = 5 + (g_FromChunkX - gTotalFromChunkX) * CHUNKSIZE_X + (fromz - gTotalFromChunkZ) * CHUNKSIZE_Z;
 	}
-	return false;
+	return false; // not done yet, return false
+}
+
+void printHelp(char* binary)
+{
+	printf(
+			////////////////////////////////////////////////////////////////////////////////
+			"\nmcmap - an isometric minecraft alpha map rendering tool. Version " VERSION "\n\n"
+			"Usage: %s [-from X Z -to X Z] [-night] [-cave] [-noise VAL] WORLDPATH\n\n"
+			"  -from X Z     sets the coordinate of the chunk to start rendering at\n"
+			"  -to X Z       sets the coordinate of the chunk to end rendering at\n"
+			"                Note: Currently you need both -from and -to to define\n"
+			"                bounds, otherwise the entire world will be rendered.\n"
+			"  -cave         renders a map of all caves that have been explored by players\n"
+			"  -night        renders the world at night using blocklight (torches)\n"
+			"  -skylight     use skylight when rendering map (shadows below trees etc.)\n"
+			"                hint: using this with -night makes a difference\n"
+			"  -noise VAL    adds some noise to certain blocks, reasonable values are 0-20\n"
+			"  -height VAL   maximum height at which blocks will be rendered (1-128)\n"
+			"  -file NAME    sets the output filename to 'NAME'; default is output.bmp\n"
+			"  -mem VAL      if set, rendering will not happen if it would need more\n"
+			"                than VAL MiB of RAM. You can use that to prevent mcmap from\n"
+			"                trying to use more memory than you have. Always leave some\n"
+			"                headroom for the OS, e.g. if you have 4GiB RAM, use -mem 3100\n"
+			"  -colors NAME  loads user defined colors from file 'NAME'\n"
+			"  -dumpcolors   creates a file which contains the default colors being used\n"
+			"                for rendering. Can be used to modify them and then use -colors\n"
+			"  -north -east -south -west\n"
+			"                controls which direction will point to the *top left* corner\n"
+			"                it only makes sense to pass one of them; East is default\n"
+			"\n    WORLDPATH is the path of the desired alpha world.\n\n"
+			////////////////////////////////////////////////////////////////////////////////
+			"Examples:\n\n"
+#ifdef _WIN32
+			"%s %%APPDATA%%\\.minecraft\\saves\\World1\n"
+			"  - This would render your entire singleplayer world in slot 1\n"
+			"%s -night -from -10 -10 -to 10 10 %%APPDATA%%\\.minecraft\\saves\\World1\n"
+			"  - This would render the same world but at night, and only\n"
+			"    from chunk (-10 -10) to chunk (10 10)\n"
+#else
+			"%s ~/.minecraft/saves/World1\n"
+			"  - This would render your entire singleplayer world in slot 1\n"
+			"%s -night -from -10 -10 -to 10 10 ~/.minecraft/saves/World1\n"
+			"  - This would render the same world but at night, and only\n"
+			"    from chunk (-10 -10) to chunk (10 10)\n"
+#endif
+			, binary, binary, binary, binary, binary, binary, binary, binary, binary);
 }

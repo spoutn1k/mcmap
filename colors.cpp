@@ -159,7 +159,8 @@ bool dumpColorsToFile(const char* file)
 	FILE *f = fopen(file, "w");
 	if (f == NULL) return false;
 	fprintf(f, "# For Block IDs see http://minecraftwiki.net/wiki/Data_values\n"
-			"# Note that noise or alpha (or both) do not work for a few blocks like snow, torches, fences, ...\n\n");
+			"# Note that noise or alpha (or both) do not work for a few blocks like snow, torches, fences, steps, ...\n"
+			"# Actually, you should leave alpha at <255 for those blocks to prevent black artifacts\n\n");
 	for (size_t i = 1; i < 256; ++i) {
 		uint8_t *c = colors[i];
 		if (i % 15 == 1) {
