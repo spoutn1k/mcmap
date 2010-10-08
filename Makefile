@@ -1,7 +1,7 @@
 CC=g++
 CFLAGS=-O2 -c -Wall -w -fomit-frame-pointer
 LDFLAGS=-O2 -lz -fomit-frame-pointer
-DCFLAGS=-g -c -Wall -w
+DCFLAGS=-g -c -Wall -w -D_DEBUG
 DLDFLAGS=-g -lz
 SOURCES=main.cpp helper.cpp nbt.cpp draw.cpp colors.cpp worldloader.cpp filesystem.cpp globals.cpp
 OBJECTS=$(SOURCES:.cpp=.default.o)
