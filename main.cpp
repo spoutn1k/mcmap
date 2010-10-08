@@ -335,18 +335,25 @@ int main(int argc, char** argv)
 										&& (!BLOCK_AT_MAPEDGE(x, z)) // block is not edge of map (or if it is, has non-opaque block above)
 												)) {
 							int l = 0; // find out how much light hits that block
-							bool blocked[3] = {false, false, false}; // if light is blocked in one direction
-							for (size_t i = 1; i < 12 && l == 0; ++i) {
+							bool blocked[5] = {false, false, false, false, false}; // if light is blocked in one direction
+							for (size_t i = 1; i < 4 && l <= 0; ++i) {
 								// Need to make this a loop to deal with half-steps, fences, flowers and other special blocks
-								if (!blocked[2] && l == 0 && y+i < g_MapsizeY) l = GETLIGHTAT(x, y+i, z);
-								if (!blocked[0] && l == 0) l = GETLIGHTAT(x+i, y, z);
-								if (!blocked[1] && l == 0) l = GETLIGHTAT(x, y, z+i);
 								blocked[0] |= (colors[BLOCKAT(x+i, y, z)][ALPHA] == 255);
 								blocked[1] |= (colors[BLOCKAT(x, y, z+i)][ALPHA] == 255);
 								blocked[2] |= (y+i >= g_MapsizeY || colors[BLOCKAT(x, y+i, z)][ALPHA] == 255);
-								if (l == 0 // if block is still dark and there are no translucent blocks around, stop
-										&& blocked[0] && blocked[1] && blocked[2]) break;
+								blocked[3] |= (colors[BLOCKAT(x+i, y+i, z)][ALPHA] == 255);
+								blocked[4] |= (colors[BLOCKAT(x, y+i, z+i)][ALPHA] == 255);
+								if (l <= 0 // if block is still dark and there are no translucent blocks around, stop
+										&& blocked[0] && blocked[1] && blocked[2] && blocked[3] && blocked[4]) break;
+								//
+								if (!blocked[2] && l <= 0 && y+i < g_MapsizeY) l = GETLIGHTAT(x, y+i, z);
+								if (!blocked[0] && l <= 0) l = GETLIGHTAT(x+i, y, z) - i;
+								if (!blocked[1] && l <= 0) l = GETLIGHTAT(x, y, z+i) - i;
+								if (!blocked[3] && l <= 0 && y+i < g_MapsizeY) l = (int)GETLIGHTAT(x+i, y+i, z) - i;
+								if (!blocked[4] && l <= 0 && y+i < g_MapsizeY) l = (int)GETLIGHTAT(x, y+i, z+i) - i;
+								//if (!blocked[2] && l <= 0 && y+i < g_MapsizeY) l = GETLIGHTAT(x+i/2, y+i/2, z+i/2) - i/2;
 							}
+							if (l < 0) l = 0;
 							if (!g_Skylight) { // Night
 								brightnessAdjustment -= (125 - l * 9);
 							} else { // Day
@@ -519,9 +526,9 @@ void printHelp(char* binary)
 			"  -noise VAL    adds some noise to certain blocks, reasonable values are 0-20\n"
 			"  -height VAL   maximum height at which blocks will be rendered (1-128)\n"
 			"  -file NAME    sets the output filename to 'NAME'; default is output.bmp\n"
-			"  -mem VAL      sets the amount of memory used for rendering. mcmap will use\n"
-			"                incremental rendering or disk caching to stick to this limit.\n"
-			"                default is 1800\n"
+			"  -mem VAL      sets the amount of memory (in MiB) used for rendering. mcmap\n"
+			"                will use incremental rendering or disk caching to stick to\n"
+			"                this limit. Default is 1800.\n"
 			"  -colors NAME  loads user defined colors from file 'NAME'\n"
 			"  -dumpcolors   creates a file which contains the default colors being used\n"
 			"                for rendering. Can be used to modify them and then use -colors\n"
