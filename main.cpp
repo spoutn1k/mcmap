@@ -1,6 +1,6 @@
 /***
  * mcmap - create isometric maps of your minecraft alpha world
- * v1.5+, 09-2010 by Zahl
+ * v1.5+, 10-2010 by Zahl
  */
 
 #define VERSION "1.5+"
@@ -97,7 +97,7 @@ int main(int argc, char** argv)
 				g_Noise = atoi(NEXTARG);
 			} else if (strcmp(option, "-height") == 0) {
 				if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
-					printf("Error: %s needs an integer arguments, ie: %s 100\n", option, option);
+					printf("Error: %s needs an integer argument, ie: %s 100\n", option, option);
 					return 1;
 				}
 				g_MapsizeY = atoi(NEXTARG);
@@ -237,7 +237,10 @@ int main(int argc, char** argv)
 	}
 
 	// This write out the bitmap header and pre-allocate space if disk caching is used
-	createBitmap(fileHandle, bitmapX, bitmapY, splitImage);
+	if (!createBitmap(fileHandle, bitmapX, bitmapY, splitImage)) {
+		printf("Error allocating bitmap. Check if you have enough free disk space.\n");
+		return 1;
+	}
 
 	// Now here's the loop rendering all the required parts of the image.
 	// All the vars previously used to define bounds will be set on each loop,
@@ -514,7 +517,7 @@ void printHelp(char* binary)
 	printf(
 			////////////////////////////////////////////////////////////////////////////////
 			"\nmcmap - an isometric minecraft alpha map rendering tool. Version " VERSION "\n\n"
-			"Usage: %s [-from X Z -to X Z] [-night] [-cave] [-noise VAL] WORLDPATH\n\n"
+			"Usage: %s [-from X Z -to X Z] [-night] [-cave] [-noise VAL] [...] WORLDPATH\n\n"
 			"  -from X Z     sets the coordinate of the chunk to start rendering at\n"
 			"  -to X Z       sets the coordinate of the chunk to end rendering at\n"
 			"                Note: Currently you need both -from and -to to define\n"

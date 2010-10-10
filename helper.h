@@ -30,8 +30,10 @@
 #if defined(_WIN32) && !defined(__GNUC__)
 #	include <windows.h>
 #	define usleep(x) Sleep((x) / 1000);
+#	define fseek64 _fseeki64
 #else
 #	include <unistd.h>
+#	define fseek64 fseeko64
 #endif
 
 // If this is missing for you in Visual Studio: See http://en.wikipedia.org/wiki/Stdint.h#External_links
