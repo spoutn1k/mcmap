@@ -27,14 +27,24 @@
 
 #include <string>
 
+// Difference between MCVC++ and gcc/others
 #if defined(_WIN32) && !defined(__GNUC__)
 #	include <windows.h>
 #	define usleep(x) Sleep((x) / 1000);
-#	define fseek64 _fseeki64
 #else
 #	include <unistd.h>
+#endif
+
+// For fseek
+#if defined(_WIN32) && !defined(__GNUC__)
+// MCVC++
+#	define fseek64 _fseeki64
+#elif defined(__APPLE__)
+#	define fseek64 fseeko
+#else
 #	define fseek64 fseeko64
 #endif
+
 
 // If this is missing for you in Visual Studio: See http://en.wikipedia.org/wiki/Stdint.h#External_links
 #include <stdint.h>
@@ -47,6 +57,6 @@ uint8_t clamp(int32_t val);
 void printProgress(const size_t current, const size_t max);
 bool fileExists(const char* strFilename);
 bool isNumeric(char* str);
-size_t calcBitmapSize(int mapChunksX, int mapChunksZ, size_t mapHeight, size_t &pixelsX, size_t &pixelsY, bool tight = false);
+size_t calcBitmapSize(int mapChunksX, int mapChunksZ, size_t mapHeight, int &pixelsX, int &pixelsY, bool tight = false);
 
 #endif

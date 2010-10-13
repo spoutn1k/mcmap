@@ -99,9 +99,9 @@ bool isNumeric(char* str)
 	return true;
 }
 
-size_t calcBitmapSize(int mapChunksX, int mapChunksZ, size_t mapHeight, size_t &pixelsX, size_t &pixelsY, bool tight)
+size_t calcBitmapSize(int mapChunksX, int mapChunksZ, size_t mapHeight, int &pixelsX, int &pixelsY, bool tight)
 {
 	pixelsX = (mapChunksX * CHUNKSIZE_X + mapChunksZ * CHUNKSIZE_Z) * 2 + (tight ? 3 : 10);
-	pixelsY = (mapChunksX * CHUNKSIZE_X + mapChunksZ * CHUNKSIZE_Z + mapHeight * 2) + (tight ? 3 : 10);
+	pixelsY = (mapChunksX * CHUNKSIZE_X + mapChunksZ * CHUNKSIZE_Z + (int)mapHeight * 2) + (tight ? 3 : 10);
 	return (size_t(pixelsX * 3 + 3) & ~size_t(3)) * pixelsY;
 }

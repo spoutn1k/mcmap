@@ -31,7 +31,7 @@ static int gTotalFromChunkX, gTotalFromChunkZ, gTotalToChunkX, gTotalToChunkZ;
 void optimizeTerrain();
 inline void blockCulling(const size_t x, const size_t y, const size_t z, size_t &removed);
 void undergroundMode(bool explore);
-bool prepareNextArea(int splitX, int splitZ, size_t &bitmapStartX, size_t &bitmapStartY);
+bool prepareNextArea(int splitX, int splitZ, int &bitmapStartX, int &bitmapStartY);
 void printHelp(char* binary);
 
 int main(int argc, char** argv)
@@ -170,13 +170,13 @@ int main(int argc, char** argv)
 	gTotalToChunkX = g_ToChunkX;
 	gTotalToChunkZ = g_ToChunkZ;
 	// Don't allow ridiculously small values for big maps
-	if (memlimit && memlimit < 200000000 && memlimit < g_MapsizeX * g_MapsizeZ * 150000) {
+	if (memlimit && memlimit < 200000000 && memlimit < size_t(g_MapsizeX * g_MapsizeZ * 150000)) {
 		printf("Need at least %d MiB of RAM to render a map of that size.\n", int(float(g_MapsizeX) * g_MapsizeZ * .15f + 1));
 		return 1;
 	}
 
 	// Mem check
-	size_t bitmapX, bitmapY;
+	int bitmapX, bitmapY;
 	size_t bitmapBytes = calcBitmapSize(g_ToChunkX - g_FromChunkX, g_ToChunkZ - g_FromChunkZ, g_MapsizeY, bitmapX, bitmapY);
 	// Cropping
 	int cropLeft = 0, cropRight = 0, cropTop = 0, cropBottom = 0;
@@ -207,7 +207,7 @@ int main(int argc, char** argv)
 		for (numSplitsX = 1, numSplitsZ = 2;;) {
 			int subAreaX = ((gTotalToChunkX - gTotalFromChunkX) + (numSplitsX - 1)) / numSplitsX;
 			int subAreaZ = ((gTotalToChunkZ - gTotalFromChunkZ) + (numSplitsZ - 1)) / numSplitsZ;
-			size_t subBitmapX, subBitmapY;
+			int subBitmapX, subBitmapY;
 			if (splitImage && calcBitmapSize(subAreaX, subAreaZ, g_MapsizeY, subBitmapX, subBitmapY, true) + calcTerrainSize(subAreaX, subAreaZ) <= memlimit) {
 				break; // Found a suitable partitioning
 			} else if (!splitImage && bitmapBytes + calcTerrainSize(subAreaX, subAreaZ) <= memlimit) {
@@ -258,7 +258,7 @@ int main(int argc, char** argv)
 	// to create something like a virtual window inside the map.
 	for (;;) {
 
-		size_t bitmapStartX = 3, bitmapStartY = 5;
+		int bitmapStartX = 3, bitmapStartY = 5;
 		if (numSplitsX) { // virtual window is set here
 			// Set current chunk bounds according to number of splits. returns true if we're done
 			if (prepareNextArea(numSplitsX, numSplitsZ, bitmapStartX, bitmapStartY)) {
@@ -267,9 +267,9 @@ int main(int argc, char** argv)
 			// if image is split up, prepare memory block for next part
 			if (splitImage) {
 				bitmapStartX += 2;
-				const size_t sizex = (g_ToChunkX - g_FromChunkX) * CHUNKSIZE_X * 2 + (g_ToChunkZ - g_FromChunkZ) * CHUNKSIZE_Z * 2;
-				const size_t sizey = g_MapsizeY * 2 + (g_ToChunkX - g_FromChunkX) * CHUNKSIZE_X + (g_ToChunkZ - g_FromChunkZ) * CHUNKSIZE_Z + 2;
-				if (!loadImagePart(fileHandle, (int)bitmapStartX - cropLeft, (int)bitmapStartY - cropTop, sizex, sizey)) {
+				const int sizex = (g_ToChunkX - g_FromChunkX) * CHUNKSIZE_X * 2 + (g_ToChunkZ - g_FromChunkZ) * CHUNKSIZE_Z * 2;
+				const int sizey = (int)g_MapsizeY * 2 + (g_ToChunkX - g_FromChunkX) * CHUNKSIZE_X + (g_ToChunkZ - g_FromChunkZ) * CHUNKSIZE_Z + 2;
+				if (!loadImagePart(fileHandle, bitmapStartX - cropLeft, bitmapStartY - cropTop, sizex, sizey)) {
 					printf("Error loading partial image to render to.\n");
 					return 1;
 				}
@@ -316,8 +316,8 @@ int main(int argc, char** argv)
 		for (size_t x = CHUNKSIZE_X; x < g_MapsizeX - CHUNKSIZE_X; ++x) {
 			printProgress(x - CHUNKSIZE_X, g_MapsizeX);
 			for (size_t z = CHUNKSIZE_Z; z < g_MapsizeZ - CHUNKSIZE_Z; ++z) {
-				const size_t bmpPosX = ((g_MapsizeZ - z - CHUNKSIZE_Z) * 2 + (x - CHUNKSIZE_X) * 2 + (splitImage ? -2 : bitmapStartX)) - cropLeft;
-				size_t bmpPosY = (g_MapsizeY * 2 + z + x - CHUNKSIZE_Z - CHUNKSIZE_X + (splitImage ? 0 : bitmapStartY)) - cropTop;
+				const int bmpPosX = int((g_MapsizeZ - z - CHUNKSIZE_Z) * 2 + (x - CHUNKSIZE_X) * 2 + (splitImage ? -2 : bitmapStartX - cropLeft));
+				int bmpPosY = int(g_MapsizeY * 2 + z + x - CHUNKSIZE_Z - CHUNKSIZE_X + (splitImage ? 0 : bitmapStartY - cropTop));
 				for (size_t y = 0; y < g_MapsizeY; ++y) {
 					uint8_t c = BLOCKAT(x,y,z);
 					if (c != AIR) { // If block is not air (colors[c][3] != 0)
@@ -331,7 +331,7 @@ int main(int argc, char** argv)
 												)) {
 							int l = GETLIGHTAT(x, y, z); // find out how much light hits that block
 							bool blocked[5] = {false, false, false, false, false}; // if light is blocked in one direction
-							for (size_t i = 1; i < 4 && l <= 0; ++i) {
+							for (int i = 1; i < 4 && l <= 0; ++i) {
 								// Need to make this a loop to deal with half-steps, fences, flowers and other special blocks
 								blocked[0] |= (colors[BLOCKAT(x+i, y, z)][ALPHA] == 255);
 								blocked[1] |= (colors[BLOCKAT(x, y, z+i)][ALPHA] == 255);
@@ -342,10 +342,10 @@ int main(int argc, char** argv)
 										&& blocked[0] && blocked[1] && blocked[2] && blocked[3] && blocked[4]) break;
 								//
 								if (!blocked[2] && l <= 0 && y+i < g_MapsizeY) l = GETLIGHTAT(x, y+i, z);
-								if (!blocked[0] && l <= 0) l = GETLIGHTAT(x+i, y, z) - i;
-								if (!blocked[1] && l <= 0) l = GETLIGHTAT(x, y, z+i) - i;
-								if (!blocked[3] && l <= 0 && y+i < g_MapsizeY) l = (int)GETLIGHTAT(x+i, y+i, z) - i;
-								if (!blocked[4] && l <= 0 && y+i < g_MapsizeY) l = (int)GETLIGHTAT(x, y+i, z+i) - i;
+								if (!blocked[0] && l <= 0) l = GETLIGHTAT(x+i, y, z) - i/2;
+								if (!blocked[1] && l <= 0) l = GETLIGHTAT(x, y, z+i) - i/2;
+								if (!blocked[3] && l <= 0 && y+i < g_MapsizeY) l = (int)GETLIGHTAT(x+i, y+i, z) - i/2;
+								if (!blocked[4] && l <= 0 && y+i < g_MapsizeY) l = (int)GETLIGHTAT(x, y+i, z+i) - i/2;
 								//if (!blocked[2] && l <= 0 && y+i < g_MapsizeY) l = GETLIGHTAT(x+i/2, y+i/2, z+i/2) - i/2;
 							}
 							if (l < 0) l = 0;
@@ -526,7 +526,7 @@ void undergroundMode(bool explore)
 	//}
 }
 
-bool prepareNextArea(int splitX, int splitZ, size_t &bitmapStartX, size_t &bitmapStartY)
+bool prepareNextArea(int splitX, int splitZ, int &bitmapStartX, int &bitmapStartY)
 {
 	static int currentAreaX = -1;
 	static int currentAreaZ = 0;

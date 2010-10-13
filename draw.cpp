@@ -37,8 +37,9 @@ typedef struct {
 
 namespace {
 	uint8_t *gBitmap = NULL;
-	size_t gBmpLocalLineWidth = 0, gBmpLocalWidth = 0, gBmpLocalHeight = 0, gBmpLocalSize = 0, gBmpLocalX = 0, gBmpLocalY = 0;
-	size_t gBmpLineWidth = 0, gBmpWidth = 0, gBmpHeight = 0, gBmpSize = 0;
+	int gBmpLocalLineWidth = 0, gBmpLocalWidth = 0, gBmpLocalHeight = 0, gBmpLocalX = 0, gBmpLocalY = 0;
+	int gBmpLineWidth = 0, gBmpWidth = 0, gBmpHeight = 0;
+	int64_t gBmpSize = 0, gBmpLocalSize = 0;
 
 	inline void blend(uint8_t* c1, const uint8_t* c2);
 	inline void modColor(uint8_t* color, const int mod);
@@ -78,8 +79,8 @@ namespace {
 
 bool createBitmap(FILE* fh, size_t width, size_t height, bool splitUp)
 {
-	gBmpWidth = width;
-	gBmpHeight = height;
+	gBmpWidth = (int)width;
+	gBmpHeight = (int)height;
 	gBmpLineWidth = size_t(gBmpWidth * 3 + 3) & ~size_t(3); // The size in bytes of a line in a bitmap has to be a multiple of 4
 	gBmpSize = gBmpLineWidth * gBmpHeight;
 	printf("Bitmap dimensions are %dx%d, 24bpp, %.2fMiB\n", gBmpWidth, gBmpHeight, float(gBmpSize / float(1024 * 1024)));
@@ -91,8 +92,8 @@ bool createBitmap(FILE* fh, size_t width, size_t height, bool splitUp)
 		// beyond the EOF, but just to be sure, do it manually
 		uint8_t *tmpdata = new uint8_t[gBmpLineWidth];
 		memset(tmpdata, 0, gBmpLineWidth);
-		for (size_t i = 0; i < gBmpHeight; ++i) {
-			if (fwrite(tmpdata, 1, gBmpLineWidth, fh) != gBmpLineWidth) return false;
+		for (int i = 0; i < gBmpHeight; ++i) {
+			if ((int)fwrite(tmpdata, 1, gBmpLineWidth, fh) != gBmpLineWidth) return false;
 		}
 		delete[] tmpdata;
 	} else {
@@ -112,18 +113,12 @@ bool saveBitmap(FILE* fh)
 
 bool loadImagePart(FILE* fh, int startx, int starty, int width, int height)
 {
-	if (startx < 0) {
-		width += startx;
-		startx = 0;
-	}
-	if (starty < 0) {
-		height += starty;
-		starty = 0;
-	}
+	const int offX = MAX(0, -startx);
+	const int offY = MAX(0, -starty);
 	if (width + startx > gBmpWidth) width = gBmpWidth - startx;
 	if (height + starty > gBmpHeight) height = gBmpHeight - starty;
 	gBmpLocalWidth = width;
-	gBmpLocalLineWidth = width * 3;
+	gBmpLocalLineWidth = (width - offX) * 3;
 	gBmpLocalHeight = height;
 	gBmpLocalX = startx;
 	gBmpLocalY = starty;
@@ -140,10 +135,11 @@ bool loadImagePart(FILE* fh, int startx, int starty, int width, int height)
 			delete[] gBitmap;
 			gBitmap = new uint8_t[gBmpLocalSize];
 		}
-		size_t fileLine = gBmpHeight - gBmpLocalY - gBmpLocalHeight;
-		for (size_t arrayLine = 0; arrayLine < gBmpLocalHeight; ++arrayLine) {
-			fseek64(fh, int64_t(fileLine) * int64_t(gBmpLineWidth) + int64_t(gBmpLocalX * 3 + sizeof(BITMAP_INFOHEADER) + sizeof(BITMAP_FILEHEADER)), SEEK_SET);
-			if (fread(gBitmap + (arrayLine * gBmpLocalLineWidth), 1, gBmpLocalLineWidth, fh) != gBmpLocalLineWidth) return false;
+		int fileLine = gBmpHeight - gBmpLocalY - gBmpLocalHeight + offY;
+		for (int arrayLine = offY; arrayLine < gBmpLocalHeight; ++arrayLine) {
+			const int64_t pos = int64_t(fileLine) * int64_t(gBmpLineWidth) + int64_t((gBmpLocalX + offX) * 3 + sizeof(BITMAP_INFOHEADER) + sizeof(BITMAP_FILEHEADER));
+			fseek64(fh, pos, SEEK_SET);
+			if ((int)fread(gBitmap + (arrayLine * gBmpLocalLineWidth), 1, gBmpLocalLineWidth, fh) != gBmpLocalLineWidth) return false;
 			++fileLine;
 		}
 	}
@@ -152,10 +148,14 @@ bool loadImagePart(FILE* fh, int startx, int starty, int width, int height)
 
 bool saveImagePart(FILE* fh)
 {
-	size_t fileLine = gBmpHeight - gBmpLocalY - gBmpLocalHeight;
-	for (size_t arrayLine = 0; arrayLine < gBmpLocalHeight; ++arrayLine) {
-		fseek64(fh, int64_t(fileLine) * int64_t(gBmpLineWidth) + int64_t(gBmpLocalX * 3 + sizeof(BITMAP_INFOHEADER) + sizeof(BITMAP_FILEHEADER)), SEEK_SET);
-		if (fwrite(gBitmap + (arrayLine * gBmpLocalLineWidth), 1, gBmpLocalLineWidth, fh) != gBmpLocalLineWidth) return false;
+	const int offX = MAX(0, -gBmpLocalX);
+	const int offY = MAX(0, -gBmpLocalY);
+	size_t fileLine = gBmpHeight - gBmpLocalY - gBmpLocalHeight + offY;
+	for (int arrayLine = offY; arrayLine < gBmpLocalHeight; ++arrayLine) {
+		const int64_t pos = int64_t(fileLine) * int64_t(gBmpLineWidth) + int64_t((gBmpLocalX + offX) * 3 + sizeof(BITMAP_INFOHEADER) + sizeof(BITMAP_FILEHEADER));
+		if (pos < 0) continue;
+		fseek64(fh, pos, SEEK_SET);
+		if ((int)fwrite(gBitmap + (arrayLine * gBmpLocalLineWidth), 1, gBmpLocalLineWidth, fh) != gBmpLocalLineWidth) return false;
 		++fileLine;
 	}
 	return true;
@@ -284,7 +284,7 @@ void blendPixel(size_t x, size_t y, uint8_t color, float fsub)
 	uint8_t L[4], D[4], c[4];
 	// Now make a local copy of the color that we can modify just for this one block
 	memcpy(c, colors[color], 4);
-	c[ALPHA] = clamp(float(c[ALPHA]) * fsub); // The brighter the color, the stronger the impact
+	c[ALPHA] = clamp(int(float(c[ALPHA]) * fsub)); // The brighter the color, the stronger the impact
 	// They are for the sides of blocks
 	memcpy(L, c, 4);
 	memcpy(D, c, 4);
