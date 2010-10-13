@@ -159,7 +159,7 @@ int main(int argc, char** argv)
 		return 1;
 	}
 	if (g_MapsizeY < 1 || g_ToChunkX <= g_FromChunkX || g_ToChunkZ <= g_FromChunkZ) {
-		printf("What to doooo, yeah, what to doooo... (English: max height < 1 or X/Z-width <= 0) %d %d %d\n", g_MapsizeY, g_MapsizeX, g_MapsizeZ);
+		printf("What to doooo, yeah, what to doooo... (English: max height < 1 or X/Z-width <= 0) %d %d %d\n", (int)g_MapsizeY, (int)g_MapsizeX, (int)g_MapsizeZ);
 		return 1;
 	}
 	if (g_MapsizeY > CHUNKSIZE_Y) g_MapsizeY = CHUNKSIZE_Y;

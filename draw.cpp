@@ -108,7 +108,7 @@ bool createBitmap(FILE* fh, size_t width, size_t height, bool splitUp)
 
 bool saveBitmap(FILE* fh)
 {
-	return fwrite(gBitmap, 1, gBmpSize, fh) == gBmpSize;
+	return fwrite(gBitmap, 1, gBmpSize, fh) == (size_t)gBmpSize;
 }
 
 bool loadImagePart(FILE* fh, int startx, int starty, int width, int height)
