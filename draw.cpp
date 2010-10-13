@@ -14,23 +14,23 @@
 
 typedef struct {
 	int8_t Type[2];
-	uint32_t Size;
-	uint32_t Reserved;
-	uint32_t DataOffset;
+	uint8_t Size[4];
+	uint8_t Reserved[4];
+	uint8_t DataOffset[4];
 } BITMAP_FILEHEADER;
 
 typedef struct {
-	uint32_t HeaderSize;
-	int32_t Width;
-	int32_t Height;
-	uint16_t Planes;
-	uint16_t BitCount;
-	uint32_t Compression;
-	uint32_t ImageByteCount;
-	int32_t PelsPerMeterX;
-	int32_t PelsPerMeterY;
-	uint32_t ClrUsed;
-	uint32_t ClrImportant;
+	uint8_t HeaderSize[4];
+	uint8_t Width[4];
+	uint8_t Height[4];
+	uint8_t Planes[2];
+	uint8_t BitCount[2];
+	uint8_t Compression[4];
+	uint8_t ImageByteCount[4];
+	uint8_t PelsPerMeterX[4];
+	uint8_t PelsPerMeterY[4];
+	uint8_t ClrUsed[4];
+	uint8_t ClrImportant[4];
 } BITMAP_INFOHEADER;
 
 #define PIXEL(x,y) (gBitmap[(x) * 3 + (gBmpLocalHeight - ((y) + 1)) * gBmpLocalLineWidth])
@@ -54,6 +54,19 @@ namespace {
 	void setFence(const size_t &x, const size_t &y, const uint8_t *color);
 	void setStep(const size_t &x, const size_t &y, const uint8_t *color, const uint8_t *light, const uint8_t *dark);
 
+	inline void le32(uint8_t* target, uint32_t val)
+	{
+		target[0] = uint8_t(val & 0xff);
+		target[1] = uint8_t((val >> 8) & 0xff);
+		target[2] = uint8_t((val >> 16) & 0xff);
+		target[3] = uint8_t((val >> 24) & 0xff);
+	}
+	inline void le16(uint8_t* target, uint16_t val)
+	{
+		target[0] = uint8_t(val & 0xff);
+		target[1] = uint8_t((val >> 8) & 0xff);
+	}
+
 	bool writeBitmapHeader24(FILE* fh, const size_t width, const size_t height)
 	{
 		//uint32_t datasize = ((uint32_t(width) * 3u + 3u) & ~uint32_t(3)) * uint32_t(height);
@@ -63,14 +76,12 @@ namespace {
 		memset(&info, 0, sizeof(info));
 		header.Type[0] = 'B';
 		header.Type[1] = 'M';
-		header.Size = 0; //sizeof(header) + sizeof(info) + datasize;
-		header.DataOffset = sizeof(header) + sizeof(info);
-		info.HeaderSize = sizeof(info);
-		info.BitCount = 24;
-		info.Height = (int)height;
-		info.Width = (int)width;
-		info.ImageByteCount = 0; //datasize;
-		info.Planes = 1;
+		le32(header.DataOffset, uint32_t(sizeof(header) + sizeof(info)));
+		le32(info.HeaderSize, uint32_t(sizeof(info)));
+		le16(info.BitCount, 24);
+		le32(info.Height, uint32_t(height));
+		le32(info.Width, uint32_t(width));
+		le16(info.Planes, 1);
 		return
 				(fwrite(&header, 1, sizeof(header), fh) == sizeof(header))
 				&& (fwrite(&info, 1, sizeof(info), fh) == sizeof(info));

@@ -604,7 +604,7 @@ void printHelp(char* binary)
 			"                bounds, otherwise the entire world will be rendered.\n"
 			"  -cave         renders a map of all caves that have been explored by players\n"
 			"  -blendcave    overlay caves over normal map; doesn't work with incremental\n"
-			"                rendering (some parts will be hidden)"
+			"                rendering (some parts will be hidden)\n"
 			"  -night        renders the world at night using blocklight (torches)\n"
 			"  -skylight     use skylight when rendering map (shadows below trees etc.)\n"
 			"                hint: using this with -night makes a difference\n"
