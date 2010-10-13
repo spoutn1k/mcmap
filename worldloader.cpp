@@ -313,16 +313,66 @@ void calcBitmapOverdraw(int &left, int &right, int &top, int &bottom)
 		const int x = (**it).x;
 		const int z = (**it).z;
 		if (g_Orientation == North) {
+			// Right
 			val = (((g_ToChunkX - 1) - x) * CHUNKSIZE_X * 2)
 					+ ((z - g_FromChunkZ) * CHUNKSIZE_Z * 2);
 			if (val < right) right = val;
+			// Left
 			val = (((g_ToChunkZ - 1) - z) * CHUNKSIZE_Z * 2)
 					+ ((x - g_FromChunkX) * CHUNKSIZE_X * 2);
 			if (val < left) left = val;
+			// Top
 			val = (z - g_FromChunkZ) * CHUNKSIZE_Z + (x - g_FromChunkX) * CHUNKSIZE_X;
 			if (val < top) top = val;
+			// Bottom
 			val = (((g_ToChunkX - 1) - x) * CHUNKSIZE_X) + (((g_ToChunkZ - 1) - z) * CHUNKSIZE_Z);
 			if (val < bottom) bottom = val;
+		} else if (g_Orientation == South) {
+			// Right
+			val = (((g_ToChunkZ - 1) - z) * CHUNKSIZE_Z * 2)
+					+ ((x - g_FromChunkX) * CHUNKSIZE_X * 2);
+			if (val < right) right = val;
+			// Left
+			val = (((g_ToChunkX - 1) - x) * CHUNKSIZE_X * 2)
+					+ ((z - g_FromChunkZ) * CHUNKSIZE_Z * 2);
+			if (val < left) left = val;
+			// Top
+			val = ((g_ToChunkZ - 1) - z) * CHUNKSIZE_Z + ((g_ToChunkX - 1) - x) * CHUNKSIZE_X;
+			if (val < top) top = val;
+			// Bottom
+			val = ((x - g_FromChunkX) * CHUNKSIZE_X) + ((z - g_FromChunkZ) * CHUNKSIZE_Z);
+			if (val < bottom) bottom = val;
+		} else if (g_Orientation == East) {
+			// Right
+			val = ((g_ToChunkZ - 1) - z) * CHUNKSIZE_Z * 2 + ((g_ToChunkX - 1) - x) * CHUNKSIZE_X * 2;
+			if (val < right) right = val;
+			// Left
+			val = ((x - g_FromChunkX) * CHUNKSIZE_X) * 2 +  + ((z - g_FromChunkZ) * CHUNKSIZE_Z) * 2;
+			if (val < left) left = val;
+			// Top
+			val = ((g_ToChunkX - 1) - x) * CHUNKSIZE_X
+					+ (z - g_FromChunkZ) * CHUNKSIZE_Z;
+			if (val < top) top = val;
+			// Bottom
+			val = ((g_ToChunkZ - 1) - z) * CHUNKSIZE_Z
+					+ (x - g_FromChunkX) * CHUNKSIZE_X;
+			if (val < bottom) bottom = val;
+		} else {
+			// Right
+			val = ((x - g_FromChunkX) * CHUNKSIZE_X) * 2 +  + ((z - g_FromChunkZ) * CHUNKSIZE_Z) * 2;
+			if (val < right) right = val;
+			// Left
+			val = ((g_ToChunkZ - 1) - z) * CHUNKSIZE_Z * 2 + ((g_ToChunkX - 1) - x) * CHUNKSIZE_X * 2;
+			if (val < left) left = val;
+			// Top
+			val = ((g_ToChunkZ - 1) - z) * CHUNKSIZE_Z
+					+ (x - g_FromChunkX) * CHUNKSIZE_X;
+			if (val < top) top = val;
+			// Bottom
+			val = ((g_ToChunkX - 1) - x) * CHUNKSIZE_X
+					+ (z - g_FromChunkZ) * CHUNKSIZE_Z;
+			if (val < bottom) bottom = val;
+		}
 	}
 	//if (right > (CHUNKSIZE_X + CHUNKSIZE_Y) * 2) right -= (CHUNKSIZE_X + CHUNKSIZE_Y) * 2;
 }

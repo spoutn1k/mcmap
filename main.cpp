@@ -88,7 +88,7 @@ int main(int argc, char** argv)
 				g_Nightmode = true;
 			} else if (strcmp(option, "-cave") == 0 || strcmp(option, "-underground") == 0) {
 				g_Underground = true;
-			} else if (strcmp(option, "-blendcave") == 0) {
+			} else if (strcmp(option, "-blendcave") == 0 || strcmp(option, "-blendcaves") == 0) {
 				g_BlendUnderground = true;
 			} else if (strcmp(option, "-skylight") == 0) {
 				g_Skylight = true;
