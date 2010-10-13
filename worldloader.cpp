@@ -10,11 +10,32 @@
 #include <cstdio>
 
 using std::string;
-typedef std::list<char*> filelist;
 
-static size_t lightsize;
+namespace {
+	struct Chunk {
+		int x;
+		int z;
+		char *filename;
+		Chunk(const char* source, int sx, int sz)
+		{
+			filename = strdup(source);
+			x = sx;
+			z = sz;
+		}
+		~Chunk()
+		{
+			free(filename);
+		}
+	};
+	typedef std::list<char*> charList;
+	typedef std::list<Chunk*> chunkList;
 
-static filelist chunks;
+	size_t lightsize;
+	chunkList chunks;
+
+
+}
+
 static void loadChunk(const char *file);
 static bool isAlphaWorld(string path);
 static void allocateTerrain();
@@ -25,7 +46,7 @@ bool scanWorldDirectory(const char *fromPath)
 		return false;
 	}
 
-	filelist subdirs;
+	charList subdirs;
 	myFile file;
 	DIRHANDLE d = Dir::open((char*)fromPath, file);
 	if (d == NULL) {
@@ -42,8 +63,8 @@ bool scanWorldDirectory(const char *fromPath)
 		return false;
 	}
 	// OK go
-	for (filelist::iterator it = chunks.begin(); it != chunks.end(); it++) {
-		free(*it);
+	for (chunkList::iterator it = chunks.begin(); it != chunks.end(); it++) {
+		delete *it;
 	}
 	chunks.clear();
 	g_FromChunkX = g_FromChunkZ = 10000000;
@@ -54,7 +75,7 @@ bool scanWorldDirectory(const char *fromPath)
 	const size_t max = subdirs.size();
 	size_t count = 0;
 	printf("Scanning world...\n");
-	for (filelist::iterator it = subdirs.begin(); it != subdirs.end(); it++) {
+	for (charList::iterator it = subdirs.begin(); it != subdirs.end(); it++) {
 		string base2 = base + *it;
 		printProgress(count++, max);
 		d = Dir::open((char*)base2.c_str(), file);
@@ -90,7 +111,7 @@ bool scanWorldDirectory(const char *fromPath)
 									g_ToChunkZ = valZ;
 								}
 								string full = path + "/" + chunk.name;
-								chunks.push_back(strdup(full.c_str()));
+								chunks.push_back(new Chunk(full.c_str(), valX, valZ));
 							} else {
 								printf("Ignoring bad chunk at %d %d\n", valX, valZ);
 							}
@@ -106,7 +127,7 @@ bool scanWorldDirectory(const char *fromPath)
 	g_ToChunkX++;
 	g_ToChunkZ++;
 	//
-	for (filelist::iterator it = subdirs.begin(); it != subdirs.end(); it++) {
+	for (charList::iterator it = subdirs.begin(); it != subdirs.end(); it++) {
 		free(*it);
 	}
 	printf("Min: (%d|%d) Max: (%d|%d)\n", g_FromChunkX, g_FromChunkZ, g_ToChunkX, g_ToChunkZ);
@@ -120,12 +141,10 @@ bool loadEntireTerrain()
 	const size_t max = chunks.size();
 	size_t count = 0;
 	printf("Loading all chunks..\n");
-	for (filelist::iterator it = chunks.begin(); it != chunks.end(); it++) {
+	for (chunkList::iterator it = chunks.begin(); it != chunks.end(); it++) {
 		printProgress(count++, max);
-		loadChunk(*it);
-		free(*it);
+		loadChunk((**it).filename);
 	}
-	chunks.clear();
 	printProgress(10, 10);
 	return true;
 }
@@ -213,9 +232,9 @@ static void loadChunk(const char *file)
 					if (blockdata[y + (z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y] == TORCH) {
 						// In underground mode, the lightmap is also used, but the values are calculated manually, to only show
 						// caves the players have discovered yet. It's not perfect of course, but works ok.
-						for (int ty = int(y) - 9; ty < int(y) + 9; ++ty) { // The trick here is to only take into account
+						for (int ty = int(y) - 9; ty < int(y) + 9; ty+=2) { // The trick here is to only take into account
 							if (ty < 0) continue; // areas around torches.
-							if (ty >= int(g_MapsizeY/2)) break;
+							if (ty >= int(g_MapsizeY)) break;
 							for (int tz = int(z) - 18 + offsetz; tz < int(z) + 18 + offsetz; ++tz) {
 								if (tz < CHUNKSIZE_Z) continue;
 								for (int tx = int(x) - 18 + offsetx; tx < int(x) + 18 + offsetx; ++tx) {
@@ -280,10 +299,31 @@ static void loadChunk(const char *file)
 size_t calcTerrainSize(int chunksX, int chunksZ)
 {
 	size_t size = size_t(chunksX+2) * CHUNKSIZE_X * size_t(chunksZ+2) * CHUNKSIZE_Z * g_MapsizeY;
-	if (g_Nightmode || g_Underground || g_Skylight) {
+	if (g_Nightmode || g_Underground || g_Skylight || g_BlendUnderground) {
 		return size + size_t(chunksX+2) * CHUNKSIZE_X * size_t(chunksZ+2) * CHUNKSIZE_Z * ((g_MapsizeY + 1) / 2);
 	}
 	return size;
+}
+
+void calcBitmapOverdraw(int &left, int &right, int &top, int &bottom)
+{
+	top = left = bottom = right = 0xfffffff;
+	int val = 0;
+	for (chunkList::iterator it = chunks.begin(); it != chunks.end(); it++) {
+		if (g_Orientation == North) {
+			val = (((g_ToChunkX - 1) - (**it).x) * CHUNKSIZE_X * 2)
+					+ (((**it).z - g_FromChunkZ) * CHUNKSIZE_Z * 2);
+			if (val < right) right = val;
+			val = (((g_ToChunkZ - 1) - (**it).z) * CHUNKSIZE_Z * 2)
+					+ (((**it).x - g_FromChunkX) * CHUNKSIZE_X * 2);
+			if (val < left) left = val;
+			val = ((**it).z - g_FromChunkZ) * CHUNKSIZE_Z + ((**it).x - g_FromChunkX) * CHUNKSIZE_X;
+			if (val < top) top = val;
+			val = (((g_ToChunkX - 1) - (**it).x) * CHUNKSIZE_X) + (((g_ToChunkZ - 1) - (**it).z) * CHUNKSIZE_Z);
+			if (val < bottom) bottom = val;
+		}
+	}
+	//if (right > (CHUNKSIZE_X + CHUNKSIZE_Y) * 2) right -= (CHUNKSIZE_X + CHUNKSIZE_Y) * 2;
 }
 
 static bool isAlphaWorld(string path)
@@ -300,7 +340,7 @@ static void allocateTerrain()
 	printf("Terrain takes up %.2fMiB", float(terrainsize / float(1024 * 1024)));
 	g_Terrain = new uint8_t[terrainsize];
 	memset(g_Terrain, 0, terrainsize); // Preset: Air
-	if (g_Nightmode || g_Underground || g_Skylight) {
+	if (g_Nightmode || g_Underground || g_BlendUnderground || g_Skylight) {
 		lightsize = g_MapsizeZ * g_MapsizeX * ((g_MapsizeY + 1) / 2);
 		printf(", lightmap %.2fMiB", float(lightsize / float(1024 * 1024)));
 		g_Light = new uint8_t[lightsize];
@@ -314,4 +354,9 @@ static void allocateTerrain()
 		}
 	}
 	printf("\n");
+}
+
+void clearLightmap()
+{
+	if (g_Light != NULL) memset(g_Light, 0x00, lightsize);
 }

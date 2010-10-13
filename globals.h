@@ -23,6 +23,7 @@ extern int G_FROMX, G_FROMZ, G_TOX, G_TOZ;
 extern Orientation g_Orientation;
 extern bool g_Nightmode;
 extern bool g_Underground;
+extern bool g_BlendUnderground;
 extern bool g_Skylight;
 extern int g_Noise;
 

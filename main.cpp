@@ -1,9 +1,9 @@
 /***
  * mcmap - create isometric maps of your minecraft alpha world
- * v1.5+, 10-2010 by Zahl
+ * v1.6, 10-2010 by Zahl
  */
 
-#define VERSION "1.5+"
+#define VERSION "1.6m"
 
 #include "helper.h"
 #include "draw.h"
@@ -21,15 +21,16 @@
 using std::string;
 
 // For bright edge
-static bool gAtBottomLeft = false, gAtBottomRight = false;
+static bool gAtBottomLeft = true, gAtBottomRight = true;
 
 static int gTotalFromChunkX, gTotalFromChunkZ, gTotalToChunkX, gTotalToChunkZ;
 
 // Macros to make code more readable
 #define BLOCK_AT_MAPEDGE(x,z) (((z)+1 == g_MapsizeZ-CHUNKSIZE_Z && gAtBottomLeft) || ((x)+1 == g_MapsizeX-CHUNKSIZE_X && gAtBottomRight))
 
+void optimizeTerrain();
 inline void blockCulling(const size_t x, const size_t y, const size_t z, size_t &removed);
-void undergroundMode();
+void undergroundMode(bool explore);
 bool prepareNextArea(int splitX, int splitZ, size_t &bitmapStartX, size_t &bitmapStartY);
 void printHelp(char* binary);
 
@@ -87,6 +88,8 @@ int main(int argc, char** argv)
 				g_Nightmode = true;
 			} else if (strcmp(option, "-cave") == 0 || strcmp(option, "-underground") == 0) {
 				g_Underground = true;
+			} else if (strcmp(option, "-blendcave") == 0) {
+				g_BlendUnderground = true;
 			} else if (strcmp(option, "-skylight") == 0) {
 				g_Skylight = true;
 			} else if (strcmp(option, "-noise") == 0 || strcmp(option, "-dither") == 0) {
@@ -175,6 +178,14 @@ int main(int argc, char** argv)
 	// Mem check
 	size_t bitmapX, bitmapY;
 	size_t bitmapBytes = calcBitmapSize(g_ToChunkX - g_FromChunkX, g_ToChunkZ - g_FromChunkZ, g_MapsizeY, bitmapX, bitmapY);
+	// Cropping
+	int cropLeft = 0, cropRight = 0, cropTop = 0, cropBottom = 0;
+	if (wholeworld) {
+		calcBitmapOverdraw(cropLeft, cropRight, cropTop, cropBottom);
+		bitmapX -= (cropLeft + cropRight);
+		bitmapY -= (cropTop + cropBottom);
+		bitmapBytes = (size_t(bitmapX * 3 + 3) & ~size_t(3)) * bitmapY;
+	}
 	bool splitImage = false;
 	int numSplitsX = 0;
 	int numSplitsZ = 0;
@@ -258,7 +269,7 @@ int main(int argc, char** argv)
 				bitmapStartX += 2;
 				const size_t sizex = (g_ToChunkX - g_FromChunkX) * CHUNKSIZE_X * 2 + (g_ToChunkZ - g_FromChunkZ) * CHUNKSIZE_Z * 2;
 				const size_t sizey = g_MapsizeY * 2 + (g_ToChunkX - g_FromChunkX) * CHUNKSIZE_X + (g_ToChunkZ - g_FromChunkZ) * CHUNKSIZE_Z + 2;
-				if (!loadImagePart(fileHandle, bitmapStartX, bitmapStartY, sizex, sizey)) {
+				if (!loadImagePart(fileHandle, (int)bitmapStartX - cropLeft, (int)bitmapStartY - cropTop, sizex, sizey)) {
 					printf("Error loading partial image to render to.\n");
 					return 1;
 				}
@@ -295,43 +306,24 @@ int main(int argc, char** argv)
 
 		// If underground mode, remove blocks that don't seem to belong to caves
 		if (g_Underground) {
-			undergroundMode();
+			undergroundMode(false);
 		}
-		// Remove invisible blocks from map (covered by other blocks from isometric pov)
-		// Do so by "raytracing" every block from front to back..
-		printf("Optimizing terrain...\n");
-		size_t removed = 0;
-		printProgress(0, 10);
-		for (size_t x = CHUNKSIZE_X+1; x < g_MapsizeX - CHUNKSIZE_X; ++x) {
-			for (size_t z = CHUNKSIZE_Z+1; z < g_MapsizeZ - CHUNKSIZE_Z; ++z) {
-				blockCulling(x, MIN(g_MapsizeY, 100)-1, z, removed); // Some cheating here, as in most cases there is little to nothing up that high, and the few things that are won't slow down rendering too much
-			}
-			for (size_t y = MIN(g_MapsizeY, 100) - 1; y > 0; --y) {
-				blockCulling(x, y, g_MapsizeZ-1-CHUNKSIZE_Z, removed);
-			}
-			printProgress(x, g_MapsizeX + g_MapsizeZ);
-		}
-		for (size_t z = CHUNKSIZE_Z+1; z < g_MapsizeZ-1 - CHUNKSIZE_Z; ++z) {
-			for (size_t y = MIN(g_MapsizeY, 100) - 1; y > 0; --y) {
-				blockCulling(g_MapsizeX-1-CHUNKSIZE_X, y, z, removed);
-			}
-			printProgress(z + g_MapsizeX, g_MapsizeX + g_MapsizeZ);
-		}
-		printProgress(10, 10);
-		printf("Removed %lu blocks\n", (unsigned long)removed);
+
+		optimizeTerrain();
 
 		// Finally, render terrain to file
 		printf("Creating bitmap...\n");
 		for (size_t x = CHUNKSIZE_X; x < g_MapsizeX - CHUNKSIZE_X; ++x) {
-			printProgress(x, g_MapsizeX);
+			printProgress(x - CHUNKSIZE_X, g_MapsizeX);
 			for (size_t z = CHUNKSIZE_Z; z < g_MapsizeZ - CHUNKSIZE_Z; ++z) {
-				const size_t bmpPosX = (g_MapsizeZ - z - CHUNKSIZE_Z) * 2 + (x - CHUNKSIZE_X) * 2 + (splitImage ? -2 : bitmapStartX);
-				size_t bmpPosY = g_MapsizeY * 2 + z + x - CHUNKSIZE_Z - CHUNKSIZE_X + (splitImage ? 0 : bitmapStartY);
+				const size_t bmpPosX = ((g_MapsizeZ - z - CHUNKSIZE_Z) * 2 + (x - CHUNKSIZE_X) * 2 + (splitImage ? -2 : bitmapStartX)) - cropLeft;
+				size_t bmpPosY = (g_MapsizeY * 2 + z + x - CHUNKSIZE_Z - CHUNKSIZE_X + (splitImage ? 0 : bitmapStartY)) - cropTop;
 				for (size_t y = 0; y < g_MapsizeY; ++y) {
 					uint8_t c = BLOCKAT(x,y,z);
 					if (c != AIR) { // If block is not air (colors[c][3] != 0)
 						//float col = float(y) * .78f - 91;
 						float brightnessAdjustment = (100.0f/(1.0f+exp(-(1.3f * float(y) / 16.0f)+6.0f))) - 91; // thx Donkey Kong
+						if (g_BlendUnderground) brightnessAdjustment -= 168;
 						// we use light if...
 						if (g_Nightmode // nightmode is active, or
 								|| (g_Skylight // skylight is used and
@@ -377,6 +369,40 @@ int main(int argc, char** argv)
 			}
 		}
 		printProgress(10, 10);
+		// Bitmap creation complete
+		// unless we use....
+		// Underground overlay mode
+		if (g_BlendUnderground && !g_Underground) {
+			// Load map data again, since block culling removed most of the blocks
+			if (numSplitsX == 0 && wholeworld && !loadEntireTerrain()) {
+				printf("Error loading terrain from '%s'\n", filename);
+				return 1;
+			} else if (numSplitsX != 0 || !wholeworld) {
+				if (!loadTerrain(filename)) {
+					printf("Error loading terrain from '%s'\n", filename);
+					return 1;
+				}
+			}
+			undergroundMode(true);
+			optimizeTerrain();
+			printf("Creating cave overlay...\n");
+			for (size_t x = CHUNKSIZE_X; x < g_MapsizeX - CHUNKSIZE_X; ++x) {
+				printProgress(x - CHUNKSIZE_X, g_MapsizeX);
+				for (size_t z = CHUNKSIZE_Z; z < g_MapsizeZ - CHUNKSIZE_Z; ++z) {
+					const size_t bmpPosX = (g_MapsizeZ - z - CHUNKSIZE_Z) * 2 + (x - CHUNKSIZE_X) * 2 + (splitImage ? -2 : bitmapStartX) - cropLeft;
+					size_t bmpPosY = g_MapsizeY * 2 + z + x - CHUNKSIZE_Z - CHUNKSIZE_X + (splitImage ? 0 : bitmapStartY) - cropTop;
+					for (size_t y = 0; y < MIN(g_MapsizeY, 64); ++y) {
+						uint8_t c = BLOCKAT(x,y,z);
+						if (c != AIR) { // If block is not air (colors[c][3] != 0)
+							blendPixel(bmpPosX, bmpPosY, c, float(y + 30) * .0048f);
+						}
+						bmpPosY -= 2;
+					}
+				}
+			}
+			printProgress(10, 10);
+		} // End blend-underground
+		// If disk caching is used, save part to disk
 		if (splitImage && !saveImagePart(fileHandle)) {
 			printf("Error saving partially rendered image.\n");
 			return 1;
@@ -394,6 +420,32 @@ int main(int argc, char** argv)
 	return 0;
 }
 
+void optimizeTerrain()
+{
+	// Remove invisible blocks from map (covered by other blocks from isometric pov)
+	// Do so by "raytracing" every block from front to back..
+	printf("Optimizing terrain...\n");
+	size_t removed = 0;
+	printProgress(0, 10);
+	for (size_t x = CHUNKSIZE_X+1; x < g_MapsizeX - CHUNKSIZE_X; ++x) {
+		for (size_t z = CHUNKSIZE_Z+1; z < g_MapsizeZ - CHUNKSIZE_Z; ++z) {
+			blockCulling(x, MIN(g_MapsizeY, 100)-1, z, removed); // Some cheating here, as in most cases there is little to nothing up that high, and the few things that are won't slow down rendering too much
+		}
+		for (size_t y = MIN(g_MapsizeY, 100) - 1; y > 0; --y) {
+			blockCulling(x, y, g_MapsizeZ-1-CHUNKSIZE_Z, removed);
+		}
+		printProgress(x, g_MapsizeX + g_MapsizeZ);
+	}
+	for (size_t z = CHUNKSIZE_Z+1; z < g_MapsizeZ-1 - CHUNKSIZE_Z; ++z) {
+		for (size_t y = MIN(g_MapsizeY, 100) - 1; y > 0; --y) {
+			blockCulling(g_MapsizeX-1-CHUNKSIZE_X, y, z, removed);
+		}
+		printProgress(z + g_MapsizeX, g_MapsizeX + g_MapsizeZ);
+	}
+	printProgress(10, 10);
+	printf("Removed %lu blocks\n", (unsigned long)removed);
+}
+
 inline void blockCulling(const size_t x, const size_t y, const size_t z, size_t &removed)
 {	// Actually I just used 'removed' for debugging, but removing it
 	// gives no speed increase at all, so why bother?
@@ -409,32 +461,60 @@ inline void blockCulling(const size_t x, const size_t y, const size_t z, size_t 
 	}
 }
 
-void undergroundMode()
+void undergroundMode(bool explore)
 {	// This wipes out all blocks that are not caves/tunnels
 	//int cnt[256];
 	//memset(cnt, 0, sizeof(cnt));
 	printf("Exploring underground...\n");
+	if (explore) {
+		clearLightmap();
+		for (size_t x = CHUNKSIZE_X; x < g_MapsizeX-CHUNKSIZE_X; ++x) {
+			printProgress(x - CHUNKSIZE_X, g_MapsizeX);
+			for (size_t z = CHUNKSIZE_Z; z < g_MapsizeZ-CHUNKSIZE_Z; ++z) {
+				for (size_t y = 0; y < MIN(g_MapsizeY, 64)-1; y++) {
+					if (BLOCKAT(x,y,z) == TORCH) {
+						// Torch
+						BLOCKAT(x,y,z) = AIR;
+						for (int ty = int(y) - 9; ty < int(y) + 9; ty+=2) { // The trick here is to only take into account
+							if (ty < 0) continue; // areas around torches.
+							if (ty >= int(g_MapsizeY)-1) break;
+							for (int tz = int(z) - 18; tz < int(z) + 18; ++tz) {
+								if (tz < CHUNKSIZE_Z) continue;
+								if (tz >= int(g_MapsizeZ)-CHUNKSIZE_Z) break;
+								for (int tx = int(x) - 18; tx < int(x) + 18; ++tx) {
+									if (tx < CHUNKSIZE_X) continue;
+									if (tx >= int(g_MapsizeX)-CHUNKSIZE_X) break;
+									SETLIGHTNORTH(tx, ty, tz) = 0xFF;
+								}
+							}
+						}
+						// /
+					}
+				}
+			}
+		}
+	}
 	for (size_t x = 0; x < g_MapsizeX; ++x) {
-		printProgress(x, g_MapsizeX);
+		printProgress(x + g_MapsizeX * (explore ? 1 : 0), g_MapsizeX * (explore ? 2 : 1));
 		for (size_t z = 0; z < g_MapsizeZ; ++z) {
 			size_t ground = 0;
 			size_t cave = 0;
 			for (size_t y = g_MapsizeY-1; y < g_MapsizeY; --y) {
 				uint8_t *c = &BLOCKAT(x,y,z);
-				if (*c != AIR && cave > 0) {
+				if (*c != AIR && cave > 0) { // Found a cave, leave floor
 					if (*c == GRASS || *c == LEAVES || *c == SNOW || GETLIGHTAT(x,y,z) == 0) {
-						*c = AIR;
+						*c = AIR; // But never count snow or leaves
 					} //else cnt[*c]++;
-					--cave;
-				} else if (*c != AIR) {
+					if (*c != WATER && *c != STAT_WATER) --cave;
+				} else if (*c != AIR) { // Block is not air, count up "ground"
 					*c = AIR;
-					if (*c != LOG && *c != LEAVES && *c != SNOW && *c != WOOD) {
+					if (*c != LOG && *c != LEAVES && *c != SNOW && *c != WOOD && *c != WATER && *c != STAT_WATER) {
 						++ground;
 					}
-				} else if (ground < 2) {
+				} else if (ground < 3) { // Block is air, if there was not enough ground above, don't trat that as a cave
 					ground = 0;
-				} else {
-					cave = 3;
+				} else { // Thats a cave, draw next two blocks below it
+					cave = 2;
 				}
 			}
 		}
@@ -523,6 +603,8 @@ void printHelp(char* binary)
 			"                Note: Currently you need both -from and -to to define\n"
 			"                bounds, otherwise the entire world will be rendered.\n"
 			"  -cave         renders a map of all caves that have been explored by players\n"
+			"  -blendcave    overlay caves over normal map; doesn't work with incremental\n"
+			"                rendering (some parts will be hidden)"
 			"  -night        renders the world at night using blocklight (torches)\n"
 			"  -skylight     use skylight when rendering map (shadows below trees etc.)\n"
 			"                hint: using this with -night makes a difference\n"

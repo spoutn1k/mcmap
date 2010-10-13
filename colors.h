@@ -29,6 +29,8 @@ bool dumpColorsToFile(const char* file);
 #define DIRT 3
 #define COBBLESTONE 4
 #define WOOD 5
+#define WATER 8
+#define STAT_WATER 9
 #define SAND 12
 #define GRAVEL 13
 #define LOG 17

@@ -42,6 +42,7 @@ namespace {
 
 	inline void blend(uint8_t* c1, const uint8_t* c2);
 	inline void modColor(uint8_t* color, const int mod);
+	inline void addColor(uint8_t* color, uint8_t* add);
 
 	// Split them up so setPixel won't be one hell of a mess
 	void setSnow(const size_t &x, const size_t &y, const uint8_t *color);
@@ -109,8 +110,18 @@ bool saveBitmap(FILE* fh)
 	return fwrite(gBitmap, 1, gBmpSize, fh) == gBmpSize;
 }
 
-bool loadImagePart(FILE* fh, size_t startx, size_t starty, size_t width, size_t height)
+bool loadImagePart(FILE* fh, int startx, int starty, int width, int height)
 {
+	if (startx < 0) {
+		width += startx;
+		startx = 0;
+	}
+	if (starty < 0) {
+		height += starty;
+		starty = 0;
+	}
+	if (width + startx > gBmpWidth) width = gBmpWidth - startx;
+	if (height + starty > gBmpHeight) height = gBmpHeight - starty;
 	gBmpLocalWidth = width;
 	gBmpLocalLineWidth = width * 3;
 	gBmpLocalHeight = height;
@@ -262,11 +273,61 @@ void setPixel(size_t x, size_t y, uint8_t color, float fsub)
 	// The above two branches are almost the same, maybe one could just create a function pointer and...
 }
 
+void blendPixel(size_t x, size_t y, uint8_t color, float fsub)
+{
+	// Sets pixels around x,y where A is the anchor
+	// T = given color, D = darker, L = lighter
+	// A T T T
+	// D D L L
+	// D D L L
+	//	  D L
+	uint8_t L[4], D[4], c[4];
+	// Now make a local copy of the color that we can modify just for this one block
+	memcpy(c, colors[color], 4);
+	c[ALPHA] = clamp(float(c[ALPHA]) * fsub); // The brighter the color, the stronger the impact
+	// They are for the sides of blocks
+	memcpy(L, c, 4);
+	memcpy(D, c, 4);
+	modColor(L, -17);
+	modColor(D, -27);
+	// In case the user wants noise, calc the strength now, depending on the desired intensity and the block's brightness
+	int noise = 0;
+	if (g_Noise && colors[color][NOISE]) {
+		noise = int(float(g_Noise * colors[color][NOISE]) * (float(GETBRIGHTNESS(c) + 10) / 2650.0f));
+	}
+	// Top row
+	uint8_t *pos = &PIXEL(x, y);
+	for (size_t i = 0; i < 4; ++i, pos += 3) {
+		blend(pos, c);
+		if (noise) modColor(pos, rand() % (noise * 2) - noise);
+	}
+	// Second row
+	pos = &PIXEL(x, y+1);
+	for (size_t i = 0; i < 4; ++i, pos += 3) {
+		blend(pos, (i < 2 ? D : L));
+		if (noise) modColor(pos, rand() % (noise * 2) - noise * (i == 0 || i == 3 ? 1 : 2));
+	}
+	/*
+	// Third row
+	pos = &PIXEL(x, y+2);
+	for (size_t i = 0; i < 4; ++i, pos += 3) {
+		addColor(pos, (i < 2 ? D : L));
+		if (noise) modColor(pos, rand() % (noise * 2) - noise * (i == 0 || i == 3 ? 2 : 1));
+	}
+	// Last row
+	pos = &PIXEL(x, y+3);
+	addColor(pos+=3, D);
+	if (noise) modColor(pos, -(rand() % noise) * 2);
+	addColor(pos+=3, L);
+	if (noise) modColor(pos, -(rand() % noise) * 2);
+	*/
+}
+
 namespace {
 
 	inline void blend(uint8_t* c1, const uint8_t* c2)
 	{
-		const float v2 = (float(c2[3]) / 255.0f);
+		const float v2 = (float(c2[ALPHA]) / 255.0f);
 		const float v1 = (1.0f - v2);
 		c1[0] = uint8_t(float(c1[0]) * v1 + float(c2[0]) * v2);
 		c1[1] = uint8_t(float(c1[1]) * v1 + float(c2[1]) * v2);
@@ -278,6 +339,15 @@ namespace {
 		color[0] = clamp(color[0] + mod);
 		color[1] = clamp(color[1] + mod);
 		color[2] = clamp(color[2] + mod);
+	}
+
+	inline void addColor(uint8_t* color, uint8_t* add)
+	{
+		const float v2 = (float(add[ALPHA]) / 255.0f);
+		const float v1 = (1.0f - (v2 * .2f));
+		color[0] = clamp(uint16_t(float(color[0]) * v1 + float(add[0]) * v2));
+		color[1] = clamp(uint16_t(float(color[1]) * v1 + float(add[1]) * v2));
+		color[2] = clamp(uint16_t(float(color[2]) * v1 + float(add[2]) * v2));
 	}
 
 	void setSnow(const size_t &x, const size_t &y, const uint8_t *color)
