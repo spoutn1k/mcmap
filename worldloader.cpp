@@ -310,18 +310,19 @@ void calcBitmapOverdraw(int &left, int &right, int &top, int &bottom)
 	top = left = bottom = right = 0xfffffff;
 	int val = 0;
 	for (chunkList::iterator it = chunks.begin(); it != chunks.end(); it++) {
+		const int x = (**it).x;
+		const int z = (**it).z;
 		if (g_Orientation == North) {
-			val = (((g_ToChunkX - 1) - (**it).x) * CHUNKSIZE_X * 2)
-					+ (((**it).z - g_FromChunkZ) * CHUNKSIZE_Z * 2);
+			val = (((g_ToChunkX - 1) - x) * CHUNKSIZE_X * 2)
+					+ ((z - g_FromChunkZ) * CHUNKSIZE_Z * 2);
 			if (val < right) right = val;
-			val = (((g_ToChunkZ - 1) - (**it).z) * CHUNKSIZE_Z * 2)
-					+ (((**it).x - g_FromChunkX) * CHUNKSIZE_X * 2);
+			val = (((g_ToChunkZ - 1) - z) * CHUNKSIZE_Z * 2)
+					+ ((x - g_FromChunkX) * CHUNKSIZE_X * 2);
 			if (val < left) left = val;
-			val = ((**it).z - g_FromChunkZ) * CHUNKSIZE_Z + ((**it).x - g_FromChunkX) * CHUNKSIZE_X;
+			val = (z - g_FromChunkZ) * CHUNKSIZE_Z + (x - g_FromChunkX) * CHUNKSIZE_X;
 			if (val < top) top = val;
-			val = (((g_ToChunkX - 1) - (**it).x) * CHUNKSIZE_X) + (((g_ToChunkZ - 1) - (**it).z) * CHUNKSIZE_Z);
+			val = (((g_ToChunkX - 1) - x) * CHUNKSIZE_X) + (((g_ToChunkZ - 1) - z) * CHUNKSIZE_Z);
 			if (val < bottom) bottom = val;
-		}
 	}
 	//if (right > (CHUNKSIZE_X + CHUNKSIZE_Y) * 2) right -= (CHUNKSIZE_X + CHUNKSIZE_Y) * 2;
 }

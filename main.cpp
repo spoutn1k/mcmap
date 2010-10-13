@@ -43,7 +43,7 @@ int main(int argc, char** argv)
 	}
 	bool wholeworld = false;
 	char *filename = NULL, *outfile = NULL, *colorfile = NULL;
-	size_t memlimit = 1800 * (1024ll * 1024ll);
+	size_t memlimit = 1800 * size_t(1024 * 1024);
 	bool memlimitSet = false;
 
 	// First, for the sake of backward compatibility, try to parse command line arguments the old way first
@@ -110,7 +110,7 @@ int main(int argc, char** argv)
 					return 1;
 				}
 				memlimitSet = true;
-				memlimit = size_t(atoi(NEXTARG)) * 1024ll * 1024ll;
+				memlimit = size_t(atoi(NEXTARG)) * size_t(1024 * 1024);
 			} else if (strcmp(option, "-file") == 0) {
 				if (!MOREARGS(1)) {
 					printf("Error: %s needs one argument, ie: %s myworld.bmp\n", option, option);
@@ -636,5 +636,5 @@ void printHelp(char* binary)
 			"  - This would render the same world but at night, and only\n"
 			"    from chunk (-10 -10) to chunk (10 10)\n"
 #endif
-			, binary, binary, binary, binary, binary, binary, binary, binary, binary);
+			, binary, binary, binary);
 }

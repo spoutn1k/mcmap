@@ -84,7 +84,7 @@ NBT::NBT(const char* file, bool &success)
 	_filename = strdup(file);
 	gzFile fh = 0;
 	for (int i = 0; i < 20; ++i) { // Give up eventually if you can't open the file....
-		if (fh = gzopen(file, "rb")) break;
+		if ((fh = gzopen(file, "rb")) != 0) break;
 		usleep(5000); // sleep 5ms
 	}
 	success = (fh != 0);
@@ -272,6 +272,10 @@ void NBT_Tag::parseData(uint8_t* &position, const uint8_t* end, string *name)
 		}
 		_data = position;
 		position += 2 + _len;
+		break;
+	case tagUnknown:
+	default:
+		position = NULL;
 		break;
 	}
 }

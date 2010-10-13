@@ -118,7 +118,8 @@ bool loadImagePart(FILE* fh, int startx, int starty, int width, int height)
 	if (width + startx > gBmpWidth) width = gBmpWidth - startx;
 	if (height + starty > gBmpHeight) height = gBmpHeight - starty;
 	gBmpLocalWidth = width;
-	gBmpLocalLineWidth = (width - offX) * 3;
+	gBmpLocalLineWidth = width * 3;
+	const int readLineWidth = (width - offX) * 3;
 	gBmpLocalHeight = height;
 	gBmpLocalX = startx;
 	gBmpLocalY = starty;
@@ -135,11 +136,13 @@ bool loadImagePart(FILE* fh, int startx, int starty, int width, int height)
 			delete[] gBitmap;
 			gBitmap = new uint8_t[gBmpLocalSize];
 		}
-		int fileLine = gBmpHeight - gBmpLocalY - gBmpLocalHeight + offY;
-		for (int arrayLine = offY; arrayLine < gBmpLocalHeight; ++arrayLine) {
-			const int64_t pos = int64_t(fileLine) * int64_t(gBmpLineWidth) + int64_t((gBmpLocalX + offX) * 3 + sizeof(BITMAP_INFOHEADER) + sizeof(BITMAP_FILEHEADER));
+		int fileLine = gBmpHeight - gBmpLocalY - gBmpLocalHeight;
+		for (int arrayLine = 0; arrayLine < gBmpLocalHeight - offY; ++arrayLine) {
+			const int64_t pos = int64_t(fileLine) * int64_t(gBmpLineWidth) // row
+					+ int64_t((gBmpLocalX + offX) * 3 // column
+					+ sizeof(BITMAP_INFOHEADER) + sizeof(BITMAP_FILEHEADER)); // header
 			fseek64(fh, pos, SEEK_SET);
-			if ((int)fread(gBitmap + (arrayLine * gBmpLocalLineWidth), 1, gBmpLocalLineWidth, fh) != gBmpLocalLineWidth) return false;
+			if ((int)fread(gBitmap + (arrayLine * gBmpLocalLineWidth) + offX * 3, 1, readLineWidth, fh) != readLineWidth) return false;
 			++fileLine;
 		}
 	}
@@ -150,12 +153,15 @@ bool saveImagePart(FILE* fh)
 {
 	const int offX = MAX(0, -gBmpLocalX);
 	const int offY = MAX(0, -gBmpLocalY);
-	size_t fileLine = gBmpHeight - gBmpLocalY - gBmpLocalHeight + offY;
-	for (int arrayLine = offY; arrayLine < gBmpLocalHeight; ++arrayLine) {
-		const int64_t pos = int64_t(fileLine) * int64_t(gBmpLineWidth) + int64_t((gBmpLocalX + offX) * 3 + sizeof(BITMAP_INFOHEADER) + sizeof(BITMAP_FILEHEADER));
+	const int writeLineWidth = (gBmpLocalWidth - offX) * 3;
+	size_t fileLine = gBmpHeight - gBmpLocalY - gBmpLocalHeight;
+	for (int arrayLine = 0; arrayLine < gBmpLocalHeight - offY; ++arrayLine) {
+		const int64_t pos = int64_t(fileLine) * int64_t(gBmpLineWidth)
+				+ int64_t((gBmpLocalX + offX) * 3
+				+ sizeof(BITMAP_INFOHEADER) + sizeof(BITMAP_FILEHEADER));
 		if (pos < 0) continue;
 		fseek64(fh, pos, SEEK_SET);
-		if ((int)fwrite(gBitmap + (arrayLine * gBmpLocalLineWidth), 1, gBmpLocalLineWidth, fh) != gBmpLocalLineWidth) return false;
+		if ((int)fwrite(gBitmap + (arrayLine * gBmpLocalLineWidth) + offX * 3, 1, writeLineWidth, fh) != writeLineWidth) return false;
 		++fileLine;
 	}
 	return true;

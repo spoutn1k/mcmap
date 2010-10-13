@@ -27,7 +27,7 @@
 
 #include <string>
 
-// Difference between MCVC++ and gcc/others
+// Difference between MSVC++ and gcc/others
 #if defined(_WIN32) && !defined(__GNUC__)
 #	include <windows.h>
 #	define usleep(x) Sleep((x) / 1000);
@@ -37,7 +37,7 @@
 
 // For fseek
 #if defined(_WIN32) && !defined(__GNUC__)
-// MCVC++
+// MSVC++
 #	define fseek64 _fseeki64
 #elif defined(__APPLE__)
 #	define fseek64 fseeko
