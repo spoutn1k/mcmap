@@ -330,6 +330,7 @@ int main(int argc, char** argv)
 										&& (!BLOCK_AT_MAPEDGE(x, z)) // block is not edge of map (or if it is, has non-opaque block above)
 												)) {
 							int l = GETLIGHTAT(x, y, z); // find out how much light hits that block
+							if (y+1 == g_MapsizeY) l = 15; // quickfix: assume maximum strength at highest level
 							bool blocked[5] = {false, false, false, false, false}; // if light is blocked in one direction
 							for (int i = 1; i < 4 && l <= 0; ++i) {
 								// Need to make this a loop to deal with half-steps, fences, flowers and other special blocks
