@@ -4,10 +4,10 @@
 #include <cstdlib>
 
 #define SETCOLOR(col,r,g,b,a) do { \
-	colors[col][BLUE] 		= b; \
-	colors[col][GREEN] 		= g; \
-	colors[col][RED] 			= r; \
-	colors[col][ALPHA] 		= a; \
+	colors[col][BLUE] = colors[col][PBLUE]			= b; \
+	colors[col][GREEN] = colors[col][PGREEN] 		= g; \
+	colors[col][RED] = colors[col][PRED] 			= r; \
+	colors[col][ALPHA] = colors[col][PALPHA] 		= a; \
 	colors[col][BRIGHTNESS]	= (uint8_t)sqrt( \
 			double(r * r) * .236 + \
 			double(g * g) * .601 + \
@@ -15,20 +15,20 @@
 } while (false)
 
 #define SETCOLORNOISE(col,r,g,b,a,n) do { \
-	colors[col][BLUE] 		= b; \
-	colors[col][GREEN] 		= g; \
-	colors[col][RED] 			= r; \
-	colors[col][ALPHA] 		= a; \
+	colors[col][BLUE] = colors[col][PBLUE]			= b; \
+	colors[col][GREEN] = colors[col][PGREEN] 		= g; \
+	colors[col][RED] = colors[col][PRED] 			= r; \
+	colors[col][ALPHA] = colors[col][PALPHA] 		= a; \
 	colors[col][NOISE]		= n; \
 	colors[col][BRIGHTNESS]	= (uint8_t)sqrt( \
 			double(r * r) * .236 + \
-			double(g * g) * .661 + \
-			double(b * b) * .103); \
+			double(g * g) * .601 + \
+			double(b * b) * .163); \
 } while (false)
 
 // Byte order is: blue green red alpha noise brightness
 // Brightness is used to speed up calculations later
-uint8_t colors[256][6];
+uint8_t colors[256][16];
 
 
 void loadColors()
@@ -148,6 +148,9 @@ bool loadColorsFromFile(const char* file)
 		}
 		if (!valid) continue;
 		memcpy(colors[blockid], vals, 5);
+		colors[blockid][PRED] = colors[blockid][RED];
+		colors[blockid][PGREEN] = colors[blockid][GREEN];
+		colors[blockid][PBLUE] = colors[blockid][BLUE];
 		colors[blockid][BRIGHTNESS] = GETBRIGHTNESS(colors[blockid]);
 	}
 	fclose(f);

@@ -1,12 +1,15 @@
 /***
  * mcmap - create isometric maps of your minecraft alpha world
- * v1.6, 10-2010 by Zahl
+ * v1.7, 10-2010 by Zahl
  */
 
-#define VERSION "1.6m"
+#define VERSION "1.7.0.5.7.15"
 
 #include "helper.h"
 #include "draw.h"
+#ifdef WITHPNG
+#include "draw_png.h"
+#endif
 #include "colors.h"
 #include "worldloader.h"
 #include "globals.h"
@@ -20,10 +23,20 @@
 
 using std::string;
 
-// For bright edge
-static bool gAtBottomLeft = true, gAtBottomRight = true;
+namespace {
+	// For bright edge
+	bool gAtBottomLeft = true, gAtBottomRight = true;
+	int gTotalFromChunkX, gTotalFromChunkZ, gTotalToChunkX, gTotalToChunkZ;
+	bool gPng = false;
 
-static int gTotalFromChunkX, gTotalFromChunkZ, gTotalToChunkX, gTotalToChunkZ;
+	bool (*createImage)(FILE* fh, size_t width, size_t height, bool splitUp) = NULL;
+	bool (*saveImage)(FILE* fh) = NULL;
+	bool (*loadImagePart)(FILE* fh, int startx, int starty, int width, int height) = NULL;
+	void (*setPixel)(size_t x, size_t y, uint8_t color, float fsub) = NULL;
+	void (*blendPixel)(size_t x, size_t y, uint8_t color, float fsub) = NULL;
+	bool (*saveImagePart)(FILE* fh) = NULL;
+	size_t (*calcImageSize)(int mapChunksX, int mapChunksZ, size_t mapHeight, int &pixelsX, int &pixelsY, bool tight) = NULL;
+}
 
 // Macros to make code more readable
 #define BLOCK_AT_MAPEDGE(x,z) (((z)+1 == g_MapsizeZ-CHUNKSIZE_Z && gAtBottomLeft) || ((x)+1 == g_MapsizeX-CHUNKSIZE_X && gAtBottomRight))
@@ -32,6 +45,7 @@ void optimizeTerrain();
 inline void blockCulling(const size_t x, const size_t y, const size_t z, size_t &removed);
 void undergroundMode(bool explore);
 bool prepareNextArea(int splitX, int splitZ, int &bitmapStartX, int &bitmapStartY);
+void assignFunctionPointers();
 void printHelp(char* binary);
 
 int main(int argc, char** argv)
@@ -92,6 +106,13 @@ int main(int argc, char** argv)
 				g_BlendUnderground = true;
 			} else if (strcmp(option, "-skylight") == 0) {
 				g_Skylight = true;
+			} else if (strcmp(option, "-png") == 0) {
+#ifdef WITHPNG
+				gPng = true;
+#else
+				printf("mcmap was not compiled with libpng support.\n");
+				return 1;
+#endif
 			} else if (strcmp(option, "-noise") == 0 || strcmp(option, "-dither") == 0) {
 				if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
 					printf("Error: %s needs an integer argument, ie: %s 10\n", option, option);
@@ -175,23 +196,30 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
+	// This decides whether a bmp or png is created
+	assignFunctionPointers();
+
 	// Mem check
 	int bitmapX, bitmapY;
-	size_t bitmapBytes = calcBitmapSize(g_ToChunkX - g_FromChunkX, g_ToChunkZ - g_FromChunkZ, g_MapsizeY, bitmapX, bitmapY);
+	size_t bitmapBytes = (*calcImageSize)(g_ToChunkX - g_FromChunkX, g_ToChunkZ - g_FromChunkZ, g_MapsizeY, bitmapX, bitmapY, false);
 	// Cropping
 	int cropLeft = 0, cropRight = 0, cropTop = 0, cropBottom = 0;
 	if (wholeworld) {
 		calcBitmapOverdraw(cropLeft, cropRight, cropTop, cropBottom);
 		bitmapX -= (cropLeft + cropRight);
 		bitmapY -= (cropTop + cropBottom);
-		bitmapBytes = (size_t(bitmapX * 3 + 3) & ~size_t(3)) * bitmapY;
+		if (gPng) {
+			bitmapBytes = size_t(bitmapX) * 4 * size_t(bitmapY);
+		} else {
+			bitmapBytes = (size_t(bitmapX * 3 + 3) & ~size_t(3)) * bitmapY;
+		}
 	}
 	bool splitImage = false;
 	int numSplitsX = 0;
 	int numSplitsZ = 0;
 	if (memlimit && memlimit < bitmapBytes + calcTerrainSize(g_ToChunkX - g_FromChunkX, g_ToChunkZ - g_FromChunkZ)) {
 		// If we'd need more mem than allowed, we have to render groups of chunks...
-		if (memlimit < bitmapBytes * 2) {
+		if (memlimit < bitmapBytes + 220 * size_t(1024 * 1024)) {
 			// Warn about using incremental rendering if user didn't set limit manually
 			if (!memlimitSet) {
 				printf(" ***** PLEASE NOTE *****\n"
@@ -199,6 +227,9 @@ int main(int argc, char** argv)
 						"of 1800MiB. If you want to use more memory to render (=faster) use\n"
 						"the -mem switch followed by the amount of memory in MiB to use.\n"
 						"Start mcmap without any arguments to get more help.\n");
+			} else if (gPng) {
+				printf("Disk caching required, but not supported for png yet. Try setting memlimit to %dMiB.\n", int(bitmapBytes / (1024 * 1024) + 221));
+				return 1;
 			}
 			// ...or even use disk caching
 			splitImage = true;
@@ -208,7 +239,7 @@ int main(int argc, char** argv)
 			int subAreaX = ((gTotalToChunkX - gTotalFromChunkX) + (numSplitsX - 1)) / numSplitsX;
 			int subAreaZ = ((gTotalToChunkZ - gTotalFromChunkZ) + (numSplitsZ - 1)) / numSplitsZ;
 			int subBitmapX, subBitmapY;
-			if (splitImage && calcBitmapSize(subAreaX, subAreaZ, g_MapsizeY, subBitmapX, subBitmapY, true) + calcTerrainSize(subAreaX, subAreaZ) <= memlimit) {
+			if (splitImage && (*calcImageSize)(subAreaX, subAreaZ, g_MapsizeY, subBitmapX, subBitmapY, true) + calcTerrainSize(subAreaX, subAreaZ) <= memlimit) {
 				break; // Found a suitable partitioning
 			} else if (!splitImage && bitmapBytes + calcTerrainSize(subAreaX, subAreaZ) <= memlimit) {
 				break; // Found a suitable partitioning
@@ -236,19 +267,24 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
-	// open output file
-	FILE *fileHandle = fopen((outfile == NULL ? "output.bmp" : outfile), (splitImage ? "w+b" : "wb"));
+	if (outfile == NULL) {
+		if (gPng) {
+			outfile = (char*)"output.png";
+		} else {
+			outfile = (char*)"output.bmp";
+		}
+	}
 
-	if (fileHandle == NULL && outfile == NULL) {
-		printf("Error opening 'output.bmp' for writing.\n");
-		return 1;
-	} else if (fileHandle == NULL) {
+	// open output file
+	FILE *fileHandle = fopen(outfile, (splitImage ? "w+b" : "wb"));
+
+	if (fileHandle == NULL) {
 		printf("Error opening '%s' for writing.\n", outfile);
 		return 1;
 	}
 
 	// This write out the bitmap header and pre-allocate space if disk caching is used
-	if (!createBitmap(fileHandle, bitmapX, bitmapY, splitImage)) {
+	if (!(*createImage)(fileHandle, bitmapX, bitmapY, splitImage)) {
 		printf("Error allocating bitmap. Check if you have enough free disk space.\n");
 		return 1;
 	}
@@ -269,7 +305,7 @@ int main(int argc, char** argv)
 				bitmapStartX += 2;
 				const int sizex = (g_ToChunkX - g_FromChunkX) * CHUNKSIZE_X * 2 + (g_ToChunkZ - g_FromChunkZ) * CHUNKSIZE_Z * 2;
 				const int sizey = (int)g_MapsizeY * 2 + (g_ToChunkX - g_FromChunkX) * CHUNKSIZE_X + (g_ToChunkZ - g_FromChunkZ) * CHUNKSIZE_Z + 2;
-				if (!loadImagePart(fileHandle, bitmapStartX - cropLeft, bitmapStartY - cropTop, sizex, sizey)) {
+				if (!(*loadImagePart)(fileHandle, bitmapStartX - cropLeft, bitmapStartY - cropTop, sizex, sizey)) {
 					printf("Error loading partial image to render to.\n");
 					return 1;
 				}
@@ -317,55 +353,54 @@ int main(int argc, char** argv)
 			printProgress(x - CHUNKSIZE_X, g_MapsizeX);
 			for (size_t z = CHUNKSIZE_Z; z < g_MapsizeZ - CHUNKSIZE_Z; ++z) {
 				const int bmpPosX = int((g_MapsizeZ - z - CHUNKSIZE_Z) * 2 + (x - CHUNKSIZE_X) * 2 + (splitImage ? -2 : bitmapStartX - cropLeft));
-				int bmpPosY = int(g_MapsizeY * 2 + z + x - CHUNKSIZE_Z - CHUNKSIZE_X + (splitImage ? 0 : bitmapStartY - cropTop));
+				int bmpPosY = int(g_MapsizeY * 2 + z + x - CHUNKSIZE_Z - CHUNKSIZE_X + (splitImage ? 0 : bitmapStartY - cropTop)) + 2;
 				for (size_t y = 0; y < g_MapsizeY; ++y) {
-					uint8_t c = BLOCKAT(x,y,z);
-					if (c != AIR) { // If block is not air (colors[c][3] != 0)
-						//float col = float(y) * .78f - 91;
-						float brightnessAdjustment = (100.0f/(1.0f+exp(-(1.3f * float(y) / 16.0f)+6.0f))) - 91; // thx Donkey Kong
-						if (g_BlendUnderground) brightnessAdjustment -= 168;
-						// we use light if...
-						if (g_Nightmode // nightmode is active, or
-								|| (g_Skylight // skylight is used and
-										&& (!BLOCK_AT_MAPEDGE(x, z)) // block is not edge of map (or if it is, has non-opaque block above)
-												)) {
-							int l = GETLIGHTAT(x, y, z); // find out how much light hits that block
-							if (y+1 == g_MapsizeY) l = 15; // quickfix: assume maximum strength at highest level
-							bool blocked[5] = {false, false, false, false, false}; // if light is blocked in one direction
-							for (int i = 1; i < 4 && l <= 0; ++i) {
-								// Need to make this a loop to deal with half-steps, fences, flowers and other special blocks
-								blocked[0] |= (colors[BLOCKAT(x+i, y, z)][ALPHA] == 255);
-								blocked[1] |= (colors[BLOCKAT(x, y, z+i)][ALPHA] == 255);
-								blocked[2] |= (y+i >= g_MapsizeY || colors[BLOCKAT(x, y+i, z)][ALPHA] == 255);
-								blocked[3] |= (colors[BLOCKAT(x+i, y+i, z)][ALPHA] == 255);
-								blocked[4] |= (colors[BLOCKAT(x, y+i, z+i)][ALPHA] == 255);
-								if (l <= 0 // if block is still dark and there are no translucent blocks around, stop
-										&& blocked[0] && blocked[1] && blocked[2] && blocked[3] && blocked[4]) break;
-								//
-								if (!blocked[2] && l <= 0 && y+i < g_MapsizeY) l = GETLIGHTAT(x, y+i, z);
-								if (!blocked[0] && l <= 0) l = GETLIGHTAT(x+i, y, z) - i/2;
-								if (!blocked[1] && l <= 0) l = GETLIGHTAT(x, y, z+i) - i/2;
-								if (!blocked[3] && l <= 0 && y+i < g_MapsizeY) l = (int)GETLIGHTAT(x+i, y+i, z) - i/2;
-								if (!blocked[4] && l <= 0 && y+i < g_MapsizeY) l = (int)GETLIGHTAT(x, y+i, z+i) - i/2;
-								//if (!blocked[2] && l <= 0 && y+i < g_MapsizeY) l = GETLIGHTAT(x+i/2, y+i/2, z+i/2) - i/2;
-							}
-							if (l < 0) l = 0;
-							if (!g_Skylight) { // Night
-								brightnessAdjustment -= (125 - l * 9);
-							} else { // Day
-								brightnessAdjustment -= (210 - l * 14);
-							}
-						}
-						// Edge detection (this means where terrain goes 'down' and the side of the block is not visible)
-						if ((y && y+1 < g_MapsizeY) // In bounds?
-							&& BLOCKAT(x,y+1,z) == AIR // Only if block above is air
-							&& (BLOCKAT(x-1,y-1,z-1) == c || BLOCKAT(x-1,y-1,z-1) == AIR) // block behind (from pov) this one is same type or air
-							&& (BLOCKAT(x-1,y,z) == AIR || BLOCKAT(x,y,z-1) == AIR)) { // block TL/TR from this one is air = edge
-								brightnessAdjustment += 12;
-						}
-						setPixel(bmpPosX, bmpPosY, c, brightnessAdjustment);
-					}
 					bmpPosY -= 2;
+					uint8_t &c = BLOCKAT(x,y,z);
+					if (c == AIR) continue;
+					//float col = float(y) * .78f - 91;
+					float brightnessAdjustment = (100.0f/(1.0f+exp(-(1.3f * float(y) / 16.0f)+6.0f))) - 91; // thx Donkey Kong
+					if (g_BlendUnderground) brightnessAdjustment -= 168;
+					// we use light if...
+					if (g_Nightmode // nightmode is active, or
+							|| (g_Skylight // skylight is used and
+									&& (!BLOCK_AT_MAPEDGE(x, z)) // block is not edge of map (or if it is, has non-opaque block above)
+											)) {
+						int l = GETLIGHTAT(x, y, z); // find out how much light hits that block
+						if (y+1 == g_MapsizeY) l = (g_Nightmode ? 3 : 15); // quickfix: assume maximum strength at highest level
+						bool blocked[5] = {false, false, false, false, false}; // if light is blocked in one direction
+						for (int i = 1; i < 4 && l <= 0; ++i) {
+							// Need to make this a loop to deal with half-steps, fences, flowers and other special blocks
+							blocked[0] |= (colors[BLOCKAT(x+i, y, z)][ALPHA] == 255);
+							blocked[1] |= (colors[BLOCKAT(x, y, z+i)][ALPHA] == 255);
+							blocked[2] |= (y+i >= g_MapsizeY || colors[BLOCKAT(x, y+i, z)][ALPHA] == 255);
+							blocked[3] |= (colors[BLOCKAT(x+i, y+i, z)][ALPHA] == 255);
+							blocked[4] |= (colors[BLOCKAT(x, y+i, z+i)][ALPHA] == 255);
+							if (l <= 0 // if block is still dark and there are no translucent blocks around, stop
+									&& blocked[0] && blocked[1] && blocked[2] && blocked[3] && blocked[4]) break;
+							//
+							if (!blocked[2] && l <= 0 && y+i < g_MapsizeY) l = GETLIGHTAT(x, y+i, z);
+							if (!blocked[0] && l <= 0) l = GETLIGHTAT(x+i, y, z) - i/2;
+							if (!blocked[1] && l <= 0) l = GETLIGHTAT(x, y, z+i) - i/2;
+							if (!blocked[3] && l <= 0 && y+i < g_MapsizeY) l = (int)GETLIGHTAT(x+i, y+i, z) - i/2;
+							if (!blocked[4] && l <= 0 && y+i < g_MapsizeY) l = (int)GETLIGHTAT(x, y+i, z+i) - i/2;
+							//if (!blocked[2] && l <= 0 && y+i < g_MapsizeY) l = GETLIGHTAT(x+i/2, y+i/2, z+i/2) - i/2;
+						}
+						if (l < 0) l = 0;
+						if (!g_Skylight) { // Night
+							brightnessAdjustment -= (125 - l * 9);
+						} else { // Day
+							brightnessAdjustment -= (210 - l * 14);
+						}
+					}
+					// Edge detection (this means where terrain goes 'down' and the side of the block is not visible)
+					if ((y && y+1 < g_MapsizeY) // In bounds?
+						&& BLOCKAT(x,y+1,z) == AIR // Only if block above is air
+						&& (BLOCKAT(x-1,y-1,z-1) == c || BLOCKAT(x-1,y-1,z-1) == AIR) // block behind (from pov) this one is same type or air
+						&& (BLOCKAT(x-1,y,z) == AIR || BLOCKAT(x,y,z-1) == AIR)) { // block TL/TR from this one is air = edge
+							brightnessAdjustment += 12;
+					}
+					setPixel(bmpPosX, bmpPosY, c, brightnessAdjustment);
 				}
 			}
 		}
@@ -393,9 +428,9 @@ int main(int argc, char** argv)
 					const size_t bmpPosX = (g_MapsizeZ - z - CHUNKSIZE_Z) * 2 + (x - CHUNKSIZE_X) * 2 + (splitImage ? -2 : bitmapStartX) - cropLeft;
 					size_t bmpPosY = g_MapsizeY * 2 + z + x - CHUNKSIZE_Z - CHUNKSIZE_X + (splitImage ? 0 : bitmapStartY) - cropTop;
 					for (size_t y = 0; y < MIN(g_MapsizeY, 64); ++y) {
-						uint8_t c = BLOCKAT(x,y,z);
+						uint8_t &c = BLOCKAT(x,y,z);
 						if (c != AIR) { // If block is not air (colors[c][3] != 0)
-							blendPixel(bmpPosX, bmpPosY, c, float(y + 30) * .0048f);
+							(*blendPixel)(bmpPosX, bmpPosY, c, float(y + 30) * .0048f);
 						}
 						bmpPosY -= 2;
 					}
@@ -404,7 +439,7 @@ int main(int argc, char** argv)
 			printProgress(10, 10);
 		} // End blend-underground
 		// If disk caching is used, save part to disk
-		if (splitImage && !saveImagePart(fileHandle)) {
+		if (splitImage && !(*saveImagePart)(fileHandle)) {
 			printf("Error saving partially rendered image.\n");
 			return 1;
 		}
@@ -413,7 +448,7 @@ int main(int argc, char** argv)
 	}
 	if (!splitImage) {
 		printf("Writing to file...\n");
-		saveBitmap(fileHandle);
+		(*saveImage)(fileHandle);
 	}
 	fclose(fileHandle);
 
@@ -428,20 +463,22 @@ void optimizeTerrain()
 	printf("Optimizing terrain...\n");
 	size_t removed = 0;
 	printProgress(0, 10);
+	const size_t top = MIN(g_MapsizeY, 100) - 1;  // Some cheating here, as in most cases there is little to nothing up that high, and the few things that are won't slow down rendering too much
+	const size_t progressMax = g_MapsizeX + g_MapsizeZ - 1 - CHUNKSIZE_Z;
 	for (size_t x = CHUNKSIZE_X+1; x < g_MapsizeX - CHUNKSIZE_X; ++x) {
 		for (size_t z = CHUNKSIZE_Z+1; z < g_MapsizeZ - CHUNKSIZE_Z; ++z) {
-			blockCulling(x, MIN(g_MapsizeY, 100)-1, z, removed); // Some cheating here, as in most cases there is little to nothing up that high, and the few things that are won't slow down rendering too much
+			blockCulling(x, top, z, removed);
 		}
-		for (size_t y = MIN(g_MapsizeY, 100) - 1; y > 0; --y) {
+		for (size_t y = top; y > 0; --y) {
 			blockCulling(x, y, g_MapsizeZ-1-CHUNKSIZE_Z, removed);
 		}
-		printProgress(x, g_MapsizeX + g_MapsizeZ);
+		printProgress(x, progressMax);
 	}
 	for (size_t z = CHUNKSIZE_Z+1; z < g_MapsizeZ-1 - CHUNKSIZE_Z; ++z) {
-		for (size_t y = MIN(g_MapsizeY, 100) - 1; y > 0; --y) {
+		for (size_t y = top; y > 0; --y) {
 			blockCulling(g_MapsizeX-1-CHUNKSIZE_X, y, z, removed);
 		}
-		printProgress(z + g_MapsizeX, g_MapsizeX + g_MapsizeZ);
+		printProgress(z + g_MapsizeX, progressMax);
 	}
 	printProgress(10, 10);
 	printf("Removed %lu blocks\n", (unsigned long)removed);
@@ -453,10 +490,11 @@ inline void blockCulling(const size_t x, const size_t y, const size_t z, size_t 
 	bool cull = false; // Culling active?
 	for (size_t i = 0; i < g_MapsizeY; ++i) {
 		if (x < i || y < i || z < i) break;
-		if (cull && BLOCKAT(x-i, y-i, z-i) != AIR) {
-			BLOCKAT(x-i, y-i, z-i) = AIR;
+		uint8_t &c = BLOCKAT(x-i, y-i, z-i);
+		if (cull && c != AIR) {
+			c = AIR;
 			++removed;
-		} else if (colors[BLOCKAT(x-i, y-i, z-i)][ALPHA] == 255) {
+		} else if (colors[c][ALPHA] == 255) {
 			cull = true;
 		}
 	}
@@ -501,15 +539,15 @@ void undergroundMode(bool explore)
 			size_t ground = 0;
 			size_t cave = 0;
 			for (size_t y = g_MapsizeY-1; y < g_MapsizeY; --y) {
-				uint8_t *c = &BLOCKAT(x,y,z);
-				if (*c != AIR && cave > 0) { // Found a cave, leave floor
-					if (*c == GRASS || *c == LEAVES || *c == SNOW || GETLIGHTAT(x,y,z) == 0) {
-						*c = AIR; // But never count snow or leaves
+				uint8_t &c = BLOCKAT(x,y,z);
+				if (c != AIR && cave > 0) { // Found a cave, leave floor
+					if (c == GRASS || c == LEAVES || c == SNOW || GETLIGHTAT(x,y,z) == 0) {
+						c = AIR; // But never count snow or leaves
 					} //else cnt[*c]++;
-					if (*c != WATER && *c != STAT_WATER) --cave;
-				} else if (*c != AIR) { // Block is not air, count up "ground"
-					*c = AIR;
-					if (*c != LOG && *c != LEAVES && *c != SNOW && *c != WOOD && *c != WATER && *c != STAT_WATER) {
+					if (c != WATER && c != STAT_WATER) --cave;
+				} else if (c != AIR) { // Block is not air, count up "ground"
+					c = AIR;
+					if (c != LOG && c != LEAVES && c != SNOW && c != WOOD && c != WATER && c != STAT_WATER) {
 						++ground;
 					}
 				} else if (ground < 3) { // Block is air, if there was not enough ground above, don't trat that as a cave
@@ -591,6 +629,29 @@ bool prepareNextArea(int splitX, int splitZ, int &bitmapStartX, int &bitmapStart
 		bitmapStartY = 5 + (g_FromChunkX - gTotalFromChunkX) * CHUNKSIZE_X + (fromz - gTotalFromChunkZ) * CHUNKSIZE_Z;
 	}
 	return false; // not done yet, return false
+}
+
+void assignFunctionPointers()
+{
+	if (gPng) {
+#ifdef WITHPNG
+		createImage = &createImagePng;
+		saveImage = &saveImagePng;
+		loadImagePart = &loadImagePartPng;
+		setPixel = &setPixelPng;
+		blendPixel = &blendPixelPng;
+		saveImagePart = &saveImagePartPng;
+		calcImageSize = &calcImageSizePng;
+#endif
+	} else {
+		createImage = &createImageBmp;
+		saveImage = &saveImageBmp;
+		loadImagePart = &loadImagePartBmp;
+		setPixel = &setPixelBmp;
+		blendPixel = &blendPixelBmp;
+		saveImagePart = &saveImagePartBmp;
+		calcImageSize = &calcImageSizeBmp;
+	}
 }
 
 void printHelp(char* binary)

@@ -11,13 +11,17 @@
 
 // Byte order is: blue green red alpha noise brightness
 // Brightness is used to speed up calculations later
-extern uint8_t colors[256][6];
+extern uint8_t colors[256][16];
 #define BLUE 0
 #define GREEN 1
 #define RED 2
 #define ALPHA 3
 #define NOISE 4
 #define BRIGHTNESS 5
+#define PRED 8
+#define PGREEN 9
+#define PBLUE 10
+#define PALPHA 11
 
 void loadColors();
 bool loadColorsFromFile(const char* file);
