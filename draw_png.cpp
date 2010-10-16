@@ -10,16 +10,46 @@
 #include <cstdio>
 #include <cstdlib>
 #include <png.h>
+#include <list>
+#ifndef _WIN32
+#include <sys/stat.h>
+#endif
 
 
-#define PIXEL(x,y) (gImageBuffer[(x) * 4 + (y) * gPngLocalLineWidth])
+#define PIXEL(x,y) (gImageBuffer[((x) + gOffsetX) * 4 + ((y) + gOffsetY) * gPngLocalLineWidth])
 
 namespace {
+	struct ImagePart {
+		int x, y, width, height;
+		char *filename;
+		FILE *pngFileHandle;
+		png_structp pngPtr;
+		png_infop pngInfo;
+		ImagePart(const char* _file, int _x, int _y, int _w, int _h)
+		{
+			filename = strdup(_file);
+			x = _x; y = _y; width = _w; height = _h;
+			pngPtr = NULL;
+			pngFileHandle = NULL;
+			pngInfo = NULL;
+		}
+		~ImagePart()
+		{
+			free(filename);
+		}
+	};
+	typedef std::list<ImagePart*> imageList;
+	imageList partialImages;
+
 	uint8_t *gImageBuffer = NULL;
 	int gPngLocalLineWidth = 0, gPngLocalWidth = 0, gPngLocalHeight = 0, gPngLocalX = 0, gPngLocalY = 0;
 	int gPngLineWidth = 0, gPngWidth = 0, gPngHeight = 0;
+	int gOffsetX = 0, gOffsetY = 0;
 	int64_t gPngSize = 0, gPngLocalSize = 0;
-	png_structp png_ptr = NULL;
+	png_structp pngPtrMain = NULL; // Main image
+	png_infop pngInfoPtrMain = NULL;
+	png_structp pngPtrCurrent = NULL; // This will be either the same as above, or a temp image when using disk caching
+	FILE* gPngPartialFileHandle = NULL;
 
 	inline void blend(uint8_t* c1, const uint8_t* c2);
 	inline void modColor(uint8_t* color, const int mod);
@@ -40,7 +70,7 @@ bool createImagePng(FILE* fh, size_t width, size_t height, bool splitUp)
 	gPngLocalWidth = gPngWidth = (int)width;
 	gPngLocalHeight = gPngHeight = (int)height;
 	gPngLocalLineWidth = gPngLineWidth = gPngWidth * 4;
-	gPngSize = gPngLineWidth * gPngHeight;
+	gPngSize = gPngLocalSize = gPngLineWidth * gPngHeight;
 	printf("Image dimensions are %dx%d, 32bpp, %.2fMiB\n", gPngWidth, gPngHeight, float(gPngSize / float(1024 * 1024)));
 	if (!splitUp) {
 		gImageBuffer = new uint8_t[gPngSize];
@@ -48,66 +78,218 @@ bool createImagePng(FILE* fh, size_t width, size_t height, bool splitUp)
 	}
 	fseek64(fh, 0, SEEK_SET);
 	// Write header
-	png_infop info_ptr = NULL;
-	png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+	pngPtrMain = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 
-	if (png_ptr == NULL) {
+	if (pngPtrMain == NULL) {
 		return false;
 	}
 
-	info_ptr = png_create_info_struct(png_ptr);
+	pngInfoPtrMain = png_create_info_struct(pngPtrMain);
 
-	if (info_ptr == NULL) {
-		png_destroy_write_struct(&png_ptr, NULL);
+	if (pngInfoPtrMain == NULL) {
+		png_destroy_write_struct(&pngPtrMain, NULL);
 		return false;
 	}
 
-	if (setjmp(png_jmpbuf(png_ptr))) { // libpng will issue a longjmp on error, so code flow will end up
-		png_destroy_write_struct(&png_ptr, NULL); // here if something goes wrong in the code below
+	if (setjmp(png_jmpbuf(pngPtrMain))) { // libpng will issue a longjmp on error, so code flow will end up
+		png_destroy_write_struct(&pngPtrMain, &pngInfoPtrMain); // here if something goes wrong in the code below
 		return false;
 	}
 
-	png_init_io(png_ptr, fh);
+	png_init_io(pngPtrMain, fh);
 
-	png_set_IHDR(png_ptr, info_ptr, (uint32_t)width, (uint32_t)height,
-	8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE,
-	PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+	png_set_IHDR(pngPtrMain, pngInfoPtrMain, (uint32_t)width, (uint32_t)height,
+			8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE,
+			PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
 
 	png_text title_text;
 	title_text.compression = PNG_TEXT_COMPRESSION_NONE;
 	title_text.key = (png_charp)"Software";
 	title_text.text = (png_charp)"mcmap";
-	png_set_text(png_ptr, info_ptr, &title_text, 1);
+	png_set_text(pngPtrMain, pngInfoPtrMain, &title_text, 1);
 
-	png_write_info(png_ptr, info_ptr);
+	png_write_info(pngPtrMain, pngInfoPtrMain);
+	if (!splitUp) {
+		pngPtrCurrent = pngPtrMain;
+	}
 	return true;
 }
 
 bool saveImagePng(FILE* fh)
 {
-	if (setjmp(png_jmpbuf(png_ptr))) { // libpng will issue a longjmp on error, so code flow will end up
-		png_destroy_write_struct(&png_ptr, NULL); // here if something goes wrong in the code below
+	if (setjmp(png_jmpbuf(pngPtrMain))) { // libpng will issue a longjmp on error, so code flow will end up
+		png_destroy_write_struct(&pngPtrMain, &pngInfoPtrMain); // here if something goes wrong in the code below
 		return false;
 	}
 	uint8_t *line = gImageBuffer;
 	for (int y = 0; y < gPngHeight; ++y) {
-		png_write_row(png_ptr, (png_bytep)line);
+		png_write_row(pngPtrMain, (png_bytep)line);
 		line += gPngLineWidth;
 	}
-	png_write_end(png_ptr, NULL);
+	png_write_end(pngPtrMain, NULL);
+	png_destroy_write_struct(&pngPtrMain, &pngInfoPtrMain);
 	return true;
 }
 
 bool loadImagePartPng(FILE* fh, int startx, int starty, int width, int height)
 {
-	// Dummy, we'll use single files for that
+	if (pngPtrCurrent != NULL || gPngPartialFileHandle != NULL) {
+		printf("Something wrong with disk caching.\n");
+		return false;
+	}
+	gOffsetX = MIN(startx, 0);
+	gOffsetY = MIN(starty, 0);
+	if (startx < 0) {
+		width += startx;
+		startx = 0;
+	}
+	if (starty < 0) {
+		height += starty;
+		starty = 0;
+	}
+	if (startx + width > gPngWidth) {
+		width = gPngWidth - startx;
+	}
+	if (starty + height > gPngHeight) {
+		height = gPngHeight - starty;
+	}
+	char name[200];
+	snprintf(name, 200, "cache/%d.%d.%d.%d.png", startx, starty, width, height);
+	ImagePart *img = new ImagePart(name, startx, starty, width, height);
+	partialImages.push_back(img);
+	//
+	gPngLocalWidth = width;
+	gPngLocalHeight = height;
+	gPngLocalLineWidth = gPngLocalWidth * 4;
+	int64_t size = gPngLocalLineWidth * gPngLocalHeight;
+	printf("Creating temporary image: %dx%d, 32bpp, %.2fMiB\n", gPngLocalWidth, gPngLocalHeight, float(size / float(1024 * 1024)));
+	if (gImageBuffer == NULL) {
+		gImageBuffer = new uint8_t[size];
+		gPngLocalSize = size;
+	} else if (size > gPngLocalSize) {
+		delete[] gImageBuffer;
+		gImageBuffer = new uint8_t[size];
+		gPngLocalSize = size;
+	}
+	memset(gImageBuffer, 0, (size_t)size);
+	// Create temp image
+	// This is done here to detect early if the target is not writable
+#ifdef _WIN32
+	mkdir("cache");
+#else
+	mkdir("cache", 0755);
+#endif
+	gPngPartialFileHandle = fopen(name, "wb");
+	if (gPngPartialFileHandle == NULL) {
+		printf("Could not create temporary image at %s; check permissions in current dir.\n", name);
+		return false;
+	}
 	return true;
 }
 
 bool saveImagePartPng(FILE* fh)
 {
-	// TODO: Implement
-	// fh can be ignored, create new file handle, as a separate tempfile is used
+	// Write header
+	png_infop info_ptr = NULL;
+	pngPtrCurrent = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+
+	if (pngPtrCurrent == NULL) {
+		return false;
+	}
+
+	info_ptr = png_create_info_struct(pngPtrCurrent);
+
+	if (info_ptr == NULL) {
+		png_destroy_write_struct(&pngPtrCurrent, NULL);
+		return false;
+	}
+
+	if (setjmp(png_jmpbuf(pngPtrCurrent))) { // libpng will issue a longjmp on error, so code flow will end up
+		png_destroy_write_struct(&pngPtrCurrent, &info_ptr); // here if something goes wrong in the code below
+		return false;
+	}
+
+	png_init_io(pngPtrCurrent, gPngPartialFileHandle);
+	png_set_compression_level(pngPtrCurrent, Z_BEST_SPEED);
+
+	png_set_IHDR(pngPtrCurrent, info_ptr, (uint32_t)gPngLocalWidth, (uint32_t)gPngLocalHeight,
+			8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE,
+			PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+
+	png_write_info(pngPtrCurrent, info_ptr);
+	//
+	uint8_t *line = gImageBuffer;
+	for (int y = 0; y < gPngLocalHeight; ++y) {
+		png_write_row(pngPtrCurrent, (png_bytep)line);
+		line += gPngLocalLineWidth;
+	}
+	png_write_end(pngPtrCurrent, NULL);
+	png_destroy_write_struct(&pngPtrCurrent, &info_ptr);
+	pngPtrCurrent = NULL;
+	fclose(gPngPartialFileHandle);
+	gPngPartialFileHandle = NULL;
+	return true;
+}
+
+bool composeFinalImagePng()
+{
+	uint8_t *lineWrite = new uint8_t[gPngLineWidth];
+	uint8_t *lineRead = new uint8_t[gPngLineWidth];
+	if (setjmp(png_jmpbuf(pngPtrMain))) { // libpng will issue a longjmp on error, so code flow will end up
+		delete[] lineWrite;
+		delete[] lineRead;
+		png_destroy_write_struct(&pngPtrMain, NULL); // here if something goes wrong in the code below
+		return false;
+	}
+	printf("Composing final png file...\n");
+	for (int y = 0; y < gPngHeight; ++y) {
+		if (y % 10 == 0) printProgress(size_t(y), size_t(gPngHeight));
+		// paint each image on this one
+		memset(lineWrite, 0, gPngLineWidth);
+		for (imageList::iterator it = partialImages.begin(); it != partialImages.end(); it++) {
+			ImagePart *img = *it;
+			// do we have to load?
+			if (img->y == y && img->pngPtr == NULL) {
+				img->pngFileHandle = fopen(img->filename, "rb");
+				img->pngPtr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+				if (img->pngPtr == NULL || img->pngFileHandle == NULL) {
+					fclose(img->pngFileHandle);
+					return false; // Not really cleaning up here, but program will terminate anyways, so why bother
+				}
+				img->pngInfo = png_create_info_struct(img->pngPtr);
+				if (img->pngInfo == NULL || setjmp(png_jmpbuf(img->pngPtr))) {
+					return false; // Same here
+				}
+				png_init_io(img->pngPtr, img->pngFileHandle);
+				png_read_info(img->pngPtr, img->pngInfo);
+				// TODO: maybe check image dimensions reported by libpng here. They should never really be different from what's expected
+			}
+			if (img->pngPtr == NULL) continue; // Not your turn, image!
+			// Read next line from current image chunk
+			png_read_row(img->pngPtr, (png_bytep)lineRead, NULL);
+			// Now this puts all the pixels in the right spot of the current line of the final image
+			const uint8_t *end = lineWrite + (img->x + img->width) * 4;
+			uint8_t *read = lineRead;
+			for (uint8_t *write = lineWrite + (img->x * 4); write < end; write += 4) {
+				blend(write, read);
+				read += 4;
+			}
+			// Now check if we're done with this image chunk
+			if (--(img->height) == 0) { // if so, close and discard
+				png_destroy_read_struct(&(img->pngPtr), &(img->pngInfo), NULL);
+				fclose(img->pngFileHandle);
+				img->pngFileHandle = NULL;
+				img->pngPtr = NULL;
+				remove(img->filename);
+			}
+		} // Done composing this line, write to final image
+		png_write_row(pngPtrMain, (png_bytep)lineWrite);
+	}
+	printProgress(10, 10);
+	png_write_end(pngPtrMain, NULL);
+	png_destroy_write_struct(&pngPtrMain, NULL);
+	delete[] lineWrite;
+	delete[] lineRead;
 	return true;
 }
 
@@ -231,7 +413,7 @@ void setPixelPng(size_t x, size_t y, uint8_t color, float fsub)
 }
 
 void blendPixelPng(size_t x, size_t y, uint8_t color, float fsub)
-{
+{	// This one is used for cave overlay
 	// Sets pixels around x,y where A is the anchor
 	// T = given color, D = darker, L = lighter
 	// A T T T
@@ -270,11 +452,11 @@ namespace {
 
 	inline void blend(uint8_t* c1, const uint8_t* c2)
 	{
-		if (c1[ALPHA] == 0) {
+		if (c1[ALPHA] == 0 || c2[ALPHA] == 255) {
 			memcpy(c1, c2, 4);
 			return;
 		}
-#		define BLEND(ca,aa,cb) uint8_t((size_t(ca) * size_t(aa)) / 255 + (size_t(255 - aa) * size_t(cb)) / 255)
+#		define BLEND(ca,aa,cb) clamp((size_t(ca) * size_t(aa)) / 255 + (size_t(255 - aa) * size_t(cb)) / 255)
 		c1[0] = BLEND(c2[0], c2[ALPHA], c1[0]);
 		c1[1] = BLEND(c2[1], c2[ALPHA], c1[1]);
 		c1[2] = BLEND(c2[2], c2[ALPHA], c1[2]);
@@ -304,17 +486,6 @@ namespace {
 		for (size_t i = 0; i < 13; i += 4) {
 			memcpy(pos+i, color, 4);
 		}
-		/*
-		// Third row
-		// This gives you white edges on height diffs, but I think
-		// the current way looks closer to ingame, although trees
-		// turn out a little prettier when using this imo
-		pos = &PIXEL(x, y+2);
-		memcpy(pos, D, 3);
-		memcpy(pos+3, D, 3);
-		memcpy(pos+6, L, 3);
-		memcpy(pos+9, L, 3);
-		*/
 	}
 
 	void setTorch(const size_t &x, const size_t &y, const uint8_t *color)

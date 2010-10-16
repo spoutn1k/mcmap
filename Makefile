@@ -2,8 +2,8 @@
 CC=g++
 CFLAGS=-O2 -c -Wall -fomit-frame-pointer -pedantic -DWITHPNG
 LDFLAGS=-O2 -lz -lpng -fomit-frame-pointer
-DCFLAGS=-g -c -Wall -D_DEBUG -DWITHPNG
-DLDFLAGS=-g -lz -lpng
+DCFLAGS=-g -O0 -c -Wall -D_DEBUG -DWITHPNG
+DLDFLAGS=-g -O0 -lz -lpng
 SOURCES=main.cpp helper.cpp nbt.cpp draw.cpp colors.cpp worldloader.cpp filesystem.cpp globals.cpp draw_png.cpp
 OBJECTS=$(SOURCES:.cpp=.default.o)
 OBJECTS_TURBO=$(SOURCES:.cpp=.turbo.o)

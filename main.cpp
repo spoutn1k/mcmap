@@ -227,9 +227,8 @@ int main(int argc, char** argv)
 						"of 1800MiB. If you want to use more memory to render (=faster) use\n"
 						"the -mem switch followed by the amount of memory in MiB to use.\n"
 						"Start mcmap without any arguments to get more help.\n");
-			} else if (gPng) {
-				printf("Disk caching required, but not supported for png yet. Try setting memlimit to %dMiB.\n", int(bitmapBytes / (1024 * 1024) + 221));
-				return 1;
+			} else {
+				printf("Choosing disk caching strategy...\n");
 			}
 			// ...or even use disk caching
 			splitImage = true;
@@ -283,7 +282,7 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
-	// This write out the bitmap header and pre-allocate space if disk caching is used
+	// This writes out the bitmap header and pre-allocates space if disk caching is used
 	if (!(*createImage)(fileHandle, bitmapX, bitmapY, splitImage)) {
 		printf("Error allocating bitmap. Check if you have enough free disk space.\n");
 		return 1;
@@ -304,7 +303,7 @@ int main(int argc, char** argv)
 			if (splitImage) {
 				bitmapStartX += 2;
 				const int sizex = (g_ToChunkX - g_FromChunkX) * CHUNKSIZE_X * 2 + (g_ToChunkZ - g_FromChunkZ) * CHUNKSIZE_Z * 2;
-				const int sizey = (int)g_MapsizeY * 2 + (g_ToChunkX - g_FromChunkX) * CHUNKSIZE_X + (g_ToChunkZ - g_FromChunkZ) * CHUNKSIZE_Z + 2;
+				const int sizey = (int)g_MapsizeY * 2 + (g_ToChunkX - g_FromChunkX) * CHUNKSIZE_X + (g_ToChunkZ - g_FromChunkZ) * CHUNKSIZE_Z + 3;
 				if (!(*loadImagePart)(fileHandle, bitmapStartX - cropLeft, bitmapStartY - cropTop, sizex, sizey)) {
 					printf("Error loading partial image to render to.\n");
 					return 1;
@@ -348,7 +347,7 @@ int main(int argc, char** argv)
 		optimizeTerrain();
 
 		// Finally, render terrain to file
-		printf("Creating bitmap...\n");
+		printf("Drawing map...\n");
 		for (size_t x = CHUNKSIZE_X; x < g_MapsizeX - CHUNKSIZE_X; ++x) {
 			printProgress(x - CHUNKSIZE_X, g_MapsizeX);
 			for (size_t z = CHUNKSIZE_Z; z < g_MapsizeZ - CHUNKSIZE_Z; ++z) {
@@ -367,7 +366,7 @@ int main(int argc, char** argv)
 									&& (!BLOCK_AT_MAPEDGE(x, z)) // block is not edge of map (or if it is, has non-opaque block above)
 											)) {
 						int l = GETLIGHTAT(x, y, z); // find out how much light hits that block
-						if (y+1 == g_MapsizeY) l = (g_Nightmode ? 3 : 15); // quickfix: assume maximum strength at highest level
+						if (l == 0 && y+1 == g_MapsizeY) l = (g_Nightmode ? 3 : 15); // quickfix: assume maximum strength at highest level
 						bool blocked[5] = {false, false, false, false, false}; // if light is blocked in one direction
 						for (int i = 1; i < 4 && l <= 0; ++i) {
 							// Need to make this a loop to deal with half-steps, fences, flowers and other special blocks
@@ -449,6 +448,8 @@ int main(int argc, char** argv)
 	if (!splitImage) {
 		printf("Writing to file...\n");
 		(*saveImage)(fileHandle);
+	} else if (gPng) {
+		composeFinalImagePng();
 	}
 	fclose(fileHandle);
 
@@ -682,6 +683,9 @@ void printHelp(char* binary)
 			"  -north -east -south -west\n"
 			"                controls which direction will point to the *top left* corner\n"
 			"                it only makes sense to pass one of them; East is default\n"
+#ifdef WITHPNG
+			"  -png          set output format to png instead of bmp\n"
+#endif
 			"\n    WORLDPATH is the path of the desired alpha world.\n\n"
 			////////////////////////////////////////////////////////////////////////////////
 			"Examples:\n\n"
