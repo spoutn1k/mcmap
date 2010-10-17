@@ -449,7 +449,9 @@ int main(int argc, char** argv)
 		printf("Writing to file...\n");
 		(*saveImage)(fileHandle);
 	} else if (gPng) {
+#ifdef WITHPNG
 		composeFinalImagePng();
+#endif
 	}
 	fclose(fileHandle);
 
