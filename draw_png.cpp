@@ -51,7 +51,7 @@ namespace {
 	png_structp pngPtrCurrent = NULL; // This will be either the same as above, or a temp image when using disk caching
 	FILE* gPngPartialFileHandle = NULL;
 
-	inline void blend(uint8_t* c1, const uint8_t* c2);
+	inline void blend(uint8_t* destination, const uint8_t* source);
 	inline void modColor(uint8_t* color, const int mod);
 	inline void addColor(uint8_t* color, uint8_t* add);
 
@@ -450,17 +450,17 @@ void blendPixelPng(size_t x, size_t y, uint8_t color, float fsub)
 
 namespace {
 
-	inline void blend(uint8_t* c1, const uint8_t* c2)
+	inline void blend(uint8_t* destination, const uint8_t* source)
 	{
-		if (c1[ALPHA] == 0 || c2[ALPHA] == 255) {
-			memcpy(c1, c2, 4);
+		if (destination[ALPHA] == 0 || source[ALPHA] == 255) {
+			memcpy(destination, source, 4);
 			return;
 		}
 #		define BLEND(ca,aa,cb) clamp((size_t(ca) * size_t(aa)) / 255 + (size_t(255 - aa) * size_t(cb)) / 255)
-		c1[0] = BLEND(c2[0], c2[ALPHA], c1[0]);
-		c1[1] = BLEND(c2[1], c2[ALPHA], c1[1]);
-		c1[2] = BLEND(c2[2], c2[ALPHA], c1[2]);
-		c1[ALPHA] += (size_t(c2[ALPHA]) * size_t(255 - c1[ALPHA])) / 255;
+		destination[0] = BLEND(source[0], source[ALPHA], destination[0]);
+		destination[1] = BLEND(source[1], source[ALPHA], destination[1]);
+		destination[2] = BLEND(source[2], source[ALPHA], destination[2]);
+		destination[ALPHA] += (size_t(source[ALPHA]) * size_t(255 - destination[ALPHA])) / 255;
 	}
 
 	inline void modColor(uint8_t* color, const int mod)
