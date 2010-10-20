@@ -151,6 +151,7 @@ bool loadColorsFromFile(const char* file)
 		colors[blockid][PRED] = colors[blockid][RED];
 		colors[blockid][PGREEN] = colors[blockid][GREEN];
 		colors[blockid][PBLUE] = colors[blockid][BLUE];
+		colors[blockid][PALPHA] = colors[blockid][ALPHA];
 		colors[blockid][BRIGHTNESS] = GETBRIGHTNESS(colors[blockid]);
 	}
 	fclose(f);

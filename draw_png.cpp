@@ -42,7 +42,7 @@ namespace {
 	imageList partialImages;
 
 	uint8_t *gImageBuffer = NULL;
-	int gPngLocalLineWidth = 0, gPngLocalWidth = 0, gPngLocalHeight = 0, gPngLocalX = 0, gPngLocalY = 0;
+	int gPngLocalLineWidth = 0, gPngLocalWidth = 0, gPngLocalHeight = 0;
 	int gPngLineWidth = 0, gPngWidth = 0, gPngHeight = 0;
 	int gOffsetX = 0, gOffsetY = 0;
 	int64_t gPngSize = 0, gPngLocalSize = 0;
@@ -280,7 +280,7 @@ bool composeFinalImagePng()
 				fclose(img->pngFileHandle);
 				img->pngFileHandle = NULL;
 				img->pngPtr = NULL;
-				remove(img->filename);
+				//remove(img->filename);
 			}
 		} // Done composing this line, write to final image
 		png_write_row(pngPtrMain, (png_bytep)lineWrite);
@@ -456,7 +456,7 @@ namespace {
 			memcpy(destination, source, 4);
 			return;
 		}
-#		define BLEND(ca,aa,cb) clamp((size_t(ca) * size_t(aa)) / 255 + (size_t(255 - aa) * size_t(cb)) / 255)
+#		define BLEND(ca,aa,cb) uint8_t(((size_t(ca) * size_t(aa)) + (size_t(255 - aa) * size_t(cb))) / 255)
 		destination[0] = BLEND(source[0], source[ALPHA], destination[0]);
 		destination[1] = BLEND(source[1], source[ALPHA], destination[1]);
 		destination[2] = BLEND(source[2], source[ALPHA], destination[2]);
