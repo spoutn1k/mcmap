@@ -83,7 +83,7 @@ bool createBitmap(FILE* fh, size_t width, size_t height, bool splitUp)
 	gBmpLineWidth = size_t(gBmpWidth * 3 + 3) & ~size_t(3); // The size in bytes of a line in a bitmap has to be a multiple of 4
 	gBmpSize = gBmpLineWidth * gBmpHeight;
 	printf("Bitmap dimensions are %dx%d, 24bpp, %.2fMiB\n", gBmpWidth, gBmpHeight, float(gBmpSize / float(1024 * 1024)));
-	fseek(fh, 0, SEEK_SET);
+	fseeko(fh, 0, SEEK_SET);
 	if (!writeBitmapHeader24(fh, width, height)) return false;
 	if (splitUp) {
 		// Pre allocate disk space with zeroes
@@ -142,7 +142,7 @@ bool loadImagePart(FILE* fh, int startx, int starty, int width, int height)
 		}
 		size_t fileLine = gBmpHeight - gBmpLocalY - gBmpLocalHeight;
 		for (size_t arrayLine = 0; arrayLine < gBmpLocalHeight; ++arrayLine) {
-			fseek(fh, int64_t(fileLine) * int64_t(gBmpLineWidth) + int64_t(gBmpLocalX * 3 + sizeof(BITMAP_INFOHEADER) + sizeof(BITMAP_FILEHEADER)), SEEK_SET);
+			fseeko(fh, int64_t(fileLine) * int64_t(gBmpLineWidth) + int64_t(gBmpLocalX * 3 + sizeof(BITMAP_INFOHEADER) + sizeof(BITMAP_FILEHEADER)), SEEK_SET);
 			if (fread(gBitmap + (arrayLine * gBmpLocalLineWidth), 1, gBmpLocalLineWidth, fh) != gBmpLocalLineWidth) return false;
 			++fileLine;
 		}
@@ -154,7 +154,7 @@ bool saveImagePart(FILE* fh)
 {
 	size_t fileLine = gBmpHeight - gBmpLocalY - gBmpLocalHeight;
 	for (size_t arrayLine = 0; arrayLine < gBmpLocalHeight; ++arrayLine) {
-		fseek(fh, int64_t(fileLine) * int64_t(gBmpLineWidth) + int64_t(gBmpLocalX * 3 + sizeof(BITMAP_INFOHEADER) + sizeof(BITMAP_FILEHEADER)), SEEK_SET);
+		fseeko(fh, int64_t(fileLine) * int64_t(gBmpLineWidth) + int64_t(gBmpLocalX * 3 + sizeof(BITMAP_INFOHEADER) + sizeof(BITMAP_FILEHEADER)), SEEK_SET);
 		if (fwrite(gBitmap + (arrayLine * gBmpLocalLineWidth), 1, gBmpLocalLineWidth, fh) != gBmpLocalLineWidth) return false;
 		++fileLine;
 	}
