@@ -12,6 +12,7 @@
 // Byte order see below. Colors aligned to word boundaries for some speedup
 // Brightness is precalculated to speed up calculations later
 // Colors are stored twice since BMP and PNG need them in different order
+// Noise is supposed to look normal if -noise 10 is given
 extern uint8_t colors[256][16];
 #define BLUE 0
 #define GREEN 1
@@ -27,6 +28,7 @@ extern uint8_t colors[256][16];
 void loadColors();
 bool loadColorsFromFile(const char* file);
 bool dumpColorsToFile(const char* file);
+bool extractColors(const char* file);
 
 #define AIR 0
 #define STONE 1
