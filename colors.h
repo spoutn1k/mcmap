@@ -9,8 +9,9 @@
 			double(1[c] * 1[c]) * .601 + \
 			double(0[c] * 0[c]) * .163)
 
-// Byte order is: blue green red alpha noise brightness
-// Brightness is used to speed up calculations later
+// Byte order see below. Colors aligned to word boundaries for some speedup
+// Brightness is precalculated to speed up calculations later
+// Colors are stored twice since BMP and PNG need them in different order
 extern uint8_t colors[256][16];
 #define BLUE 0
 #define GREEN 1

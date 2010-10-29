@@ -26,6 +26,7 @@ extern bool g_Underground;
 extern bool g_BlendUnderground;
 extern bool g_Skylight;
 extern int g_Noise;
+extern bool g_BlendAll;
 
 extern uint8_t *g_Terrain, *g_Light;
 

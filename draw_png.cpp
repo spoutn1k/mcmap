@@ -45,7 +45,7 @@ namespace {
 	int gPngLocalLineWidth = 0, gPngLocalWidth = 0, gPngLocalHeight = 0;
 	int gPngLineWidth = 0, gPngWidth = 0, gPngHeight = 0;
 	int gOffsetX = 0, gOffsetY = 0;
-	int64_t gPngSize = 0, gPngLocalSize = 0;
+	uint64_t gPngSize = 0, gPngLocalSize = 0;
 	png_structp pngPtrMain = NULL; // Main image
 	png_infop pngInfoPtrMain = NULL;
 	png_structp pngPtrCurrent = NULL; // This will be either the same as above, or a temp image when using disk caching
@@ -56,13 +56,24 @@ namespace {
 	inline void addColor(uint8_t* color, uint8_t* add);
 
 	// Split them up so setPixelPng won't be one hell of a mess
-	void setSnow(const size_t &x, const size_t &y, const uint8_t *color);
-	void setTorch(const size_t &x, const size_t &y, const uint8_t *color);
-	void setFlower(const size_t &x, const size_t &y, const uint8_t *color);
-	void setFire(const size_t &x, const size_t &y, uint8_t *color, uint8_t *light, uint8_t *dark);
-	void setGrass(const size_t &x, const size_t &y, const uint8_t *color, const uint8_t *light, const uint8_t *dark, const int &sub);
-	void setFence(const size_t &x, const size_t &y, const uint8_t *color);
-	void setStep(const size_t &x, const size_t &y, const uint8_t *color, const uint8_t *light, const uint8_t *dark);
+	void setSnow(const size_t x, const size_t y, const uint8_t *color);
+	void setTorch(const size_t x, const size_t y, const uint8_t *color);
+	void setFlower(const size_t x, const size_t y, const uint8_t *color);
+	void setFire(const size_t x, const size_t y, uint8_t *color, uint8_t *light, uint8_t *dark);
+	void setGrass(const size_t x, const size_t y, const uint8_t *color, const uint8_t *light, const uint8_t *dark, const int &sub);
+	void setFence(const size_t x, const size_t y, const uint8_t *color);
+	void setStep(const size_t x, const size_t y, const uint8_t *color, const uint8_t *light, const uint8_t *dark);
+	void setWater(const size_t x, const size_t y, const uint8_t *color);
+
+   // Then make duplicate copies so it is one hell of a mess
+	// ..but hey, its for speeeeeeeeed!
+	void setSnowBA(const size_t &x, const size_t &y, const uint8_t *color);
+	void setTorchBA(const size_t &x, const size_t &y, const uint8_t *color);
+	void setFlowerBA(const size_t &x, const size_t &y, const uint8_t *color);
+	void setFireBA(const size_t &x, const size_t &y, uint8_t *color, uint8_t *light, uint8_t *dark);
+	void setGrassBA(const size_t &x, const size_t &y, const uint8_t *color, const uint8_t *light, const uint8_t *dark, const int &sub);
+	void setFenceBA(const size_t &x, const size_t &y, const uint8_t *color);
+	void setStepBA(const size_t &x, const size_t &y, const uint8_t *color, const uint8_t *light, const uint8_t *dark);
 }
 
 bool createImagePng(FILE* fh, size_t width, size_t height, bool splitUp)
@@ -70,7 +81,7 @@ bool createImagePng(FILE* fh, size_t width, size_t height, bool splitUp)
 	gPngLocalWidth = gPngWidth = (int)width;
 	gPngLocalHeight = gPngHeight = (int)height;
 	gPngLocalLineWidth = gPngLineWidth = gPngWidth * 4;
-	gPngSize = gPngLocalSize = gPngLineWidth * gPngHeight;
+	gPngSize = gPngLocalSize = (uint64_t)gPngLineWidth * (uint64_t)gPngHeight;
 	printf("Image dimensions are %dx%d, 32bpp, %.2fMiB\n", gPngWidth, gPngHeight, float(gPngSize / float(1024 * 1024)));
 	if (!splitUp) {
 		gImageBuffer = new uint8_t[gPngSize];
@@ -133,12 +144,15 @@ bool saveImagePng(FILE* fh)
 
 bool loadImagePartPng(FILE* fh, int startx, int starty, int width, int height)
 {
+	// These are set to NULL in saveImahePartPng to make sure the two functions are called in turn
 	if (pngPtrCurrent != NULL || gPngPartialFileHandle != NULL) {
 		printf("Something wrong with disk caching.\n");
 		return false;
 	}
+	// In case the image needs to be cropped the offsets will be negative
 	gOffsetX = MIN(startx, 0);
 	gOffsetY = MIN(starty, 0);
+	// Also modify width and height in these cases
 	if (startx < 0) {
 		width += startx;
 		startx = 0;
@@ -157,11 +171,11 @@ bool loadImagePartPng(FILE* fh, int startx, int starty, int width, int height)
 	snprintf(name, 200, "cache/%d.%d.%d.%d.png", startx, starty, width, height);
 	ImagePart *img = new ImagePart(name, startx, starty, width, height);
 	partialImages.push_back(img);
-	//
+	// alloc mem for image and open tempfile
 	gPngLocalWidth = width;
 	gPngLocalHeight = height;
 	gPngLocalLineWidth = gPngLocalWidth * 4;
-	int64_t size = gPngLocalLineWidth * gPngLocalHeight;
+	uint64_t size = (uint64_t)gPngLocalLineWidth * (uint64_t)gPngLocalHeight;
 	printf("Creating temporary image: %dx%d, 32bpp, %.2fMiB\n", gPngLocalWidth, gPngLocalHeight, float(size / float(1024 * 1024)));
 	if (gImageBuffer == NULL) {
 		gImageBuffer = new uint8_t[size];
@@ -246,9 +260,10 @@ bool composeFinalImagePng()
 		if (y % 10 == 0) printProgress(size_t(y), size_t(gPngHeight));
 		// paint each image on this one
 		memset(lineWrite, 0, gPngLineWidth);
+		// the partial images are kept in this list. they're already in the correct order in which they have to me merged and blended
 		for (imageList::iterator it = partialImages.begin(); it != partialImages.end(); it++) {
 			ImagePart *img = *it;
-			// do we have to load?
+			// do we have to open this image?
 			if (img->y == y && img->pngPtr == NULL) {
 				img->pngFileHandle = fopen(img->filename, "rb");
 				img->pngPtr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
@@ -264,6 +279,7 @@ bool composeFinalImagePng()
 				png_read_info(img->pngPtr, img->pngInfo);
 				// TODO: maybe check image dimensions reported by libpng here. They should never really be different from what's expected
 			}
+			// Here, the image is either open and ready for reading another line, or its not open when it doesn't have to be copied/blended here, or is already finished
 			if (img->pngPtr == NULL) continue; // Not your turn, image!
 			// Read next line from current image chunk
 			png_read_row(img->pngPtr, (png_bytep)lineRead, NULL);
@@ -314,42 +330,81 @@ void setPixelPng(size_t x, size_t y, uint8_t color, float fsub)
 	// Now make a local copy of the color that we can modify just for this one block
 	memcpy(c, colors[color]+8, 4);
 	modColor(c, sub);
-	// Then check the block type, as some types will be drawn differently
-	if (color == SNOW) {
-		setSnow(x, y, c);
-		return;
-	}
-	if (color == TORCH || color == REDTORCH_ON || color == REDTORCH_OFF) {
-		setTorch(x, y, c);
-		return;
-	}
-	if (color == FLOWERR || color == FLOWERY || color == MUSHROOMB || color == MUSHROOMR) {
-		setFlower(x, y, c);
-		return;
-	}
-	if (color == FENCE) {
-		setFence(x, y, c);
-		return;
-	}
-	// All the above blocks didn't need the shaded down versions of the color, so we only calc them here
-	// They are for the sides of blocks
-	memcpy(L, c, 4);
-	memcpy(D, c, 4);
-	modColor(L, -17);
-	modColor(D, -27);
-	// A few more blocks with special handling... Those need the two colors we just mixed
-	if (color == GRASS) {
-		setGrass(x, y, c, L, D, sub);
-		return;
-	}
-	if (color == FIRE) {
-		setFire(x, y, c, L, D);
-		return;
-	}
-	if (color == STEP) {
-		setStep(x, y, c, L, D);
-		return;
-	}
+   if (g_BlendAll) {
+       // Then check the block type, as some types will be drawn differently
+       if (color == SNOW) {
+           setSnowBA(x, y, c);
+           return;
+       }
+       if (color == TORCH || color == REDTORCH_ON || color == REDTORCH_OFF) {
+           setTorchBA(x, y, c);
+           return;
+       }
+       if (color == FLOWERR || color == FLOWERY || color == MUSHROOMB || color == MUSHROOMR) {
+           setFlowerBA(x, y, c);
+           return;
+       }
+       if (color == FENCE) {
+           setFenceBA(x, y, c);
+           return;
+       }
+       // All the above blocks didn't need the shaded down versions of the color, so we only calc them here
+       // They are for the sides of blocks
+       memcpy(L, c, 4);
+       memcpy(D, c, 4);
+       modColor(L, -17);
+       modColor(D, -27);
+       // A few more blocks with special handling... Those need the two colors we just mixed
+       if (color == GRASS) {
+           setGrassBA(x, y, c, L, D, sub);
+           return;
+       }
+       if (color == FIRE) {
+           setFireBA(x, y, c, L, D);
+           return;
+       }
+       if (color == STEP) {
+           setStepBA(x, y, c, L, D);
+           return;
+       }
+   } else {
+       // Then check the block type, as some types will be drawn differently
+       if (color == SNOW) {
+           setSnow(x, y, c);
+           return;
+       }
+       if (color == TORCH || color == REDTORCH_ON || color == REDTORCH_OFF) {
+           setTorch(x, y, c);
+           return;
+       }
+       if (color == FLOWERR || color == FLOWERY || color == MUSHROOMB || color == MUSHROOMR) {
+           setFlower(x, y, c);
+           return;
+       }
+       if (color == FENCE) {
+           setFence(x, y, c);
+           return;
+       }
+       // All the above blocks didn't need the shaded down versions of the color, so we only calc them here
+       // They are for the sides of blocks
+       memcpy(L, c, 4);
+       memcpy(D, c, 4);
+       modColor(L, -17);
+       modColor(D, -27);
+       // A few more blocks with special handling... Those need the two colors we just mixed
+       if (color == GRASS) {
+           setGrass(x, y, c, L, D, sub);
+           return;
+       }
+       if (color == FIRE) {
+           setFire(x, y, c, L, D);
+           return;
+       }
+       if (color == STEP) {
+           setStep(x, y, c, L, D);
+           return;
+       }
+   }
 	// In case the user wants noise, calc the strength now, depending on the desired intensity and the block's brightness
 	int noise = 0;
 	if (g_Noise && colors[color][NOISE]) {
@@ -479,7 +534,7 @@ namespace {
 		color[2] = clamp(uint16_t(float(color[2]) * v1 + float(add[2]) * v2));
 	}
 
-	void setSnow(const size_t &x, const size_t &y, const uint8_t *color)
+	void setSnow(const size_t x, const size_t y, const uint8_t *color)
 	{
 		// Top row (second row)
 		uint8_t *pos = &PIXEL(x, y+1);
@@ -488,7 +543,7 @@ namespace {
 		}
 	}
 
-	void setTorch(const size_t &x, const size_t &y, const uint8_t *color)
+	void setTorch(const size_t x, const size_t y, const uint8_t *color)
 	{ // Maybe the orientation should be considered when drawing, but it probably isn't worth the efford
 		uint8_t *pos = &PIXEL(x+2, y+1);
 		memcpy(pos, color, 4);
@@ -496,7 +551,7 @@ namespace {
 		memcpy(pos, color, 4);
 	}
 
-	void setFlower(const size_t &x, const size_t &y, const uint8_t *color)
+	void setFlower(const size_t x, const size_t y, const uint8_t *color)
 	{
 		uint8_t *pos = &PIXEL(x, y+1);
 		memcpy(pos+4, color, 4);
@@ -507,11 +562,11 @@ namespace {
 		memcpy(pos, color, 4);
 	}
 
-	void setFire(const size_t &x, const size_t &y, uint8_t *color, uint8_t *light, uint8_t *dark)
+	void setFire(const size_t x, const size_t y, uint8_t *color, uint8_t *light, uint8_t *dark)
 	{	// This basically just leaves out a few pixels
 		// Top row
 		uint8_t *pos = &PIXEL(x, y);
-		for (size_t i = 0; i < 10; i += 8) {
+		for (size_t i = 0; i < 13; i += 8) {
 			blend(pos+i, color);
 		}
 		// Second and third row
@@ -526,7 +581,7 @@ namespace {
 		blend(pos+8, light);
 	}
 
-	void setGrass(const size_t &x, const size_t &y, const uint8_t *color, const uint8_t *light, const uint8_t *dark, const int &sub)
+	void setGrass(const size_t x, const size_t y, const uint8_t *color, const uint8_t *light, const uint8_t *dark, const int &sub)
 	{	// this will make grass look like dirt from the side
 		uint8_t L[4], D[4];
 		memcpy(L, colors[DIRT]+8, 4);
@@ -562,7 +617,7 @@ namespace {
 		memcpy(pos+8, L, 4);
 	}
 
-	void setFence(const size_t &x, const size_t &y, const uint8_t *color)
+	void setFence(const size_t x, const size_t y, const uint8_t *color)
 	{
 		// First row
 		uint8_t *pos = &PIXEL(x, y);
@@ -580,15 +635,140 @@ namespace {
 		blend(pos, color);
 	}
 
-	void setStep(const size_t &x, const size_t &y, const uint8_t *color, const uint8_t *light, const uint8_t *dark)
+	void setStep(const size_t x, const size_t y, const uint8_t *color, const uint8_t *light, const uint8_t *dark)
 	{
 		uint8_t *pos = &PIXEL(x, y+2);
-		for (size_t i = 0; i < 10; i += 4) {
+		for (size_t i = 0; i < 13; i += 4) {
 			memcpy(pos+i, color, 4);
 		}
 		pos = &PIXEL(x, y+3);
 		memcpy(pos+4, dark, 4);
 		memcpy(pos+8, light, 4);
+	}
+
+	void setWater(const size_t x, const size_t y, const uint8_t *color)
+	{
+		uint8_t *pos = &PIXEL(x, y);
+		for (size_t i = 0; i < 5; i += 4) {
+			blend(pos+i, color);
+		}
+		pos = &PIXEL(x, y+1);
+		for (size_t i = 0; i < 5; i += 4) {
+			blend(pos+i, color);
+		}
+	}
+
+   // The g_BlendAll versions of the block set functions
+	void setSnowBA(const size_t &x, const size_t &y, const uint8_t *color)
+	{
+		// Top row (second row)
+		uint8_t *pos = &PIXEL(x, y+1);
+		for (size_t i = 0; i < 13; i += 4) {
+			blend(pos+i, color);
+		}
+	}
+
+	void setTorchBA(const size_t &x, const size_t &y, const uint8_t *color)
+	{ // Maybe the orientation should be considered when drawing, but it probably isn't worth the effort
+		uint8_t *pos = &PIXEL(x+2, y+1);
+		blend(pos, color);
+		pos = &PIXEL(x+2, y+2);
+		blend(pos, color);
+	}
+
+	void setFlowerBA(const size_t &x, const size_t &y, const uint8_t *color)
+	{
+		uint8_t *pos = &PIXEL(x, y+1);
+		blend(pos+4, color);
+		blend(pos+12, color);
+		pos = &PIXEL(x+2, y+2);
+		blend(pos, color);
+		pos = &PIXEL(x+1, y+3);
+		blend(pos, color);
+	}
+
+	void setFireBA(const size_t &x, const size_t &y, uint8_t *color, uint8_t *light, uint8_t *dark)
+	{	// This basically just leaves out a few pixels
+		// Top row
+		uint8_t *pos = &PIXEL(x, y);
+		for (size_t i = 0; i < 10; i += 8) {
+			blend(pos+i, color);
+		}
+		// Second and third row
+		for (size_t i = 1; i < 3; ++i) {
+			pos = &PIXEL(x, y+i);
+			blend(pos, dark);
+			blend(pos+(4*i), dark);
+			blend(pos+12, light);
+		}
+		// Last row
+		pos = &PIXEL(x, y+3);
+		blend(pos+8, light);
+	}
+
+	void setGrassBA(const size_t &x, const size_t &y, const uint8_t *color, const uint8_t *light, const uint8_t *dark, const int &sub)
+	{	// this will make grass look like dirt from the side
+		uint8_t L[4], D[4];
+		memcpy(L, colors[DIRT]+8, 4);
+		memcpy(D, colors[DIRT]+8, 4);
+		modColor(L, sub - 15);
+		modColor(D, sub - 25);
+		// consider noise
+		int noise = 0;
+		if (g_Noise && colors[GRASS][NOISE]) {
+			noise = int(float(g_Noise * colors[GRASS][NOISE]) * (float(GETBRIGHTNESS(color) + 10) / 2650.0f));
+		}
+		// Top row
+		uint8_t *pos = &PIXEL(x, y);
+		for (size_t i = 0; i < 4; ++i, pos += 4) {
+			blend(pos, color);
+			if (noise) modColor(pos, rand() % (noise * 2) - noise);
+		}
+		// Second row
+		pos = &PIXEL(x, y+1);
+		blend(pos, dark);
+		blend(pos+4, dark);
+		blend(pos+8, light);
+		blend(pos+12, light);
+		// Third row
+		pos = &PIXEL(x, y+2);
+		blend(pos, D);
+		blend(pos+4, D);
+		blend(pos+8, L);
+		blend(pos+12, L);
+		// Last row
+		pos = &PIXEL(x, y+3);
+		blend(pos+4, D);
+		blend(pos+8, L);
+	}
+
+	void setFenceBA(const size_t &x, const size_t &y, const uint8_t *color)
+	{
+		// First row
+		uint8_t *pos = &PIXEL(x, y);
+		blend(pos, color);
+		blend(pos+4, color);
+		// Second row
+		pos = &PIXEL(x, y+1);
+		blend(pos, color);
+		// Third row
+		pos = &PIXEL(x, y+2);
+		blend(pos, color);
+		blend(pos+4, color);
+		// Last row
+		pos = &PIXEL(x, y+3);
+		blend(pos, color);
+	}
+
+	void setStepBA(const size_t &x, const size_t &y, const uint8_t *color, const uint8_t *light, const uint8_t *dark)
+	{
+		uint8_t *pos = &PIXEL(x, y+2);
+		for (size_t i = 0; i < 10; i += 4) {
+			blend(pos+i, color);
+		}
+		pos = &PIXEL(x, y+3);
+		blend(pos+4, dark);
+		blend(pos+8, light);
 	}
 
 }

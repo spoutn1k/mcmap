@@ -26,8 +26,7 @@
 			double(b * b) * .163); \
 } while (false)
 
-// Byte order is: blue green red alpha noise brightness
-// Brightness is used to speed up calculations later
+// See header for description
 uint8_t colors[256][16];
 
 
@@ -42,8 +41,8 @@ void loadColors()
 	SETCOLORNOISE(WOOD, 157,128,79,255, 11);
 	SETCOLOR(6, 120,120,120,0);
 	SETCOLOR(7, 84,84,84,255);
-	SETCOLOR(8, 38,92,225,41);
-	SETCOLOR(9, 38,92,225,41);
+	SETCOLOR(WATER, 38,92,225,128);
+	SETCOLOR(STAT_WATER, 38,92,225,128);
 	SETCOLOR(10, 255,90,0,255);
 	SETCOLOR(11, 255,90,0,255);
 	SETCOLORNOISE(SAND, 220,212,160,255, 14);

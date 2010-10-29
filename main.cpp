@@ -42,7 +42,7 @@ namespace {
 #define BLOCK_AT_MAPEDGE(x,z) (((z)+1 == g_MapsizeZ-CHUNKSIZE_Z && gAtBottomLeft) || ((x)+1 == g_MapsizeX-CHUNKSIZE_X && gAtBottomRight))
 
 void optimizeTerrain();
-inline void blockCulling(const size_t x, const size_t y, const size_t z, size_t &removed);
+inline void blockCulling(const size_t x, const size_t y, const size_t z);
 void undergroundMode(bool explore);
 bool prepareNextArea(int splitX, int splitZ, int &bitmapStartX, int &bitmapStartY);
 void assignFunctionPointers();
@@ -113,6 +113,8 @@ int main(int argc, char** argv)
 				printf("mcmap was not compiled with libpng support.\n");
 				return 1;
 #endif
+			} else if (strcmp(option, "-blendall") == 0) {
+				g_BlendAll = true;
 			} else if (strcmp(option, "-noise") == 0 || strcmp(option, "-dither") == 0) {
 				if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
 					printf("Error: %s needs an integer argument, ie: %s 10\n", option, option);
@@ -367,22 +369,20 @@ int main(int argc, char** argv)
 											)) {
 						int l = GETLIGHTAT(x, y, z); // find out how much light hits that block
 						if (l == 0 && y+1 == g_MapsizeY) l = (g_Nightmode ? 3 : 15); // quickfix: assume maximum strength at highest level
-						bool blocked[5] = {false, false, false, false, false}; // if light is blocked in one direction
-						for (int i = 1; i < 4 && l <= 0; ++i) {
+						bool blocked[4] = {false, false, false, false}; // if light is blocked in one direction
+						for (int i = 1; i < 3 && l <= 0; ++i) {
 							// Need to make this a loop to deal with half-steps, fences, flowers and other special blocks
 							blocked[0] |= (colors[BLOCKAT(x+i, y, z)][ALPHA] == 255);
 							blocked[1] |= (colors[BLOCKAT(x, y, z+i)][ALPHA] == 255);
 							blocked[2] |= (y+i >= g_MapsizeY || colors[BLOCKAT(x, y+i, z)][ALPHA] == 255);
-							blocked[3] |= (colors[BLOCKAT(x+i, y+i, z)][ALPHA] == 255);
-							blocked[4] |= (colors[BLOCKAT(x, y+i, z+i)][ALPHA] == 255);
+							blocked[3] |= (colors[BLOCKAT(x+i, y+i, z+i)][ALPHA] == 255);
 							if (l <= 0 // if block is still dark and there are no translucent blocks around, stop
-									&& blocked[0] && blocked[1] && blocked[2] && blocked[3] && blocked[4]) break;
+									&& blocked[0] && blocked[1] && blocked[2] && blocked[3]) break;
 							//
 							if (!blocked[2] && l <= 0 && y+i < g_MapsizeY) l = GETLIGHTAT(x, y+i, z);
 							if (!blocked[0] && l <= 0) l = GETLIGHTAT(x+i, y, z) - i/2;
 							if (!blocked[1] && l <= 0) l = GETLIGHTAT(x, y, z+i) - i/2;
-							if (!blocked[3] && l <= 0 && y+i < g_MapsizeY) l = (int)GETLIGHTAT(x+i, y+i, z) - i/2;
-							if (!blocked[4] && l <= 0 && y+i < g_MapsizeY) l = (int)GETLIGHTAT(x, y+i, z+i) - i/2;
+							if (!blocked[3] && l <= 0 && y+i < g_MapsizeY) l = (int)GETLIGHTAT(x+i-1, y+i, z+i-1) - i;
 							//if (!blocked[2] && l <= 0 && y+i < g_MapsizeY) l = GETLIGHTAT(x+i/2, y+i/2, z+i/2) - i/2;
 						}
 						if (l < 0) l = 0;
@@ -405,7 +405,7 @@ int main(int argc, char** argv)
 		}
 		printProgress(10, 10);
 		// Bitmap creation complete
-		// unless we use....
+		// unless using....
 		// Underground overlay mode
 		if (g_BlendUnderground && !g_Underground) {
 			// Load map data again, since block culling removed most of the blocks
@@ -459,36 +459,38 @@ int main(int argc, char** argv)
 	return 0;
 }
 
+static size_t gBlocksRemoved = 0;
+// 136944041
 void optimizeTerrain()
 {
 	// Remove invisible blocks from map (covered by other blocks from isometric pov)
 	// Do so by "raytracing" every block from front to back..
 	printf("Optimizing terrain...\n");
-	size_t removed = 0;
+	gBlocksRemoved = 0;
 	printProgress(0, 10);
 	const size_t top = MIN(g_MapsizeY, 100) - 1;  // Some cheating here, as in most cases there is little to nothing up that high, and the few things that are won't slow down rendering too much
-	const size_t progressMax = g_MapsizeX + g_MapsizeZ - 1 - CHUNKSIZE_Z;
-	for (size_t x = CHUNKSIZE_X+1; x < g_MapsizeX - CHUNKSIZE_X; ++x) {
-		for (size_t z = CHUNKSIZE_Z+1; z < g_MapsizeZ - CHUNKSIZE_Z; ++z) {
-			blockCulling(x, top, z, removed);
+	const size_t mx = g_MapsizeX - CHUNKSIZE_X - 1;
+	const size_t mz = g_MapsizeZ - CHUNKSIZE_Z - 1;
+	for (size_t x = CHUNKSIZE_X+1; x < mx; ++x) {
+		for (size_t z = CHUNKSIZE_Z+1; z <= mz; ++z) {
+			blockCulling(x, top, z);
 		}
 		for (size_t y = top; y > 0; --y) {
-			blockCulling(x, y, g_MapsizeZ-1-CHUNKSIZE_Z, removed);
+			blockCulling(x, y, mz);
 		}
-		printProgress(x, progressMax);
+		printProgress(x, mx);
 	}
-	for (size_t z = CHUNKSIZE_Z+1; z < g_MapsizeZ-1 - CHUNKSIZE_Z; ++z) {
+	for (size_t z = CHUNKSIZE_Z+1; z < mz; ++z) {
 		for (size_t y = top; y > 0; --y) {
-			blockCulling(g_MapsizeX-1-CHUNKSIZE_X, y, z, removed);
+			blockCulling(mx, y, z);
 		}
-		printProgress(z + g_MapsizeX, progressMax);
 	}
 	printProgress(10, 10);
-	printf("Removed %lu blocks\n", (unsigned long)removed);
+	printf("Removed %lu blocks\n", (unsigned long)gBlocksRemoved);
 }
 
-inline void blockCulling(const size_t x, const size_t y, const size_t z, size_t &removed)
-{	// Actually I just used 'removed' for debugging, but removing it
+inline void blockCulling(const size_t x, const size_t y, const size_t z)
+{	// Actually I just used 'gBlocksRemoved' for debugging, but removing it
 	// gives no speed increase at all, so why bother?
 	bool cull = false; // Culling active?
 	for (size_t i = 0; i < g_MapsizeY; ++i) {
@@ -496,7 +498,7 @@ inline void blockCulling(const size_t x, const size_t y, const size_t z, size_t 
 		uint8_t &c = BLOCKAT(x-i, y-i, z-i);
 		if (cull && c != AIR) {
 			c = AIR;
-			++removed;
+			++gBlocksRemoved;
 		} else if (colors[c][ALPHA] == 255) {
 			cull = true;
 		}

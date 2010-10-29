@@ -41,6 +41,8 @@
 #	define fseek64 _fseeki64
 #elif defined(__APPLE__)
 #	define fseek64 fseeko
+#elif defined(__FreeBSD__)
+#   define fseek64 fseeko
 #else
 #	define fseek64 fseeko64
 #endif

@@ -10,5 +10,6 @@ bool g_Underground = false;
 bool g_BlendUnderground = false;
 bool g_Skylight = false;
 int g_Noise = 0;
+bool g_BlendAll = false;
 
 uint8_t *g_Terrain = NULL, *g_Light = NULL;
