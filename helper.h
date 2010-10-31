@@ -58,6 +58,8 @@ int base10(char* val);
 uint8_t clamp(int32_t val);
 void printProgress(const size_t current, const size_t max);
 bool fileExists(const char* strFilename);
+bool dirExists(const char* strFilename);
 bool isNumeric(char* str);
+bool isAlphaWorld(char* path);
 
 #endif
