@@ -38,6 +38,8 @@ bool extractColors(const char* file);
 #define WOOD 5
 #define WATER 8
 #define STAT_WATER 9
+#define LAVA 10
+#define STAT_LAVA 11
 #define SAND 12
 #define GRAVEL 13
 #define LOG 17
