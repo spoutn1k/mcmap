@@ -5,9 +5,9 @@
 #include <cmath>
 
 #define GETBRIGHTNESS(c) (uint8_t)sqrt( \
-			double(2[c] * 2[c]) * .236 + \
-			double(1[c] * 1[c]) * .601 + \
-			double(0[c] * 0[c]) * .163)
+                                        double(2[c] * 2[c]) * .236 + \
+                                        double(1[c] * 1[c]) * .601 + \
+                                        double(0[c] * 0[c]) * .163)
 
 // Byte order see below. Colors aligned to word boundaries for some speedup
 // Brightness is precalculated to speed up calculations later
@@ -26,9 +26,10 @@ extern uint8_t colors[256][16];
 #define PALPHA 11
 
 void loadColors();
-bool loadColorsFromFile(const char* file);
-bool dumpColorsToFile(const char* file);
-bool extractColors(const char* file);
+bool loadColorsFromFile(const char *file);
+bool dumpColorsToFile(const char *file);
+bool extractColors(const char *file);
+bool loadBiomeColors(const char* path, int fromXZ);
 
 #define AIR 0
 #define STONE 1

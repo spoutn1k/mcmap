@@ -47,6 +47,12 @@
 #	define fseek64 fseeko64
 #endif
 
+// Differently named
+#if defined(_WIN32) && !defined(__GNUC__)
+#	define snprintf _snprintf
+#  define mkdir _mkdir
+#endif
+
 
 // If this is missing for you in Visual Studio: See http://en.wikipedia.org/wiki/Stdint.h#External_links
 #include <stdint.h>
@@ -54,12 +60,12 @@
 using std::string;
 
 string base36(int val);
-int base10(char* val);
+int base10(char *val);
 uint8_t clamp(int32_t val);
 void printProgress(const size_t current, const size_t max);
-bool fileExists(const char* strFilename);
-bool dirExists(const char* strFilename);
-bool isNumeric(char* str);
-bool isAlphaWorld(char* path);
+bool fileExists(const char *strFilename);
+bool dirExists(const char *strFilename);
+bool isNumeric(char *str);
+bool isAlphaWorld(char *path);
 
 #endif

@@ -11,7 +11,7 @@ using std::map;
 using std::list;
 
 class NBT_Tag;
-typedef map<string, NBT_Tag*> tagmap;
+typedef map<string, NBT_Tag *> tagmap;
 
 enum TagType {
 	tagUnknown = 0, // Tag_End is not made available, so 0 should never be in any list of available elements
@@ -27,19 +27,20 @@ enum TagType {
 	tagCompound = 10
 };
 
-class NBT_Tag {
-friend class NBT;
+class NBT_Tag
+{
+	friend class NBT;
 private:
 	tagmap *_elems;
-	list<NBT_Tag*> *_list;
+	list<NBT_Tag *> *_list;
 	TagType _type;
-	uint8_t* _data;
+	uint8_t *_data;
 	uint32_t _len;
 
-	explicit NBT_Tag(uint8_t* &position, const uint8_t* end, string &name);
-	explicit NBT_Tag(uint8_t* &position, const uint8_t* end, TagType type);
+	explicit NBT_Tag(uint8_t* &position, const uint8_t *end, string &name);
+	explicit NBT_Tag(uint8_t* &position, const uint8_t *end, TagType type);
 	explicit NBT_Tag();
-	void parseData(uint8_t* &position, const uint8_t* end, string *name = NULL);
+	void parseData(uint8_t* &position, const uint8_t *end, string *name = NULL);
 
 public:
 	bool getCompound(string name, NBT_Tag* &compound);
@@ -47,17 +48,20 @@ public:
 	bool getInt(string name, int32_t &value);
 	bool getLong(string name, int64_t &value);
 	bool getByteArray(string name, uint8_t* &data, int &len);
-	TagType getType() { return _type; }
+	TagType getType() {
+		return _type;
+	}
 	virtual ~NBT_Tag();
 };
 
-class NBT : public NBT_Tag {
+class NBT : public NBT_Tag
+{
 private:
 	uint8_t *_blob;
 	char *_filename;
 	size_t _bloblen;
 public:
-	explicit NBT(const char* file, bool &success);
+	explicit NBT(const char *file, bool &success);
 	virtual ~NBT();
 	//bool save();
 };
