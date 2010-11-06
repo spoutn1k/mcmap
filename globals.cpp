@@ -3,6 +3,7 @@
 // Current window of world being rendered
 int g_FromChunkX = UNDEFINED, g_FromChunkZ = UNDEFINED, g_ToChunkX = UNDEFINED, g_ToChunkZ = UNDEFINED;
 size_t g_MapsizeZ = 0, g_MapsizeY = 128, g_MapsizeX = 0;
+int g_OffsetY = 2;
 
 Orientation g_Orientation = East;
 bool g_Nightmode = false;

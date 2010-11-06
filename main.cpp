@@ -42,7 +42,8 @@ namespace
 // Macros to make code more readable
 #define BLOCK_AT_MAPEDGE(x,z) (((z)+1 == g_MapsizeZ-CHUNKSIZE_Z && gAtBottomLeft) || ((x)+1 == g_MapsizeX-CHUNKSIZE_X && gAtBottomRight))
 
-void optimizeTerrain();
+void optimizeTerrain2();
+void optimizeTerrain3();
 void undergroundMode(bool explore);
 bool prepareNextArea(int splitX, int splitZ, int &bitmapStartX, int &bitmapStartY);
 void assignFunctionPointers();
@@ -177,6 +178,8 @@ int main(int argc, char **argv)
 				g_Orientation = East;
 			} else if (strcmp(option, "-west") == 0) {
 				g_Orientation = West;
+			} else if (strcmp(option, "-3") == 0) {
+				g_OffsetY = 3;
 			} else if (strcmp(option, "-help") == 0 || strcmp(option, "-h") == 0 || strcmp(option, "-?") == 0) {
 				printHelp(argv[0]);
 				return 0;
@@ -366,7 +369,7 @@ int main(int argc, char **argv)
 			if (splitImage) {
 				bitmapStartX += 2;
 				const int sizex = (g_ToChunkX - g_FromChunkX) * CHUNKSIZE_X * 2 + (g_ToChunkZ - g_FromChunkZ) * CHUNKSIZE_Z * 2;
-				const int sizey = (int)g_MapsizeY * 2 + (g_ToChunkX - g_FromChunkX) * CHUNKSIZE_X + (g_ToChunkZ - g_FromChunkZ) * CHUNKSIZE_Z + 3;
+				const int sizey = (int)g_MapsizeY * g_OffsetY + (g_ToChunkX - g_FromChunkX) * CHUNKSIZE_X + (g_ToChunkZ - g_FromChunkZ) * CHUNKSIZE_Z + 3;
 				if (!(*loadImagePart)(fileHandle, bitmapStartX - cropLeft, bitmapStartY - cropTop, sizex, sizey)) {
 					printf("Error loading partial image to render to.\n");
 					return 1;
@@ -407,7 +410,11 @@ int main(int argc, char **argv)
 			undergroundMode(false);
 		}
 
-		optimizeTerrain();
+		if (g_OffsetY == 2) {
+			optimizeTerrain2();
+		} else {
+			optimizeTerrain3();
+		}
 
 		// Finally, render terrain to file
 		printf("Drawing map...\n");
@@ -423,11 +430,11 @@ int main(int argc, char **argv)
 				}
 				//
 				const int bmpPosX = int((g_MapsizeZ - z - CHUNKSIZE_Z) * 2 + (x - CHUNKSIZE_X) * 2 + (splitImage ? -2 : bitmapStartX - cropLeft));
-				int bmpPosY = int(g_MapsizeY * 2 + z + x - CHUNKSIZE_Z - CHUNKSIZE_X + (splitImage ? 0 : bitmapStartY - cropTop)) + 2;
+				int bmpPosY = int(g_MapsizeY * g_OffsetY + z + x - CHUNKSIZE_Z - CHUNKSIZE_X + (splitImage ? 0 : bitmapStartY - cropTop)) + 2;
 				for (size_t y = 0; y < g_MapsizeY; ++y) {
-					bmpPosY -= 2;
+					bmpPosY -= g_OffsetY;
 					uint8_t &c = BLOCKAT(x, y, z);
-					if (c == AIR) {
+					if (c == AIR || c == VOIDBLOCK) {
 						continue;
 					}
 					//float col = float(y) * .78f - 91;
@@ -480,12 +487,13 @@ int main(int argc, char **argv)
 						}
 					}
 					// Edge detection (this means where terrain goes 'down' and the side of the block is not visible)
+					uint8_t &b = BLOCKAT(x - 1, y - 1, z - 1);
 					if ((y && y + 1 < g_MapsizeY)  // In bounds?
 					      && BLOCKAT(x, y + 1, z) == AIR  // Only if block above is air
 					      && BLOCKAT(x - 1, y + 1, z - 1) == AIR  // and block above and behind is air
-					      && (BLOCKAT(x - 1, y - 1, z - 1) == c || BLOCKAT(x - 1, y - 1, z - 1) == AIR)   // block behind (from pov) this one is same type or air
+					      && (b == VOIDBLOCK || b == AIR || b == c)   // block behind (from pov) this one is same type or air
 					      && (BLOCKAT(x - 1, y, z) == AIR || BLOCKAT(x, y, z - 1) == AIR)) {   // block TL/TR from this one is air = edge
-						brightnessAdjustment += 12;
+						brightnessAdjustment += 13;
 					}
 					setPixel(bmpPosX, bmpPosY, c, brightnessAdjustment);
 				}
@@ -507,19 +515,19 @@ int main(int argc, char **argv)
 				}
 			}
 			undergroundMode(true);
-			optimizeTerrain();
+			optimizeTerrain2();
 			printf("Creating cave overlay...\n");
 			for (size_t x = CHUNKSIZE_X; x < g_MapsizeX - CHUNKSIZE_X; ++x) {
 				printProgress(x - CHUNKSIZE_X, g_MapsizeX);
 				for (size_t z = CHUNKSIZE_Z; z < g_MapsizeZ - CHUNKSIZE_Z; ++z) {
 					const size_t bmpPosX = (g_MapsizeZ - z - CHUNKSIZE_Z) * 2 + (x - CHUNKSIZE_X) * 2 + (splitImage ? -2 : bitmapStartX) - cropLeft;
-					size_t bmpPosY = g_MapsizeY * 2 + z + x - CHUNKSIZE_Z - CHUNKSIZE_X + (splitImage ? 0 : bitmapStartY) - cropTop;
+					size_t bmpPosY = g_MapsizeY * g_OffsetY + z + x - CHUNKSIZE_Z - CHUNKSIZE_X + (splitImage ? 0 : bitmapStartY) - cropTop;
 					for (size_t y = 0; y < MIN(g_MapsizeY, 64); ++y) {
 						uint8_t &c = BLOCKAT(x, y, z);
-						if (c != AIR) { // If block is not air (colors[c][3] != 0)
+						if (c != AIR && c != VOIDBLOCK) { // If block is not air (colors[c][3] != 0)
 							(*blendPixel)(bmpPosX, bmpPosY, c, float(y + 30) * .0048f);
 						}
-						bmpPosY -= 2;
+						bmpPosY -= g_OffsetY;
 					}
 				}
 			}
@@ -550,22 +558,22 @@ int main(int argc, char **argv)
 }
 
 static size_t gBlocksRemoved = 0;
-void optimizeTerrain()
+void optimizeTerrain2()
 {
 	// Remove invisible blocks from map (covered by other blocks from isometric pov)
 	// Do so by "raytracing" every block from front to back..
 	printf("Optimizing terrain...\n");
 	gBlocksRemoved = 0;
 	printProgress(0, 10);
-	const int top = (int)MIN(g_MapsizeY, 100);  // Some cheating here, as in most cases there is little to nothing up that high, and the few things that are won't slow down rendering too much
-	uint8_t blocked[100]; // Helper array to remember which block is blocked from being seen. This allows to traverse the array in a slightly more sequential way, which leads to better usage of the CPU cache
+	const int top = (int)g_MapsizeY;
+	uint8_t blocked[CHUNKSIZE_Y]; // Helper array to remember which block is blocked from being seen. This allows to traverse the array in a slightly more sequential way, which leads to better usage of the CPU cache
 	const int max = (int)MIN(g_MapsizeX - CHUNKSIZE_X * 2, g_MapsizeZ - CHUNKSIZE_Z * 2);
 	const int maxX = int(g_MapsizeX - CHUNKSIZE_X - 1);
 	const int maxZ = int(g_MapsizeZ - CHUNKSIZE_Z - 1);
 	const size_t maxProgress = size_t(maxX + maxZ);
 	// The following needs to be done twice, once for the X-Y front plane, once for the Z-Y front plane
 	for (int x = CHUNKSIZE_X; x <= maxX; ++x) {
-		memset(blocked, 0, 100); // Nothing is blocked at first
+		memset(blocked, 0, CHUNKSIZE_Y); // Nothing is blocked at first
 		int offset = 0; // The helper array had to be shifted after each run of the inner most loop. As this is expensive, just use an offset that increases instead
 		const int max2 = MIN(max, x - CHUNKSIZE_X + 1); // Block array will be traversed diagonally, determine how many blocks there are
 		for (int i = 0; i < max2; ++i) { // This traversesthe block array diagonally, which would be upwards in the image
@@ -573,7 +581,7 @@ void optimizeTerrain()
 			for (int j = 0; j < top; ++j) { // Go up
 				if (blocked[(j+offset) % top]) { // Block is hidden, remove
 					if (*block != AIR) {
-						*block = AIR;
+						*block = VOIDBLOCK;
 						++gBlocksRemoved;
 					}
 				} else if (colors[*block][ALPHA] == 255) { // Block is not hidden, do not remove, but mark spot as blocked for next iteration
@@ -587,7 +595,7 @@ void optimizeTerrain()
 		printProgress(size_t(x), maxProgress);
 	}
 	for (int z = CHUNKSIZE_Z; z < maxZ; ++z) {
-		memset(blocked, 0, 100);
+		memset(blocked, 0, CHUNKSIZE_Y);
 		int offset = 0;
 		const int max2 = MIN(max, z - CHUNKSIZE_Z + 1);
 		for (int i = 0; i < max2; ++i) {
@@ -595,7 +603,7 @@ void optimizeTerrain()
 			for (int j = 0; j < top; ++j) {
 				if (blocked[(j+offset) % top]) {
 					if (*block != AIR) {
-						*block = AIR;
+						*block = VOIDBLOCK;
 						++gBlocksRemoved;
 					}
 				} else if (colors[*block][ALPHA] == 255) {
@@ -605,6 +613,77 @@ void optimizeTerrain()
 			}
 			blocked[offset % top] = 0;
 			++offset;
+		}
+		printProgress(size_t(z + maxX), maxProgress);
+	}
+	printProgress(10, 10);
+	printf("Removed %lu blocks\n", (unsigned long) gBlocksRemoved);
+}
+
+void optimizeTerrain3()
+{
+	// Remove invisible blocks from map (covered by other blocks from isometric pov)
+	// Do so by "raytracing" every block from front to back..
+	printf("Optimizing terrain...\n");
+	gBlocksRemoved = 0;
+	printProgress(0, 10);
+	const int top = (int)g_MapsizeY;
+	// Helper arrays to remember which block is blocked from being seen. This allows to traverse the array in a slightly more sequential way, which leads to better usage of the CPU cache
+	uint8_t blocked[CHUNKSIZE_Y*3];
+	const int max = (int)MIN(g_MapsizeX - CHUNKSIZE_X * 2, g_MapsizeZ - CHUNKSIZE_Z * 2);
+	const int maxX = int(g_MapsizeX - CHUNKSIZE_X - 1);
+	const int maxZ = int(g_MapsizeZ - CHUNKSIZE_Z - 1);
+	const size_t maxProgress = size_t(maxX + maxZ);
+	// The following needs to be done twice, once for the X-Y front plane, once for the Z-Y front plane
+	for (int x = CHUNKSIZE_X; x <= maxX; ++x) {
+		memset(blocked, 0, CHUNKSIZE_Y*3); // Nothing is blocked at first
+		int offset = 0; // The helper array had to be shifted after each run of the inner most loop. As this is expensive, just use an offset that increases instead
+		const int max2 = MIN(max, x - CHUNKSIZE_X + 1); // Block array will be traversed diagonally, determine how many blocks there are
+		for (int i = 0; i < max2; ++i) { // This traverses the block array diagonally, which would be upwards in the image
+			const int blockedOffset = CHUNKSIZE_Y * (i % 3);
+			uint8_t *block = &BLOCKAT(x - i, 0, maxZ - i); // Get the lowest block at that point
+			for (int j = 0; j < top; ++j) { // Go up
+				if (blocked[blockedOffset + (j+offset) % top]) { // Block is hidden, remove
+					if (*block != AIR) {
+						*block = VOIDBLOCK;
+						++gBlocksRemoved;
+					}
+				} else if (colors[*block][ALPHA] == 255) { // Block is not hidden, do not remove, but mark spot as blocked for next iteration
+					blocked[blockedOffset + (j+offset) % top] = 1;
+				}
+				++block; // Go up
+			}
+			blocked[blockedOffset + ((offset + 1) % top)] = 0; // This will be the array index responsible for the top most block in the next itaration. Set it to 0 as it can't be hidden.
+			blocked[blockedOffset + (offset % top)] = 0;
+			if (i % 3 == 2) {
+				offset += 2; // Increase offset, as block at height n in current row will hide block at n-1 in next row
+			}
+		}
+		printProgress(size_t(x), maxProgress);
+	}
+	for (int z = CHUNKSIZE_Z; z < maxZ; ++z) {
+		memset(blocked, 0, CHUNKSIZE_Y*3);
+		int offset = 0;
+		const int max2 = MIN(max, z - CHUNKSIZE_Z + 1);
+		for (int i = 0; i < max2; ++i) {
+			const int blockedOffset = CHUNKSIZE_Y * (i % 3);
+			uint8_t *block = &BLOCKAT(maxX - i, 0, z - i);
+			for (int j = 0; j < top; ++j) {
+				if (blocked[blockedOffset + (j+offset) % top]) {
+					if (*block != AIR) {
+						*block = VOIDBLOCK;
+						++gBlocksRemoved;
+					}
+				} else if (colors[*block][ALPHA] == 255) {
+					blocked[blockedOffset + (j+offset) % top] = 1;
+				}
+				++block;
+			}
+			blocked[blockedOffset + ((offset + 1) % top)] = 0;
+			blocked[blockedOffset + (offset % top)] = 0;
+			if (i % 3 == 2) {
+				offset += 2;
+			}
 		}
 		printProgress(size_t(z + maxX), maxProgress);
 	}

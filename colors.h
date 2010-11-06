@@ -12,7 +12,7 @@
 // Byte order see below. Colors aligned to word boundaries for some speedup
 // Brightness is precalculated to speed up calculations later
 // Colors are stored twice since BMP and PNG need them in different order
-// Noise is supposed to look normal if -noise 10 is given
+// Noise is supposed to look normal when -noise 10 is given
 extern uint8_t colors[256][16];
 #define BLUE 0
 #define GREEN 1
@@ -57,5 +57,6 @@ bool loadBiomeColors(const char* path, int fromXZ);
 #define REDTORCH_ON 76
 #define SNOW 78
 #define FENCE 85
+#define VOIDBLOCK 255 // This will hopefully never be a valid block id in the near future :-)
 
 #endif

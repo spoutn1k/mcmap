@@ -319,7 +319,7 @@ bool composeFinalImagePng()
 uint64_t calcImageSizePng(int mapChunksX, int mapChunksZ, size_t mapHeight, int &pixelsX, int &pixelsY, bool tight)
 {
 	pixelsX = (mapChunksX * CHUNKSIZE_X + mapChunksZ * CHUNKSIZE_Z) * 2 + (tight ? 3 : 10);
-	pixelsY = (mapChunksX * CHUNKSIZE_X + mapChunksZ * CHUNKSIZE_Z + int(mapHeight) * 2) + (tight ? 3 : 10);
+	pixelsY = (mapChunksX * CHUNKSIZE_X + mapChunksZ * CHUNKSIZE_Z + int(mapHeight) * g_OffsetY) + (tight ? 3 : 10);
 	return uint64_t(pixelsX) * 4 * uint64_t(pixelsY);
 }
 
@@ -447,13 +447,13 @@ void setPixelPng(size_t x, size_t y, uint8_t color, float fsub)
 		}
 		// Last row
 		pos = &PIXEL(x, y+3);
-		memcpy(pos+=4, D, 4);
-		if (noise) {
-			modColor(pos, -(rand() % noise) * 2);
-		}
-		memcpy(pos+=4, L, 4);
-		if (noise) {
-			modColor(pos, -(rand() % noise) * 2);
+		for (size_t i = 0; i < 4; ++i, pos += 4) {
+			memcpy(pos, (i < 2 ? D : L), 4);
+			// The weird check here is to get the pattern right, as the noise should be stronger
+			// every other row, but take into account the isometric perspective
+			if (noise) {
+				modColor(pos, rand() % (noise * 2) - noise * (i == 0 || i == 3 ? 1 : 2));
+			}
 		}
 	} else { // Not opaque, use slower blending code
 		// Top row
@@ -482,13 +482,11 @@ void setPixelPng(size_t x, size_t y, uint8_t color, float fsub)
 		}
 		// Last row
 		pos = &PIXEL(x, y+3);
-		blend(pos+=4, D);
-		if (noise) {
-			modColor(pos, -(rand() % noise) * 2);
-		}
-		blend(pos+=4, L);
-		if (noise) {
-			modColor(pos, -(rand() % noise) * 2);
+		for (size_t i = 0; i < 4; ++i, pos += 4) {
+			blend(pos, (i < 2 ? D : L));
+			if (noise) {
+				modColor(pos, rand() % (noise * 2) - noise * (i == 0 || i == 3 ? 1 : 2));
+			}
 		}
 	}
 	// The above two branches are almost the same, maybe one could just create a function pointer and...
@@ -651,8 +649,10 @@ namespace
 		memcpy(pos+12, L, 4);
 		// Last row
 		pos = &PIXEL(x, y+3);
+		memcpy(pos, D, 4);
 		memcpy(pos+4, D, 4);
 		memcpy(pos+8, L, 4);
+		memcpy(pos+12, L, 4);
 	}
 
 	void setFence(const size_t x, const size_t y, const uint8_t *color)
@@ -677,8 +677,9 @@ namespace
 			memcpy(pos+i, color, 4);
 		}
 		pos = &PIXEL(x, y+2);
-		memcpy(pos+4, dark, 4);
-		memcpy(pos+8, light, 4);
+		for (size_t i = 0; i < 13; i += 4) {
+			memcpy(pos+i, color, 4);
+		}
 	}
 
 	// The g_BlendAll versions of the block set functions
@@ -766,8 +767,10 @@ namespace
 		blend(pos+12, L);
 		// Last row
 		pos = &PIXEL(x, y+3);
+		blend(pos, D);
 		blend(pos+4, D);
 		blend(pos+8, L);
+		blend(pos+12, L);
 	}
 
 	void setFenceBA(const size_t x, const size_t y, const uint8_t *color)
@@ -792,8 +795,9 @@ namespace
 			blend(pos+i, color);
 		}
 		pos = &PIXEL(x, y+2);
-		blend(pos+4, dark);
-		blend(pos+8, light);
+		for (size_t i = 0; i < 10; i += 4) {
+			blend(pos+i, color);
+		}
 	}
 
 }

@@ -17,6 +17,7 @@ enum Orientation {
 
 extern int g_FromChunkX, g_FromChunkZ, g_ToChunkX, g_ToChunkZ;
 extern size_t g_MapsizeY, g_MapsizeZ, g_MapsizeX;
+extern int g_OffsetY; // y pixel offset in the final image for one y step in 3d array
 
 extern Orientation g_Orientation; // North, West, South, East
 extern bool g_Nightmode;

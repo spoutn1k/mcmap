@@ -196,7 +196,7 @@ bool saveImagePartBmp(FILE *fh)
 uint64_t calcImageSizeBmp(int mapChunksX, int mapChunksZ, size_t mapHeight, int &pixelsX, int &pixelsY, bool tight)
 {
 	pixelsX = (mapChunksX * CHUNKSIZE_X + mapChunksZ * CHUNKSIZE_Z) * 2 + (tight ? 3 : 10);
-	pixelsY = (mapChunksX * CHUNKSIZE_X + mapChunksZ * CHUNKSIZE_Z + int(mapHeight) * 2) + (tight ? 3 : 10);
+	pixelsY = (mapChunksX * CHUNKSIZE_X + mapChunksZ * CHUNKSIZE_Z + int(mapHeight) * g_OffsetY) + (tight ? 3 : 10);
 	return (uint64_t(pixelsX * 3 + 3) & ~uint64_t(3)) * uint64_t(pixelsY);
 }
 
