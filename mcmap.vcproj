@@ -201,6 +201,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\pngreader.h"
+				>
+			</File>
+			<File
 				RelativePath=".\worldloader.h"
 				>
 			</File>
@@ -250,6 +254,10 @@
 			</File>
 			<File
 				RelativePath=".\nbt.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\pngreader.cpp"
 				>
 			</File>
 			<File
