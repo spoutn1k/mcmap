@@ -60,7 +60,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="zdll.lib"
+				AdditionalDependencies="zdll.lib libpng.lib"
 				LinkIncremental="2"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -129,7 +129,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="zdll.lib"
+				AdditionalDependencies="zdll.lib libpng.lib"
 				LinkIncremental="2"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -177,6 +177,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\draw_png.h"
+				>
+			</File>
+			<File
+				RelativePath=".\extractcolors.h"
+				>
+			</File>
+			<File
 				RelativePath=".\filesystem.h"
 				>
 			</File>
@@ -214,6 +222,14 @@
 			</File>
 			<File
 				RelativePath=".\draw.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\draw_png.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\extractcolors.cpp"
 				>
 			</File>
 			<File
