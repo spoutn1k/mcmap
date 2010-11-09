@@ -20,6 +20,12 @@
 #define SETLIGHTWEST(x,y,z) g_Light[((y) / 2) + ((x) + ((g_MapsizeX - ((z) + 1)) * g_MapsizeZ)) * ((g_MapsizeY + 1) / 2)]
 #define SETLIGHTNORTH(x,y,z) g_Light[((y) / 2) + ((z) + ((x) * g_MapsizeZ)) * ((g_MapsizeY + 1) / 2)]
 #define SETLIGHTSOUTH(x,y,z) g_Light[((y) / 2) + ((g_MapsizeZ - ((z) + 1)) + ((g_MapsizeX - ((x) + 1)) * g_MapsizeZ)) * ((g_MapsizeY + 1) / 2)]
+// Biome array
+#define BIOMEAT(x,z) g_BiomeMap[(z) + ((x) * g_MapsizeZ)]
+#define BIOMEEAST(x,z) g_BiomeMap[(g_MapsizeZ - ((x) + 1)) + ((z) * g_MapsizeZ)]
+#define BIOMEWEST(x,z) g_BiomeMap[(x) + ((g_MapsizeX - ((z) + 1)) * g_MapsizeZ)]
+#define BIOMENORTH(x,z) g_BiomeMap[(z) + ((x) * g_MapsizeZ)]
+#define BIOMESOUTH(x,z) g_BiomeMap[(g_MapsizeZ - ((z) + 1)) + ((g_MapsizeX - ((x) + 1)) * g_MapsizeZ)]
 
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
 #define MIN(a,b) ((a) < (b) ? (a) : (b))

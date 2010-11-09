@@ -15,6 +15,7 @@ PngReader::PngReader(const char* filename)
 	_chans = Unknown;
 	_imageData = NULL;
 	uint8_t **rows = NULL;
+	_bytesPerPixel = 0;
 	// Open PNG file
 	FILE *fh = fopen(filename, "rb");
 	if (fh == NULL) {
@@ -50,37 +51,37 @@ PngReader::PngReader(const char* filename)
 	// Assign properties
 	_width = width;
 	_height = height;
-	int bytesPerPixel = 0;
 	switch (type) {
 	case PNG_COLOR_TYPE_GRAY_ALPHA:
 		_chans = GrayScaleAlpha;
-		bytesPerPixel = 2;
+		_bytesPerPixel = 2;
 		break;
 	case PNG_COLOR_TYPE_GRAY:
 		_chans = GrayScale;
-		bytesPerPixel = 1;
+		_bytesPerPixel = 1;
 		break;
 	case PNG_COLOR_TYPE_PALETTE:
 		_chans = Palette;
-		bytesPerPixel = 1;
+		_bytesPerPixel = 1;
 		break;
 	case PNG_COLOR_TYPE_RGB:
 		_chans = RGB;
-		bytesPerPixel = 3;
+		_bytesPerPixel = 3;
 		break;
 	case PNG_COLOR_TYPE_RGBA:
 		_chans = RGBA;
-		bytesPerPixel = 4;
+		_bytesPerPixel = 4;
 		break;
 	default:
 		_chans = Unknown;
+		_bytesPerPixel = 0;
 	}
-	bytesPerPixel = (bytesPerPixel * _bitDepth) / 8;
+	_bytesPerPixel = (_bytesPerPixel * _bitDepth) / 8;
 	// Alloc mem
-	_imageData = new uint8_t[width * height * bytesPerPixel];
+	_imageData = new uint8_t[width * height * _bytesPerPixel];
 	rows = new uint8_t*[height];
 	for (png_uint_32 i = 0; i < height; ++i) {
-		rows[i] = _imageData + i * width * bytesPerPixel;
+		rows[i] = _imageData + i * width * _bytesPerPixel;
 	}
 	png_read_image(pngPtr, rows);
 	png_destroy_read_struct(&pngPtr, &pngInfo, NULL);

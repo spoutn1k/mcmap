@@ -217,6 +217,10 @@ namespace Dir
 			return NULL;
 		}
 		dirent *dirp = readdir(h);
+		if (dirp == NULL) {
+			closedir(h);
+			return NULL;
+		}
 		char buffer[1000];
 		concat(buffer, 1000, path, "/", dirp->d_name, CCEND);
 		struct stat stDirInfo;

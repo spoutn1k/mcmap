@@ -207,6 +207,9 @@ bool dumpColorsToFile(const char *file)
 	return true;
 }
 
+/**
+ * Extract block colors from given terrain.png file
+ */
 bool extractColors(const char* file)
 {
 	PngReader png(file);
@@ -240,44 +243,45 @@ bool extractColors(const char* file)
 
 static PngReader *pngGrass = NULL;
 static PngReader *pngLeaf = NULL;
-bool loadBiomeColors(const char* path, int fromXZ)
+/**
+ * This loads grasscolor.png and foliagecolor.png where the
+ * biome colors will be read from upon rendering
+ */
+bool loadBiomeColors(const char* path)
 {
 	size_t len = strlen(path) + 21;
-	char *grass = new char[len], *foilage = new char[len];
-	snprintf(grass, len + 20, "%s/grass.png", path);
-	snprintf(foilage, len + 20, "%s/leaves.png", path);
+	char *grass = new char[len], *foliage = new char[len];
+	snprintf(grass, len + 20, "%s/grasscolor.png", path);
+	snprintf(foliage, len + 20, "%s/foliagecolor.png", path);
 	pngGrass = new PngReader(grass);
-	pngLeaf = new PngReader(foilage);
+	pngLeaf = new PngReader(foliage);
 	if (!pngGrass->isValidImage() || !pngLeaf->isValidImage()) {
 		delete pngGrass;
 		delete pngLeaf;
-		printf("Could not load %s and %s: no valid PNG files. Biomes disabled.\n", grass, foilage);
+		printf("Could not load %s and %s: no valid PNG files. Biomes disabled.\n", grass, foliage);
 		return false;
 	}
-	if (pngGrass->getColorType() != PngReader::RGB || pngGrass->getBitsPerChannel() != 8
-			|| pngLeaf->getColorType() != PngReader::RGB || pngLeaf->getBitsPerChannel() != 8) {
+	if ((pngGrass->getColorType() != PngReader::RGBA && pngGrass->getColorType() != PngReader::RGB) || pngGrass->getBitsPerChannel() != 8
+			|| (pngLeaf->getColorType() != PngReader::RGBA && pngLeaf->getColorType() != PngReader::RGB) || pngLeaf->getBitsPerChannel() != 8
+			|| pngGrass->getWidth() != 256 || pngGrass->getHeight() != 256 || pngLeaf->getWidth() != 256 || pngLeaf->getHeight() != 256) {
 		delete pngGrass;
 		delete pngLeaf;
-		printf("Could not load %s and %s; Expecting RGB, 24bpp.\n", grass, foilage);
+		printf("Could not load %s and %s; Expecting RGB(A), 8 bits per channel.\n", grass, foliage);
 		return false;
 	}
-	g_GrassLineWidth = pngGrass->getWidth() * 3;
-	g_LeafLineWidth = pngLeaf->getWidth() * 3;
+	g_GrasscolorDepth = pngGrass->getBytesPerPixel();
+	g_FoliageDepth = pngLeaf->getBytesPerPixel();
 	g_Grasscolor = pngGrass->getImageData();
 	g_Leafcolor = pngLeaf->getImageData();
 	// Adjust brightness to what colors.txt says
-	const int maxG = pngGrass->getWidth() * pngGrass->getHeight() * 3;
+	const int maxG = pngGrass->getWidth() * pngGrass->getHeight() * g_GrasscolorDepth;
 	for (int i = 0; i < maxG; ++i) {
 		g_Grasscolor[i] = ((int)g_Grasscolor[i] * (int)colors[GRASS][BRIGHTNESS]) / 255;
 	}
-	const int maxT = pngLeaf->getWidth() * pngLeaf->getHeight() * 3;
+	const int maxT = pngLeaf->getWidth() * pngLeaf->getHeight() * g_FoliageDepth;
 	for (int i = 0; i < maxT; ++i) {
 		g_Leafcolor[i] = ((int)g_Leafcolor[i] * (int)colors[LEAVES][BRIGHTNESS]) / 255;
 	}
-	g_ColormapFromX = fromXZ - (g_FromChunkX * CHUNKSIZE_X);
-	g_ColormapFromZ = fromXZ - (g_FromChunkZ * CHUNKSIZE_Z);
-	g_ColormapToX = MIN(MIN(pngGrass->getWidth(), pngGrass->getHeight()), MIN(pngLeaf->getWidth(), pngLeaf->getHeight())) + g_ColormapFromX;
-	g_ColormapToZ = MIN(MIN(pngGrass->getWidth(), pngGrass->getHeight()), MIN(pngLeaf->getWidth(), pngLeaf->getHeight())) + g_ColormapFromZ;
-	printf("Loaded biome colors from %s\n", path);
+	printf("Loaded biome color maps from %s\n", path);
 	return true;
 }

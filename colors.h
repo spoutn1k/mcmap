@@ -29,7 +29,7 @@ void loadColors();
 bool loadColorsFromFile(const char *file);
 bool dumpColorsToFile(const char *file);
 bool extractColors(const char *file);
-bool loadBiomeColors(const char* path, int fromXZ);
+bool loadBiomeColors(const char* path);
 
 #define AIR 0
 #define STONE 1

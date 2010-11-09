@@ -14,6 +14,9 @@ int g_Noise = 0;
 bool g_BlendAll = false;
 bool g_Hell = false, g_ServerHell = false;
 
-int g_ColormapFromX = 0, g_ColormapToX = 0, g_ColormapFromZ = 0, g_ColormapToZ = 0, g_GrassLineWidth = 0, g_LeafLineWidth = 0;
+uint64_t g_BiomeMapSize = 0;
 uint8_t *g_Grasscolor = NULL, *g_Leafcolor = NULL;
+uint16_t *g_BiomeMap = NULL;
+int g_GrasscolorDepth = 0, g_FoliageDepth = 0;
+
 uint8_t *g_Terrain = NULL, *g_Light = NULL;

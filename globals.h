@@ -29,8 +29,10 @@ extern bool g_BlendAll; // If set, do not assume certain blocks (like grass) are
 extern bool g_Hell, g_ServerHell; // rendering the nether
 
 // For rendering biome colors properly, external png files are used
-extern int g_ColormapFromX, g_ColormapToX, g_ColormapFromZ, g_ColormapToZ, g_GrassLineWidth, g_LeafLineWidth;
+extern uint64_t g_BiomeMapSize;
 extern uint8_t *g_Grasscolor, *g_Leafcolor;
+extern uint16_t *g_BiomeMap;
+extern int g_GrasscolorDepth, g_FoliageDepth;
 
 // 3D arrays holding terrain/lightmap
 extern uint8_t *g_Terrain, *g_Light;

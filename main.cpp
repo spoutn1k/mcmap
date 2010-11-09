@@ -3,13 +3,10 @@
  * v1.8+, 11-2010 by Zahl
  */
 
-#define VERSION "1.8.805g"
+#define VERSION "1.8.81h"
 
 #include "helper.h"
-#include "draw.h"
-#ifdef WITHPNG
 #include "draw_png.h"
-#endif
 #include "colors.h"
 #include "worldloader.h"
 #include "globals.h"
@@ -28,15 +25,6 @@ namespace
 	// For bright edge
 	bool gAtBottomLeft = true, gAtBottomRight = true;
 	int gTotalFromChunkX, gTotalFromChunkZ, gTotalToChunkX, gTotalToChunkZ;
-	bool gPng = false;
-
-	bool (*createImage)(FILE *fh, size_t width, size_t height, bool splitUp) = NULL;
-	bool (*saveImage)(FILE *fh) = NULL;
-	bool (*loadImagePart)(FILE *fh, int startx, int starty, int width, int height) = NULL;
-	void (*setPixel)(size_t x, size_t y, uint8_t color, float fsub) = NULL;
-	void (*blendPixel)(size_t x, size_t y, uint8_t color, float fsub) = NULL;
-	bool (*saveImagePart)(FILE *fh) = NULL;
-	uint64_t (*calcImageSize)(int mapChunksX, int mapChunksZ, size_t mapHeight, int &pixelsX, int &pixelsY, bool tight) = NULL;
 }
 
 // Macros to make code more readable
@@ -46,8 +34,6 @@ void optimizeTerrain2();
 void optimizeTerrain3();
 void undergroundMode(bool explore);
 bool prepareNextArea(int splitX, int splitZ, int &bitmapStartX, int &bitmapStartY);
-void assignFunctionPointers();
-inline size_t getBiomePixel(size_t x, size_t z, int lineWidth);
 void printHelp(char *binary);
 
 int main(int argc, char **argv)
@@ -60,8 +46,8 @@ int main(int argc, char **argv)
 	bool wholeworld = false;
 	char *filename = NULL, *outfile = NULL, *colorfile = NULL, *texturefile = NULL;
 	bool dumpColors = false;
+	bool useBiomes = false;
 	char *biomepath = NULL;
-	int biomeOffset = 0;
 	uint64_t memlimit = 1800 * uint64_t(1024 * 1024);
 	bool memlimitSet = false;
 
@@ -115,20 +101,17 @@ int main(int argc, char **argv)
 				g_Hell = true;
 			} else if (strcmp(option, "-serverhell") == 0) {
 				g_ServerHell = true;
-			} else if (strcmp(option, "-biome") == 0) {
-				if (!MOREARGS(2) || !isNumeric(POLLARG(2))) {
-					printf("Error: %s needs path which contains grass.png and leaves.png plus the offset of the top-left corner (X and Z need to be identical), ie: %s ./seed12354567 -500\n", option, option);
+			} else if (strcmp(option, "-biomes") == 0) {
+				useBiomes = true;
+			} else if (strcmp(option, "-biomecolors") == 0) {
+				if (!MOREARGS(1)) {
+					printf("Error: %s needs path to grasscolor.png and foliagecolor.png, ie: %s ./subdir\n", option, option);
 					return 1;
 				}
+				useBiomes = true;
 				biomepath = NEXTARG;
-				biomeOffset = atoi(NEXTARG);
 			} else if (strcmp(option, "-png") == 0) {
-#ifdef WITHPNG
-				gPng = true;
-#else
-				printf("mcmap was not compiled with libpng support.\n");
-				return 1;
-#endif
+				// void
 			} else if (strcmp(option, "-blendall") == 0) {
 				g_BlendAll = true;
 			} else if (strcmp(option, "-noise") == 0 || strcmp(option, "-dither") == 0) {
@@ -269,27 +252,31 @@ int main(int argc, char **argv)
 	}
 
 	// Load biomes
-	if (biomepath != NULL) {
-		if (!loadBiomeColors(biomepath, biomeOffset)) return 1;
+	if (useBiomes) {
+		char *bpath = new char[strlen(filename) + 30];
+		strcpy(bpath, filename);
+		strcat(bpath, "/EXTRACTEDBIOMES");
+		if (!dirExists(bpath)) {
+			printf("Error loading biome information. '%s' does not exist.\n", bpath);
+			return 1;
+		}
+		if (biomepath == NULL) {
+			biomepath = bpath;
+		}
+		if (!loadBiomeColors(biomepath)) return 1;
+		biomepath = bpath;
 	}
-
-	// This decides whether a bmp or png is created
-	assignFunctionPointers();
 
 	// Mem check
 	int bitmapX, bitmapY;
-	uint64_t bitmapBytes = (*calcImageSize)(g_ToChunkX - g_FromChunkX, g_ToChunkZ - g_FromChunkZ, g_MapsizeY, bitmapX, bitmapY, false);
+	uint64_t bitmapBytes = calcImageSize(g_ToChunkX - g_FromChunkX, g_ToChunkZ - g_FromChunkZ, g_MapsizeY, bitmapX, bitmapY, false);
 	// Cropping
 	int cropLeft = 0, cropRight = 0, cropTop = 0, cropBottom = 0;
 	if (wholeworld) {
 		calcBitmapOverdraw(cropLeft, cropRight, cropTop, cropBottom);
 		bitmapX -= (cropLeft + cropRight);
 		bitmapY -= (cropTop + cropBottom);
-		if (gPng) {
-			bitmapBytes = uint64_t(bitmapX) * 4 * uint64_t(bitmapY);
-		} else {
-			bitmapBytes = (uint64_t(bitmapX * 3 + 3) & ~uint64_t(3)) * uint64_t(bitmapY);
-		}
+		bitmapBytes = uint64_t(bitmapX) * 4 * uint64_t(bitmapY);
 	}
 	bool splitImage = false;
 	int numSplitsX = 0;
@@ -315,7 +302,7 @@ int main(int argc, char **argv)
 			int subAreaX = ((gTotalToChunkX - gTotalFromChunkX) + (numSplitsX - 1)) / numSplitsX;
 			int subAreaZ = ((gTotalToChunkZ - gTotalFromChunkZ) + (numSplitsZ - 1)) / numSplitsZ;
 			int subBitmapX, subBitmapY;
-			if (splitImage && (*calcImageSize)(subAreaX, subAreaZ, g_MapsizeY, subBitmapX, subBitmapY, true) + calcTerrainSize(subAreaX, subAreaZ) <= memlimit) {
+			if (splitImage && calcImageSize(subAreaX, subAreaZ, g_MapsizeY, subBitmapX, subBitmapY, true) + calcTerrainSize(subAreaX, subAreaZ) <= memlimit) {
 				break; // Found a suitable partitioning
 			} else if (!splitImage && bitmapBytes + calcTerrainSize(subAreaX, subAreaZ) <= memlimit) {
 				break; // Found a suitable partitioning
@@ -333,11 +320,7 @@ int main(int argc, char **argv)
 	srand(1337);
 
 	if (outfile == NULL) {
-		if (gPng) {
-			outfile = (char *) "output.png";
-		} else {
-			outfile = (char *) "output.bmp";
-		}
+		outfile = (char *) "output.png";
 	}
 
 	// open output file
@@ -349,7 +332,7 @@ int main(int argc, char **argv)
 	}
 
 	// This writes out the bitmap header and pre-allocates space if disk caching is used
-	if (!(*createImage)(fileHandle, bitmapX, bitmapY, splitImage)) {
+	if (!createImage(fileHandle, bitmapX, bitmapY, splitImage)) {
 		printf("Error allocating bitmap. Check if you have enough free disk space.\n");
 		return 1;
 	}
@@ -370,7 +353,7 @@ int main(int argc, char **argv)
 				bitmapStartX += 2;
 				const int sizex = (g_ToChunkX - g_FromChunkX) * CHUNKSIZE_X * 2 + (g_ToChunkZ - g_FromChunkZ) * CHUNKSIZE_Z * 2;
 				const int sizey = (int)g_MapsizeY * g_OffsetY + (g_ToChunkX - g_FromChunkX) * CHUNKSIZE_X + (g_ToChunkZ - g_FromChunkZ) * CHUNKSIZE_Z + 3;
-				if (!(*loadImagePart)(fileHandle, bitmapStartX - cropLeft, bitmapStartY - cropTop, sizex, sizey)) {
+				if (!loadImagePart(bitmapStartX - cropLeft, bitmapStartY - cropTop, sizex, sizey)) {
 					printf("Error loading partial image to render to.\n");
 					return 1;
 				}
@@ -399,10 +382,21 @@ int main(int argc, char **argv)
 			printf("Error loading terrain from '%s'\n", filename);
 			return 1;
 		} else if (numSplitsX != 0 || !wholeworld) {
-			if (!loadTerrain(filename)) {
+			int i;
+			if (!loadTerrain(filename, i)) {
 				printf("Error loading terrain from '%s'\n", filename);
 				return 1;
 			}
+			if (splitImage && i == 0) {
+				printf("Section is empty, skipping...\n");
+				discardImagePart();
+				continue;
+			}
+		}
+
+		// Also load biome data if requested
+		if (useBiomes) {
+			loadBiomeMap(biomepath);
 		}
 
 		// If underground mode, remove blocks that don't seem to belong to caves
@@ -422,11 +416,10 @@ int main(int argc, char **argv)
 			printProgress(x - CHUNKSIZE_X, g_MapsizeX);
 			for (size_t z = CHUNKSIZE_Z; z < g_MapsizeZ - CHUNKSIZE_Z; ++z) {
 				// Biome colors
-				if (g_Grasscolor != NULL && (int)x >= g_ColormapFromX && (int)z >= g_ColormapFromZ && (int)x < g_ColormapToX && (int)z < g_ColormapToZ) {
-					memcpy(colors[GRASS] + 8, g_Grasscolor + getBiomePixel(x, z, g_GrassLineWidth), 3);
-				}
-				if (g_Leafcolor != NULL && (int)x >= g_ColormapFromX && (int)z >= g_ColormapFromZ && (int)x < g_ColormapToX && (int)z < g_ColormapToZ) {
-					memcpy(colors[LEAVES] + 8, g_Leafcolor + getBiomePixel(x, z, g_LeafLineWidth), 3);
+				if (g_BiomeMap != NULL) {
+					uint16_t &offset = BIOMEAT(x,z);
+					memcpy(colors[GRASS] + 8, g_Grasscolor + offset * g_GrasscolorDepth, 3);
+					memcpy(colors[LEAVES] + 8, g_Leafcolor + offset * g_FoliageDepth, 3);
 				}
 				//
 				const int bmpPosX = int((g_MapsizeZ - z - CHUNKSIZE_Z) * 2 + (x - CHUNKSIZE_X) * 2 + (splitImage ? -2 : bitmapStartX - cropLeft));
@@ -509,7 +502,8 @@ int main(int argc, char **argv)
 				printf("Error loading terrain from '%s'\n", filename);
 				return 1;
 			} else if (numSplitsX != 0 || !wholeworld) {
-				if (!loadTerrain(filename)) {
+				int i;
+				if (!loadTerrain(filename, i)) {
 					printf("Error loading terrain from '%s'\n", filename);
 					return 1;
 				}
@@ -525,7 +519,7 @@ int main(int argc, char **argv)
 					for (size_t y = 0; y < MIN(g_MapsizeY, 64); ++y) {
 						uint8_t &c = BLOCKAT(x, y, z);
 						if (c != AIR && c != VOIDBLOCK) { // If block is not air (colors[c][3] != 0)
-							(*blendPixel)(bmpPosX, bmpPosY, c, float(y + 30) * .0048f);
+							blendPixel(bmpPosX, bmpPosY, c, float(y + 30) * .0048f);
 						}
 						bmpPosY -= g_OffsetY;
 					}
@@ -534,7 +528,7 @@ int main(int argc, char **argv)
 			printProgress(10, 10);
 		} // End blend-underground
 		// If disk caching is used, save part to disk
-		if (splitImage && !(*saveImagePart)(fileHandle)) {
+		if (splitImage && !saveImagePart()) {
 			printf("Error saving partially rendered image.\n");
 			return 1;
 		}
@@ -544,12 +538,9 @@ int main(int argc, char **argv)
 		}
 	}
 	if (!splitImage) {
-		printf("Writing to file...\n");
-		(*saveImage)(fileHandle);
-	} else if (gPng) {
-#ifdef WITHPNG
-		composeFinalImagePng();
-#endif
+		saveImage();
+	} else {
+		composeFinalImage();
 	}
 	fclose(fileHandle);
 
@@ -841,43 +832,6 @@ bool prepareNextArea(int splitX, int splitZ, int &bitmapStartX, int &bitmapStart
 	return false; // not done yet, return false
 }
 
-void assignFunctionPointers()
-{
-	if (gPng) {
-#ifdef WITHPNG
-		createImage = &createImagePng;
-		saveImage = &saveImagePng;
-		loadImagePart = &loadImagePartPng;
-		setPixel = &setPixelPng;
-		blendPixel = &blendPixelPng;
-		saveImagePart = &saveImagePartPng;
-		calcImageSize = &calcImageSizePng;
-#endif
-	} else {
-		createImage = &createImageBmp;
-		saveImage = &saveImageBmp;
-		loadImagePart = &loadImagePartBmp;
-		setPixel = &setPixelBmp;
-		blendPixel = &blendPixelBmp;
-		saveImagePart = &saveImagePartBmp;
-		calcImageSize = &calcImageSizeBmp;
-	}
-}
-
-inline size_t getBiomePixel(size_t x, size_t z, int lineWidth)
-{
-	if (g_Orientation == North) {
-		return ((int)x - g_ColormapFromX) * 3 + ((int)z - g_ColormapFromZ) * lineWidth;
-	}
-	if (g_Orientation == East) {
-		return ((int)x - g_ColormapFromX) * lineWidth + (g_ColormapToZ - ((int)z + 1)) * 3;
-	}
-	if (g_Orientation == South) {
-		return (g_ColormapToX - ((int)x + 1)) * 3 + (g_ColormapToZ - ((int)z + 1)) * lineWidth;
-	}
-	return (g_ColormapToX - ((int)x + 1)) * lineWidth + ((int)z - g_ColormapFromZ) * 3;
-}
-
 void printHelp(char *binary)
 {
 	printf(
@@ -896,7 +850,7 @@ void printHelp(char *binary)
 	   "                hint: using this with -night makes a difference\n"
 	   "  -noise VAL    adds some noise to certain blocks, reasonable values are 0-20\n"
 	   "  -height VAL   maximum height at which blocks will be rendered (1-128)\n"
-	   "  -file NAME    sets the output filename to 'NAME'; default is output.bmp\n"
+	   "  -file NAME    sets the output filename to 'NAME'; default is output.png\n"
 	   "  -mem VAL      sets the amount of memory (in MiB) used for rendering. mcmap\n"
 	   "                will use incremental rendering or disk caching to stick to\n"
 	   "                this limit. Default is 1800.\n"
@@ -906,18 +860,13 @@ void printHelp(char *binary)
 	   "  -north -east -south -west\n"
 	   "                controls which direction will point to the *top left* corner\n"
 	   "                it only makes sense to pass one of them; East is default\n"
-#ifdef WITHPNG
-	   "  -png          set output format to png instead of bmp\n"
-#endif
 	   "  -blendall     always use blending mode for blocks\n"
 	   "  -hell         render the hell/nether dimension of the given world\n"
 	   "  -serverhell   force cropping of blocks at the top (use for nether servers)\n"
 	   "  -texture NAME extract colors from png file 'NAME'; eg. terrain.png\n"
-	   "  -biome PATH OFFSET  load biome colors from given path. It must contain two\n"
-	   "                files: grass.png and leaves.png which contain the appropriate\n"
-	   "                color for each X|Z coordinate. The offset is the offset of the\n"
-	   "                top left pixel of both files, i.e. -500 (X and Z offset thus\n"
-	   "                need to be the same)\n"
+	   "  -biomes       apply biome colors to grass/leaves; requires that you run"
+	   "                Donkey Kong's biome extractor first on the world in question\n"
+	   "  -biomecolors PATH  load grasscolor.png and foliagecolor.png from 'PATH'\n"
 	   "\n    WORLDPATH is the path of the desired alpha world.\n\n"
 	   ////////////////////////////////////////////////////////////////////////////////
 	   "Examples:\n\n"

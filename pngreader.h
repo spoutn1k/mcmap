@@ -29,6 +29,7 @@ private:
 	uint32_t _height;
 	PngColorType _chans;
 	int _bitDepth;
+	int _bytesPerPixel;
 
 public:
 	PngReader(const char* filename);
@@ -39,6 +40,7 @@ public:
 	int getBitsPerChannel() { return _bitDepth; }
 	bool isValidImage() { return _imageData != NULL; }
 	uint8_t *getImageData() { return _imageData; }
+	int getBytesPerPixel() { return _bytesPerPixel; }
 };
 
 #endif

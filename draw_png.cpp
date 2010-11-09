@@ -11,6 +11,7 @@
 #include <cstdlib>
 #include <png.h>
 #include <list>
+#include <ctime>
 #ifndef _WIN32
 #include <sys/stat.h>
 #endif
@@ -60,7 +61,7 @@ namespace
 	inline void modColor(uint8_t *color, const int mod);
 	inline void addColor(uint8_t *color, uint8_t *add);
 
-	// Split them up so setPixelPng won't be one hell of a mess
+	// Split them up so setPixel won't be one hell of a mess
 	void setSnow(const size_t x, const size_t y, const uint8_t *color);
 	void setTorch(const size_t x, const size_t y, const uint8_t *color);
 	void setFlower(const size_t x, const size_t y, const uint8_t *color);
@@ -80,7 +81,7 @@ namespace
 	void setStepBA(const size_t x, const size_t y, const uint8_t *color, const uint8_t *light, const uint8_t *dark);
 }
 
-bool createImagePng(FILE *fh, size_t width, size_t height, bool splitUp)
+bool createImage(FILE *fh, size_t width, size_t height, bool splitUp)
 {
 	gPngLocalWidth = gPngWidth = (int)width;
 	gPngLocalHeight = gPngHeight = (int)height;
@@ -130,23 +131,28 @@ bool createImagePng(FILE *fh, size_t width, size_t height, bool splitUp)
 	return true;
 }
 
-bool saveImagePng(FILE *fh)
+bool saveImage()
 {
 	if (setjmp(png_jmpbuf(pngPtrMain))) { // libpng will issue a longjmp on error, so code flow will end up
 		png_destroy_write_struct(&pngPtrMain, &pngInfoPtrMain); // here if something goes wrong in the code below
 		return false;
 	}
 	uint8_t *line = gImageBuffer;
+	printf("Writing to file...\n");
 	for (int y = 0; y < gPngHeight; ++y) {
+		if (y % 25 == 0) {
+			printProgress(size_t(y), size_t(gPngHeight));
+		}
 		png_write_row(pngPtrMain, (png_bytep)line);
 		line += gPngLineWidth;
 	}
+	printProgress(10, 10);
 	png_write_end(pngPtrMain, NULL);
 	png_destroy_write_struct(&pngPtrMain, &pngInfoPtrMain);
 	return true;
 }
 
-bool loadImagePartPng(FILE *fh, int startx, int starty, int width, int height)
+bool loadImagePart(int startx, int starty, int width, int height)
 {
 	// These are set to NULL in saveImahePartPng to make sure the two functions are called in turn
 	if (pngPtrCurrent != NULL || gPngPartialFileHandle != NULL) {
@@ -171,8 +177,10 @@ bool loadImagePartPng(FILE *fh, int startx, int starty, int width, int height)
 	if (starty + height > gPngHeight) {
 		height = gPngHeight - starty;
 	}
+	if (width < 1) width = 1;
+	if (height < 1) height = 1;
 	char name[200];
-	snprintf(name, 200, "cache/%d.%d.%d.%d.png", startx, starty, width, height);
+	snprintf(name, 200, "cache/%d.%d.%d.%d.%d.png", startx, starty, width, height, (int)time(NULL));
 	ImagePart *img = new ImagePart(name, startx, starty, width, height);
 	partialImages.push_back(img);
 	// alloc mem for image and open tempfile
@@ -205,8 +213,12 @@ bool loadImagePartPng(FILE *fh, int startx, int starty, int width, int height)
 	return true;
 }
 
-bool saveImagePartPng(FILE *fh)
+bool saveImagePart()
 {
+	if (gPngPartialFileHandle == NULL || pngPtrCurrent != NULL) {
+		printf("saveImagePart() called in bad state.\n");
+		return false;
+	}
 	// Write header
 	png_infop info_ptr = NULL;
 	pngPtrCurrent = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
@@ -249,7 +261,22 @@ bool saveImagePartPng(FILE *fh)
 	return true;
 }
 
-bool composeFinalImagePng()
+bool discardImagePart()
+{
+	if (gPngPartialFileHandle == NULL || pngPtrCurrent != NULL) {
+		printf("discardImagePart() called in bad state.\n");
+		return false;
+	}
+	fclose(gPngPartialFileHandle);
+	gPngPartialFileHandle = NULL;
+	ImagePart *img = partialImages.back();
+	remove(img->filename);
+	delete img;
+	partialImages.pop_back();
+	return true;
+}
+
+bool composeFinalImage()
 {
 	uint8_t *lineWrite = new uint8_t[gPngLineWidth];
 	uint8_t *lineRead = new uint8_t[gPngLineWidth];
@@ -261,7 +288,7 @@ bool composeFinalImagePng()
 	}
 	printf("Composing final png file...\n");
 	for (int y = 0; y < gPngHeight; ++y) {
-		if (y % 10 == 0) {
+		if (y % 50 == 0) {
 			printProgress(size_t(y), size_t(gPngHeight));
 		}
 		// paint each image on this one
@@ -303,7 +330,7 @@ bool composeFinalImagePng()
 				fclose(img->pngFileHandle);
 				img->pngFileHandle = NULL;
 				img->pngPtr = NULL;
-				//remove(img->filename);
+				remove(img->filename);
 			}
 		} // Done composing this line, write to final image
 		png_write_row(pngPtrMain, (png_bytep)lineWrite);
@@ -316,14 +343,14 @@ bool composeFinalImagePng()
 	return true;
 }
 
-uint64_t calcImageSizePng(int mapChunksX, int mapChunksZ, size_t mapHeight, int &pixelsX, int &pixelsY, bool tight)
+uint64_t calcImageSize(int mapChunksX, int mapChunksZ, size_t mapHeight, int &pixelsX, int &pixelsY, bool tight)
 {
 	pixelsX = (mapChunksX * CHUNKSIZE_X + mapChunksZ * CHUNKSIZE_Z) * 2 + (tight ? 3 : 10);
 	pixelsY = (mapChunksX * CHUNKSIZE_X + mapChunksZ * CHUNKSIZE_Z + int(mapHeight) * g_OffsetY) + (tight ? 3 : 10);
 	return uint64_t(pixelsX) * 4 * uint64_t(pixelsY);
 }
 
-void setPixelPng(size_t x, size_t y, uint8_t color, float fsub)
+void setPixel(size_t x, size_t y, uint8_t color, float fsub)
 {
 	// Sets pixels around x,y where A is the anchor
 	// T = given color, D = darker, L = lighter
@@ -492,7 +519,7 @@ void setPixelPng(size_t x, size_t y, uint8_t color, float fsub)
 	// The above two branches are almost the same, maybe one could just create a function pointer and...
 }
 
-void blendPixelPng(size_t x, size_t y, uint8_t color, float fsub)
+void blendPixel(size_t x, size_t y, uint8_t color, float fsub)
 {
 	// This one is used for cave overlay
 	// Sets pixels around x,y where A is the anchor

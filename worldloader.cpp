@@ -9,6 +9,8 @@
 #include <string>
 #include <cstdio>
 
+#define CHUNKS_PER_BIOME_FILE 8
+
 using std::string;
 
 namespace
@@ -35,8 +37,9 @@ namespace
 
 }
 
-static void loadChunk(const char *file);
+static bool loadChunk(const char *file);
 static void allocateTerrain();
+static void loadBiomeChunk(const char* path, int chunkX, int chunkZ);
 
 bool scanWorldDirectory(const char *fromPath)
 {
@@ -47,7 +50,7 @@ bool scanWorldDirectory(const char *fromPath)
 		return false;
 	}
 	do {
-		if (file.isdir) {
+		if (file.isdir && strcmp(file.name + strlen(file.name) - 3, "/..") != 0 && strcmp(file.name + strlen(file.name) - 2, "/.") != 0) {
 			char *s = strdup(file.name);
 			subdirs.push_back(s);
 		}
@@ -149,8 +152,9 @@ bool loadEntireTerrain()
 	return true;
 }
 
-bool loadTerrain(const char *fromPath)
+bool loadTerrain(const char *fromPath, int &loadedChunks)
 {
+	loadedChunks = 0;
 	if (fromPath == NULL || *fromPath == '\0') {
 		return false;
 	}
@@ -165,7 +169,9 @@ bool loadTerrain(const char *fromPath)
 		printProgress(chunkZ - g_FromChunkZ, g_ToChunkZ - g_FromChunkZ);
 		for (int chunkX = g_FromChunkX; chunkX < g_ToChunkX; ++chunkX) {
 			string thispath = path + base36((chunkX + 640000) % 64) + "/" + base36((chunkZ + 640000) % 64) + "/c." + base36(chunkX) + "." + base36(chunkZ) + ".dat";
-			loadChunk(thispath.c_str());
+			if (loadChunk(thispath.c_str())) {
+				++loadedChunks;
+			}
 		}
 	}
 	// Done loading all chunks
@@ -173,47 +179,47 @@ bool loadTerrain(const char *fromPath)
 	return true;
 }
 
-static void loadChunk(const char *file)
+static bool loadChunk(const char *file)
 {
 	bool ok = false; // Get path name for all required chunks
 	NBT chunk(file, ok);
 	if (!ok) {
-		return; // chunk does not exist
+		return false; // chunk does not exist
 	}
 	NBT_Tag *level = NULL;
 	ok = chunk.getCompound("Level", level);
 	if (!ok) {
-		return;
+		return false;
 	}
 	int32_t chunkX, chunkZ;
 	ok = level->getInt("xPos", chunkX);
 	ok = ok && level->getInt("zPos", chunkZ);
 	if (!ok) {
-		return;
+		return false;
 	}
 	// Check if chunk is in desired bounds (not a chunk where the filename tells a different position)
 	if (chunkX < g_FromChunkX || chunkX >= g_ToChunkX || chunkZ < g_FromChunkZ || chunkZ >= g_ToChunkZ) {
 #ifdef _DEBUG
 		printf("Chunk %s is out of bounds. %d %d\n", file, chunkX, chunkZ);
 #endif
-		return; // Nope, its not...
+		return false; // Nope, its not...
 	}
 	uint8_t *blockdata, *lightdata, *skydata;
 	int32_t len;
 	ok = level->getByteArray("Blocks", blockdata, len);
 	if (!ok || len < 32768) {
-		return;
+		return false;
 	}
 	if (g_Nightmode || g_Skylight) { // If nightmode, we need the light information too
 		ok = level->getByteArray("BlockLight", lightdata, len);
 		if (!ok || len < 16384) {
-			return;
+			return false;
 		}
 	}
 	if (g_Skylight) { // Skylight desired - wish granted
 		ok = level->getByteArray("SkyLight", skydata, len);
 		if (!ok || len < 16384) {
-			return;
+			return false;
 		}
 	}
 	const int offsetz = (chunkZ - g_FromChunkZ) * CHUNKSIZE_Z;
@@ -352,6 +358,7 @@ static void loadChunk(const char *file)
 			}
 		}
 	}
+	return true;
 }
 
 uint64_t calcTerrainSize(int chunksX, int chunksZ)
@@ -365,7 +372,7 @@ uint64_t calcTerrainSize(int chunksX, int chunksZ)
 
 void calcBitmapOverdraw(int &left, int &right, int &top, int &bottom)
 {
-	top = left = bottom = right = 0xfffffff;
+	top = left = bottom = right = 0x0fffffff;
 	int val = 0;
 	for (chunkList::iterator it = chunks.begin(); it != chunks.end(); it++) {
 		const int x = (**it).x;
@@ -500,4 +507,89 @@ void clearLightmap()
 	if (g_Light != NULL) {
 		memset(g_Light, 0x00, lightsize);
 	}
+}
+
+/**
+ * Round down to the nearest multiple of 8, e.g. floor8(-5) == 8
+ */
+static const int floor8(const int val)
+{
+	if (val < 0) {
+		return ((val - (CHUNKS_PER_BIOME_FILE - 1)) / CHUNKS_PER_BIOME_FILE) * CHUNKS_PER_BIOME_FILE;
+	}
+	return (val / CHUNKS_PER_BIOME_FILE) * CHUNKS_PER_BIOME_FILE;
+}
+
+/**
+ * Load all the 8x8-chunks-files containing biome information
+ */
+void loadBiomeMap(const char* path)
+{
+	printf("Loading biome data...\n");
+	const uint64_t size = g_MapsizeX * g_MapsizeZ;
+	if (g_BiomeMapSize == 0 || size > g_BiomeMapSize) {
+		if (g_BiomeMap == NULL) delete[] g_BiomeMap;
+		g_BiomeMapSize = size;
+		g_BiomeMap = new uint16_t[size];
+	}
+	memset(g_BiomeMap, 0, size * sizeof(uint16_t));
+	//
+	const int tmpMin = -floor8(g_FromChunkX);
+	for (int x = floor8(g_FromChunkX); x <= floor8(g_ToChunkX); x += CHUNKS_PER_BIOME_FILE) {
+		printProgress(size_t(x + tmpMin), size_t(floor8(g_ToChunkX) + tmpMin));
+		for (int z = floor8(g_FromChunkZ); z <= floor8(g_ToChunkZ); z += CHUNKS_PER_BIOME_FILE) {
+			loadBiomeChunk(path, x, z);
+		}
+	}
+	printProgress(10, 10);
+}
+
+static const inline uint16_t ntoh16(const uint16_t val)
+{
+	return (uint16_t(*(uint8_t*)&val) << 8) + uint16_t(*(((uint8_t*)&val) + 1));
+}
+
+static void loadBiomeChunk(const char* path, int chunkX, int chunkZ)
+{
+#	define BIOME_ENTRIES CHUNKS_PER_BIOME_FILE * CHUNKS_PER_BIOME_FILE * CHUNKSIZE_X * CHUNKSIZE_Z
+#	define RECORDS_PER_LINE CHUNKSIZE_X * CHUNKS_PER_BIOME_FILE
+	const size_t size = strlen(path) + 50;
+	char *file = new char[size];
+	snprintf(file, size, "%s/%d.%d.biome", path, chunkX, chunkZ);
+	if (!fileExists(file)) {
+		printf("'%s' doesn't exist. Please update biome cache.\n", file);
+		delete[] file;
+		return;
+	}
+	FILE *fh = fopen(file, "rb");
+	uint16_t *data = new uint16_t[BIOME_ENTRIES];
+	const bool success = (fread(data, sizeof(uint16_t), BIOME_ENTRIES, fh) == BIOME_ENTRIES);
+	fclose(fh);
+	if (!success) {
+		printf("'%s' seems to be truncated. Try rebuilding biome cache.\n", file);
+	} else {
+		const int fromX = g_FromChunkX * CHUNKSIZE_X;
+		const int toX   = g_ToChunkX * CHUNKSIZE_X;
+		const int fromZ = g_FromChunkZ * CHUNKSIZE_Z;
+		const int toZ   = g_ToChunkZ * CHUNKSIZE_Z;
+		const int offX  = chunkX * CHUNKSIZE_X;
+		const int offZ  = chunkZ * CHUNKSIZE_Z;
+		for (int z = 0; z < CHUNKSIZE_Z * CHUNKS_PER_BIOME_FILE; ++z) {
+			if (z + offZ < fromZ || z + offZ >= toZ) continue;
+			for (int x = 0; x < CHUNKSIZE_X * CHUNKS_PER_BIOME_FILE; ++x) {
+				if (x + offX < fromX || x + offX >= toX) continue;
+				if (g_Orientation == North) {
+					BIOMENORTH(x + offX - fromX, z + offZ - fromZ) = ntoh16(data[RECORDS_PER_LINE * z + x]);
+				} else if (g_Orientation == East) {
+					BIOMEEAST(x + offX - fromX, z + offZ - fromZ) = ntoh16(data[RECORDS_PER_LINE * z + x]);
+				} else if (g_Orientation == South) {
+					BIOMESOUTH(x + offX - fromX, z + offZ - fromZ) = ntoh16(data[RECORDS_PER_LINE * z + x]);
+				} else {
+					BIOMEWEST(x + offX - fromX, z + offZ - fromZ) = ntoh16(data[RECORDS_PER_LINE * z + x]);
+				}
+			}
+		}
+	}
+	delete[] data;
+	delete[] file;
 }
