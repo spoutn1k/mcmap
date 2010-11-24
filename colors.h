@@ -53,6 +53,8 @@ bool loadBiomeColors(const char* path);
 #define STEP 44
 #define TORCH 50
 #define FIRE 51
+#define REDWIRE 55
+#define RAILROAD 66
 #define REDTORCH_OFF 75
 #define REDTORCH_ON 76
 #define SNOW 78

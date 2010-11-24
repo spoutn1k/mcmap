@@ -65,19 +65,19 @@ namespace
 	void setSnow(const size_t x, const size_t y, const uint8_t *color);
 	void setTorch(const size_t x, const size_t y, const uint8_t *color);
 	void setFlower(const size_t x, const size_t y, const uint8_t *color);
+	void setRedwire(const size_t x, const size_t y, const uint8_t *color);
 	void setFire(const size_t x, const size_t y, uint8_t *color, uint8_t *light, uint8_t *dark);
 	void setGrass(const size_t x, const size_t y, const uint8_t *color, const uint8_t *light, const uint8_t *dark, const int &sub);
 	void setFence(const size_t x, const size_t y, const uint8_t *color);
 	void setStep(const size_t x, const size_t y, const uint8_t *color, const uint8_t *light, const uint8_t *dark);
+#  define setRailroad setSnowBA
 
 	// Then make duplicate copies so it is one hell of a mess
 	// ..but hey, its for speeeeeeeeed!
 	void setSnowBA(const size_t x, const size_t y, const uint8_t *color);
 	void setTorchBA(const size_t x, const size_t y, const uint8_t *color);
 	void setFlowerBA(const size_t x, const size_t y, const uint8_t *color);
-	void setFireBA(const size_t x, const size_t y, uint8_t *color, uint8_t *light, uint8_t *dark);
 	void setGrassBA(const size_t x, const size_t y, const uint8_t *color, const uint8_t *light, const uint8_t *dark, const int &sub);
-	void setFenceBA(const size_t x, const size_t y, const uint8_t *color);
 	void setStepBA(const size_t x, const size_t y, const uint8_t *color, const uint8_t *light, const uint8_t *dark);
 }
 
@@ -379,7 +379,15 @@ void setPixel(size_t x, size_t y, uint8_t color, float fsub)
 			return;
 		}
 		if (color == FENCE) {
-			setFenceBA(x, y, c);
+			setFence(x, y, c);
+			return;
+		}
+		if (color == REDWIRE) {
+			setRedwire(x, y, c);
+			return;
+		}
+		if (color == RAILROAD) {
+			setRailroad(x, y, c);
 			return;
 		}
 		// All the above blocks didn't need the shaded down versions of the color, so we only calc them here
@@ -394,7 +402,7 @@ void setPixel(size_t x, size_t y, uint8_t color, float fsub)
 			return;
 		}
 		if (color == FIRE) {
-			setFireBA(x, y, c, L, D);
+			setFire(x, y, c, L, D);
 			return;
 		}
 		if (color == STEP) {
@@ -417,6 +425,14 @@ void setPixel(size_t x, size_t y, uint8_t color, float fsub)
 		}
 		if (color == FENCE) {
 			setFence(x, y, c);
+			return;
+		}
+		if (color == REDWIRE) {
+			setRedwire(x, y, c);
+			return;
+		}
+		if (color == RAILROAD) {
+			setRailroad(x, y, c);
 			return;
 		}
 		// All the above blocks didn't need the shaded down versions of the color, so we only calc them here
@@ -709,7 +725,15 @@ namespace
 		}
 	}
 
+	void setRedwire(const size_t x, const size_t y, const uint8_t *color)
+	{
+		uint8_t *pos = &PIXEL(x+1, y+2);
+		blend(pos, color);
+		blend(pos+4, color);
+	}
+
 	// The g_BlendAll versions of the block set functions
+	//
 	void setSnowBA(const size_t x, const size_t y, const uint8_t *color)
 	{
 		// Top row (second row)
@@ -737,26 +761,6 @@ namespace
 		blend(pos, color);
 		pos = &PIXEL(x+1, y+3);
 		blend(pos, color);
-	}
-
-	void setFireBA(const size_t x, const size_t y, uint8_t *color, uint8_t *light, uint8_t *dark)
-	{
-		// This basically just leaves out a few pixels
-		// Top row
-		uint8_t *pos = &PIXEL(x, y);
-		for (size_t i = 0; i < 10; i += 8) {
-			blend(pos+i, color);
-		}
-		// Second and third row
-		for (size_t i = 1; i < 3; ++i) {
-			pos = &PIXEL(x, y+i);
-			blend(pos, dark);
-			blend(pos+(4*i), dark);
-			blend(pos+12, light);
-		}
-		// Last row
-		pos = &PIXEL(x, y+3);
-		blend(pos+8, light);
 	}
 
 	void setGrassBA(const size_t x, const size_t y, const uint8_t *color, const uint8_t *light, const uint8_t *dark, const int &sub)
@@ -798,21 +802,6 @@ namespace
 		blend(pos+4, D);
 		blend(pos+8, L);
 		blend(pos+12, L);
-	}
-
-	void setFenceBA(const size_t x, const size_t y, const uint8_t *color)
-	{
-		// First row
-		uint8_t *pos = &PIXEL(x, y);
-		blend(pos+4, color);
-		blend(pos+8, color);
-		// Second row
-		pos = &PIXEL(x+1, y+1);
-		blend(pos, color);
-		// Third row
-		pos = &PIXEL(x, y+2);
-		blend(pos+4, color);
-		blend(pos+8, color);
 	}
 
 	void setStepBA(const size_t x, const size_t y, const uint8_t *color, const uint8_t *light, const uint8_t *dark)

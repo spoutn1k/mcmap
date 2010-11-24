@@ -3,7 +3,7 @@
  * v1.8+, 11-2010 by Zahl
  */
 
-#define VERSION "1.8.81h"
+#define VERSION "1.9.01"
 
 #include "helper.h"
 #include "draw_png.h"
@@ -46,7 +46,6 @@ int main(int argc, char **argv)
 	bool wholeworld = false;
 	char *filename = NULL, *outfile = NULL, *colorfile = NULL, *texturefile = NULL;
 	bool dumpColors = false;
-	bool useBiomes = false;
 	char *biomepath = NULL;
 	uint64_t memlimit = 1800 * uint64_t(1024 * 1024);
 	bool memlimitSet = false;
@@ -102,13 +101,13 @@ int main(int argc, char **argv)
 			} else if (strcmp(option, "-serverhell") == 0) {
 				g_ServerHell = true;
 			} else if (strcmp(option, "-biomes") == 0) {
-				useBiomes = true;
+				g_UseBiomes = true;
 			} else if (strcmp(option, "-biomecolors") == 0) {
 				if (!MOREARGS(1)) {
 					printf("Error: %s needs path to grasscolor.png and foliagecolor.png, ie: %s ./subdir\n", option, option);
 					return 1;
 				}
-				useBiomes = true;
+				g_UseBiomes = true;
 				biomepath = NEXTARG;
 			} else if (strcmp(option, "-png") == 0) {
 				// void
@@ -120,12 +119,19 @@ int main(int argc, char **argv)
 					return 1;
 				}
 				g_Noise = atoi(NEXTARG);
-			} else if (strcmp(option, "-height") == 0) {
+			} else if (strcmp(option, "-height") == 0 || strcmp(option, "-max") == 0) {
 				if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
 					printf("Error: %s needs an integer argument, ie: %s 100\n", option, option);
 					return 1;
 				}
 				g_MapsizeY = atoi(NEXTARG);
+				if (strcmp(option, "-max") == 0) g_MapsizeY++;
+			} else if (strcmp(option, "-min") == 0) {
+				if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
+					printf("Error: %s needs an integer argument, ie: %s 50\n", option, option);
+					return 1;
+				}
+				g_MapminY = atoi(NEXTARG);
 			} else if (strcmp(option, "-mem") == 0) {
 				if (!MOREARGS(1) || !isNumeric(POLLARG(1)) || atoi(POLLARG(1)) <= 0) {
 					printf("Error: %s needs a positive integer argument, ie: %s 1000\n", option, option);
@@ -228,17 +234,25 @@ int main(int argc, char **argv)
 		}
 		filename = tmp;
 	}
+	if (g_MapsizeY > CHUNKSIZE_Y) {
+		g_MapsizeY = CHUNKSIZE_Y;
+	}
+	if (g_MapminY > CHUNKSIZE_Y) {
+		g_MapminY = CHUNKSIZE_Y;
+	}
 	if (wholeworld && !scanWorldDirectory(filename)) {
 		printf("Error accessing terrain at '%s'\n", filename);
 		return 1;
 	}
-	if (g_MapsizeY < 1 || g_ToChunkX <= g_FromChunkX || g_ToChunkZ <= g_FromChunkZ) {
-		printf("What to doooo, yeah, what to doooo... (English: max height < 1 or X/Z-width <= 0) %d %d %d\n", (int)g_MapsizeY, (int)g_MapsizeX, (int)g_MapsizeZ);
+	if (g_ToChunkX <= g_FromChunkX || g_ToChunkZ <= g_FromChunkZ) {
+		printf("Nothing to render: -from X Z has to be <= -to X Z\n");
 		return 1;
 	}
-	if (g_MapsizeY > CHUNKSIZE_Y) {
-		g_MapsizeY = CHUNKSIZE_Y;
+	if (g_MapsizeY - g_MapminY < 1) {
+		printf("Nothing to render: -min Y has to be < -max/-height Y\n");
+		return 1;
 	}
+	g_MapsizeY -= g_MapminY;
 	// Whole area to be rendered, in chunks
 	// If -mem is omitted or high enough, this won't be needed
 	gTotalFromChunkX = g_FromChunkX;
@@ -246,13 +260,13 @@ int main(int argc, char **argv)
 	gTotalToChunkX = g_ToChunkX;
 	gTotalToChunkZ = g_ToChunkZ;
 	// Don't allow ridiculously small values for big maps
-	if (memlimit && memlimit < 200000000 && memlimit < size_t (g_MapsizeX * g_MapsizeZ * 150000)) {
+	if (memlimit && memlimit < 200000000 && memlimit < size_t(g_MapsizeX * g_MapsizeZ * 150000)) {
 		printf("Need at least %d MiB of RAM to render a map of that size.\n", int(float(g_MapsizeX) * g_MapsizeZ * .15f + 1));
 		return 1;
 	}
 
 	// Load biomes
-	if (useBiomes) {
+	if (g_UseBiomes) {
 		char *bpath = new char[strlen(filename) + 30];
 		strcpy(bpath, filename);
 		strcat(bpath, "/EXTRACTEDBIOMES");
@@ -395,7 +409,7 @@ int main(int argc, char **argv)
 		}
 
 		// Also load biome data if requested
-		if (useBiomes) {
+		if (g_UseBiomes) {
 			loadBiomeMap(biomepath);
 		}
 
@@ -836,7 +850,7 @@ void printHelp(char *binary)
 {
 	printf(
 	   ////////////////////////////////////////////////////////////////////////////////
-	   "\nmcmap - an isometric minecraft alpha map rendering tool. Version " VERSION "\n\n"
+	   "\nmcmap by Zahl - an isometric minecraft map rendering tool. Version " VERSION "\n\n"
 	   "Usage: %s [-from X Z -to X Z] [-night] [-cave] [-noise VAL] [...] WORLDPATH\n\n"
 	   "  -from X Z     sets the coordinate of the chunk to start rendering at\n"
 	   "  -to X Z       sets the coordinate of the chunk to end rendering at\n"
@@ -850,6 +864,7 @@ void printHelp(char *binary)
 	   "                hint: using this with -night makes a difference\n"
 	   "  -noise VAL    adds some noise to certain blocks, reasonable values are 0-20\n"
 	   "  -height VAL   maximum height at which blocks will be rendered (1-128)\n"
+	   "  -min/max VAL  minimum/maximum Y index (height) of blocks to render (0-127)\n"
 	   "  -file NAME    sets the output filename to 'NAME'; default is output.png\n"
 	   "  -mem VAL      sets the amount of memory (in MiB) used for rendering. mcmap\n"
 	   "                will use incremental rendering or disk caching to stick to\n"
@@ -865,7 +880,7 @@ void printHelp(char *binary)
 	   "  -serverhell   force cropping of blocks at the top (use for nether servers)\n"
 	   "  -texture NAME extract colors from png file 'NAME'; eg. terrain.png\n"
 	   "  -biomes       apply biome colors to grass/leaves; requires that you run"
-	   "                Donkey Kong's biome extractor first on the world in question\n"
+	   "                Donkey Kong's biome extractor first on your world\n"
 	   "  -biomecolors PATH  load grasscolor.png and foliagecolor.png from 'PATH'\n"
 	   "\n    WORLDPATH is the path of the desired alpha world.\n\n"
 	   ////////////////////////////////////////////////////////////////////////////////

@@ -256,27 +256,30 @@ static bool loadChunk(const char *file)
 				}
 			}
 			if (g_Orientation == East) {
-				memcpy(&BLOCKEAST(x + offsetx, 0, z + offsetz), &blockdata[(z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y], g_MapsizeY);
+				memcpy(&BLOCKEAST(x + offsetx, 0, z + offsetz), &blockdata[g_MapminY + (z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y], g_MapsizeY);
 			} else if (g_Orientation == North) {
-				memcpy(&BLOCKNORTH(x + offsetx, 0, z + offsetz), &blockdata[(z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y], g_MapsizeY);
+				memcpy(&BLOCKNORTH(x + offsetx, 0, z + offsetz), &blockdata[g_MapminY + (z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y], g_MapsizeY);
 			} else if (g_Orientation == South) {
-				memcpy(&BLOCKSOUTH(x + offsetx, 0, z + offsetz), &blockdata[(z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y], g_MapsizeY);
+				memcpy(&BLOCKSOUTH(x + offsetx, 0, z + offsetz), &blockdata[g_MapminY + (z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y], g_MapsizeY);
 			} else {
-				memcpy(&BLOCKWEST(x + offsetx, 0, z + offsetz), &blockdata[(z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y], g_MapsizeY);
+				memcpy(&BLOCKWEST(x + offsetx, 0, z + offsetz), &blockdata[g_MapminY + (z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y], g_MapsizeY);
 			}
 			if (!(g_Nightmode || g_Skylight || g_Underground)) {
 				continue;
 			}
-			for (size_t y = 0; y < g_MapsizeY; ++y) {
+			const size_t toY = g_MapsizeY + g_MapminY;
+			for (size_t y = (g_MapminY / 2) * 2; y < toY; ++y) {
 				if (g_Underground) {
+					if (y < g_MapminY) continue; // As we start at even numbers there might be no block data here
 					if (blockdata[y + (z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y] == TORCH) {
 						// In underground mode, the lightmap is also used, but the values are calculated manually, to only show
 						// caves the players have discovered yet. It's not perfect of course, but works ok.
 						for (int ty = int(y) - 9; ty < int(y) + 9; ty+=2) { // The trick here is to only take into account
-							if (ty < 0) {
+							const int oty = ty - (int)g_MapminY;
+							if (oty < 0) {
 								continue;   // areas around torches.
 							}
-							if (ty >= int(g_MapsizeY)) {
+							if (oty >= int(g_MapsizeY)) {
 								break;
 							}
 							for (int tz = int(z) - 18 + offsetz; tz < int(z) + 18 + offsetz; ++tz) {
@@ -294,7 +297,7 @@ static bool loadChunk(const char *file)
 										if (tz >= int(g_MapsizeX)-CHUNKSIZE_X) {
 											break;
 										}
-										SETLIGHTEAST(tx, ty, tz) = 0xFF;
+										SETLIGHTEAST(tx, oty, tz) = 0xFF;
 									} else if (g_Orientation == North) {
 										if (tx >= int(g_MapsizeX)-CHUNKSIZE_X) {
 											break;
@@ -302,7 +305,7 @@ static bool loadChunk(const char *file)
 										if (tz >= int(g_MapsizeZ)-CHUNKSIZE_Z) {
 											break;
 										}
-										SETLIGHTNORTH(tx, ty, tz) = 0xFF;
+										SETLIGHTNORTH(tx, oty, tz) = 0xFF;
 									} else if (g_Orientation == South) {
 										if (tx >= int(g_MapsizeX)-CHUNKSIZE_X) {
 											break;
@@ -310,7 +313,7 @@ static bool loadChunk(const char *file)
 										if (tz >= int(g_MapsizeZ)-CHUNKSIZE_Z) {
 											break;
 										}
-										SETLIGHTSOUTH(tx, ty, tz) = 0xFF;
+										SETLIGHTSOUTH(tx, oty, tz) = 0xFF;
 									} else {
 										if (tx >= int(g_MapsizeZ)-CHUNKSIZE_Z) {
 											break;
@@ -318,41 +321,43 @@ static bool loadChunk(const char *file)
 										if (tz >= int(g_MapsizeX)-CHUNKSIZE_X) {
 											break;
 										}
-										SETLIGHTWEST(tx , ty, tz) = 0xFF;
+										SETLIGHTWEST(tx , oty, tz) = 0xFF;
 									}
 								}
 							}
 						}
 					}
 				} else if (g_Skylight && y % 2 == 0) { // copy light info too. Only every other time, since light info is 4 bits
-					uint8_t light = lightdata[(y / 2) + (z + (x * CHUNKSIZE_Z)) * (CHUNKSIZE_Y / 2)];
-					uint8_t highlight = (light >> 4) & 0x0F;
-					uint8_t lowlight =  (light & 0x0F);
-					uint8_t sky = skydata[(y / 2) + (z + (x * CHUNKSIZE_Z)) * (CHUNKSIZE_Y / 2)];
+					const uint8_t &light = lightdata[(y / 2) + (z + (x * CHUNKSIZE_Z)) * (CHUNKSIZE_Y / 2)];
+					const uint8_t highlight = (light >> 4) & 0x0F;
+					const uint8_t lowlight =  (light & 0x0F);
+					const uint8_t &sky = skydata[(y / 2) + (z + (x * CHUNKSIZE_Z)) * (CHUNKSIZE_Y / 2)];
 					uint8_t highsky = ((sky >> 4) & 0x0F);
 					uint8_t lowsky =  (sky & 0x0F);
 					if (g_Nightmode) {
 						highsky = clamp(highsky / 3 - 2);
 						lowsky = clamp(lowsky / 3 - 2);
 					}
+					const size_t oy = y - g_MapminY;
 					if (g_Orientation == East) {
-						SETLIGHTEAST(x + offsetx, y, z + offsetz) = (MAX(highlight, highsky) << 4) | (MAX(lowlight, lowsky) & 0x0F);
+						SETLIGHTEAST(x + offsetx, oy, z + offsetz) = (MAX(highlight, highsky) << 4) | (MAX(lowlight, lowsky) & 0x0F);
 					} else if (g_Orientation == North) {
-						SETLIGHTNORTH(x + offsetx, y, z + offsetz) = (MAX(highlight, highsky) << 4) | (MAX(lowlight, lowsky) & 0x0F);
+						SETLIGHTNORTH(x + offsetx, oy, z + offsetz) = (MAX(highlight, highsky) << 4) | (MAX(lowlight, lowsky) & 0x0F);
 					} else if (g_Orientation == South) {
-						SETLIGHTSOUTH(x + offsetx, y, z + offsetz) = (MAX(highlight, highsky) << 4) | (MAX(lowlight, lowsky) & 0x0F);
+						SETLIGHTSOUTH(x + offsetx, oy, z + offsetz) = (MAX(highlight, highsky) << 4) | (MAX(lowlight, lowsky) & 0x0F);
 					} else {
-						SETLIGHTWEST(x + offsetx, y, z + offsetz) = (MAX(highlight, highsky) << 4) | (MAX(lowlight, lowsky) & 0x0F);
+						SETLIGHTWEST(x + offsetx, oy, z + offsetz) = (MAX(highlight, highsky) << 4) | (MAX(lowlight, lowsky) & 0x0F);
 					}
 				} else if (g_Nightmode && y % 2 == 0) {
+					const size_t oy = y - g_MapminY;
 					if (g_Orientation == East) {
-						SETLIGHTEAST(x + offsetx, y, z + offsetz) = lightdata[(y / 2) + (z + (x * CHUNKSIZE_Z)) * (CHUNKSIZE_Y / 2)];
+						SETLIGHTEAST(x + offsetx, oy, z + offsetz) = lightdata[(y / 2) + (z + (x * CHUNKSIZE_Z)) * (CHUNKSIZE_Y / 2)];
 					} else if (g_Orientation == North) {
-						SETLIGHTNORTH(x + offsetx, y, z + offsetz) = lightdata[(y / 2) + (z + (x * CHUNKSIZE_Z)) * (CHUNKSIZE_Y / 2)];
+						SETLIGHTNORTH(x + offsetx, oy, z + offsetz) = lightdata[(y / 2) + (z + (x * CHUNKSIZE_Z)) * (CHUNKSIZE_Y / 2)];
 					} else if (g_Orientation == South) {
-						SETLIGHTSOUTH(x + offsetx, y, z + offsetz) = lightdata[(y / 2) + (z + (x * CHUNKSIZE_Z)) * (CHUNKSIZE_Y / 2)];
+						SETLIGHTSOUTH(x + offsetx, oy, z + offsetz) = lightdata[(y / 2) + (z + (x * CHUNKSIZE_Z)) * (CHUNKSIZE_Y / 2)];
 					} else {
-						SETLIGHTWEST(x + offsetx, y, z + offsetz) = lightdata[(y / 2) + (z + (x * CHUNKSIZE_Z)) * (CHUNKSIZE_Y / 2)];
+						SETLIGHTWEST(x + offsetx, oy, z + offsetz) = lightdata[(y / 2) + (z + (x * CHUNKSIZE_Z)) * (CHUNKSIZE_Y / 2)];
 					}
 				}
 			}
@@ -365,7 +370,10 @@ uint64_t calcTerrainSize(int chunksX, int chunksZ)
 {
 	uint64_t size = uint64_t(chunksX+2) * CHUNKSIZE_X * uint64_t(chunksZ+2) * CHUNKSIZE_Z * uint64_t(g_MapsizeY);
 	if (g_Nightmode || g_Underground || g_Skylight || g_BlendUnderground) {
-		return size + uint64_t(chunksX+2) * CHUNKSIZE_X * uint64_t(chunksZ+2) * CHUNKSIZE_Z * (uint64_t(g_MapsizeY + 1) / 2);
+		size += size / 2;
+	}
+	if (g_UseBiomes) {
+		size += uint64_t(chunksX+2) * CHUNKSIZE_X * uint64_t(chunksZ+2) * CHUNKSIZE_Z * sizeof(uint16_t);
 	}
 	return size;
 }
@@ -487,7 +495,7 @@ static void allocateTerrain()
 	g_Terrain = new uint8_t[terrainsize];
 	memset(g_Terrain, 0, terrainsize); // Preset: Air
 	if (g_Nightmode || g_Underground || g_BlendUnderground || g_Skylight) {
-		lightsize = g_MapsizeZ * g_MapsizeX * ((g_MapsizeY + 1) / 2);
+		lightsize = g_MapsizeZ * g_MapsizeX * ((g_MapsizeY + (g_MapminY % 2 == 0 ? 1 : 2)) / 2);
 		printf(", lightmap %.2fMiB", float(lightsize / float(1024 * 1024)));
 		g_Light = new uint8_t[lightsize];
 		// Preset: all bright / dark depending on night or day

@@ -16,7 +16,7 @@ enum Orientation {
 // see globals.cpp
 
 extern int g_FromChunkX, g_FromChunkZ, g_ToChunkX, g_ToChunkZ;
-extern size_t g_MapsizeY, g_MapsizeZ, g_MapsizeX;
+extern size_t g_MapsizeY, g_MapminY, g_MapsizeZ, g_MapsizeX;
 extern int g_OffsetY; // y pixel offset in the final image for one y step in 3d array
 
 extern Orientation g_Orientation; // North, West, South, East
@@ -29,6 +29,7 @@ extern bool g_BlendAll; // If set, do not assume certain blocks (like grass) are
 extern bool g_Hell, g_ServerHell; // rendering the nether
 
 // For rendering biome colors properly, external png files are used
+extern bool g_UseBiomes;
 extern uint64_t g_BiomeMapSize;
 extern uint8_t *g_Grasscolor, *g_Leafcolor;
 extern uint16_t *g_BiomeMap;
