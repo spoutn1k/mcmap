@@ -26,6 +26,9 @@
 #define BIOMEWEST(x,z) g_BiomeMap[(x) + ((g_MapsizeX - ((z) + 1)) * g_MapsizeZ)]
 #define BIOMENORTH(x,z) g_BiomeMap[(z) + ((x) * g_MapsizeZ)]
 #define BIOMESOUTH(x,z) g_BiomeMap[(g_MapsizeZ - ((z) + 1)) + ((g_MapsizeX - ((x) + 1)) * g_MapsizeZ)]
+// Heightmap array
+#define HEIGHTAT(x,z) g_HeightMap[(z) + ((x) * g_MapsizeZ)]
+
 
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
 #define MIN(a,b) ((a) < (b) ? (a) : (b))

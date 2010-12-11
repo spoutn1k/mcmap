@@ -1,9 +1,9 @@
 /***
  * mcmap - create isometric maps of your minecraft alpha world
- * v1.8+, 11-2010 by Zahl
+ * v1.9+, 12-2010 by Zahl
  */
 
-#define VERSION "1.9.01"
+#define VERSION "1.9.07"
 
 #include "helper.h"
 #include "draw_png.h"
@@ -14,6 +14,7 @@
 #include <cstring>
 #include <cstdio>
 #include <cstdlib>
+#include <ctime>
 #ifdef _DEBUG
 #include <cassert>
 #endif
@@ -34,6 +35,7 @@ void optimizeTerrain2();
 void optimizeTerrain3();
 void undergroundMode(bool explore);
 bool prepareNextArea(int splitX, int splitZ, int &bitmapStartX, int &bitmapStartY);
+void writeInfoFile(const char* file, int xo, int yo);
 void printHelp(char *binary);
 
 int main(int argc, char **argv)
@@ -44,7 +46,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 	bool wholeworld = false;
-	char *filename = NULL, *outfile = NULL, *colorfile = NULL, *texturefile = NULL;
+	char *filename = NULL, *outfile = NULL, *colorfile = NULL, *texturefile = NULL, *infoFile = NULL;
 	bool dumpColors = false;
 	char *biomepath = NULL;
 	uint64_t memlimit = 1800 * uint64_t(1024 * 1024);
@@ -157,6 +159,12 @@ int main(int argc, char **argv)
 					return 1;
 				}
 				texturefile = NEXTARG;
+			} else if (strcmp(option, "-info") == 0) {
+				if (!MOREARGS(1)) {
+					printf("Error: %s needs one argument, ie: %s data.json\n", option, option);
+					return 1;
+				}
+				infoFile = NEXTARG;
 			} else if (strcmp(option, "-dumpcolors") == 0) {
 				dumpColors = true;
 			} else if (strcmp(option, "-north") == 0) {
@@ -424,6 +432,13 @@ int main(int argc, char **argv)
 			optimizeTerrain3();
 		}
 
+		if (infoFile != NULL) {
+			writeInfoFile(infoFile,
+					int((g_MapsizeZ - CHUNKSIZE_Z) * 2 -CHUNKSIZE_X * 2 + (bitmapStartX - cropLeft)),
+					int(g_MapsizeY * g_OffsetY - CHUNKSIZE_Z - CHUNKSIZE_X + (bitmapStartY - cropTop)) + 2);
+			infoFile = NULL;
+		}
+
 		// Finally, render terrain to file
 		printf("Drawing map...\n");
 		for (size_t x = CHUNKSIZE_X; x < g_MapsizeX - CHUNKSIZE_X; ++x) {
@@ -437,11 +452,12 @@ int main(int argc, char **argv)
 				}
 				//
 				const int bmpPosX = int((g_MapsizeZ - z - CHUNKSIZE_Z) * 2 + (x - CHUNKSIZE_X) * 2 + (splitImage ? -2 : bitmapStartX - cropLeft));
-				int bmpPosY = int(g_MapsizeY * g_OffsetY + z + x - CHUNKSIZE_Z - CHUNKSIZE_X + (splitImage ? 0 : bitmapStartY - cropTop)) + 2;
-				for (size_t y = 0; y < g_MapsizeY; ++y) {
+				int bmpPosY = int(g_MapsizeY * g_OffsetY + z + x - CHUNKSIZE_Z - CHUNKSIZE_X + (splitImage ? 0 : bitmapStartY - cropTop)) + 2 - (HEIGHTAT(x, z) & 0xFF) * g_OffsetY;
+				const size_t max = (HEIGHTAT(x, z) & 0xFF00) >> 8;
+				for (size_t y = uint8_t(HEIGHTAT(x, z)); y < max; ++y) {
 					bmpPosY -= g_OffsetY;
 					uint8_t &c = BLOCKAT(x, y, z);
-					if (c == AIR || c == VOIDBLOCK) {
+					if (c == AIR) {
 						continue;
 					}
 					//float col = float(y) * .78f - 91;
@@ -523,7 +539,11 @@ int main(int argc, char **argv)
 				}
 			}
 			undergroundMode(true);
-			optimizeTerrain2();
+			if (g_OffsetY == 2) {
+				optimizeTerrain2();
+			} else {
+				optimizeTerrain3();
+			}
 			printf("Creating cave overlay...\n");
 			for (size_t x = CHUNKSIZE_X; x < g_MapsizeX - CHUNKSIZE_X; ++x) {
 				printProgress(x - CHUNKSIZE_X, g_MapsizeX);
@@ -581,19 +601,26 @@ void optimizeTerrain2()
 		memset(blocked, 0, CHUNKSIZE_Y); // Nothing is blocked at first
 		int offset = 0; // The helper array had to be shifted after each run of the inner most loop. As this is expensive, just use an offset that increases instead
 		const int max2 = MIN(max, x - CHUNKSIZE_X + 1); // Block array will be traversed diagonally, determine how many blocks there are
-		for (int i = 0; i < max2; ++i) { // This traversesthe block array diagonally, which would be upwards in the image
+		for (int i = 0; i < max2; ++i) { // This traverses the block array diagonally, which would be upwards in the image
 			uint8_t *block = &BLOCKAT(x - i, 0, maxZ - i); // Get the lowest block at that point
+			int highest = 0, lowest = 0xFF; // remember lowest and highest block which are visible to limit the Y-for-loop later
 			for (int j = 0; j < top; ++j) { // Go up
 				if (blocked[(j+offset) % top]) { // Block is hidden, remove
 					if (*block != AIR) {
-						*block = VOIDBLOCK;
 						++gBlocksRemoved;
 					}
-				} else if (colors[*block][ALPHA] == 255) { // Block is not hidden, do not remove, but mark spot as blocked for next iteration
-					blocked[(j+offset) % top] = 1;
+				} else { // block is not hidden by another block
+					if (*block != AIR && lowest == 0xFF) { // if it's not air, this is the lowest block to draw
+						lowest = j;
+					}
+					if (colors[*block][ALPHA] == 255) { // Block is not hidden, do not remove, but mark spot as blocked for next iteration
+						blocked[(j+offset) % top] = 1;
+					}
+					if (*block != AIR) highest = j; // it it's not air, it's the new highest block encountered so far
 				}
 				++block; // Go up
 			}
+			HEIGHTAT(x - i, maxZ - i) = (((uint16_t)highest + 1) << 8) | (uint16_t)lowest; // cram them both into a 16bit int
 			blocked[offset % top] = 0; // This will be the array index responsible for the top most block in the next itaration. Set it to 0 as it can't be hidden.
 			++offset; // Increase offset, as block at height n in current row will hide block at n-1 in next row
 		}
@@ -605,17 +632,24 @@ void optimizeTerrain2()
 		const int max2 = MIN(max, z - CHUNKSIZE_Z + 1);
 		for (int i = 0; i < max2; ++i) {
 			uint8_t *block = &BLOCKAT(maxX - i, 0, z - i);
+			int highest = 0, lowest = 0xFF;
 			for (int j = 0; j < top; ++j) {
-				if (blocked[(j+offset) % top]) {
+				if (blocked[(j+offset) % top]) { // Block is hidden, remove
 					if (*block != AIR) {
-						*block = VOIDBLOCK;
 						++gBlocksRemoved;
 					}
-				} else if (colors[*block][ALPHA] == 255) {
-					blocked[(j+offset) % top] = 1;
+				} else {
+					if (*block != AIR && lowest == 0xFF) {
+						lowest = j;
+					}
+					if (colors[*block][ALPHA] == 255) { // Block is not hidden, do not remove, but mark spot as blocked for next iteration
+						blocked[(j+offset) % top] = 1;
+					}
+					if (*block != AIR) highest = j;
 				}
 				++block;
 			}
+			HEIGHTAT(maxX - i, z - i) = (((uint16_t)highest + 1) << 8) | (uint16_t)lowest;
 			blocked[offset % top] = 0;
 			++offset;
 		}
@@ -647,17 +681,24 @@ void optimizeTerrain3()
 		for (int i = 0; i < max2; ++i) { // This traverses the block array diagonally, which would be upwards in the image
 			const int blockedOffset = CHUNKSIZE_Y * (i % 3);
 			uint8_t *block = &BLOCKAT(x - i, 0, maxZ - i); // Get the lowest block at that point
+			int highest = 0, lowest = 0xFF;
 			for (int j = 0; j < top; ++j) { // Go up
 				if (blocked[blockedOffset + (j+offset) % top]) { // Block is hidden, remove
 					if (*block != AIR) {
-						*block = VOIDBLOCK;
 						++gBlocksRemoved;
 					}
-				} else if (colors[*block][ALPHA] == 255) { // Block is not hidden, do not remove, but mark spot as blocked for next iteration
-					blocked[blockedOffset + (j+offset) % top] = 1;
+				} else {
+					if (*block != AIR && lowest == 0xFF) {
+						lowest = j;
+					}
+					if (colors[*block][ALPHA] == 255) { // Block is not hidden, do not remove, but mark spot as blocked for next iteration
+						blocked[blockedOffset + (j+offset) % top] = 1;
+					}
+					if (*block != AIR) highest = j;
 				}
 				++block; // Go up
 			}
+			HEIGHTAT(x - i, maxZ - i) = (((uint16_t)highest + 1) << 8) | (uint16_t)lowest;
 			blocked[blockedOffset + ((offset + 1) % top)] = 0; // This will be the array index responsible for the top most block in the next itaration. Set it to 0 as it can't be hidden.
 			blocked[blockedOffset + (offset % top)] = 0;
 			if (i % 3 == 2) {
@@ -673,17 +714,24 @@ void optimizeTerrain3()
 		for (int i = 0; i < max2; ++i) {
 			const int blockedOffset = CHUNKSIZE_Y * (i % 3);
 			uint8_t *block = &BLOCKAT(maxX - i, 0, z - i);
+			int highest = 0, lowest = 0xFF;
 			for (int j = 0; j < top; ++j) {
 				if (blocked[blockedOffset + (j+offset) % top]) {
 					if (*block != AIR) {
-						*block = VOIDBLOCK;
 						++gBlocksRemoved;
 					}
-				} else if (colors[*block][ALPHA] == 255) {
-					blocked[blockedOffset + (j+offset) % top] = 1;
+				} else {
+					if (*block != AIR && lowest == 0xFF) {
+						lowest = j;
+					}
+					if (colors[*block][ALPHA] == 255) {
+						blocked[blockedOffset + (j+offset) % top] = 1;
+					}
+					if (*block != AIR) highest = j;
 				}
 				++block;
 			}
+			HEIGHTAT(maxX - i, z - i) = (((uint16_t)highest + 1) << 8) | (uint16_t)lowest;
 			blocked[blockedOffset + ((offset + 1) % top)] = 0;
 			blocked[blockedOffset + (offset % top)] = 0;
 			if (i % 3 == 2) {
@@ -846,6 +894,61 @@ bool prepareNextArea(int splitX, int splitZ, int &bitmapStartX, int &bitmapStart
 	return false; // not done yet, return false
 }
 
+#define RIGHTSTRING(x,y) ((x) + strlen(x) - ((y) > strlen(x) ? strlen(x) : (y)))
+void writeInfoFile(const char* file, int xo, int yo)
+{
+	char *direction = NULL;
+	if (g_Orientation == North) {
+		xo += (-g_FromChunkX * 16 + g_FromChunkZ * 16) * g_OffsetY;
+		yo -= (g_FromChunkX * 16 + g_FromChunkZ * 16);
+		direction = (char*)"North";
+	} else if (g_Orientation == South) {
+		xo -= (-g_ToChunkX * 16 + g_ToChunkZ * 16) * g_OffsetY;
+		yo += (g_ToChunkX * 16 + g_ToChunkZ * 16);
+		direction = (char*)"South";
+	} else if (g_Orientation == East) {
+		xo += (-g_ToChunkX * 16 - g_FromChunkZ * 16) * g_OffsetY;
+		yo += (g_ToChunkX * 16 - g_FromChunkZ * 16);
+		direction = (char*)"East";
+	} else {
+		xo -= (-g_FromChunkX * 16 - g_ToChunkZ * 16) * g_OffsetY;
+		yo -= (g_FromChunkX * 16 - g_ToChunkZ * 16);
+		direction = (char*)"West";
+	}
+	FILE *fh = fopen(file, "w");
+	if (fh == NULL) return;
+	xo += 1;
+	yo -= 2;
+	if (strcmp(".json", RIGHTSTRING(file, 5)) == 0) {
+		fprintf(fh, "{\n"
+				" \"origin\" : {\n"
+				"  \"x\" : %d,\n"
+				"  \"y\" : %d\n"
+				" },\n"
+				" \"geometry\" : {\n"
+				"  \"scaling\" : %d,\n"
+				"  \"orientation\" : \"%s\"\n"
+				" },\n"
+				" \"meta\" : {\n"
+				"  \"timestamp\" : %lu\n"
+				" }\n"
+				"}\n", xo, yo, g_OffsetY, direction, (unsigned long)time(NULL));
+	} else if (strcmp(".xml", RIGHTSTRING(file, 4)) == 0) {
+		fprintf(fh, "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
+				"<map>\n"
+				" <origin x=\"%d\" y=\"%d\" />\n"
+				" <geometry scaling=\"%d\" orientation=\"%s\" />\n"
+				" <meta timestamp=\"%lu\" />\n"
+				"</map>\n", xo, yo, g_OffsetY, direction, (unsigned long)time(NULL));
+	} else {
+		time_t t = time(NULL);
+		fprintf(fh, "Origin at %d, %d\n"
+				"Y-Offset: %d, Orientation: %s\n"
+				"Rendered on: %s\n", xo, yo, g_OffsetY, direction, asctime(localtime(&t)));
+	}
+	fclose(fh);
+}
+
 void printHelp(char *binary)
 {
 	printf(
@@ -879,9 +982,11 @@ void printHelp(char *binary)
 	   "  -hell         render the hell/nether dimension of the given world\n"
 	   "  -serverhell   force cropping of blocks at the top (use for nether servers)\n"
 	   "  -texture NAME extract colors from png file 'NAME'; eg. terrain.png\n"
-	   "  -biomes       apply biome colors to grass/leaves; requires that you run"
+	   "  -biomes       apply biome colors to grass/leaves; requires that you run\n"
 	   "                Donkey Kong's biome extractor first on your world\n"
 	   "  -biomecolors PATH  load grasscolor.png and foliagecolor.png from 'PATH'\n"
+	   "  -info NAME    Write information about map to file 'NAME' You can choose the\n"
+	   "                format by using file extensions .xml, .json or .txt (default)\n"
 	   "\n    WORLDPATH is the path of the desired alpha world.\n\n"
 	   ////////////////////////////////////////////////////////////////////////////////
 	   "Examples:\n\n"

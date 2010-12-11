@@ -1,6 +1,5 @@
 #include "globals.h"
 
-// Current window of world being rendered
 int g_FromChunkX = UNDEFINED, g_FromChunkZ = UNDEFINED, g_ToChunkX = UNDEFINED, g_ToChunkZ = UNDEFINED;
 size_t g_MapsizeZ = 0, g_MapsizeY = 128, g_MapminY = 0, g_MapsizeX = 0;
 int g_OffsetY = 2;
@@ -21,3 +20,4 @@ uint16_t *g_BiomeMap = NULL;
 int g_GrasscolorDepth = 0, g_FoliageDepth = 0;
 
 uint8_t *g_Terrain = NULL, *g_Light = NULL;
+uint16_t *g_HeightMap = NULL;

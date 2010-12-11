@@ -13,11 +13,13 @@ enum Orientation {
 	West
 };
 
-// see globals.cpp
 
+// Current area of world being rendered
 extern int g_FromChunkX, g_FromChunkZ, g_ToChunkX, g_ToChunkZ;
+// size of that area in blocks (no offset)
 extern size_t g_MapsizeY, g_MapminY, g_MapsizeZ, g_MapsizeX;
-extern int g_OffsetY; // y pixel offset in the final image for one y step in 3d array
+
+extern int g_OffsetY; // y pixel offset in the final image for one y step in 3d array (2 or 3)
 
 extern Orientation g_Orientation; // North, West, South, East
 extern bool g_Nightmode;
@@ -37,5 +39,7 @@ extern int g_GrasscolorDepth, g_FoliageDepth;
 
 // 3D arrays holding terrain/lightmap
 extern uint8_t *g_Terrain, *g_Light;
+// 2D array to store min and max block height per X/Z - it's 2 bytes per index, upper for highest, lower for lowest (don't ask!)
+extern uint16_t *g_HeightMap;
 
 #endif

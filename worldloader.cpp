@@ -207,18 +207,18 @@ static bool loadChunk(const char *file)
 	uint8_t *blockdata, *lightdata, *skydata;
 	int32_t len;
 	ok = level->getByteArray("Blocks", blockdata, len);
-	if (!ok || len < 32768) {
+	if (!ok || len < CHUNKSIZE_X * CHUNKSIZE_Z * CHUNKSIZE_Y) {
 		return false;
 	}
 	if (g_Nightmode || g_Skylight) { // If nightmode, we need the light information too
 		ok = level->getByteArray("BlockLight", lightdata, len);
-		if (!ok || len < 16384) {
+		if (!ok || len < (CHUNKSIZE_X * CHUNKSIZE_Z * CHUNKSIZE_Y) / 2) {
 			return false;
 		}
 	}
 	if (g_Skylight) { // Skylight desired - wish granted
 		ok = level->getByteArray("SkyLight", skydata, len);
-		if (!ok || len < 16384) {
+		if (!ok || len < (CHUNKSIZE_X * CHUNKSIZE_Z * CHUNKSIZE_Y) / 2) {
 			return false;
 		}
 	}
@@ -267,6 +267,7 @@ static bool loadChunk(const char *file)
 			if (!(g_Nightmode || g_Skylight || g_Underground)) {
 				continue;
 			}
+			// Following code applies only to modes (ab)using the lightmap
 			const size_t toY = g_MapsizeY + g_MapminY;
 			for (size_t y = (g_MapminY / 2) * 2; y < toY; ++y) {
 				if (g_Underground) {
@@ -361,8 +362,8 @@ static bool loadChunk(const char *file)
 					}
 				}
 			}
-		}
-	}
+		} // z
+	} // x
 	return true;
 }
 
@@ -490,6 +491,11 @@ static void allocateTerrain()
 	if (g_Light != NULL) {
 		delete[] g_Light;
 	}
+	if (g_HeightMap != NULL) {
+		delete[] g_HeightMap;
+	}
+	g_HeightMap = new uint16_t[g_MapsizeX * g_MapsizeZ];
+	memset(g_HeightMap, 0, g_MapsizeX * g_MapsizeZ * sizeof(uint16_t));
 	const size_t terrainsize = g_MapsizeZ * g_MapsizeX * g_MapsizeY;
 	printf("Terrain takes up %.2fMiB", float(terrainsize / float(1024 * 1024)));
 	g_Terrain = new uint8_t[terrainsize];
