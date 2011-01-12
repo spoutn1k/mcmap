@@ -3,7 +3,7 @@
  * v1.9+, 12-2010 by Zahl
  */
 
-#define VERSION "1.9.07"
+#define VERSION "1.9.08"
 
 #include "helper.h"
 #include "draw_png.h"
@@ -187,6 +187,8 @@ int main(int argc, char **argv)
 		wholeworld = (g_FromChunkX == UNDEFINED || g_ToChunkX == UNDEFINED);
 	}
 	// ########## end of command line parsing ##########
+
+	printf("mcmap " VERSION "\n");
 
 	if (sizeof(size_t) < 8 && memlimit > 1800 * uint64_t(1024 * 1024)) {
 		memlimit = 1800 * uint64_t(1024 * 1024);
@@ -375,10 +377,12 @@ int main(int argc, char **argv)
 				bitmapStartX += 2;
 				const int sizex = (g_ToChunkX - g_FromChunkX) * CHUNKSIZE_X * 2 + (g_ToChunkZ - g_FromChunkZ) * CHUNKSIZE_Z * 2;
 				const int sizey = (int)g_MapsizeY * g_OffsetY + (g_ToChunkX - g_FromChunkX) * CHUNKSIZE_X + (g_ToChunkZ - g_FromChunkZ) * CHUNKSIZE_Z + 3;
-				if (!loadImagePart(bitmapStartX - cropLeft, bitmapStartY - cropTop, sizex, sizey)) {
+				if (sizex <= 0 || sizey <= 0) continue; // Don't know if this is right, might also be that the size calulation is plain wrong
+				int res = loadImagePart(bitmapStartX - cropLeft, bitmapStartY - cropTop, sizex, sizey);
+				if (res == -1) {
 					printf("Error loading partial image to render to.\n");
 					return 1;
-				}
+				} else if (res == 1) continue;
 			}
 		}
 
@@ -404,12 +408,12 @@ int main(int argc, char **argv)
 			printf("Error loading terrain from '%s'\n", filename);
 			return 1;
 		} else if (numSplitsX != 0 || !wholeworld) {
-			int i;
-			if (!loadTerrain(filename, i)) {
+			int numberOfChunks;
+			if (!loadTerrain(filename, numberOfChunks)) {
 				printf("Error loading terrain from '%s'\n", filename);
 				return 1;
 			}
-			if (splitImage && i == 0) {
+			if (splitImage && numberOfChunks == 0) {
 				printf("Section is empty, skipping...\n");
 				discardImagePart();
 				continue;
@@ -447,8 +451,8 @@ int main(int argc, char **argv)
 				// Biome colors
 				if (g_BiomeMap != NULL) {
 					uint16_t &offset = BIOMEAT(x,z);
-					memcpy(colors[GRASS] + 8, g_Grasscolor + offset * g_GrasscolorDepth, 3);
-					memcpy(colors[LEAVES] + 8, g_Leafcolor + offset * g_FoliageDepth, 3);
+					memcpy(colors[GRASS], g_Grasscolor + offset * g_GrasscolorDepth, 3);
+					memcpy(colors[LEAVES], g_Leafcolor + offset * g_FoliageDepth, 3);
 				}
 				//
 				const int bmpPosX = int((g_MapsizeZ - z - CHUNKSIZE_Z) * 2 + (x - CHUNKSIZE_X) * 2 + (splitImage ? -2 : bitmapStartX - cropLeft));
@@ -477,10 +481,10 @@ int main(int argc, char **argv)
 						bool blocked[4] = {false, false, false, false}; // if light is blocked in one direction
 						for (int i = 1; i < 3 && l <= 0; ++i) {
 							// Need to make this a loop to deal with half-steps, fences, flowers and other special blocks
-							blocked[0] |= (colors[BLOCKAT(x+i, y, z) ][ALPHA] == 255);
-							blocked[1] |= (colors[BLOCKAT(x, y, z+i) ][ALPHA] == 255);
-							blocked[2] |= (y + i >= g_MapsizeY || colors[BLOCKAT(x, y+i, z) ][ALPHA] == 255);
-							blocked[3] |= (colors[BLOCKAT(x+i, y+i, z+i) ][ALPHA] == 255);
+							blocked[0] |= (colors[BLOCKAT(x+i, y, z) ][PALPHA] == 255);
+							blocked[1] |= (colors[BLOCKAT(x, y, z+i) ][PALPHA] == 255);
+							blocked[2] |= (y + i >= g_MapsizeY || colors[BLOCKAT(x, y+i, z) ][PALPHA] == 255);
+							blocked[3] |= (colors[BLOCKAT(x+i, y+i, z+i) ][PALPHA] == 255);
 							if (l <= 0 // if block is still dark and there are no translucent blocks around, stop
 							      && blocked[0] && blocked[1] && blocked[2] && blocked[3]) {
 								break;
@@ -613,7 +617,7 @@ void optimizeTerrain2()
 					if (*block != AIR && lowest == 0xFF) { // if it's not air, this is the lowest block to draw
 						lowest = j;
 					}
-					if (colors[*block][ALPHA] == 255) { // Block is not hidden, do not remove, but mark spot as blocked for next iteration
+					if (colors[*block][PALPHA] == 255) { // Block is not hidden, do not remove, but mark spot as blocked for next iteration
 						blocked[(j+offset) % top] = 1;
 					}
 					if (*block != AIR) highest = j; // it it's not air, it's the new highest block encountered so far
@@ -626,6 +630,7 @@ void optimizeTerrain2()
 		}
 		printProgress(size_t(x), maxProgress);
 	}
+	// Again for other plane
 	for (int z = CHUNKSIZE_Z; z < maxZ; ++z) {
 		memset(blocked, 0, CHUNKSIZE_Y);
 		int offset = 0;
@@ -642,7 +647,7 @@ void optimizeTerrain2()
 					if (*block != AIR && lowest == 0xFF) {
 						lowest = j;
 					}
-					if (colors[*block][ALPHA] == 255) { // Block is not hidden, do not remove, but mark spot as blocked for next iteration
+					if (colors[*block][PALPHA] == 255) { // Block is not hidden, do not remove, but mark spot as blocked for next iteration
 						blocked[(j+offset) % top] = 1;
 					}
 					if (*block != AIR) highest = j;
@@ -691,7 +696,7 @@ void optimizeTerrain3()
 					if (*block != AIR && lowest == 0xFF) {
 						lowest = j;
 					}
-					if (colors[*block][ALPHA] == 255) { // Block is not hidden, do not remove, but mark spot as blocked for next iteration
+					if (colors[*block][PALPHA] == 255) { // Block is not hidden, do not remove, but mark spot as blocked for next iteration
 						blocked[blockedOffset + (j+offset) % top] = 1;
 					}
 					if (*block != AIR) highest = j;
@@ -724,7 +729,7 @@ void optimizeTerrain3()
 					if (*block != AIR && lowest == 0xFF) {
 						lowest = j;
 					}
-					if (colors[*block][ALPHA] == 255) {
+					if (colors[*block][PALPHA] == 255) {
 						blocked[blockedOffset + (j+offset) % top] = 1;
 					}
 					if (*block != AIR) highest = j;

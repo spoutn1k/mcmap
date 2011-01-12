@@ -7,10 +7,10 @@
 #include <cstdlib>
 
 #define SETCOLOR(col,r,g,b,a) do { \
-		colors[col][BLUE] = colors[col][PBLUE]			= b; \
-		colors[col][GREEN] = colors[col][PGREEN] 		= g; \
-		colors[col][RED] = colors[col][PRED] 			= r; \
-		colors[col][ALPHA] = colors[col][PALPHA] 		= a; \
+		colors[col][PBLUE]		= b; \
+		colors[col][PGREEN] 		= g; \
+		colors[col][PRED] 		= r; \
+		colors[col][PALPHA] 		= a; \
 		colors[col][BRIGHTNESS]	= (uint8_t)sqrt( \
 		                          double(r * r) * .236 + \
 		                          double(g * g) * .601 + \
@@ -18,10 +18,10 @@
 	} while (false)
 
 #define SETCOLORNOISE(col,r,g,b,a,n) do { \
-		colors[col][BLUE] = colors[col][PBLUE]			= b; \
-		colors[col][GREEN] = colors[col][PGREEN] 		= g; \
-		colors[col][RED] = colors[col][PRED] 			= r; \
-		colors[col][ALPHA] = colors[col][PALPHA] 		= a; \
+		colors[col][PBLUE]		= b; \
+		colors[col][PGREEN] 		= g; \
+		colors[col][PRED] 		= r; \
+		colors[col][PALPHA] 		= a; \
 		colors[col][NOISE]		= n; \
 		colors[col][BRIGHTNESS]	= (uint8_t)sqrt( \
 		                          double(r * r) * .236 + \
@@ -30,7 +30,7 @@
 	} while (false)
 
 // See header for description
-uint8_t colors[256][16];
+uint8_t colors[256][8];
 
 
 void loadColors()
@@ -162,13 +162,7 @@ bool loadColorsFromFile(const char *file)
 				valid = false;
 				break;
 			}
-			if (i == 0) {
-				vals[RED] = clamp(atoi(ptr));
-			} else if (i == 2) {
-				vals[BLUE] = clamp(atoi(ptr));
-			} else {
-				vals[i] = clamp(atoi(ptr));
-			}
+			vals[i] = clamp(atoi(ptr));
 			while (*ptr != ' ' && *ptr != '\t' && *ptr != '\0') {
 				++ptr;
 			}
@@ -177,10 +171,6 @@ bool loadColorsFromFile(const char *file)
 			continue;
 		}
 		memcpy(colors[blockid], vals, 5);
-		colors[blockid][PRED] = colors[blockid][RED];
-		colors[blockid][PGREEN] = colors[blockid][GREEN];
-		colors[blockid][PBLUE] = colors[blockid][BLUE];
-		colors[blockid][PALPHA] = colors[blockid][ALPHA];
 		colors[blockid][BRIGHTNESS] = GETBRIGHTNESS(colors[blockid]);
 	}
 	fclose(f);
@@ -194,14 +184,15 @@ bool dumpColorsToFile(const char *file)
 		return false;
 	}
 	fprintf(f, "# For Block IDs see http://minecraftwiki.net/wiki/Data_values\n"
-	        "# Note that noise or alpha (or both) do not work for a few blocks like snow, torches, fences, steps, ...\n"
-	        "# Actually, if you see any block has an alpha value of 254 you should leave it that way to prevent black artifacts\n\n");
+				"# Note that noise or alpha (or both) do not work for a few blocks like snow, torches, fences, steps, ...\n"
+				"# Actually, if you see any block has an alpha value of 254 you should leave it that way to prevent black artifacts.\n"
+				"# If you want to set alpha of grass to <255, use -blendall or you won't get what you expect.\n\n");
 	for (size_t i = 1; i < 256; ++i) {
 		uint8_t *c = colors[i];
 		if (i % 15 == 1) {
 			fprintf(f, "#ID    R   G   B    A  Noise\n");
 		}
-		fprintf(f, "%3d  %3d %3d %3d  %3d  %3d\n", int(i), int(c[2]), int(c[1]), int(c[0]), int(c[3]), int(c[4]));
+		fprintf(f, "%3d  %3d %3d %3d  %3d  %3d\n", int(i), int(c[PRED]), int(c[PGREEN]), int(c[PBLUE]), int(c[PALPHA]), int(c[NOISE]));
 	}
 	fclose(f);
 	return true;
@@ -226,7 +217,7 @@ bool extractColors(const char* file)
 		}
 		int r, g, b, a, n; // i i s g t u o l v n
 		if (getTileRGBA(imgData, png.getWidth() / 16, i, r, g, b, a, n)) {
-			const bool flag = (colors[i][ALPHA] == 254);
+			const bool flag = (colors[i][PALPHA] == 254);
 			if (i == FENCE) {
 				r = clamp(r + 10);
 				g = clamp(g + 10);
@@ -234,7 +225,7 @@ bool extractColors(const char* file)
 			}
 			SETCOLORNOISE(i, r, g, b, a, n);
 			if (flag) {
-				colors[i][ALPHA] = colors[i][PALPHA] = 254;   // If you don't like this, dump texture pack to txt file and modify that one
+				colors[i][PALPHA] = 254;   // If you don't like this, dump texture pack to txt file and modify that one
 			}
 		}
 	}
@@ -282,6 +273,9 @@ bool loadBiomeColors(const char* path)
 	for (int i = 0; i < maxT; ++i) {
 		g_Leafcolor[i] = ((int)g_Leafcolor[i] * (int)colors[LEAVES][BRIGHTNESS]) / 255;
 	}
+	// Now re-calc brightness of those two
+	colors[GRASS][BRIGHTNESS] = GETBRIGHTNESS(g_Grasscolor);
+	colors[LEAVES][BRIGHTNESS] = GETBRIGHTNESS(g_Leafcolor);
 	printf("Loaded biome color maps from %s\n", path);
 	return true;
 }

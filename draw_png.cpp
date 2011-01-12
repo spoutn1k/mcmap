@@ -152,12 +152,15 @@ bool saveImage()
 	return true;
 }
 
-bool loadImagePart(int startx, int starty, int width, int height)
+/**
+ * @return 0 = OK, -1 = Error, 1 = Zero/Negative size
+ */
+int loadImagePart(int startx, int starty, int width, int height)
 {
 	// These are set to NULL in saveImahePartPng to make sure the two functions are called in turn
 	if (pngPtrCurrent != NULL || gPngPartialFileHandle != NULL) {
 		printf("Something wrong with disk caching.\n");
-		return false;
+		return -1;
 	}
 	// In case the image needs to be cropped the offsets will be negative
 	gOffsetX = MIN(startx, 0);
@@ -177,8 +180,7 @@ bool loadImagePart(int startx, int starty, int width, int height)
 	if (starty + height > gPngHeight) {
 		height = gPngHeight - starty;
 	}
-	if (width < 1) width = 1;
-	if (height < 1) height = 1;
+	if (width < 1 || height < 1) return 1;
 	char name[200];
 	snprintf(name, 200, "cache/%d.%d.%d.%d.%d.png", startx, starty, width, height, (int)time(NULL));
 	ImagePart *img = new ImagePart(name, startx, starty, width, height);
@@ -208,9 +210,9 @@ bool loadImagePart(int startx, int starty, int width, int height)
 	gPngPartialFileHandle = fopen(name, "wb");
 	if (gPngPartialFileHandle == NULL) {
 		printf("Could not create temporary image at %s; check permissions in current dir.\n", name);
-		return false;
+		return -1;
 	}
-	return true;
+	return 0;
 }
 
 bool saveImagePart()
@@ -362,7 +364,7 @@ void setPixel(size_t x, size_t y, uint8_t color, float fsub)
 	int sub = int(fsub * (float(colors[color][BRIGHTNESS]) / 323.0f + .21f)); // The brighter the color, the stronger the impact
 	uint8_t L[4], D[4], c[4];
 	// Now make a local copy of the color that we can modify just for this one block
-	memcpy(c, colors[color]+8, 4);
+	memcpy(c, colors[color], 4);
 	modColor(c, sub);
 	if (g_BlendAll) {
 		// Then check the block type, as some types will be drawn differently
@@ -461,7 +463,7 @@ void setPixel(size_t x, size_t y, uint8_t color, float fsub)
 		noise = int(float(g_Noise * colors[color][NOISE]) * (float(GETBRIGHTNESS(c) + 10) / 2650.0f));
 	}
 	// Ordinary blocks are all rendered the same way
-	if (c[ALPHA] == 255) { // Fully opaque - faster
+	if (c[PALPHA] == 255) { // Fully opaque - faster
 		// Top row
 		uint8_t *pos = &PIXEL(x, y);
 		for (size_t i = 0; i < 4; ++i, pos += 4) {
@@ -546,8 +548,8 @@ void blendPixel(size_t x, size_t y, uint8_t color, float fsub)
 	//	  D L
 	uint8_t L[4], D[4], c[4];
 	// Now make a local copy of the color that we can modify just for this one block
-	memcpy(c, colors[color]+8, 4);
-	c[ALPHA] = clamp(int(float(c[ALPHA]) * fsub)); // The brighter the color, the stronger the impact
+	memcpy(c, colors[color], 4);
+	c[PALPHA] = clamp(int(float(c[PALPHA]) * fsub)); // The brighter the color, the stronger the impact
 	// They are for the sides of blocks
 	memcpy(L, c, 4);
 	memcpy(D, c, 4);
@@ -581,15 +583,15 @@ namespace
 
 	inline void blend(uint8_t *destination, const uint8_t *source)
 	{
-		if (destination[ALPHA] == 0 || source[ALPHA] == 255) {
+		if (destination[PALPHA] == 0 || source[PALPHA] == 255) {
 			memcpy(destination, source, 4);
 			return;
 		}
 #		define BLEND(ca,aa,cb) uint8_t(((size_t(ca) * size_t(aa)) + (size_t(255 - aa) * size_t(cb))) / 255)
-		destination[0] = BLEND(source[0], source[ALPHA], destination[0]);
-		destination[1] = BLEND(source[1], source[ALPHA], destination[1]);
-		destination[2] = BLEND(source[2], source[ALPHA], destination[2]);
-		destination[ALPHA] += (size_t(source[ALPHA]) * size_t(255 - destination[ALPHA])) / 255;
+		destination[0] = BLEND(source[0], source[PALPHA], destination[0]);
+		destination[1] = BLEND(source[1], source[PALPHA], destination[1]);
+		destination[2] = BLEND(source[2], source[PALPHA], destination[2]);
+		destination[PALPHA] += (size_t(source[PALPHA]) * size_t(255 - destination[PALPHA])) / 255;
 	}
 
 	inline void modColor(uint8_t *color, const int mod)
@@ -601,7 +603,7 @@ namespace
 
 	inline void addColor(uint8_t *color, uint8_t *add)
 	{
-		const float v2 = (float(add[ALPHA]) / 255.0f);
+		const float v2 = (float(add[PALPHA]) / 255.0f);
 		const float v1 = (1.0f - (v2 * .2f));
 		color[0] = clamp(uint16_t(float(color[0]) * v1 + float(add[0]) * v2));
 		color[1] = clamp(uint16_t(float(color[1]) * v1 + float(add[1]) * v2));
@@ -661,8 +663,8 @@ namespace
 	{
 		// this will make grass look like dirt from the side
 		uint8_t L[4], D[4];
-		memcpy(L, colors[DIRT]+8, 4);
-		memcpy(D, colors[DIRT]+8, 4);
+		memcpy(L, colors[DIRT], 4);
+		memcpy(D, colors[DIRT], 4);
 		modColor(L, sub - 15);
 		modColor(D, sub - 25);
 		// consider noise
@@ -767,8 +769,8 @@ namespace
 	{
 		// this will make grass look like dirt from the side
 		uint8_t L[4], D[4];
-		memcpy(L, colors[DIRT]+8, 4);
-		memcpy(D, colors[DIRT]+8, 4);
+		memcpy(L, colors[DIRT], 4);
+		memcpy(D, colors[DIRT], 4);
 		modColor(L, sub - 15);
 		modColor(D, sub - 25);
 		// consider noise

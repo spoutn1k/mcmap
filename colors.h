@@ -4,26 +4,22 @@
 #include "helper.h"
 #include <cmath>
 
-#define GETBRIGHTNESS(c) (uint8_t)sqrt( \
-                                        double(2[c] * 2[c]) * .236 + \
-                                        double(1[c] * 1[c]) * .601 + \
-                                        double(0[c] * 0[c]) * .163)
-
 // Byte order see below. Colors aligned to word boundaries for some speedup
 // Brightness is precalculated to speed up calculations later
 // Colors are stored twice since BMP and PNG need them in different order
 // Noise is supposed to look normal when -noise 10 is given
-extern uint8_t colors[256][16];
-#define BLUE 0
-#define GREEN 1
-#define RED 2
-#define ALPHA 3
+extern uint8_t colors[256][8];
+#define PRED 0
+#define PGREEN 1
+#define PBLUE 2
+#define PALPHA 3
 #define NOISE 4
 #define BRIGHTNESS 5
-#define PRED 8
-#define PGREEN 9
-#define PBLUE 10
-#define PALPHA 11
+
+#define GETBRIGHTNESS(c) (uint8_t)sqrt( \
+                                        double(PRED[c] * PRED[c]) * .236 + \
+                                        double(PGREEN[c] * PGREEN[c]) * .601 + \
+                                        double(PBLUE[c] * PBLUE[c]) * .163)
 
 void loadColors();
 bool loadColorsFromFile(const char *file);
