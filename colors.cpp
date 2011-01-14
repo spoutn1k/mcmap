@@ -39,7 +39,7 @@ void loadColors()
 	memset(colors, 0, sizeof colors);
 	SETCOLOR(AIR, 255,255,255,0);
 	SETCOLORNOISE(STONE, 128,128,128,255, 16);
-	SETCOLORNOISE(GRASS, 107,166,63,255, 14);
+	SETCOLORNOISE(GRASS, 100,157,60,255, 14);
 	SETCOLORNOISE(DIRT, 134,96,67,255, 22);
 	SETCOLORNOISE(COBBLESTONE, 115,115,115,255, 26);
 	SETCOLORNOISE(WOOD, 157,128,79,255, 11);
@@ -55,13 +55,13 @@ void loadColors()
 	SETCOLOR(15, 136,130,127,255);
 	SETCOLOR(16, 115,115,115,255);
 	SETCOLOR(LOG, 102,81,51,255);
-	SETCOLORNOISE(LEAVES, 64,148,40,180, 12);
+	SETCOLORNOISE(LEAVES, 54,135,40,180, 12);
 	SETCOLOR(20, 255,255,255,40); //glass
-	//SETCOLOR(21, 222,50,50,255);
-	//SETCOLOR(22, 222,136,50,255);
-	//SETCOLOR(23, 222,222,50,255);
-	//SETCOLOR(24, 136,222,50,255);
-	//SETCOLOR(25, 50,222,50,255);
+	SETCOLORNOISE(21, 102, 112, 134, 255, 10);
+	SETCOLORNOISE(22, 29, 71, 165, 255, 5);
+	SETCOLOR(23, 107, 107, 107, 255);
+	SETCOLORNOISE(24, 218, 210, 158, 255, 7);
+	SETCOLORNOISE(25, 100, 67, 50, 255, 10);
 	//SETCOLOR(26, 50,222,136,255);
 	//SETCOLOR(27, 50,222,222,255);
 	//SETCOLOR(28, 104,163,222,255);
@@ -71,7 +71,7 @@ void loadColors()
 	//SETCOLOR(32, 222,50,222,255);
 	//SETCOLOR(33, 222,50,136,255);
 	//SETCOLOR(34, 77,77,77,255);
-	SETCOLOR(35, 222,222,222,255); //Color(143,143,143,255);
+	SETCOLOR(WOOL, 222,222,222,255); //Color(143,143,143,255);
 	//SETCOLOR(36, 222,222,222,255);
 	SETCOLOR(FLOWERR, 255,0,0,254); // Not fully opaque to prevent culling on this one
 	SETCOLOR(FLOWERY, 255,255,0,254); // Not fully opaque to prevent culling on this one
@@ -122,6 +122,22 @@ void loadColors()
 	SETCOLORNOISE(89, 137,112,64,255, 11);
 	SETCOLOR(90, 0,42,255,127);
 	SETCOLOR(91, 185,133,28,255);
+	SETCOLORNOISE(CAKE, 228, 205, 206, 255, 7);
+	SETCOLOR(240, 244,137,54, 255); // Dyed wool
+	SETCOLOR(241, 200,75,210,255);
+	SETCOLOR(242, 120,158,241, 255);
+	SETCOLOR(243, 204,200,28, 255);
+	SETCOLOR(244, 59,210,47, 255);
+	SETCOLOR(245, 237,141,164, 255);
+	SETCOLOR(246, 76,76,76, 255);
+	SETCOLOR(247, 168,172,172, 255);
+	SETCOLOR(248, 39,116,149, 255);
+	SETCOLOR(249, 133,53,195, 255);
+	SETCOLOR(250, 38,51,160, 255);
+	SETCOLOR(251, 85,51,27, 255);
+	SETCOLOR(252, 55,77,24, 255);
+	SETCOLOR(253, 173,44,40, 255);
+	SETCOLOR(254, 32,27,27, 255);
 }
 
 
@@ -186,8 +202,10 @@ bool dumpColorsToFile(const char *file)
 	fprintf(f, "# For Block IDs see http://minecraftwiki.net/wiki/Data_values\n"
 				"# Note that noise or alpha (or both) do not work for a few blocks like snow, torches, fences, steps, ...\n"
 				"# Actually, if you see any block has an alpha value of 254 you should leave it that way to prevent black artifacts.\n"
-				"# If you want to set alpha of grass to <255, use -blendall or you won't get what you expect.\n\n");
-	for (size_t i = 1; i < 256; ++i) {
+				"# If you want to set alpha of grass to <255, use -blendall or you won't get what you expect.\n"
+				"# Noise is supposed to look normal using -noise 10\n"
+				"# Dyed wool ranges from ID 240 to 254, it's orange to black in the order described at http://www.minecraftwiki.net/wiki/Data_values#Wool\n\n");
+	for (size_t i = 1; i < 255; ++i) {
 		uint8_t *c = colors[i];
 		if (i % 15 == 1) {
 			fprintf(f, "#ID    R   G   B    A  Noise\n");
@@ -211,7 +229,7 @@ bool extractColors(const char* file)
 			|| png.getColorType() != PngReader::RGBA) return false;
 	uint8_t *imgData = png.getImageData();
 	// Load em up
-	for (int i = 0; i < 92; i++) {
+	for (int i = 0; i < 256; i++) {
 		if (i == TORCH) {
 			continue;   // Keep those yellow for now
 		}

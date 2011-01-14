@@ -407,7 +407,7 @@ void setPixel(size_t x, size_t y, uint8_t color, float fsub)
 			setFire(x, y, c, L, D);
 			return;
 		}
-		if (color == STEP) {
+		if (color == STEP || color == CAKE) {
 			setStepBA(x, y, c, L, D);
 			return;
 		}
@@ -452,7 +452,7 @@ void setPixel(size_t x, size_t y, uint8_t color, float fsub)
 			setFire(x, y, c, L, D);
 			return;
 		}
-		if (color == STEP) {
+		if (color == STEP || color == CAKE) {
 			setStep(x, y, c, L, D);
 			return;
 		}

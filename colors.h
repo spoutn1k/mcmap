@@ -41,6 +41,7 @@ bool loadBiomeColors(const char* path);
 #define GRAVEL 13
 #define LOG 17
 #define LEAVES 18
+#define WOOL 35
 #define FLOWERY 37
 #define FLOWERR 38
 #define MUSHROOMB 39
@@ -55,6 +56,7 @@ bool loadBiomeColors(const char* path);
 #define REDTORCH_ON 76
 #define SNOW 78
 #define FENCE 85
+#define CAKE 92
 #define VOIDBLOCK 255 // This will hopefully never be a valid block id in the near future :-)
 
 #endif

@@ -204,10 +204,14 @@ static bool loadChunk(const char *file)
 #endif
 		return false; // Nope, its not...
 	}
-	uint8_t *blockdata, *lightdata, *skydata;
+	uint8_t *blockdata, *lightdata, *skydata, *justData;
 	int32_t len;
 	ok = level->getByteArray("Blocks", blockdata, len);
 	if (!ok || len < CHUNKSIZE_X * CHUNKSIZE_Z * CHUNKSIZE_Y) {
+		return false;
+	}
+	ok = level->getByteArray("Data", justData, len);
+	if (!ok || len < (CHUNKSIZE_X * CHUNKSIZE_Z * CHUNKSIZE_Y) / 2) {
 		return false;
 	}
 	if (g_Nightmode || g_Skylight) { // If nightmode, we need the light information too
@@ -255,24 +259,35 @@ static bool loadChunk(const char *file)
 					*bp-- = AIR;
 				}
 			}
+			uint8_t *targetBlock;
 			if (g_Orientation == East) {
-				memcpy(&BLOCKEAST(x + offsetx, 0, z + offsetz), &blockdata[g_MapminY + (z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y], g_MapsizeY);
+				targetBlock = &BLOCKEAST(x + offsetx, 0, z + offsetz);
 			} else if (g_Orientation == North) {
-				memcpy(&BLOCKNORTH(x + offsetx, 0, z + offsetz), &blockdata[g_MapminY + (z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y], g_MapsizeY);
+				targetBlock = &BLOCKNORTH(x + offsetx, 0, z + offsetz);
 			} else if (g_Orientation == South) {
-				memcpy(&BLOCKSOUTH(x + offsetx, 0, z + offsetz), &blockdata[g_MapminY + (z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y], g_MapsizeY);
+				targetBlock = &BLOCKSOUTH(x + offsetx, 0, z + offsetz);
 			} else {
-				memcpy(&BLOCKWEST(x + offsetx, 0, z + offsetz), &blockdata[g_MapminY + (z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y], g_MapsizeY);
-			}
-			if (!(g_Nightmode || g_Skylight || g_Underground)) {
-				continue;
+				targetBlock = &BLOCKWEST(x + offsetx, 0, z + offsetz);
 			}
 			// Following code applies only to modes (ab)using the lightmap
 			const size_t toY = g_MapsizeY + g_MapminY;
 			for (size_t y = (g_MapminY / 2) * 2; y < toY; ++y) {
+				const size_t oy = y - g_MapminY;
+				uint8_t &block = blockdata[y + (z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y];
+				// Wool block hack
+				if (block == WOOL) { // Special treatment
+					uint8_t col = (justData[(y / 2) + (z + (x * CHUNKSIZE_Z)) * (CHUNKSIZE_Y / 2)] >> ((y % 2) * 4)) & 0xF;
+					if (col != 0) {
+						*targetBlock++ = 239 + col;
+					} else {
+						*targetBlock++ = block;
+					}
+				} else {
+					*targetBlock++ = block;
+				}
 				if (g_Underground) {
 					if (y < g_MapminY) continue; // As we start at even numbers there might be no block data here
-					if (blockdata[y + (z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y] == TORCH) {
+					if (block == TORCH) {
 						// In underground mode, the lightmap is also used, but the values are calculated manually, to only show
 						// caves the players have discovered yet. It's not perfect of course, but works ok.
 						for (int ty = int(y) - 9; ty < int(y) + 9; ty+=2) { // The trick here is to only take into account
@@ -328,7 +343,7 @@ static bool loadChunk(const char *file)
 							}
 						}
 					}
-				} else if (g_Skylight && y % 2 == 0) { // copy light info too. Only every other time, since light info is 4 bits
+				} else if (g_Skylight && y % 2 == 0 && y >= g_MapminY) { // copy light info too. Only every other time, since light info is 4 bits
 					const uint8_t &light = lightdata[(y / 2) + (z + (x * CHUNKSIZE_Z)) * (CHUNKSIZE_Y / 2)];
 					const uint8_t highlight = (light >> 4) & 0x0F;
 					const uint8_t lowlight =  (light & 0x0F);
@@ -339,7 +354,6 @@ static bool loadChunk(const char *file)
 						highsky = clamp(highsky / 3 - 2);
 						lowsky = clamp(lowsky / 3 - 2);
 					}
-					const size_t oy = y - g_MapminY;
 					if (g_Orientation == East) {
 						SETLIGHTEAST(x + offsetx, oy, z + offsetz) = (MAX(highlight, highsky) << 4) | (MAX(lowlight, lowsky) & 0x0F);
 					} else if (g_Orientation == North) {
@@ -349,8 +363,7 @@ static bool loadChunk(const char *file)
 					} else {
 						SETLIGHTWEST(x + offsetx, oy, z + offsetz) = (MAX(highlight, highsky) << 4) | (MAX(lowlight, lowsky) & 0x0F);
 					}
-				} else if (g_Nightmode && y % 2 == 0) {
-					const size_t oy = y - g_MapminY;
+				} else if (g_Nightmode && y % 2 == 0 && y >= g_MapminY) {
 					if (g_Orientation == East) {
 						SETLIGHTEAST(x + offsetx, oy, z + offsetz) = lightdata[(y / 2) + (z + (x * CHUNKSIZE_Z)) * (CHUNKSIZE_Y / 2)];
 					} else if (g_Orientation == North) {

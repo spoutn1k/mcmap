@@ -3,7 +3,7 @@
  * v1.9+, 12-2010 by Zahl
  */
 
-#define VERSION "1.9.08"
+#define VERSION "1.9.09"
 
 #include "helper.h"
 #include "draw_png.h"
@@ -518,7 +518,7 @@ int main(int argc, char **argv)
 					if ((y && y + 1 < g_MapsizeY)  // In bounds?
 					      && BLOCKAT(x, y + 1, z) == AIR  // Only if block above is air
 					      && BLOCKAT(x - 1, y + 1, z - 1) == AIR  // and block above and behind is air
-					      && (b == VOIDBLOCK || b == AIR || b == c)   // block behind (from pov) this one is same type or air
+					      && (b == AIR || b == c)   // block behind (from pov) this one is same type or air
 					      && (BLOCKAT(x - 1, y, z) == AIR || BLOCKAT(x, y, z - 1) == AIR)) {   // block TL/TR from this one is air = edge
 						brightnessAdjustment += 13;
 					}
@@ -556,7 +556,7 @@ int main(int argc, char **argv)
 					size_t bmpPosY = g_MapsizeY * g_OffsetY + z + x - CHUNKSIZE_Z - CHUNKSIZE_X + (splitImage ? 0 : bitmapStartY) - cropTop;
 					for (size_t y = 0; y < MIN(g_MapsizeY, 64); ++y) {
 						uint8_t &c = BLOCKAT(x, y, z);
-						if (c != AIR && c != VOIDBLOCK) { // If block is not air (colors[c][3] != 0)
+						if (c != AIR) { // If block is not air (colors[c][3] != 0)
 							blendPixel(bmpPosX, bmpPosY, c, float(y + 30) * .0048f);
 						}
 						bmpPosY -= g_OffsetY;
