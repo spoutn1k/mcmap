@@ -12,9 +12,9 @@
 		colors[col][PRED] 		= r; \
 		colors[col][PALPHA] 		= a; \
 		colors[col][BRIGHTNESS]	= (uint8_t)sqrt( \
-		                          double(r * r) * .236 + \
-		                          double(g * g) * .601 + \
-		                          double(b * b) * .163); \
+		                          double(r) *  double(r) * .236 + \
+		                          double(g) *  double(g) * .601 + \
+		                          double(b) *  double(b) * .163); \
 	} while (false)
 
 #define SETCOLORNOISE(col,r,g,b,a,n) do { \
@@ -24,9 +24,9 @@
 		colors[col][PALPHA] 		= a; \
 		colors[col][NOISE]		= n; \
 		colors[col][BRIGHTNESS]	= (uint8_t)sqrt( \
-		                          double(r * r) * .236 + \
-		                          double(g * g) * .601 + \
-		                          double(b * b) * .163); \
+		                          double(r) *  double(r) * .236 + \
+		                          double(g) *  double(g) * .601 + \
+		                          double(b) *  double(b) * .163); \
 	} while (false)
 
 // See header for description
@@ -39,7 +39,7 @@ void loadColors()
 	memset(colors, 0, sizeof colors);
 	SETCOLOR(AIR, 255,255,255,0);
 	SETCOLORNOISE(STONE, 128,128,128,255, 16);
-	SETCOLORNOISE(GRASS, 100,157,60,255, 14);
+	SETCOLORNOISE(GRASS, 100,150,60,255, 14);
 	SETCOLORNOISE(DIRT, 134,96,67,255, 22);
 	SETCOLORNOISE(COBBLESTONE, 115,115,115,255, 26);
 	SETCOLORNOISE(WOOD, 157,128,79,255, 11);
@@ -123,6 +123,10 @@ void loadColors()
 	SETCOLOR(90, 0,42,255,127);
 	SETCOLOR(91, 185,133,28,255);
 	SETCOLORNOISE(CAKE, 228, 205, 206, 255, 7);
+	SETCOLORNOISE(PINELEAVES, 44,84,44,160, 20); // Pine leaves
+	SETCOLORNOISE(BIRCHLEAVES, 85,124,60,170, 11); // Birch leaves
+	SETCOLOR(238, 70,50,32, 255); // Pine trunk
+	SETCOLORNOISE(239, 206,206,201, 255, 5); // Birch trunk
 	SETCOLOR(240, 244,137,54, 255); // Dyed wool
 	SETCOLOR(241, 200,75,210,255);
 	SETCOLOR(242, 120,158,241, 255);
@@ -292,8 +296,8 @@ bool loadBiomeColors(const char* path)
 		g_Leafcolor[i] = ((int)g_Leafcolor[i] * (int)colors[LEAVES][BRIGHTNESS]) / 255;
 	}
 	// Now re-calc brightness of those two
-	colors[GRASS][BRIGHTNESS] = GETBRIGHTNESS(g_Grasscolor);
-	colors[LEAVES][BRIGHTNESS] = GETBRIGHTNESS(g_Leafcolor);
+	colors[GRASS][BRIGHTNESS] = GETBRIGHTNESS(g_Grasscolor) - 5;
+	colors[LEAVES][BRIGHTNESS] = colors[PINELEAVES][BRIGHTNESS] = colors[BIRCHLEAVES][BRIGHTNESS] = GETBRIGHTNESS(g_Leafcolor) - 5;
 	printf("Loaded biome color maps from %s\n", path);
 	return true;
 }

@@ -17,9 +17,9 @@ extern uint8_t colors[256][8];
 #define BRIGHTNESS 5
 
 #define GETBRIGHTNESS(c) (uint8_t)sqrt( \
-                                        double(PRED[c] * PRED[c]) * .236 + \
-                                        double(PGREEN[c] * PGREEN[c]) * .601 + \
-                                        double(PBLUE[c] * PBLUE[c]) * .163)
+                                        double(PRED[c]) *  double(PRED[c]) * .236 + \
+                                        double(PGREEN[c]) *  double(PGREEN[c]) * .601 + \
+                                        double(PBLUE[c]) *  double(PBLUE[c]) * .163)
 
 void loadColors();
 bool loadColorsFromFile(const char *file);
@@ -57,6 +57,8 @@ bool loadBiomeColors(const char* path);
 #define SNOW 78
 #define FENCE 85
 #define CAKE 92
+#define PINELEAVES 236
+#define BIRCHLEAVES 237
 #define VOIDBLOCK 255 // This will hopefully never be a valid block id in the near future :-)
 
 #endif

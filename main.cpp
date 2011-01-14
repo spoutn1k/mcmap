@@ -3,7 +3,7 @@
  * v1.9+, 12-2010 by Zahl
  */
 
-#define VERSION "1.9.09"
+#define VERSION "1.9.10"
 
 #include "helper.h"
 #include "draw_png.h"
@@ -453,6 +453,14 @@ int main(int argc, char **argv)
 					uint16_t &offset = BIOMEAT(x,z);
 					memcpy(colors[GRASS], g_Grasscolor + offset * g_GrasscolorDepth, 3);
 					memcpy(colors[LEAVES], g_Leafcolor + offset * g_FoliageDepth, 3);
+					// Leaves: This is just an approximation to get different leaf colors at all
+					colors[PINELEAVES][PRED] = clamp(int32_t(colors[LEAVES][PRED]) - 17);
+					colors[PINELEAVES][PGREEN] = clamp(int32_t(colors[LEAVES][PGREEN]) - 12);
+					colors[PINELEAVES][PBLUE] = colors[LEAVES][PBLUE];
+					int32_t avg = GETBRIGHTNESS(colors[LEAVES]);
+					colors[BIRCHLEAVES][PRED] = clamp(int32_t(colors[LEAVES][PRED]) + (avg - int32_t(colors[LEAVES][PRED])) / 2 + 15);
+					colors[BIRCHLEAVES][PGREEN] = clamp(int32_t(colors[LEAVES][PGREEN]) + (avg - int32_t(colors[LEAVES][PGREEN])) / 2 + 16);
+					colors[BIRCHLEAVES][PBLUE] = clamp(int32_t(colors[LEAVES][PBLUE]) + (avg - int32_t(colors[LEAVES][PBLUE])) / 2 + 15);
 				}
 				//
 				const int bmpPosX = int((g_MapsizeZ - z - CHUNKSIZE_Z) * 2 + (x - CHUNKSIZE_X) * 2 + (splitImage ? -2 : bitmapStartX - cropLeft));

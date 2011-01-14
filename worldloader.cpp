@@ -274,13 +274,28 @@ static bool loadChunk(const char *file)
 			for (size_t y = (g_MapminY / 2) * 2; y < toY; ++y) {
 				const size_t oy = y - g_MapminY;
 				uint8_t &block = blockdata[y + (z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y];
-				// Wool block hack
-				if (block == WOOL) { // Special treatment
+				// Wool/wood/leaves block hack: Additional block data determines type of this block, here those get remapped to other block ids
+				// Ignore leaves for now if biomes are used, since I have no clue how the color shifting works then
+				if (block == WOOL || block == LOG || block == LEAVES) {
 					uint8_t col = (justData[(y / 2) + (z + (x * CHUNKSIZE_Z)) * (CHUNKSIZE_Y / 2)] >> ((y % 2) * 4)) & 0xF;
-					if (col != 0) {
-						*targetBlock++ = 239 + col;
-					} else {
-						*targetBlock++ = block;
+					if (block == WOOL) {
+						if (col != 0) {
+							*targetBlock++ = 239 + col;
+						} else {
+							*targetBlock++ = block;
+						}
+					} else if (block == LOG) {
+						if (col != 0) { // Map to pine or birch
+							*targetBlock++ = 237 + col;
+						} else {
+							*targetBlock++ = block;
+						}
+					} else /*if (block == LEAVES)*/ {
+						if ((col & 0x3) != 0) { // Map to pine or birch
+							*targetBlock++ = 235 + ((col & 0x3) - 1) % 2 + 1;
+						} else {
+							*targetBlock++ = block;
+						}
 					}
 				} else {
 					*targetBlock++ = block;
