@@ -5,11 +5,14 @@
 #include "colors.h"
 #include "globals.h"
 #include <list>
+#include <map>
 #include <cstring>
 #include <string>
 #include <cstdio>
+#include <zlib.h>
 
 #define CHUNKS_PER_BIOME_FILE 8
+#define REGIONSIZE 32
 
 using std::string;
 
@@ -30,19 +33,32 @@ namespace
 	};
 	typedef std::list<char *> charList;
 	typedef std::list<Chunk *> chunkList;
+	typedef std::map<uint32_t, uint32_t> chunkMap;
 
 	size_t lightsize;
 	chunkList chunks;
 
+	inline uint32_t _ntohl(uint8_t *val)
+	{
+		return (uint32_t(val[0]) << 24)
+		       + (uint32_t(val[1]) << 16)
+		       + (uint32_t(val[2]) << 8)
+		       + (uint32_t(val[3]));
+	}
 
 }
 
-static bool loadChunk(const char *file);
+static bool loadChunk(const char *streamOrFile, size_t len = 0);
 static void allocateTerrain();
 static void loadBiomeChunk(const char* path, int chunkX, int chunkZ);
+static bool loadAllRegions();
+static bool loadRegion(const char* file, bool mustExist, int &loadedChunks);
+static bool loadTerrainRegion(const char *fromPath, int &loadedChunks);
+static bool scanWorldDirectoryRegion(const char *fromPath);
 
 bool scanWorldDirectory(const char *fromPath)
 {
+	if (g_RegionFormat) return scanWorldDirectoryRegion(fromPath);
 	charList subdirs;
 	myFile file;
 	DIRHANDLE d = Dir::open((char *)fromPath, file);
@@ -135,8 +151,71 @@ bool scanWorldDirectory(const char *fromPath)
 	return true;
 }
 
+static bool scanWorldDirectoryRegion(const char *fromPath)
+{
+	// OK go
+	for (chunkList::iterator it = chunks.begin(); it != chunks.end(); it++) {
+		delete *it;
+	}
+	chunks.clear();
+	g_FromChunkX = g_FromChunkZ = 10000000;
+	g_ToChunkX   = g_ToChunkZ  = -10000000;
+	// Read subdirs now
+	string path(fromPath);
+	path.append("/region");
+	printf("Scanning world...\n");
+	myFile region;
+	DIRHANDLE sd = Dir::open((char *)path.c_str(), region);
+	if (sd != NULL) {
+		do { // Here we finally arrived at the region files
+			if (!region.isdir && region.name[0] == 'r' && region.name[1] == '.') { // Make sure filename is a region
+				char *s = region.name;
+				// Extract x coordinate from region filename
+				s += 2;
+				int valX = atoi(s) * REGIONSIZE;
+				// Extract z coordinate from region filename
+				while (*s != '.' && *s != '\0') {
+					++s;
+				}
+				int valZ = atoi(s+1) * REGIONSIZE;
+				if (valX > -4000 && valX < 4000 && valZ > -4000 && valZ < 4000) {
+					// Update bounds
+					if (valX < g_FromChunkX) {
+						g_FromChunkX = valX;
+					}
+					if (valX + 31 > g_ToChunkX) {
+						g_ToChunkX = valX + 31;
+					}
+					if (valZ < g_FromChunkZ) {
+						g_FromChunkZ = valZ;
+					}
+					if (valZ + 31 > g_ToChunkZ) {
+						g_ToChunkZ = valZ + 31;
+					}
+					string full = path + "/" + region.name;
+					chunks.push_back(new Chunk(full.c_str(), valX, valZ));
+				} else {
+					printf("Ignoring bad region at %d %d\n", valX, valZ);
+				}
+			}
+		} while (Dir::next(sd, (char *)path.c_str(), region));
+		Dir::close(sd);
+	}
+	if (g_RegionFormat) {
+		g_ToChunkX += REGIONSIZE;
+		g_ToChunkZ += REGIONSIZE;
+	} else {
+		g_ToChunkX++;
+		g_ToChunkZ++;
+	}
+	//
+	printf("Min: (%d|%d) Max: (%d|%d)\n", g_FromChunkX, g_FromChunkZ, g_ToChunkX, g_ToChunkZ);
+	return true;
+}
+
 bool loadEntireTerrain()
 {
+	if (g_RegionFormat) return loadAllRegions();
 	if (chunks.empty()) {
 		return false;
 	}
@@ -155,6 +234,7 @@ bool loadEntireTerrain()
 bool loadTerrain(const char *fromPath, int &loadedChunks)
 {
 	loadedChunks = 0;
+	if (g_RegionFormat) return loadTerrainRegion(fromPath, loadedChunks);
 	if (fromPath == NULL || *fromPath == '\0') {
 		return false;
 	}
@@ -179,44 +259,53 @@ bool loadTerrain(const char *fromPath, int &loadedChunks)
 	return true;
 }
 
-static bool loadChunk(const char *file)
+static bool loadChunk(const char *streamOrFile, size_t streamLen)
 {
-	bool ok = false; // Get path name for all required chunks
-	NBT chunk(file, ok);
+	bool ok = false;
+	NBT *chunkPointer;
+	if (streamLen == 0) { // File
+		chunkPointer = new NBT(streamOrFile, ok);
+	} else {
+		chunkPointer = new NBT((uint8_t*)streamOrFile, streamLen, true, ok);
+	}
 	if (!ok) {
 		return false; // chunk does not exist
 	}
+	NBT &chunk = *chunkPointer;
 	NBT_Tag *level = NULL;
 	ok = chunk.getCompound("Level", level);
 	if (!ok) {
+		printf("No level\n");
 		return false;
 	}
 	int32_t chunkX, chunkZ;
 	ok = level->getInt("xPos", chunkX);
 	ok = ok && level->getInt("zPos", chunkZ);
 	if (!ok) {
+		printf("No pos\n");
 		return false;
 	}
 	// Check if chunk is in desired bounds (not a chunk where the filename tells a different position)
 	if (chunkX < g_FromChunkX || chunkX >= g_ToChunkX || chunkZ < g_FromChunkZ || chunkZ >= g_ToChunkZ) {
-#ifdef _DEBUG
-		printf("Chunk %s is out of bounds. %d %d\n", file, chunkX, chunkZ);
-#endif
+		if (streamLen == 0) printf("Chunk is out of bounds. %d %d\n", chunkX, chunkZ);
 		return false; // Nope, its not...
 	}
 	uint8_t *blockdata, *lightdata, *skydata, *justData;
 	int32_t len;
 	ok = level->getByteArray("Blocks", blockdata, len);
 	if (!ok || len < CHUNKSIZE_X * CHUNKSIZE_Z * CHUNKSIZE_Y) {
+		printf("No blocks\n");
 		return false;
 	}
 	ok = level->getByteArray("Data", justData, len);
 	if (!ok || len < (CHUNKSIZE_X * CHUNKSIZE_Z * CHUNKSIZE_Y) / 2) {
+		printf("No block data\n");
 		return false;
 	}
 	if (g_Nightmode || g_Skylight) { // If nightmode, we need the light information too
 		ok = level->getByteArray("BlockLight", lightdata, len);
 		if (!ok || len < (CHUNKSIZE_X * CHUNKSIZE_Z * CHUNKSIZE_Y) / 2) {
+			printf("No block light\n");
 			return false;
 		}
 	}
@@ -409,6 +498,14 @@ uint64_t calcTerrainSize(int chunksX, int chunksZ)
 
 void calcBitmapOverdraw(int &left, int &right, int &top, int &bottom)
 {
+	if (g_RegionFormat) {
+		// TODO: rewrite this thing completely
+		left = 0;
+		right = 0;
+		top = 0;
+		bottom = 0;
+		return;
+	}
 	top = left = bottom = right = 0x0fffffff;
 	int val = 0;
 	for (chunkList::iterator it = chunks.begin(); it != chunks.end(); it++) {
@@ -508,7 +605,6 @@ void calcBitmapOverdraw(int &left, int &right, int &top, int &bottom)
 			}
 		}
 	}
-	//if (right > (CHUNKSIZE_X + CHUNKSIZE_Y) * 2) right -= (CHUNKSIZE_X + CHUNKSIZE_Y) * 2;
 }
 
 static void allocateTerrain()
@@ -563,6 +659,17 @@ static const int floor8(const int val)
 }
 
 /**
+ * Round down to the nearest multiple of 32, e.g. floor32(-5) == 32
+ */
+static const int floor32(const int val)
+{
+	if (val < 0) {
+		return ((val - (REGIONSIZE - 1)) / REGIONSIZE) * REGIONSIZE;
+	}
+	return (val / REGIONSIZE) * REGIONSIZE;
+}
+
+/**
  * Load all the 8x8-chunks-files containing biome information
  */
 void loadBiomeMap(const char* path)
@@ -584,6 +691,134 @@ void loadBiomeMap(const char* path)
 		}
 	}
 	printProgress(10, 10);
+}
+
+#define REGION_HEADER_SIZE REGIONSIZE * REGIONSIZE * 4
+#define DECOMPRESSED_BUFFER 150 * 1024
+#define COMPRESSED_BUFFER 16 * 1024
+/**
+ * Load all the 32x32-region-files containing chunks information
+ */
+static bool loadAllRegions()
+{
+	if (chunks.empty()) {
+		return false;
+	}
+	allocateTerrain();
+	const size_t max = chunks.size();
+	size_t count = 0;
+	printf("Loading all chunks..\n");
+	for (chunkList::iterator it = chunks.begin(); it != chunks.end(); it++) {
+		printProgress(count++, max);
+		int i;
+		loadRegion((**it).filename, true, i);
+	}
+	printProgress(10, 10);
+	return true;
+}
+
+/**
+ * Load all the 32x32 region files withing the specified bounds
+ */
+static bool loadTerrainRegion(const char *fromPath, int &loadedChunks)
+{
+	loadedChunks = 0;
+	if (fromPath == NULL || *fromPath == '\0') {
+		return false;
+	}
+	allocateTerrain();
+	size_t maxlen = strlen(fromPath) + 40;
+	char *path = new char[maxlen];
+
+	printf("Loading all chunks..\n");
+	//
+	const int tmpMin = -floor32(g_FromChunkX);
+	for (int x = floor32(g_FromChunkX); x <= floor32(g_ToChunkX); x += REGIONSIZE) {
+		printProgress(size_t(x + tmpMin), size_t(floor32(g_ToChunkX) + tmpMin));
+		for (int z = floor32(g_FromChunkZ); z <= floor32(g_ToChunkZ); z += REGIONSIZE) {
+			snprintf(path, maxlen, "%s/region/r.%d.%d.mcr", fromPath, int(x / REGIONSIZE), int(z / REGIONSIZE));
+			if (!loadRegion(path, false, loadedChunks)) {
+				snprintf(path, maxlen, "%s/region/r.%d.%d.data", fromPath, int(x / REGIONSIZE), int(z / REGIONSIZE));
+				loadRegion(path, false, loadedChunks);
+			}
+		}
+	}
+	return true;
+}
+
+static bool loadRegion(const char* file, bool mustExist, int &loadedChunks)
+{
+	uint8_t buffer[COMPRESSED_BUFFER], decompressedBuffer[DECOMPRESSED_BUFFER];
+	FILE *rp = fopen(file, "rb");
+	if (rp == NULL) {
+		if (mustExist) printf("Error opening region file %s\n", file);
+		return false;
+	}
+	if (fread(buffer, 4, REGIONSIZE * REGIONSIZE, rp) != REGIONSIZE * REGIONSIZE) {
+		printf("Header too short in %s\n", file);
+		return false;
+	}
+	// Sort chunks using a map, so we access the file as sequential as possible
+	chunkMap localChunks;
+	for (uint32_t i = 0; i < REGION_HEADER_SIZE; i += 4) {
+		uint32_t offset = (_ntohl(buffer + i) >> 8) * 4096;
+		if (offset == 0) continue;
+		localChunks[offset] = i;
+	}
+	if (localChunks.size() == 0) return false;
+	z_stream zlibStream;
+	for (chunkMap::iterator ci = localChunks.begin(); ci != localChunks.end(); ci++) {
+		uint32_t offset = ci->first;
+		// Not even needed. duh.
+		//uint32_t index = ci->second;
+		//int x = (**it).x + (index / 4) % REGIONSIZE;
+		//int z = (**it).z + (index / 4) / REGIONSIZE;
+		if (0 != fseek(rp, offset, SEEK_SET)) {
+			printf("Error seeking to chunk in region file %s\n", file);
+			continue;
+		}
+		if (1 != fread(buffer, 5, 1, rp)) {
+			printf("Error reading chunk size from region file %s\n", file);
+			continue;
+		}
+		uint32_t len = _ntohl(buffer);
+		uint8_t version = buffer[4];
+		if (len == 0) continue;
+		len--;
+		if (len > COMPRESSED_BUFFER) {
+			printf("Chunk too big in %s\n", file);
+			continue;
+		}
+		if (fread(buffer, 1, len, rp) != len) {
+			printf("Not enough input for chunk in %s\n", file);
+			continue;
+		}
+		if (version == 1 || version == 2) { // zlib/gzip deflate
+			memset(&zlibStream, 0, sizeof(z_stream));
+			zlibStream.next_out = (Bytef*)decompressedBuffer;
+			zlibStream.avail_out = DECOMPRESSED_BUFFER;
+			zlibStream.avail_in = len;
+			zlibStream.next_in = (Bytef*)buffer;
+
+			inflateInit2(&zlibStream, 32 + MAX_WBITS);
+			int status = inflate(&zlibStream, Z_FINISH); // decompress in one step
+			inflateEnd(&zlibStream);
+
+			if (status != Z_STREAM_END) {
+				printf("Error decompressing chunk from %s\n", file);
+				continue;
+			}
+
+			len = zlibStream.total_out;
+		} else {
+			printf("Unsupported McRegion version: %c\n", version);
+			continue;
+		}
+		if (loadChunk((char*)decompressedBuffer, len)) {
+			loadedChunks++;
+		}
+	}
+	return true;
 }
 
 static const inline uint16_t ntoh16(const uint16_t val)

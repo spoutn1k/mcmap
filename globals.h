@@ -21,6 +21,7 @@ extern size_t g_MapsizeY, g_MapminY, g_MapsizeZ, g_MapsizeX;
 
 extern int g_OffsetY; // y pixel offset in the final image for one y step in 3d array (2 or 3)
 
+extern bool g_RegionFormat;
 extern Orientation g_Orientation; // North, West, South, East
 extern bool g_Nightmode;
 extern bool g_Underground;

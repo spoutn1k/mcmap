@@ -47,7 +47,7 @@
  * Thanks :-)
  */
 
-// I feel like including these just for ntohs/ntohl is unneccessary,
+// I feel like including these just for ntohs/ntohl is unnecessary,
 // especially as you need two targets in the makefile then (unix and windows)
 /*
 #if defined(linux) || defined(unix)
@@ -107,7 +107,25 @@ NBT::NBT(const char *file, bool &success)
 	_type = tagCompound;
 	NBT_Tag::parseData(position, end);
 	if (position == NULL) {
-		printf("Error parsing NBT from file\n");
+		//printf("Error parsing NBT from file\n");
+	}
+	success = (position != NULL);
+}
+
+NBT::NBT(uint8_t * const file, size_t len, bool shared, bool &success)
+{
+	if (shared) {
+		_blob = NULL;
+	} else {
+		_blob = new uint8_t[len];
+		memcpy(_blob, file, len);
+	}
+	_bloblen = len;
+	uint8_t *position = file + 3, *end = file + len;
+	_type = tagCompound;
+	NBT_Tag::parseData(position, end);
+	if (position == NULL) {
+		//printf("Error parsing NBT from stream\n");
 	}
 	success = (position != NULL);
 }
@@ -115,7 +133,7 @@ NBT::NBT(const char *file, bool &success)
 NBT::~NBT()
 {
 	if (_blob != NULL) {
-		//printf("DELETE BLOB\n");
+		////printf("DELETE BLOB\n");
 		delete[] _blob;
 	}
 	if (_filename != NULL) {
@@ -151,7 +169,7 @@ bool NBT::save()
 	}
 	//remove(tmpfile);
 	delete[] tmpfile;
-	printf("Saved %s\n", _filename);
+	//printf("Saved %s\n", _filename);
 	return true;
 }
 */
@@ -212,13 +230,16 @@ void NBT_Tag::parseData(uint8_t* &position, const uint8_t *end, string *name)
 				delete tmp;
 				return;
 			}
-			//if (name != NULL) printf(" ** Adding %s to %s\n", thisname.c_str(), name->c_str());
+			if (name != NULL) {
+				//printf(" ** Adding %s to %s\n", thisname.c_str(), name->c_str());
+			}
 			(*_elems)[thisname] = tmp;
 		}
 		++position;
 		break;
 	case tagList: {
 		if (*position < 1 || *position > 10) {
+			//printf("Invalid list type!\n");
 			position = NULL;
 			return;
 		}
@@ -266,6 +287,7 @@ void NBT_Tag::parseData(uint8_t* &position, const uint8_t *end, string *name)
 		_len = _ntohl(position);
 		//printf("Array size is %d\n", (int)_len);
 		if (position + _len + 4 >= end) {
+			//printf("Too long b< %d bytes!\n", int((position + _len + 4) - end));
 			position = NULL;
 			return;
 		}
@@ -276,6 +298,7 @@ void NBT_Tag::parseData(uint8_t* &position, const uint8_t *end, string *name)
 		_len = _ntohs(position);
 		//printf("Stringlen is %d\n", (int)_len);
 		if (position + _len + 2 >= end) {
+			//printf("Too long!\n");
 			position = NULL;
 			return;
 		}
@@ -284,6 +307,7 @@ void NBT_Tag::parseData(uint8_t* &position, const uint8_t *end, string *name)
 		break;
 	case tagUnknown:
 	default:
+		//printf("UNKNOWN TAG!\n");
 		position = NULL;
 		break;
 	}
@@ -291,17 +315,17 @@ void NBT_Tag::parseData(uint8_t* &position, const uint8_t *end, string *name)
 
 NBT_Tag::~NBT_Tag()
 {
-	//printf("Tag Destructor for %p\n", this);
+	////printf("Tag Destructor for %p\n", this);
 	if (_elems) {
 		for (tagmap::iterator it = _elems->begin(); it != _elems->end(); it++) {
-			//printf("_elems Deleting %p\n", (it->second));
+			////printf("_elems Deleting %p\n", (it->second));
 			delete (it->second);
 		}
 		delete _elems;
 	}
 	if (_list) {
 		for (list<NBT_Tag *>::iterator it = _list->begin(); it != _list->end(); it++) {
-			//printf("_list Deleting %p\n", *it);
+			////printf("_list Deleting %p\n", *it);
 			delete *it;
 		}
 		delete _list;

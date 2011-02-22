@@ -62,6 +62,7 @@ private:
 	size_t _bloblen;
 public:
 	explicit NBT(const char *file, bool &success);
+	explicit NBT(uint8_t * const file, size_t len, bool shared, bool &success);
 	virtual ~NBT();
 	//bool save();
 };

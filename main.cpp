@@ -3,7 +3,7 @@
  * v1.9+, 12-2010 by Zahl
  */
 
-#define VERSION "1.9.10"
+#define VERSION "2.0"
 
 #include "helper.h"
 #include "draw_png.h"
@@ -187,6 +187,7 @@ int main(int argc, char **argv)
 		wholeworld = (g_FromChunkX == UNDEFINED || g_ToChunkX == UNDEFINED);
 	}
 	// ########## end of command line parsing ##########
+	if (g_Hell || g_ServerHell) g_UseBiomes = false;
 
 	printf("mcmap " VERSION "\n");
 
@@ -231,7 +232,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 	if (!isAlphaWorld(filename)) {
-		printf("Error: Given path does not contain an alpha world.\n");
+		printf("Error: Given path does not contain an alpha/beta world.\n");
 		return 1;
 	}
 	if (g_Hell) {
@@ -243,6 +244,14 @@ int main(int argc, char **argv)
 			return 1;
 		}
 		filename = tmp;
+	}
+	{
+		char tmp[1000];
+		snprintf(tmp, 1000, "%s/region", filename);
+		if (dirExists(tmp)) {
+			printf("McRegion world format detected.\n");
+			g_RegionFormat = true;
+		}
 	}
 	if (g_MapsizeY > CHUNKSIZE_Y) {
 		g_MapsizeY = CHUNKSIZE_Y;
