@@ -1,6 +1,6 @@
 /***
  * mcmap - create isometric maps of your minecraft alpha world
- * v1.9+, 12-2010 by Zahl
+ * v2.0, 12-2010 by Zahl
  */
 
 #define VERSION "2.0"
@@ -245,7 +245,7 @@ int main(int argc, char **argv)
 		}
 		filename = tmp;
 	}
-	{
+	{ // Figure out whether this is the old save format or McRegion
 		char tmp[1000];
 		snprintf(tmp, 1000, "%s/region", filename);
 		if (dirExists(tmp)) {
@@ -603,13 +603,17 @@ int main(int argc, char **argv)
 	return 0;
 }
 
+#ifdef _DEBUG
 static size_t gBlocksRemoved = 0;
+#endif
 void optimizeTerrain2()
 {
 	// Remove invisible blocks from map (covered by other blocks from isometric pov)
 	// Do so by "raytracing" every block from front to back..
 	printf("Optimizing terrain...\n");
+#ifdef _DEBUG
 	gBlocksRemoved = 0;
+#endif
 	printProgress(0, 10);
 	const int top = (int)g_MapsizeY;
 	uint8_t blocked[CHUNKSIZE_Y]; // Helper array to remember which block is blocked from being seen. This allows to traverse the array in a slightly more sequential way, which leads to better usage of the CPU cache
@@ -627,9 +631,11 @@ void optimizeTerrain2()
 			int highest = 0, lowest = 0xFF; // remember lowest and highest block which are visible to limit the Y-for-loop later
 			for (int j = 0; j < top; ++j) { // Go up
 				if (blocked[(j+offset) % top]) { // Block is hidden, remove
+#ifdef _DEBUG
 					if (*block != AIR) {
 						++gBlocksRemoved;
 					}
+#endif
 				} else { // block is not hidden by another block
 					if (*block != AIR && lowest == 0xFF) { // if it's not air, this is the lowest block to draw
 						lowest = j;
@@ -657,9 +663,11 @@ void optimizeTerrain2()
 			int highest = 0, lowest = 0xFF;
 			for (int j = 0; j < top; ++j) {
 				if (blocked[(j+offset) % top]) { // Block is hidden, remove
+#ifdef _DEBUG
 					if (*block != AIR) {
 						++gBlocksRemoved;
 					}
+#endif
 				} else {
 					if (*block != AIR && lowest == 0xFF) {
 						lowest = j;
@@ -678,7 +686,9 @@ void optimizeTerrain2()
 		printProgress(size_t(z + maxX), maxProgress);
 	}
 	printProgress(10, 10);
+#ifdef _DEBUG
 	printf("Removed %lu blocks\n", (unsigned long) gBlocksRemoved);
+#endif
 }
 
 void optimizeTerrain3()
@@ -686,7 +696,9 @@ void optimizeTerrain3()
 	// Remove invisible blocks from map (covered by other blocks from isometric pov)
 	// Do so by "raytracing" every block from front to back..
 	printf("Optimizing terrain...\n");
+#ifdef _DEBUG
 	gBlocksRemoved = 0;
+#endif
 	printProgress(0, 10);
 	const int top = (int)g_MapsizeY;
 	// Helper arrays to remember which block is blocked from being seen. This allows to traverse the array in a slightly more sequential way, which leads to better usage of the CPU cache
@@ -706,9 +718,11 @@ void optimizeTerrain3()
 			int highest = 0, lowest = 0xFF;
 			for (int j = 0; j < top; ++j) { // Go up
 				if (blocked[blockedOffset + (j+offset) % top]) { // Block is hidden, remove
+#ifdef _DEBUG
 					if (*block != AIR) {
 						++gBlocksRemoved;
 					}
+#endif
 				} else {
 					if (*block != AIR && lowest == 0xFF) {
 						lowest = j;
@@ -739,9 +753,11 @@ void optimizeTerrain3()
 			int highest = 0, lowest = 0xFF;
 			for (int j = 0; j < top; ++j) {
 				if (blocked[blockedOffset + (j+offset) % top]) {
+#ifdef _DEBUG
 					if (*block != AIR) {
 						++gBlocksRemoved;
 					}
+#endif
 				} else {
 					if (*block != AIR && lowest == 0xFF) {
 						lowest = j;
@@ -763,7 +779,9 @@ void optimizeTerrain3()
 		printProgress(size_t(z + maxX), maxProgress);
 	}
 	printProgress(10, 10);
+#ifdef _DEBUG
 	printf("Removed %lu blocks\n", (unsigned long) gBlocksRemoved);
+#endif
 }
 
 void undergroundMode(bool explore)

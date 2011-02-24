@@ -319,7 +319,7 @@ static bool loadChunk(const char *streamOrFile, size_t streamLen)
 	const int offsetx = (chunkX - g_FromChunkX) * CHUNKSIZE_X;
 	// Now read all blocks from this chunk and copy them to the world array
 	// Rotation introduces lots of if-else blocks here :-(
-	// Maybe make the macros functions and then use pointers....
+	// Maybe make the macros functions and then use pointers.... Probably not faster
 	for (int x = 0; x < CHUNKSIZE_X; ++x) {
 		for (int z = 0; z < CHUNKSIZE_Z; ++z) {
 			if (g_Hell || g_ServerHell) {
@@ -358,18 +358,18 @@ static bool loadChunk(const char *streamOrFile, size_t streamLen)
 			} else {
 				targetBlock = &BLOCKWEST(x + offsetx, 0, z + offsetz);
 			}
-			// Following code applies only to modes (ab)using the lightmap
+			// Following code applies only to modes (ab)using the lightmap, and for block remapping (wool color, trees, steps)
 			const size_t toY = g_MapsizeY + g_MapminY;
 			for (size_t y = (g_MapminY / 2) * 2; y < toY; ++y) {
 				const size_t oy = y - g_MapminY;
 				uint8_t &block = blockdata[y + (z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y];
 				// Wool/wood/leaves block hack: Additional block data determines type of this block, here those get remapped to other block ids
 				// Ignore leaves for now if biomes are used, since I have no clue how the color shifting works then
-				if (block == WOOL || block == LOG || block == LEAVES) {
+				if (block == WOOL || block == LOG || block == LEAVES || block == STEP || block == DOUBLESTEP) {
 					uint8_t col = (justData[(y / 2) + (z + (x * CHUNKSIZE_Z)) * (CHUNKSIZE_Y / 2)] >> ((y % 2) * 4)) & 0xF;
-					if (block == WOOL) {
-						if (col != 0) {
-							*targetBlock++ = 239 + col;
+					if (block == LEAVES) {
+						if ((col & 0x3) != 0) { // Map to pine or birch
+							*targetBlock++ = 235 + ((col & 0x3) - 1) % 2 + 1;
 						} else {
 							*targetBlock++ = block;
 						}
@@ -379,9 +379,25 @@ static bool loadChunk(const char *streamOrFile, size_t streamLen)
 						} else {
 							*targetBlock++ = block;
 						}
-					} else /*if (block == LEAVES)*/ {
-						if ((col & 0x3) != 0) { // Map to pine or birch
-							*targetBlock++ = 235 + ((col & 0x3) - 1) % 2 + 1;
+					} else if (block == WOOL) {
+						if (col != 0) {
+							*targetBlock++ = 239 + col;
+						} else {
+							*targetBlock++ = block;
+						}
+					} else if (block == STEP) {
+						if (col != 0) {
+							*targetBlock++ = 232 + col;
+						} else {
+							*targetBlock++ = block;
+						}
+					} else /*if (block == DOUBLESTEP)*/ {
+						if (col == 1) {
+							*targetBlock++ = SANDSTONE;
+						} else if (col == 2) {
+							*targetBlock++ = WOOD;
+						} else if (col == 3) {
+							*targetBlock++ = COBBLESTONE;
 						} else {
 							*targetBlock++ = block;
 						}

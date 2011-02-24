@@ -60,9 +60,9 @@ void loadColors()
 	SETCOLORNOISE(21, 102, 112, 134, 255, 10);
 	SETCOLORNOISE(22, 29, 71, 165, 255, 5);
 	SETCOLOR(23, 107, 107, 107, 255);
-	SETCOLORNOISE(24, 218, 210, 158, 255, 7);
+	SETCOLORNOISE(SANDSTONE, 218, 210, 158, 255, 7);
 	SETCOLORNOISE(25, 100, 67, 50, 255, 10);
-	//SETCOLOR(26, 50,222,136,255);
+	SETCOLOR(26, 175,116,116, 255);
 	//SETCOLOR(27, 50,222,222,255);
 	//SETCOLOR(28, 104,163,222,255);
 	//SETCOLOR(29, 120,120,222,255);
@@ -123,6 +123,11 @@ void loadColors()
 	SETCOLOR(90, 0,42,255,127);
 	SETCOLOR(91, 185,133,28,255);
 	SETCOLORNOISE(CAKE, 228, 205, 206, 255, 7);
+	SETCOLORNOISE(93, 151,147,147, 255, 2);
+	SETCOLORNOISE(94, 161,147,147, 255, 2);
+	SETCOLORNOISE(SANDSTEP, 218, 210, 158, 255, 7);
+	SETCOLORNOISE(WOODSTEP, 157,128,79,255, 11);
+	SETCOLORNOISE(COBBLESTEP, 115,115,115,255, 26);
 	SETCOLORNOISE(PINELEAVES, 44,84,44,160, 20); // Pine leaves
 	SETCOLORNOISE(BIRCHLEAVES, 85,124,60,170, 11); // Birch leaves
 	SETCOLOR(238, 70,50,32, 255); // Pine trunk
@@ -208,7 +213,8 @@ bool dumpColorsToFile(const char *file)
 				"# Actually, if you see any block has an alpha value of 254 you should leave it that way to prevent black artifacts.\n"
 				"# If you want to set alpha of grass to <255, use -blendall or you won't get what you expect.\n"
 				"# Noise is supposed to look normal using -noise 10\n"
-				"# Dyed wool ranges from ID 240 to 254, it's orange to black in the order described at http://www.minecraftwiki.net/wiki/Data_values#Wool\n\n");
+				"# Dyed wool ranges from ID 240 to 254, it's orange to black in the order described at http://www.minecraftwiki.net/wiki/Data_values#Wool\n"
+				"# half-steps of sand, wood and cobblestone are 233 to 235\n\n");
 	for (size_t i = 1; i < 255; ++i) {
 		uint8_t *c = colors[i];
 		if (i % 15 == 1) {
