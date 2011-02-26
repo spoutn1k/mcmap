@@ -16,6 +16,12 @@
 #ifdef _DEBUG
 #include <cassert>
 #endif
+#ifndef _WIN32
+#include <sys/stat.h>
+#endif
+#if defined(_WIN32) && !defined(__GNUC__)
+#  include <direct.h>
+#endif
 
 using std::string;
 
