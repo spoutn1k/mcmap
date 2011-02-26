@@ -1,9 +1,7 @@
 /***
- * mcmap - create isometric maps of your minecraft alpha world
- * v2.0, 12-2010 by Zahl
+ * mcmap - create isometric maps of your minecraft alpha/beta world
+ * v2.0a, 02-2011 by Zahl
  */
-
-#define VERSION "2.0"
 
 #include "helper.h"
 #include "draw_png.h"
@@ -91,7 +89,7 @@ int main(int argc, char **argv)
 				g_ToChunkZ = atoi(NEXTARG) + 1;
 			} else if (strcmp(option, "-night") == 0) {
 				g_Nightmode = true;
-			} else if (strcmp(option, "-cave") == 0 || strcmp(option, "-underground") == 0) {
+			} else if (strcmp(option, "-cave") == 0 || strcmp(option, "-caves") == 0 || strcmp(option, "-underground") == 0) {
 				g_Underground = true;
 			} else if (strcmp(option, "-blendcave") == 0 || strcmp(option, "-blendcaves") == 0) {
 				g_BlendUnderground = true;
@@ -176,6 +174,12 @@ int main(int argc, char **argv)
 				g_Orientation = West;
 			} else if (strcmp(option, "-3") == 0) {
 				g_OffsetY = 3;
+			} else if (strcmp(option, "-split") == 0) {
+				if (!MOREARGS(1)) {
+					printf("Error: %s needs a path argument, ie: %s tiles/\n", option, option);
+					return 1;
+				}
+				g_TilePath = NEXTARG;
 			} else if (strcmp(option, "-help") == 0 || strcmp(option, "-h") == 0 || strcmp(option, "-?") == 0) {
 				printHelp(argv[0]);
 				return 0;
@@ -239,7 +243,7 @@ int main(int argc, char **argv)
 		strcpy(tmp, filename);
 		strcat(tmp, "/DIM-1");
 		if (!dirExists(tmp)) {
-			printf("Error: This alpha world does not have a hell world yet. Build a portal first!\n");
+			printf("Error: This world does not have a hell world yet. Build a portal first!\n");
 			return 1;
 		}
 		filename = tmp;
@@ -347,18 +351,33 @@ int main(int argc, char **argv)
 		outfile = (char *) "output.png";
 	}
 
-	// open output file
-	FILE *fileHandle = fopen(outfile, (splitImage ? "w+b" : "wb"));
+	// open output file only if not doing the tiled output
+	FILE *fileHandle = NULL;
+	if (g_TilePath == NULL) {
+		fileHandle = fopen(outfile, (splitImage ? "w+b" : "wb"));
 
-	if (fileHandle == NULL) {
-		printf("Error opening '%s' for writing.\n", outfile);
-		return 1;
-	}
+		if (fileHandle == NULL) {
+			printf("Error opening '%s' for writing.\n", outfile);
+			return 1;
+		}
 
-	// This writes out the bitmap header and pre-allocates space if disk caching is used
-	if (!createImage(fileHandle, bitmapX, bitmapY, splitImage)) {
-		printf("Error allocating bitmap. Check if you have enough free disk space.\n");
-		return 1;
+		// This writes out the bitmap header and pre-allocates space if disk caching is used
+		if (!createImage(fileHandle, bitmapX, bitmapY, splitImage)) {
+			printf("Error allocating bitmap. Check if you have enough free disk space.\n");
+			return 1;
+		}
+	} else {
+		// This would mean tiled output
+#ifdef _WIN32
+		mkdir(g_TilePath);
+#else
+		mkdir(g_TilePath, 0755);
+#endif
+		if (!dirExists(g_TilePath)) {
+			printf("Error: '%s' does not exist.\n", g_TilePath);
+			return 1;
+		}
+		createImageBuffer(bitmapX, bitmapY, splitImage);
 	}
 
 	int cropLeft = 0, cropRight = 0, cropTop = 0, cropBottom = 0;
@@ -598,7 +617,7 @@ int main(int argc, char **argv)
 	}
 	// Saving
 	if (!splitImage) {
-		saveImage();
+		saveImage(cropLeft, cropRight, cropTop, cropBottom);
 	} else {
 		composeFinalImage();
 	}
@@ -1032,7 +1051,8 @@ void printHelp(char *binary)
 	   "  -biomecolors PATH  load grasscolor.png and foliagecolor.png from 'PATH'\n"
 	   "  -info NAME    Write information about map to file 'NAME' You can choose the\n"
 	   "                format by using file extensions .xml, .json or .txt (default)\n"
-	   "\n    WORLDPATH is the path of the desired alpha world.\n\n"
+	   "  -split PATH   create tiled output in given PATH (128x128 to 4096x4096)\n"
+	   "\n    WORLDPATH is the path of the desired alpha/beta world.\n\n"
 	   ////////////////////////////////////////////////////////////////////////////////
 	   "Examples:\n\n"
 #ifdef _WIN32

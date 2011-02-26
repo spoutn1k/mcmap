@@ -1,6 +1,8 @@
 #ifndef _GLOBALS_H_
 #define _GLOBALS_H_
 
+#define VERSION "2.0a"
+
 #include <stdint.h>
 #include <cstdlib>
 
@@ -43,5 +45,8 @@ extern int g_GrasscolorDepth, g_FoliageDepth;
 extern uint8_t *g_Terrain, *g_Light;
 // 2D array to store min and max block height per X/Z - it's 2 bytes per index, upper for highest, lower for lowest (don't ask!)
 extern uint16_t *g_HeightMap;
+
+// If output is to be split up (for google maps etc) this contains the path to output to, NULL otherwise
+extern char *g_TilePath;
 
 #endif

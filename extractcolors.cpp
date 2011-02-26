@@ -326,7 +326,7 @@ bool getTileRGBA(uint8_t *textures, int tilesize, int sauce_index, int &r, int &
 	r = r / n;
 	g = g / n;
 	b = b / n;
-	a = a / n; // Changed my mind again
+	a = a / n;
 	a = int(float(a) * (float(special_sauce[sauce_index][2]) / 10.0f));
 
 	for (int j = sy; j < (sy + tilesize); j++) {

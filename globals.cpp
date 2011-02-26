@@ -24,3 +24,5 @@ int g_GrasscolorDepth = 0, g_FoliageDepth = 0;
 
 uint8_t *g_Terrain = NULL, *g_Light = NULL;
 uint16_t *g_HeightMap = NULL;
+
+char *g_TilePath = NULL;

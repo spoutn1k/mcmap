@@ -19,8 +19,12 @@
 #  include <direct.h>
 #endif
 
+// Separate them in case I ever implement 16bit rendering
+#define CHANSPERPIXEL 4
+#define BYTESPERCHAN 1
+#define BYTESPERPIXEL 4
 
-#define PIXEL(x,y) (gImageBuffer[((x) + gOffsetX) * 4 + ((y) + gOffsetY) * gPngLocalLineWidth])
+#define PIXEL(x,y) (gImageBuffer[((x) + gOffsetX) * CHANSPERPIXEL + ((y) + gOffsetY) * gPngLocalLineWidthChans])
 
 namespace
 {
@@ -44,12 +48,17 @@ namespace
 			free(filename);
 		}
 	};
+	struct ImageTile {
+		FILE *fileHandle;
+		png_structp pngPtr;
+		png_infop pngInfo;
+	};
 	typedef std::list<ImagePart *> imageList;
 	imageList partialImages;
 
 	uint8_t *gImageBuffer = NULL;
-	int gPngLocalLineWidth = 0, gPngLocalWidth = 0, gPngLocalHeight = 0;
-	int gPngLineWidth = 0, gPngWidth = 0, gPngHeight = 0;
+	int gPngLocalLineWidthChans = 0, gPngLocalWidth = 0, gPngLocalHeight = 0;
+	int gPngLineWidthChans = 0, gPngWidth = 0, gPngHeight = 0;
 	int gOffsetX = 0, gOffsetY = 0;
 	uint64_t gPngSize = 0, gPngLocalSize = 0;
 	png_structp pngPtrMain = NULL; // Main image
@@ -81,17 +90,22 @@ namespace
 	void setStepBA(const size_t x, const size_t y, const uint8_t *color, const uint8_t *light, const uint8_t *dark);
 }
 
-bool createImage(FILE *fh, size_t width, size_t height, bool splitUp)
+void createImageBuffer(size_t width, size_t height, bool splitUp)
 {
 	gPngLocalWidth = gPngWidth = (int)width;
 	gPngLocalHeight = gPngHeight = (int)height;
-	gPngLocalLineWidth = gPngLineWidth = gPngWidth * 4;
-	gPngSize = gPngLocalSize = (uint64_t)gPngLineWidth * (uint64_t)gPngHeight;
+	gPngLocalLineWidthChans = gPngLineWidthChans = gPngWidth * CHANSPERPIXEL;
+	gPngSize = gPngLocalSize = (uint64_t)gPngLineWidthChans * (uint64_t)gPngHeight;
 	printf("Image dimensions are %dx%d, 32bpp, %.2fMiB\n", gPngWidth, gPngHeight, float(gPngSize / float(1024 * 1024)));
 	if (!splitUp) {
 		gImageBuffer = new uint8_t[gPngSize];
 		memset(gImageBuffer, 0, (size_t)gPngSize);
 	}
+}
+
+bool createImage(FILE *fh, size_t width, size_t height, bool splitUp)
+{
+	createImageBuffer(width, height, splitUp);
 	fseek64(fh, 0, SEEK_SET);
 	// Write header
 	pngPtrMain = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
@@ -114,41 +128,164 @@ bool createImage(FILE *fh, size_t width, size_t height, bool splitUp)
 
 	png_init_io(pngPtrMain, fh);
 
-	png_set_IHDR(pngPtrMain, pngInfoPtrMain, (uint32_t)width, (uint32_t)height,
-	             8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE,
-	             PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
-
-	png_text title_text;
-	title_text.compression = PNG_TEXT_COMPRESSION_NONE;
-	title_text.key = (png_charp)"Software";
-	title_text.text = (png_charp)"mcmap";
-	png_set_text(pngPtrMain, pngInfoPtrMain, &title_text, 1);
-
-	png_write_info(pngPtrMain, pngInfoPtrMain);
 	if (!splitUp) {
 		pngPtrCurrent = pngPtrMain;
 	}
+
 	return true;
 }
 
-bool saveImage()
+bool saveImage(int cropLeft, int cropRight, int cropTop, int cropBottom)
 {
-	if (setjmp(png_jmpbuf(pngPtrMain))) { // libpng will issue a longjmp on error, so code flow will end up
-		png_destroy_write_struct(&pngPtrMain, &pngInfoPtrMain); // here if something goes wrong in the code below
-		return false;
-	}
-	uint8_t *line = gImageBuffer;
-	printf("Writing to file...\n");
-	for (int y = 0; y < gPngHeight; ++y) {
-		if (y % 25 == 0) {
-			printProgress(size_t(y), size_t(gPngHeight));
+	if (g_TilePath == NULL) {
+		// Normal single-file output
+		if (setjmp(png_jmpbuf(pngPtrMain))) { // libpng will issue a longjmp on error, so code flow will end up
+			png_destroy_write_struct(&pngPtrMain, &pngInfoPtrMain); // here if something goes wrong in the code below
+			return false;
 		}
-		png_write_row(pngPtrMain, (png_bytep)line);
-		line += gPngLineWidth;
+
+		png_set_IHDR(pngPtrMain, pngInfoPtrMain,
+				uint32_t(gPngWidth - (cropLeft + cropRight)), uint32_t(gPngHeight - (cropTop + cropBottom)),
+				8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE,
+				PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+
+		png_text title_text;
+		title_text.compression = PNG_TEXT_COMPRESSION_NONE;
+		title_text.key = (png_charp)"Software";
+		title_text.text = (png_charp)"mcmap " VERSION;
+		png_set_text(pngPtrMain, pngInfoPtrMain, &title_text, 1);
+
+		png_write_info(pngPtrMain, pngInfoPtrMain);
+
+		uint8_t *srcLine = gImageBuffer + cropTop * gPngLineWidthChans + cropLeft * BYTESPERPIXEL;
+		printf("Writing to file...\n");
+		for (int y = cropTop + cropBottom; y < gPngHeight; ++y) {
+			if (y % 25 == 0) {
+				printProgress(size_t(y), size_t(gPngHeight));
+			}
+			png_write_row(pngPtrMain, (png_bytep)srcLine);
+			srcLine += gPngLineWidthChans;
+		}
+		printProgress(10, 10);
+		png_write_end(pngPtrMain, NULL);
+		png_destroy_write_struct(&pngPtrMain, &pngInfoPtrMain);
+		//
+	} else {
+		// Tiled output, suitable for google maps
+		printf("Writing to files...\n");
+		size_t tmpLen = strlen(g_TilePath) + 40;
+		char *tmpString = new char[tmpLen];
+		// Prepare a temporary buffer to copy the current line to, since we need the width to be a multiple of 4096
+		// and adjusting the whole image to that would be a waste of memory
+		const size_t tempWidth = ((gPngWidth - (cropLeft + cropRight + 5)) / 4096 + 1) * 4096;
+		const size_t tempWidthChans = tempWidth * CHANSPERPIXEL;
+		const size_t copyWidth = (gPngWidth - (cropLeft + cropRight)) * BYTESPERPIXEL;
+#ifdef _DEBUG
+		printf("Temp width: %d, copy width: %d\n", (int)tempWidthChans, (int)copyWidth);
+#endif
+		uint8_t *tempLine = new uint8_t[tempWidthChans];
+		memset(tempLine, 0, tempWidth * BYTESPERPIXEL);
+		// Source pointer
+		uint8_t *srcLine = gImageBuffer + cropTop * gPngLineWidthChans + cropLeft * BYTESPERPIXEL;
+		// Prepare an array of png structs that will output simultaneously to the various tiles
+		size_t sizeOffset[7], last = 0;
+		for (size_t i = 0; i < 7; ++i) {
+			sizeOffset[i] = last;
+			last += ((tempWidth - 1) / pow(2, 12 - i)) + 1;
+		}
+		ImageTile *tile = new ImageTile[sizeOffset[6]];
+		memset(tile, 0, sizeOffset[6] * sizeof(ImageTile));
+		const int imgHeight = gPngHeight - (cropTop + cropBottom);
+		const int imgWidth = gPngWidth - (cropLeft + cropRight);
+		for (int y = 0; y < imgHeight; ++y) {
+			if (y % 25 == 0) {
+				printProgress(size_t(y), size_t(gPngHeight - (cropTop + cropBottom)));
+			}
+			memcpy(tempLine, srcLine, copyWidth);
+			srcLine += gPngLineWidthChans;
+			// Handle all png files
+			if (y % 128 == 0) {
+				size_t start;
+				if (y % 4096 == 0) start = 0;
+				else if (y % 2048 == 0) start = 1;
+				else if (y % 1024 == 0) start = 2;
+				else if (y % 512 == 0) start = 3;
+				else if (y % 256 == 0) start = 4;
+				else start = 5;
+				for (size_t tileSize = start; tileSize < 6; ++tileSize) {
+					const size_t tileWidth = pow(2, 12 - tileSize);
+					for (size_t tileIndex = sizeOffset[tileSize]; tileIndex < sizeOffset[tileSize+1]; ++tileIndex) {
+						ImageTile &t = tile[tileIndex];
+						if (t.fileHandle != NULL) { // Unload/close first
+							//printf("Calling end with ptr == %p, y == %d, start == %d, tileSize == %d, tileIndex == %d, to == %d, numpng == %d\n",
+									//t.pngPtr, y, (int)start, (int)tileSize, (int)tileIndex, (int)sizeOffset[tileSize+1], (int)numpng);
+							png_write_end(t.pngPtr, NULL);
+							png_destroy_write_struct(&(t.pngPtr), &(t.pngInfo));
+							fclose(t.fileHandle);
+							t.fileHandle = NULL;
+						}
+						if (y < imgHeight && tileWidth * (tileIndex - sizeOffset[tileSize]) < size_t(imgWidth)) {
+							// Open new tile file for a while
+							snprintf(tmpString, tmpLen, "%s/x%dy%dz%d.png", g_TilePath,
+									int(tileIndex - sizeOffset[tileSize]), int((y / pow(2, 12 - tileSize))), int(tileSize));
+#ifdef _DEBUG
+							printf("Starting tile %s of size %d...\n", tmpString, (int)pow(2, 12 - tileSize));
+#endif
+							t.fileHandle = fopen(tmpString, "wb");
+							if (t.fileHandle == NULL) {
+								printf("Error opening file!\n");
+								return false;
+							}
+							t.pngPtr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+							if (t.pngPtr == NULL) {
+								printf("Error creating png write struct!\n");
+								return false;
+							}
+							if (setjmp(png_jmpbuf(t.pngPtr))) {
+								return false;
+							}
+							t.pngInfo = png_create_info_struct(t.pngPtr);
+							if (t.pngInfo == NULL) {
+								printf("Error creating png info struct!\n");
+								png_destroy_write_struct(&(t.pngPtr), NULL);
+								return false;
+							}
+							png_init_io(t.pngPtr, t.fileHandle);
+							png_set_IHDR(t.pngPtr, t.pngInfo,
+									uint32_t(pow(2, 12 - tileSize)), uint32_t(pow(2, 12 - tileSize)),
+									8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE,
+									PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+							png_write_info(t.pngPtr, t.pngInfo);
+						}
+					}
+				}
+			} // done preparing tiles
+			// Write data to all current tiles
+			for (size_t tileSize = 0; tileSize < 6; ++tileSize) {
+				const size_t tileWidth = pow(2, 12 - tileSize);
+				for (size_t tileIndex = sizeOffset[tileSize]; tileIndex < sizeOffset[tileSize+1]; ++tileIndex) {
+					if (tile[tileIndex].fileHandle == NULL) continue;
+					png_write_row(tile[tileIndex].pngPtr, png_bytep(tempLine + tileWidth * (tileIndex - sizeOffset[tileSize]) * CHANSPERPIXEL));
+				}
+			} // done writing line
+		} // done with whole image
+		// Now the last set of tiles is not finished, so do that manually
+		memset(tempLine, 0, tempWidth * BYTESPERPIXEL);
+		for (size_t tileSize = 0; tileSize < 6; ++tileSize) {
+			const size_t tileWidth = pow(2, 12 - tileSize);
+			for (size_t tileIndex = sizeOffset[tileSize]; tileIndex < sizeOffset[tileSize+1]; ++tileIndex) {
+				if (tile[tileIndex].fileHandle == NULL) continue;
+				const int imgEnd = (((imgHeight - 1) / tileWidth) + 1) * tileWidth;
+				for (int i = imgHeight; i < imgEnd; ++i) {
+					png_write_row(tile[tileIndex].pngPtr, png_bytep(tempLine));
+				}
+				png_write_end(tile[tileIndex].pngPtr, NULL);
+				png_destroy_write_struct(&(tile[tileIndex].pngPtr), &(tile[tileIndex].pngInfo));
+				fclose(tile[tileIndex].fileHandle);
+			}
+		}
+		printProgress(10, 10);
 	}
-	printProgress(10, 10);
-	png_write_end(pngPtrMain, NULL);
-	png_destroy_write_struct(&pngPtrMain, &pngInfoPtrMain);
 	return true;
 }
 
@@ -188,8 +325,8 @@ int loadImagePart(int startx, int starty, int width, int height)
 	// alloc mem for image and open tempfile
 	gPngLocalWidth = width;
 	gPngLocalHeight = height;
-	gPngLocalLineWidth = gPngLocalWidth * 4;
-	uint64_t size = (uint64_t)gPngLocalLineWidth * (uint64_t)gPngLocalHeight;
+	gPngLocalLineWidthChans = gPngLocalWidth * CHANSPERPIXEL;
+	uint64_t size = (uint64_t)gPngLocalLineWidthChans * (uint64_t)gPngLocalHeight;
 	printf("Creating temporary image: %dx%d, 32bpp, %.2fMiB\n", gPngLocalWidth, gPngLocalHeight, float(size / float(1024 * 1024)));
 	if (gImageBuffer == NULL) {
 		gImageBuffer = new uint8_t[size];
@@ -253,7 +390,7 @@ bool saveImagePart()
 	uint8_t *line = gImageBuffer;
 	for (int y = 0; y < gPngLocalHeight; ++y) {
 		png_write_row(pngPtrCurrent, (png_bytep)line);
-		line += gPngLocalLineWidth;
+		line += gPngLocalLineWidthChans;
 	}
 	png_write_end(pngPtrCurrent, NULL);
 	png_destroy_write_struct(&pngPtrCurrent, &info_ptr);
@@ -280,8 +417,8 @@ bool discardImagePart()
 
 bool composeFinalImage()
 {
-	uint8_t *lineWrite = new uint8_t[gPngLineWidth];
-	uint8_t *lineRead = new uint8_t[gPngLineWidth];
+	uint8_t *lineWrite = new uint8_t[gPngLineWidthChans];
+	uint8_t *lineRead = new uint8_t[gPngLineWidthChans];
 	if (setjmp(png_jmpbuf(pngPtrMain))) { // libpng will issue a longjmp on error, so code flow will end up
 		delete[] lineWrite;
 		delete[] lineRead;
@@ -294,7 +431,7 @@ bool composeFinalImage()
 			printProgress(size_t(y), size_t(gPngHeight));
 		}
 		// paint each image on this one
-		memset(lineWrite, 0, gPngLineWidth);
+		memset(lineWrite, 0, gPngLineWidthChans);
 		// the partial images are kept in this list. they're already in the correct order in which they have to me merged and blended
 		for (imageList::iterator it = partialImages.begin(); it != partialImages.end(); it++) {
 			ImagePart *img = *it;
@@ -320,11 +457,11 @@ bool composeFinalImage()
 			// Read next line from current image chunk
 			png_read_row(img->pngPtr, (png_bytep)lineRead, NULL);
 			// Now this puts all the pixels in the right spot of the current line of the final image
-			const uint8_t *end = lineWrite + (img->x + img->width) * 4;
+			const uint8_t *end = lineWrite + (img->x + img->width) * CHANSPERPIXEL;
 			uint8_t *read = lineRead;
-			for (uint8_t *write = lineWrite + (img->x * 4); write < end; write += 4) {
+			for (uint8_t *write = lineWrite + (img->x * CHANSPERPIXEL); write < end; write += CHANSPERPIXEL) {
 				blend(write, read);
-				read += 4;
+				read += CHANSPERPIXEL;
 			}
 			// Now check if we're done with this image chunk
 			if (--(img->height) == 0) { // if so, close and discard
@@ -339,7 +476,7 @@ bool composeFinalImage()
 	}
 	printProgress(10, 10);
 	png_write_end(pngPtrMain, NULL);
-	png_destroy_write_struct(&pngPtrMain, NULL);
+	png_destroy_write_struct(&pngPtrMain, &pngInfoPtrMain);
 	delete[] lineWrite;
 	delete[] lineRead;
 	return true;
@@ -349,7 +486,7 @@ uint64_t calcImageSize(int mapChunksX, int mapChunksZ, size_t mapHeight, int &pi
 {
 	pixelsX = (mapChunksX * CHUNKSIZE_X + mapChunksZ * CHUNKSIZE_Z) * 2 + (tight ? 3 : 10);
 	pixelsY = (mapChunksX * CHUNKSIZE_X + mapChunksZ * CHUNKSIZE_Z + int(mapHeight) * g_OffsetY) + (tight ? 3 : 10);
-	return uint64_t(pixelsX) * 4 * uint64_t(pixelsY);
+	return uint64_t(pixelsX) * BYTESPERPIXEL * uint64_t(pixelsY);
 }
 
 void setPixel(size_t x, size_t y, uint8_t color, float fsub)
@@ -362,9 +499,9 @@ void setPixel(size_t x, size_t y, uint8_t color, float fsub)
 	//	  D L
 	// First determine how much the color has to be lightened up or darkened
 	int sub = int(fsub * (float(colors[color][BRIGHTNESS]) / 323.0f + .21f)); // The brighter the color, the stronger the impact
-	uint8_t L[4], D[4], c[4];
+	uint8_t L[CHANSPERPIXEL], D[CHANSPERPIXEL], c[CHANSPERPIXEL];
 	// Now make a local copy of the color that we can modify just for this one block
-	memcpy(c, colors[color], 4);
+	memcpy(c, colors[color], BYTESPERPIXEL);
 	modColor(c, sub);
 	if (g_BlendAll) {
 		// Then check the block type, as some types will be drawn differently
@@ -394,8 +531,8 @@ void setPixel(size_t x, size_t y, uint8_t color, float fsub)
 		}
 		// All the above blocks didn't need the shaded down versions of the color, so we only calc them here
 		// They are for the sides of blocks
-		memcpy(L, c, 4);
-		memcpy(D, c, 4);
+		memcpy(L, c, BYTESPERPIXEL);
+		memcpy(D, c, BYTESPERPIXEL);
 		modColor(L, -17);
 		modColor(D, -27);
 		// A few more blocks with special handling... Those need the two colors we just mixed
@@ -439,8 +576,8 @@ void setPixel(size_t x, size_t y, uint8_t color, float fsub)
 		}
 		// All the above blocks didn't need the shaded down versions of the color, so we only calc them here
 		// They are for the sides of blocks
-		memcpy(L, c, 4);
-		memcpy(D, c, 4);
+		memcpy(L, c, BYTESPERPIXEL);
+		memcpy(D, c, BYTESPERPIXEL);
 		modColor(L, -17);
 		modColor(D, -27);
 		// A few more blocks with special handling... Those need the two colors we just mixed
@@ -466,16 +603,16 @@ void setPixel(size_t x, size_t y, uint8_t color, float fsub)
 	if (c[PALPHA] == 255) { // Fully opaque - faster
 		// Top row
 		uint8_t *pos = &PIXEL(x, y);
-		for (size_t i = 0; i < 4; ++i, pos += 4) {
-			memcpy(pos, c, 4);
+		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
+			memcpy(pos, c, BYTESPERPIXEL);
 			if (noise) {
 				modColor(pos, rand() % (noise * 2) - noise);
 			}
 		}
 		// Second row
 		pos = &PIXEL(x, y+1);
-		for (size_t i = 0; i < 4; ++i, pos += 4) {
-			memcpy(pos, (i < 2 ? D : L), 4);
+		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
+			memcpy(pos, (i < 2 ? D : L), BYTESPERPIXEL);
 			// The weird check here is to get the pattern right, as the noise should be stronger
 			// every other row, but take into account the isometric perspective
 			if (noise) {
@@ -484,16 +621,16 @@ void setPixel(size_t x, size_t y, uint8_t color, float fsub)
 		}
 		// Third row
 		pos = &PIXEL(x, y+2);
-		for (size_t i = 0; i < 4; ++i, pos += 4) {
-			memcpy(pos, (i < 2 ? D : L), 4);
+		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
+			memcpy(pos, (i < 2 ? D : L), BYTESPERPIXEL);
 			if (noise) {
 				modColor(pos, rand() % (noise * 2) - noise * (i == 0 || i == 3 ? 2 : 1));
 			}
 		}
 		// Last row
 		pos = &PIXEL(x, y+3);
-		for (size_t i = 0; i < 4; ++i, pos += 4) {
-			memcpy(pos, (i < 2 ? D : L), 4);
+		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
+			memcpy(pos, (i < 2 ? D : L), BYTESPERPIXEL);
 			// The weird check here is to get the pattern right, as the noise should be stronger
 			// every other row, but take into account the isometric perspective
 			if (noise) {
@@ -503,7 +640,7 @@ void setPixel(size_t x, size_t y, uint8_t color, float fsub)
 	} else { // Not opaque, use slower blending code
 		// Top row
 		uint8_t *pos = &PIXEL(x, y);
-		for (size_t i = 0; i < 4; ++i, pos += 4) {
+		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
 			blend(pos, c);
 			if (noise) {
 				modColor(pos, rand() % (noise * 2) - noise);
@@ -511,7 +648,7 @@ void setPixel(size_t x, size_t y, uint8_t color, float fsub)
 		}
 		// Second row
 		pos = &PIXEL(x, y+1);
-		for (size_t i = 0; i < 4; ++i, pos += 4) {
+		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
 			blend(pos, (i < 2 ? D : L));
 			if (noise) {
 				modColor(pos, rand() % (noise * 2) - noise * (i == 0 || i == 3 ? 1 : 2));
@@ -519,7 +656,7 @@ void setPixel(size_t x, size_t y, uint8_t color, float fsub)
 		}
 		// Third row
 		pos = &PIXEL(x, y+2);
-		for (size_t i = 0; i < 4; ++i, pos += 4) {
+		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
 			blend(pos, (i < 2 ? D : L));
 			if (noise) {
 				modColor(pos, rand() % (noise * 2) - noise * (i == 0 || i == 3 ? 2 : 1));
@@ -527,7 +664,7 @@ void setPixel(size_t x, size_t y, uint8_t color, float fsub)
 		}
 		// Last row
 		pos = &PIXEL(x, y+3);
-		for (size_t i = 0; i < 4; ++i, pos += 4) {
+		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
 			blend(pos, (i < 2 ? D : L));
 			if (noise) {
 				modColor(pos, rand() % (noise * 2) - noise * (i == 0 || i == 3 ? 1 : 2));
@@ -546,13 +683,13 @@ void blendPixel(size_t x, size_t y, uint8_t color, float fsub)
 	// D D L L
 	// D D L L
 	//	  D L
-	uint8_t L[4], D[4], c[4];
+	uint8_t L[CHANSPERPIXEL], D[CHANSPERPIXEL], c[CHANSPERPIXEL];
 	// Now make a local copy of the color that we can modify just for this one block
-	memcpy(c, colors[color], 4);
+	memcpy(c, colors[color], BYTESPERPIXEL);
 	c[PALPHA] = clamp(int(float(c[PALPHA]) * fsub)); // The brighter the color, the stronger the impact
 	// They are for the sides of blocks
-	memcpy(L, c, 4);
-	memcpy(D, c, 4);
+	memcpy(L, c, BYTESPERPIXEL);
+	memcpy(D, c, BYTESPERPIXEL);
 	modColor(L, -17);
 	modColor(D, -27);
 	// In case the user wants noise, calc the strength now, depending on the desired intensity and the block's brightness
@@ -562,7 +699,7 @@ void blendPixel(size_t x, size_t y, uint8_t color, float fsub)
 	}
 	// Top row
 	uint8_t *pos = &PIXEL(x, y);
-	for (size_t i = 0; i < 4; ++i, pos += 4) {
+	for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
 		blend(pos, c);
 		if (noise) {
 			modColor(pos, rand() % (noise * 2) - noise);
@@ -570,7 +707,7 @@ void blendPixel(size_t x, size_t y, uint8_t color, float fsub)
 	}
 	// Second row
 	pos = &PIXEL(x, y+1);
-	for (size_t i = 0; i < 4; ++i, pos += 4) {
+	for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
 		blend(pos, (i < 2 ? D : L));
 		if (noise) {
 			modColor(pos, rand() % (noise * 2) - noise * (i == 0 || i == 3 ? 1 : 2));
@@ -584,7 +721,7 @@ namespace
 	inline void blend(uint8_t *destination, const uint8_t *source)
 	{
 		if (destination[PALPHA] == 0 || source[PALPHA] == 255) {
-			memcpy(destination, source, 4);
+			memcpy(destination, source, BYTESPERPIXEL);
 			return;
 		}
 #		define BLEND(ca,aa,cb) uint8_t(((size_t(ca) * size_t(aa)) + (size_t(255 - aa) * size_t(cb))) / 255)
@@ -614,8 +751,8 @@ namespace
 	{
 		// Top row (second row)
 		uint8_t *pos = &PIXEL(x, y+1);
-		for (size_t i = 0; i < 13; i += 4) {
-			memcpy(pos+i, color, 4);
+		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
+			memcpy(pos, color, BYTESPERPIXEL);
 		}
 	}
 
@@ -623,20 +760,20 @@ namespace
 	{
 		// Maybe the orientation should be considered when drawing, but it probably isn't worth the efford
 		uint8_t *pos = &PIXEL(x+2, y+1);
-		memcpy(pos, color, 4);
+		memcpy(pos, color, BYTESPERPIXEL);
 		pos = &PIXEL(x+2, y+2);
-		memcpy(pos, color, 4);
+		memcpy(pos, color, BYTESPERPIXEL);
 	}
 
 	void setFlower(const size_t x, const size_t y, const uint8_t *color)
 	{
 		uint8_t *pos = &PIXEL(x, y+1);
-		memcpy(pos+4, color, 4);
-		memcpy(pos+12, color, 4);
+		memcpy(pos+(CHANSPERPIXEL), color, BYTESPERPIXEL);
+		memcpy(pos+(CHANSPERPIXEL*3), color, BYTESPERPIXEL);
 		pos = &PIXEL(x+2, y+2);
-		memcpy(pos, color, 4);
+		memcpy(pos, color, BYTESPERPIXEL);
 		pos = &PIXEL(x+1, y+3);
-		memcpy(pos, color, 4);
+		memcpy(pos, color, BYTESPERPIXEL);
 	}
 
 	void setFire(const size_t x, const size_t y, uint8_t *color, uint8_t *light, uint8_t *dark)
@@ -644,27 +781,27 @@ namespace
 		// This basically just leaves out a few pixels
 		// Top row
 		uint8_t *pos = &PIXEL(x, y);
-		for (size_t i = 0; i < 13; i += 8) {
-			blend(pos+i, color);
+		for (size_t i = 0; i < 2; ++i, pos += CHANSPERPIXEL * 2) {
+			blend(pos, color);
 		}
 		// Second and third row
 		for (size_t i = 1; i < 3; ++i) {
 			pos = &PIXEL(x, y+i);
 			blend(pos, dark);
-			blend(pos+(4*i), dark);
-			blend(pos+12, light);
+			blend(pos+(CHANSPERPIXEL*i), dark);
+			blend(pos+(CHANSPERPIXEL*3), light);
 		}
 		// Last row
 		pos = &PIXEL(x, y+3);
-		blend(pos+8, light);
+		blend(pos+(CHANSPERPIXEL*2), light);
 	}
 
 	void setGrass(const size_t x, const size_t y, const uint8_t *color, const uint8_t *light, const uint8_t *dark, const int &sub)
 	{
 		// this will make grass look like dirt from the side
-		uint8_t L[4], D[4];
-		memcpy(L, colors[DIRT], 4);
-		memcpy(D, colors[DIRT], 4);
+		uint8_t L[CHANSPERPIXEL], D[CHANSPERPIXEL];
+		memcpy(L, colors[DIRT], BYTESPERPIXEL);
+		memcpy(D, colors[DIRT], BYTESPERPIXEL);
 		modColor(L, sub - 15);
 		modColor(D, sub - 25);
 		// consider noise
@@ -674,56 +811,56 @@ namespace
 		}
 		// Top row
 		uint8_t *pos = &PIXEL(x, y);
-		for (size_t i = 0; i < 4; ++i, pos += 4) {
-			memcpy(pos, color, 4);
+		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
+			memcpy(pos, color, BYTESPERPIXEL);
 			if (noise) {
 				modColor(pos, rand() % (noise * 2) - noise);
 			}
 		}
 		// Second row
 		pos = &PIXEL(x, y+1);
-		memcpy(pos, dark, 4);
-		memcpy(pos+4, dark, 4);
-		memcpy(pos+8, light, 4);
-		memcpy(pos+12, light, 4);
+		memcpy(pos, dark, BYTESPERPIXEL);
+		memcpy(pos+CHANSPERPIXEL, dark, BYTESPERPIXEL);
+		memcpy(pos+CHANSPERPIXEL*2, light, BYTESPERPIXEL);
+		memcpy(pos+CHANSPERPIXEL*3, light, BYTESPERPIXEL);
 		// Third row
 		pos = &PIXEL(x, y+2);
-		memcpy(pos, D, 4);
-		memcpy(pos+4, D, 4);
-		memcpy(pos+8, L, 4);
-		memcpy(pos+12, L, 4);
+		memcpy(pos, D, BYTESPERPIXEL);
+		memcpy(pos+CHANSPERPIXEL, D, BYTESPERPIXEL);
+		memcpy(pos+CHANSPERPIXEL*2, L, BYTESPERPIXEL);
+		memcpy(pos+CHANSPERPIXEL*3, L, BYTESPERPIXEL);
 		// Last row
 		pos = &PIXEL(x, y+3);
-		memcpy(pos, D, 4);
-		memcpy(pos+4, D, 4);
-		memcpy(pos+8, L, 4);
-		memcpy(pos+12, L, 4);
+		memcpy(pos, D, BYTESPERPIXEL);
+		memcpy(pos+CHANSPERPIXEL, D, BYTESPERPIXEL);
+		memcpy(pos+CHANSPERPIXEL*2, L, BYTESPERPIXEL);
+		memcpy(pos+CHANSPERPIXEL*3, L, BYTESPERPIXEL);
 	}
 
 	void setFence(const size_t x, const size_t y, const uint8_t *color)
 	{
 		// First row
 		uint8_t *pos = &PIXEL(x, y);
-		blend(pos+4, color);
-		blend(pos+8, color);
+		blend(pos+CHANSPERPIXEL, color);
+		blend(pos+CHANSPERPIXEL*2, color);
 		// Second row
 		pos = &PIXEL(x+1, y+1);
 		blend(pos, color);
 		// Third row
 		pos = &PIXEL(x, y+2);
-		blend(pos+4, color);
-		blend(pos+8, color);
+		blend(pos+CHANSPERPIXEL, color);
+		blend(pos+CHANSPERPIXEL*2, color);
 	}
 
 	void setStep(const size_t x, const size_t y, const uint8_t *color, const uint8_t *light, const uint8_t *dark)
 	{
 		uint8_t *pos = &PIXEL(x, y+1);
-		for (size_t i = 0; i < 13; i += 4) {
-			memcpy(pos+i, color, 4);
+		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
+			memcpy(pos, color, BYTESPERPIXEL);
 		}
 		pos = &PIXEL(x, y+2);
-		for (size_t i = 0; i < 13; i += 4) {
-			memcpy(pos+i, color, 4);
+		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
+			memcpy(pos, color, BYTESPERPIXEL);
 		}
 	}
 
@@ -731,7 +868,7 @@ namespace
 	{
 		uint8_t *pos = &PIXEL(x+1, y+2);
 		blend(pos, color);
-		blend(pos+4, color);
+		blend(pos+CHANSPERPIXEL, color);
 	}
 
 	// The g_BlendAll versions of the block set functions
@@ -740,8 +877,8 @@ namespace
 	{
 		// Top row (second row)
 		uint8_t *pos = &PIXEL(x, y+1);
-		for (size_t i = 0; i < 13; i += 4) {
-			blend(pos+i, color);
+		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
+			blend(pos, color);
 		}
 	}
 
@@ -757,8 +894,8 @@ namespace
 	void setFlowerBA(const size_t x, const size_t y, const uint8_t *color)
 	{
 		uint8_t *pos = &PIXEL(x, y+1);
-		blend(pos+4, color);
-		blend(pos+12, color);
+		blend(pos+CHANSPERPIXEL, color);
+		blend(pos+CHANSPERPIXEL*3, color);
 		pos = &PIXEL(x+2, y+2);
 		blend(pos, color);
 		pos = &PIXEL(x+1, y+3);
@@ -768,9 +905,9 @@ namespace
 	void setGrassBA(const size_t x, const size_t y, const uint8_t *color, const uint8_t *light, const uint8_t *dark, const int &sub)
 	{
 		// this will make grass look like dirt from the side
-		uint8_t L[4], D[4];
-		memcpy(L, colors[DIRT], 4);
-		memcpy(D, colors[DIRT], 4);
+		uint8_t L[CHANSPERPIXEL], D[CHANSPERPIXEL];
+		memcpy(L, colors[DIRT], BYTESPERPIXEL);
+		memcpy(D, colors[DIRT], BYTESPERPIXEL);
 		modColor(L, sub - 15);
 		modColor(D, sub - 25);
 		// consider noise
@@ -780,7 +917,7 @@ namespace
 		}
 		// Top row
 		uint8_t *pos = &PIXEL(x, y);
-		for (size_t i = 0; i < 4; ++i, pos += 4) {
+		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
 			blend(pos, color);
 			if (noise) {
 				modColor(pos, rand() % (noise * 2) - noise);
@@ -789,32 +926,32 @@ namespace
 		// Second row
 		pos = &PIXEL(x, y+1);
 		blend(pos, dark);
-		blend(pos+4, dark);
-		blend(pos+8, light);
-		blend(pos+12, light);
+		blend(pos+CHANSPERPIXEL, dark);
+		blend(pos+CHANSPERPIXEL*2, light);
+		blend(pos+CHANSPERPIXEL*3, light);
 		// Third row
 		pos = &PIXEL(x, y+2);
 		blend(pos, D);
-		blend(pos+4, D);
-		blend(pos+8, L);
-		blend(pos+12, L);
+		blend(pos+CHANSPERPIXEL, D);
+		blend(pos+CHANSPERPIXEL*2, L);
+		blend(pos+CHANSPERPIXEL*3, L);
 		// Last row
 		pos = &PIXEL(x, y+3);
 		blend(pos, D);
-		blend(pos+4, D);
-		blend(pos+8, L);
-		blend(pos+12, L);
+		blend(pos+CHANSPERPIXEL, D);
+		blend(pos+CHANSPERPIXEL*2, L);
+		blend(pos+CHANSPERPIXEL*3, L);
 	}
 
 	void setStepBA(const size_t x, const size_t y, const uint8_t *color, const uint8_t *light, const uint8_t *dark)
 	{
 		uint8_t *pos = &PIXEL(x, y+1);
-		for (size_t i = 0; i < 10; i += 4) {
-			blend(pos+i, color);
+		for (size_t i = 0; i < 3; ++i, pos += CHANSPERPIXEL) {
+			blend(pos, color);
 		}
 		pos = &PIXEL(x, y+2);
-		for (size_t i = 0; i < 10; i += 4) {
-			blend(pos+i, color);
+		for (size_t i = 0; i < 10; ++i, pos += CHANSPERPIXEL) {
+			blend(pos, color);
 		}
 	}
 
