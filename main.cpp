@@ -25,13 +25,12 @@ namespace
 {
 	// For bright edge
 	bool gAtBottomLeft = true, gAtBottomRight = true;
-	int gTotalFromChunkX, gTotalFromChunkZ, gTotalToChunkX, gTotalToChunkZ;
 }
 
 // Macros to make code more readable
 #define BLOCK_AT_MAPEDGE(x,z) (((z)+1 == g_MapsizeZ-CHUNKSIZE_Z && gAtBottomLeft) || ((x)+1 == g_MapsizeX-CHUNKSIZE_X && gAtBottomRight))
 
-void optimizeTerrain2();
+void optimizeTerrain2(int cropLeft, int cropRight);
 void optimizeTerrain3();
 void undergroundMode(bool explore);
 bool prepareNextArea(int splitX, int splitZ, int &bitmapStartX, int &bitmapStartY);
@@ -274,10 +273,10 @@ int main(int argc, char **argv)
 	g_MapsizeY -= g_MapminY;
 	// Whole area to be rendered, in chunks
 	// If -mem is omitted or high enough, this won't be needed
-	gTotalFromChunkX = g_FromChunkX;
-	gTotalFromChunkZ = g_FromChunkZ;
-	gTotalToChunkX = g_ToChunkX;
-	gTotalToChunkZ = g_ToChunkZ;
+	g_TotalFromChunkX = g_FromChunkX;
+	g_TotalFromChunkZ = g_FromChunkZ;
+	g_TotalToChunkX = g_ToChunkX;
+	g_TotalToChunkZ = g_ToChunkZ;
 	// Don't allow ridiculously small values for big maps
 	if (memlimit && memlimit < 200000000 && memlimit < size_t(g_MapsizeX * g_MapsizeZ * 150000)) {
 		printf("Need at least %d MiB of RAM to render a map of that size.\n", int(float(g_MapsizeX) * g_MapsizeZ * .15f + 1));
@@ -303,14 +302,6 @@ int main(int argc, char **argv)
 	// Mem check
 	int bitmapX, bitmapY;
 	uint64_t bitmapBytes = calcImageSize(g_ToChunkX - g_FromChunkX, g_ToChunkZ - g_FromChunkZ, g_MapsizeY, bitmapX, bitmapY, false);
-	// Cropping
-	int cropLeft = 0, cropRight = 0, cropTop = 0, cropBottom = 0;
-	if (wholeworld) {
-		calcBitmapOverdraw(cropLeft, cropRight, cropTop, cropBottom);
-		bitmapX -= (cropLeft + cropRight);
-		bitmapY -= (cropTop + cropBottom);
-		bitmapBytes = uint64_t(bitmapX) * 4 * uint64_t(bitmapY);
-	}
 	bool splitImage = false;
 	int numSplitsX = 0;
 	int numSplitsZ = 0;
@@ -332,8 +323,8 @@ int main(int argc, char **argv)
 		}
 		// Split up map more and more, until the mem requirements are satisfied
 		for (numSplitsX = 1, numSplitsZ = 2;;) {
-			int subAreaX = ((gTotalToChunkX - gTotalFromChunkX) + (numSplitsX - 1)) / numSplitsX;
-			int subAreaZ = ((gTotalToChunkZ - gTotalFromChunkZ) + (numSplitsZ - 1)) / numSplitsZ;
+			int subAreaX = ((g_TotalToChunkX - g_TotalFromChunkX) + (numSplitsX - 1)) / numSplitsX;
+			int subAreaZ = ((g_TotalToChunkZ - g_TotalFromChunkZ) + (numSplitsZ - 1)) / numSplitsZ;
 			int subBitmapX, subBitmapY;
 			if (splitImage && calcImageSize(subAreaX, subAreaZ, g_MapsizeY, subBitmapX, subBitmapY, true) + calcTerrainSize(subAreaX, subAreaZ) <= memlimit) {
 				break; // Found a suitable partitioning
@@ -370,6 +361,8 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
+	int cropLeft = 0, cropRight = 0, cropTop = 0, cropBottom = 0;
+
 	// Now here's the loop rendering all the required parts of the image.
 	// All the vars previously used to define bounds will be set on each loop,
 	// to create something like a virtual window inside the map.
@@ -377,7 +370,7 @@ int main(int argc, char **argv)
 
 		int bitmapStartX = 3, bitmapStartY = 5;
 		if (numSplitsX) { // virtual window is set here
-			// Set current chunk bounds according to number of splits. returns true if we're done
+			// Set current chunk bounds according to number of splits. returns true if everything has been rendered already
 			if (prepareNextArea(numSplitsX, numSplitsZ, bitmapStartX, bitmapStartY)) {
 				break;
 			}
@@ -387,7 +380,7 @@ int main(int argc, char **argv)
 				const int sizex = (g_ToChunkX - g_FromChunkX) * CHUNKSIZE_X * 2 + (g_ToChunkZ - g_FromChunkZ) * CHUNKSIZE_Z * 2;
 				const int sizey = (int)g_MapsizeY * g_OffsetY + (g_ToChunkX - g_FromChunkX) * CHUNKSIZE_X + (g_ToChunkZ - g_FromChunkZ) * CHUNKSIZE_Z + 3;
 				if (sizex <= 0 || sizey <= 0) continue; // Don't know if this is right, might also be that the size calulation is plain wrong
-				int res = loadImagePart(bitmapStartX - cropLeft, bitmapStartY - cropTop, sizex, sizey);
+				int res = loadImagePart(bitmapStartX, bitmapStartY, sizex, sizey);
 				if (res == -1) {
 					printf("Error loading partial image to render to.\n");
 					return 1;
@@ -429,6 +422,11 @@ int main(int argc, char **argv)
 			}
 		}
 
+		// Calc cropping here if image fits in memory to make optimization faster
+		if (numSplitsX == 0) {
+			calcBitmapOverdraw(cropLeft, cropRight, cropTop, cropBottom);
+		}
+
 		// Also load biome data if requested
 		if (g_UseBiomes) {
 			loadBiomeMap(biomepath);
@@ -440,15 +438,15 @@ int main(int argc, char **argv)
 		}
 
 		if (g_OffsetY == 2) {
-			optimizeTerrain2();
+			optimizeTerrain2(cropLeft, cropRight);
 		} else {
 			optimizeTerrain3();
 		}
 
 		if (infoFile != NULL) {
 			writeInfoFile(infoFile,
-					int((g_MapsizeZ - CHUNKSIZE_Z) * 2 -CHUNKSIZE_X * 2 + (bitmapStartX - cropLeft)),
-					int(g_MapsizeY * g_OffsetY - CHUNKSIZE_Z - CHUNKSIZE_X + (bitmapStartY - cropTop)) + 2);
+					int((g_MapsizeZ - CHUNKSIZE_Z) * 2 -CHUNKSIZE_X * 2 + bitmapStartX),
+					int(g_MapsizeY * g_OffsetY - CHUNKSIZE_Z - CHUNKSIZE_X + bitmapStartY) + 2);
 			infoFile = NULL;
 		}
 
@@ -472,8 +470,8 @@ int main(int argc, char **argv)
 					colors[BIRCHLEAVES][PBLUE] = clamp(int32_t(colors[LEAVES][PBLUE]) + (avg - int32_t(colors[LEAVES][PBLUE])) / 2 + 15);
 				}
 				//
-				const int bmpPosX = int((g_MapsizeZ - z - CHUNKSIZE_Z) * 2 + (x - CHUNKSIZE_X) * 2 + (splitImage ? -2 : bitmapStartX - cropLeft));
-				int bmpPosY = int(g_MapsizeY * g_OffsetY + z + x - CHUNKSIZE_Z - CHUNKSIZE_X + (splitImage ? 0 : bitmapStartY - cropTop)) + 2 - (HEIGHTAT(x, z) & 0xFF) * g_OffsetY;
+				const int bmpPosX = int((g_MapsizeZ - z - CHUNKSIZE_Z) * 2 + (x - CHUNKSIZE_X) * 2 + (splitImage ? -2 : bitmapStartX));
+				int bmpPosY = int(g_MapsizeY * g_OffsetY + z + x - CHUNKSIZE_Z - CHUNKSIZE_X + (splitImage ? 0 : bitmapStartY)) + 2 - (HEIGHTAT(x, z) & 0xFF) * g_OffsetY;
 				const size_t max = (HEIGHTAT(x, z) & 0xFF00) >> 8;
 				for (size_t y = uint8_t(HEIGHTAT(x, z)); y < max; ++y) {
 					bmpPosY -= g_OffsetY;
@@ -561,7 +559,7 @@ int main(int argc, char **argv)
 			}
 			undergroundMode(true);
 			if (g_OffsetY == 2) {
-				optimizeTerrain2();
+				optimizeTerrain2(cropLeft, cropRight);
 			} else {
 				optimizeTerrain3();
 			}
@@ -569,8 +567,8 @@ int main(int argc, char **argv)
 			for (size_t x = CHUNKSIZE_X; x < g_MapsizeX - CHUNKSIZE_X; ++x) {
 				printProgress(x - CHUNKSIZE_X, g_MapsizeX);
 				for (size_t z = CHUNKSIZE_Z; z < g_MapsizeZ - CHUNKSIZE_Z; ++z) {
-					const size_t bmpPosX = (g_MapsizeZ - z - CHUNKSIZE_Z) * 2 + (x - CHUNKSIZE_X) * 2 + (splitImage ? -2 : bitmapStartX) - cropLeft;
-					size_t bmpPosY = g_MapsizeY * g_OffsetY + z + x - CHUNKSIZE_Z - CHUNKSIZE_X + (splitImage ? 0 : bitmapStartY) - cropTop;
+					const size_t bmpPosX = (g_MapsizeZ - z - CHUNKSIZE_Z) * 2 + (x - CHUNKSIZE_X) * 2 + (splitImage ? -2 : bitmapStartX);
+					size_t bmpPosY = g_MapsizeY * g_OffsetY + z + x - CHUNKSIZE_Z - CHUNKSIZE_X + (splitImage ? 0 : bitmapStartY);
 					for (size_t y = 0; y < MIN(g_MapsizeY, 64); ++y) {
 						uint8_t &c = BLOCKAT(x, y, z);
 						if (c != AIR) { // If block is not air (colors[c][3] != 0)
@@ -592,6 +590,13 @@ int main(int argc, char **argv)
 			break;
 		}
 	}
+	// Drawing complete, now either just save the image or compose it if disk caching was used
+	// Cropping
+	if (wholeworld) {
+		// TODO: Technically now cropping would also work with -from/-to... Maybe add an option for it
+		calcBitmapOverdraw(cropLeft, cropRight, cropTop, cropBottom);
+	}
+	// Saving
 	if (!splitImage) {
 		saveImage();
 	} else {
@@ -606,7 +611,7 @@ int main(int argc, char **argv)
 #ifdef _DEBUG
 static size_t gBlocksRemoved = 0;
 #endif
-void optimizeTerrain2()
+void optimizeTerrain2(int cropLeft, int cropRight)
 {
 	// Remove invisible blocks from map (covered by other blocks from isometric pov)
 	// Do so by "raytracing" every block from front to back..
@@ -622,7 +627,7 @@ void optimizeTerrain2()
 	const int maxZ = int(g_MapsizeZ - CHUNKSIZE_Z - 1);
 	const size_t maxProgress = size_t(maxX + maxZ);
 	// The following needs to be done twice, once for the X-Y front plane, once for the Z-Y front plane
-	for (int x = CHUNKSIZE_X; x <= maxX; ++x) {
+	for (int x = CHUNKSIZE_X + cropLeft / 2; x <= maxX; ++x) {
 		memset(blocked, 0, CHUNKSIZE_Y); // Nothing is blocked at first
 		int offset = 0; // The helper array had to be shifted after each run of the inner most loop. As this is expensive, just use an offset that increases instead
 		const int max2 = MIN(max, x - CHUNKSIZE_X + 1); // Block array will be traversed diagonally, determine how many blocks there are
@@ -654,7 +659,7 @@ void optimizeTerrain2()
 		printProgress(size_t(x), maxProgress);
 	}
 	// Again for other plane
-	for (int z = CHUNKSIZE_Z; z < maxZ; ++z) {
+	for (int z = CHUNKSIZE_Z + cropRight / 2; z < maxZ; ++z) {
 		memset(blocked, 0, CHUNKSIZE_Y);
 		int offset = 0;
 		const int max2 = MIN(max, z - CHUNKSIZE_Z + 1);
@@ -886,50 +891,50 @@ bool prepareNextArea(int splitX, int splitZ, int &bitmapStartX, int &bitmapStart
 		gAtBottomRight = (currentAreaX + 1 == splitX);
 	}
 	// Calc size of area to be rendered (in chunks)
-	const int subAreaX = ((gTotalToChunkX - gTotalFromChunkX) + (splitX - 1)) / splitX;
-	const int subAreaZ = ((gTotalToChunkZ - gTotalFromChunkZ) + (splitZ - 1)) / splitZ;
+	const int subAreaX = ((g_TotalToChunkX - g_TotalFromChunkX) + (splitX - 1)) / splitX;
+	const int subAreaZ = ((g_TotalToChunkZ - g_TotalFromChunkZ) + (splitZ - 1)) / splitZ;
 	// Adjust values for current frame. order depends on map orientation
-	g_FromChunkX = gTotalFromChunkX + subAreaX * (g_Orientation == North || g_Orientation == West ? currentAreaX : splitX - (currentAreaX + 1));
-	g_FromChunkZ = gTotalFromChunkZ + subAreaZ * (g_Orientation == North || g_Orientation == East ? currentAreaZ : splitZ - (currentAreaZ + 1));
+	g_FromChunkX = g_TotalFromChunkX + subAreaX * (g_Orientation == North || g_Orientation == West ? currentAreaX : splitX - (currentAreaX + 1));
+	g_FromChunkZ = g_TotalFromChunkZ + subAreaZ * (g_Orientation == North || g_Orientation == East ? currentAreaZ : splitZ - (currentAreaZ + 1));
 	g_ToChunkX = g_FromChunkX + subAreaX;
 	g_ToChunkZ = g_FromChunkZ + subAreaZ;
 	// Bounds checking
-	if (g_ToChunkX > gTotalToChunkX) {
-		g_ToChunkX = gTotalToChunkX;
+	if (g_ToChunkX > g_TotalToChunkX) {
+		g_ToChunkX = g_TotalToChunkX;
 	}
-	if (g_ToChunkZ > gTotalToChunkZ) {
-		g_ToChunkZ = gTotalToChunkZ;
+	if (g_ToChunkZ > g_TotalToChunkZ) {
+		g_ToChunkZ = g_TotalToChunkZ;
 	}
 	printf("Pass %d of %d...\n", int(currentAreaX + (currentAreaZ * splitX) + 1), int(splitX * splitZ));
 	// Calulate pixel offsets in bitmap. Forgot how this works right after writing it, really.
 	if (g_Orientation == North) {
-		bitmapStartX = (((gTotalToChunkZ - gTotalFromChunkZ) * CHUNKSIZE_Z) * 2 + 3)   // Center of image..
-		               - ((g_ToChunkZ - gTotalFromChunkZ) * CHUNKSIZE_Z * 2)  // increasing Z pos will move left in bitmap
-		               + ((g_FromChunkX - gTotalFromChunkX) * CHUNKSIZE_X * 2);  // increasing X pos will move right in bitmap
-		bitmapStartY = 5 + (g_FromChunkZ - gTotalFromChunkZ) * CHUNKSIZE_Z + (g_FromChunkX - gTotalFromChunkX) * CHUNKSIZE_X;
+		bitmapStartX = (((g_TotalToChunkZ - g_TotalFromChunkZ) * CHUNKSIZE_Z) * 2 + 3)   // Center of image..
+		               - ((g_ToChunkZ - g_TotalFromChunkZ) * CHUNKSIZE_Z * 2)  // increasing Z pos will move left in bitmap
+		               + ((g_FromChunkX - g_TotalFromChunkX) * CHUNKSIZE_X * 2);  // increasing X pos will move right in bitmap
+		bitmapStartY = 5 + (g_FromChunkZ - g_TotalFromChunkZ) * CHUNKSIZE_Z + (g_FromChunkX - g_TotalFromChunkX) * CHUNKSIZE_X;
 	} else if (g_Orientation == South) {
-		const int tox = gTotalToChunkX - g_FromChunkX + gTotalFromChunkX;
-		const int toz = gTotalToChunkZ - g_FromChunkZ + gTotalFromChunkZ;
+		const int tox = g_TotalToChunkX - g_FromChunkX + g_TotalFromChunkX;
+		const int toz = g_TotalToChunkZ - g_FromChunkZ + g_TotalFromChunkZ;
 		const int fromx = tox - (g_ToChunkX - g_FromChunkX);
 		const int fromz = toz - (g_ToChunkZ - g_FromChunkZ);
-		bitmapStartX = (((gTotalToChunkZ - gTotalFromChunkZ) * CHUNKSIZE_Z) * 2 + 3)   // Center of image..
-		               - ((toz - gTotalFromChunkZ) * CHUNKSIZE_Z * 2)  // increasing Z pos will move left in bitmap
-		               + ((fromx - gTotalFromChunkX) * CHUNKSIZE_X * 2);  // increasing X pos will move right in bitmap
-		bitmapStartY = 5 + (fromz - gTotalFromChunkZ) * CHUNKSIZE_Z + (fromx - gTotalFromChunkX) * CHUNKSIZE_X;
+		bitmapStartX = (((g_TotalToChunkZ - g_TotalFromChunkZ) * CHUNKSIZE_Z) * 2 + 3)   // Center of image..
+		               - ((toz - g_TotalFromChunkZ) * CHUNKSIZE_Z * 2)  // increasing Z pos will move left in bitmap
+		               + ((fromx - g_TotalFromChunkX) * CHUNKSIZE_X * 2);  // increasing X pos will move right in bitmap
+		bitmapStartY = 5 + (fromz - g_TotalFromChunkZ) * CHUNKSIZE_Z + (fromx - g_TotalFromChunkX) * CHUNKSIZE_X;
 	} else if (g_Orientation == East) {
-		const int tox = gTotalToChunkX - g_FromChunkX + gTotalFromChunkX;
+		const int tox = g_TotalToChunkX - g_FromChunkX + g_TotalFromChunkX;
 		const int fromx = tox - (g_ToChunkX - g_FromChunkX);
-		bitmapStartX = (((gTotalToChunkX - gTotalFromChunkX) * CHUNKSIZE_X) * 2 + 3)   // Center of image..
-		               - ((tox - gTotalFromChunkX) * CHUNKSIZE_X * 2)  // increasing Z pos will move left in bitmap
-		               + ((g_FromChunkZ - gTotalFromChunkZ) * CHUNKSIZE_Z * 2);  // increasing X pos will move right in bitmap
-		bitmapStartY = 5 + (fromx - gTotalFromChunkX) * CHUNKSIZE_X + (g_FromChunkZ - gTotalFromChunkZ) * CHUNKSIZE_Z;
+		bitmapStartX = (((g_TotalToChunkX - g_TotalFromChunkX) * CHUNKSIZE_X) * 2 + 3)   // Center of image..
+		               - ((tox - g_TotalFromChunkX) * CHUNKSIZE_X * 2)  // increasing Z pos will move left in bitmap
+		               + ((g_FromChunkZ - g_TotalFromChunkZ) * CHUNKSIZE_Z * 2);  // increasing X pos will move right in bitmap
+		bitmapStartY = 5 + (fromx - g_TotalFromChunkX) * CHUNKSIZE_X + (g_FromChunkZ - g_TotalFromChunkZ) * CHUNKSIZE_Z;
 	} else {
-		const int toz = gTotalToChunkZ - g_FromChunkZ + gTotalFromChunkZ;
+		const int toz = g_TotalToChunkZ - g_FromChunkZ + g_TotalFromChunkZ;
 		const int fromz = toz - (g_ToChunkZ - g_FromChunkZ);
-		bitmapStartX = (((gTotalToChunkX - gTotalFromChunkX) * CHUNKSIZE_X) * 2 + 3)   // Center of image..
-		               - ((g_ToChunkX - gTotalFromChunkX) * CHUNKSIZE_X * 2)  // increasing Z pos will move left in bitmap
-		               + ((fromz - gTotalFromChunkZ) * CHUNKSIZE_Z * 2);  // increasing X pos will move right in bitmap
-		bitmapStartY = 5 + (g_FromChunkX - gTotalFromChunkX) * CHUNKSIZE_X + (fromz - gTotalFromChunkZ) * CHUNKSIZE_Z;
+		bitmapStartX = (((g_TotalToChunkX - g_TotalFromChunkX) * CHUNKSIZE_X) * 2 + 3)   // Center of image..
+		               - ((g_ToChunkX - g_TotalFromChunkX) * CHUNKSIZE_X * 2)  // increasing Z pos will move left in bitmap
+		               + ((fromz - g_TotalFromChunkZ) * CHUNKSIZE_Z * 2);  // increasing X pos will move right in bitmap
+		bitmapStartY = 5 + (g_FromChunkX - g_TotalFromChunkX) * CHUNKSIZE_X + (fromz - g_TotalFromChunkZ) * CHUNKSIZE_Z;
 	}
 	return false; // not done yet, return false
 }

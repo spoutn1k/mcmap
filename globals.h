@@ -13,7 +13,8 @@ enum Orientation {
 	West
 };
 
-
+// Global area of world being rendered
+extern int g_TotalFromChunkX, g_TotalFromChunkZ, g_TotalToChunkX, g_TotalToChunkZ;
 // Current area of world being rendered
 extern int g_FromChunkX, g_FromChunkZ, g_ToChunkX, g_ToChunkZ;
 // size of that area in blocks (no offset)
