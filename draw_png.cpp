@@ -19,11 +19,6 @@
 #  include <direct.h>
 #endif
 
-// Separate them in case I ever implement 16bit rendering
-#define CHANSPERPIXEL 4
-#define BYTESPERCHAN 1
-#define BYTESPERPIXEL 4
-
 #define PIXEL(x,y) (gImageBuffer[((x) + gOffsetX) * CHANSPERPIXEL + ((y) + gOffsetY) * gPngLocalLineWidthChans])
 
 namespace
@@ -105,7 +100,15 @@ void createImageBuffer(size_t width, size_t height, bool splitUp)
 
 bool createImage(FILE *fh, size_t width, size_t height, bool splitUp)
 {
-	createImageBuffer(width, height, splitUp);
+	gPngLocalWidth = gPngWidth = (int)width;
+	gPngLocalHeight = gPngHeight = (int)height;
+	gPngLocalLineWidthChans = gPngLineWidthChans = gPngWidth * 4;
+	gPngSize = gPngLocalSize = (uint64_t)gPngLineWidthChans * (uint64_t)gPngHeight;
+	printf("Image dimensions are %dx%d, 32bpp, %.2fMiB\n", gPngWidth, gPngHeight, float(gPngSize / float(1024 * 1024)));
+	if (!splitUp) {
+		gImageBuffer = new uint8_t[gPngSize];
+		memset(gImageBuffer, 0, (size_t)gPngSize);
+	}
 	fseek64(fh, 0, SEEK_SET);
 	// Write header
 	pngPtrMain = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
@@ -128,14 +131,24 @@ bool createImage(FILE *fh, size_t width, size_t height, bool splitUp)
 
 	png_init_io(pngPtrMain, fh);
 
+	png_set_IHDR(pngPtrMain, pngInfoPtrMain, (uint32_t)width, (uint32_t)height,
+	             8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE,
+	             PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+
+	png_text title_text;
+	title_text.compression = PNG_TEXT_COMPRESSION_NONE;
+	title_text.key = (png_charp)"Software";
+	title_text.text = (png_charp)"mcmap";
+	png_set_text(pngPtrMain, pngInfoPtrMain, &title_text, 1);
+
+	png_write_info(pngPtrMain, pngInfoPtrMain);
 	if (!splitUp) {
 		pngPtrCurrent = pngPtrMain;
 	}
-
 	return true;
 }
 
-bool saveImage(int cropLeft, int cropRight, int cropTop, int cropBottom)
+bool saveImage()
 {
 	if (g_TilePath == NULL) {
 		// Normal single-file output
@@ -144,22 +157,9 @@ bool saveImage(int cropLeft, int cropRight, int cropTop, int cropBottom)
 			return false;
 		}
 
-		png_set_IHDR(pngPtrMain, pngInfoPtrMain,
-				uint32_t(gPngWidth - (cropLeft + cropRight)), uint32_t(gPngHeight - (cropTop + cropBottom)),
-				8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE,
-				PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
-
-		png_text title_text;
-		title_text.compression = PNG_TEXT_COMPRESSION_NONE;
-		title_text.key = (png_charp)"Software";
-		title_text.text = (png_charp)"mcmap " VERSION;
-		png_set_text(pngPtrMain, pngInfoPtrMain, &title_text, 1);
-
-		png_write_info(pngPtrMain, pngInfoPtrMain);
-
-		uint8_t *srcLine = gImageBuffer + cropTop * gPngLineWidthChans + cropLeft * BYTESPERPIXEL;
+		uint8_t *srcLine = gImageBuffer;
 		printf("Writing to file...\n");
-		for (int y = cropTop + cropBottom; y < gPngHeight; ++y) {
+		for (int y = 0; y < gPngHeight; ++y) {
 			if (y % 25 == 0) {
 				printProgress(size_t(y), size_t(gPngHeight));
 			}
@@ -177,16 +177,15 @@ bool saveImage(int cropLeft, int cropRight, int cropTop, int cropBottom)
 		char *tmpString = new char[tmpLen];
 		// Prepare a temporary buffer to copy the current line to, since we need the width to be a multiple of 4096
 		// and adjusting the whole image to that would be a waste of memory
-		const size_t tempWidth = ((gPngWidth - (cropLeft + cropRight + 5)) / 4096 + 1) * 4096;
+		const size_t tempWidth = ((gPngWidth - 5) / 4096 + 1) * 4096;
 		const size_t tempWidthChans = tempWidth * CHANSPERPIXEL;
-		const size_t copyWidth = (gPngWidth - (cropLeft + cropRight)) * BYTESPERPIXEL;
 #ifdef _DEBUG
-		printf("Temp width: %d, copy width: %d\n", (int)tempWidthChans, (int)copyWidth);
+		printf("Temp width: %d, original width: %d\n", (int)tempWidthChans, (int)gPngLineWidthChans);
 #endif
 		uint8_t *tempLine = new uint8_t[tempWidthChans];
 		memset(tempLine, 0, tempWidth * BYTESPERPIXEL);
 		// Source pointer
-		uint8_t *srcLine = gImageBuffer + cropTop * gPngLineWidthChans + cropLeft * BYTESPERPIXEL;
+		uint8_t *srcLine = gImageBuffer;
 		// Prepare an array of png structs that will output simultaneously to the various tiles
 		size_t sizeOffset[7], last = 0;
 		for (size_t i = 0; i < 7; ++i) {
@@ -195,13 +194,11 @@ bool saveImage(int cropLeft, int cropRight, int cropTop, int cropBottom)
 		}
 		ImageTile *tile = new ImageTile[sizeOffset[6]];
 		memset(tile, 0, sizeOffset[6] * sizeof(ImageTile));
-		const int imgHeight = gPngHeight - (cropTop + cropBottom);
-		const int imgWidth = gPngWidth - (cropLeft + cropRight);
-		for (int y = 0; y < imgHeight; ++y) {
+		for (int y = 0; y < gPngHeight; ++y) {
 			if (y % 25 == 0) {
-				printProgress(size_t(y), size_t(gPngHeight - (cropTop + cropBottom)));
+				printProgress(size_t(y), size_t(gPngHeight));
 			}
-			memcpy(tempLine, srcLine, copyWidth);
+			memcpy(tempLine, srcLine, gPngLineWidthChans);
 			srcLine += gPngLineWidthChans;
 			// Handle all png files
 			if (y % 128 == 0) {
@@ -224,7 +221,7 @@ bool saveImage(int cropLeft, int cropRight, int cropTop, int cropBottom)
 							fclose(t.fileHandle);
 							t.fileHandle = NULL;
 						}
-						if (y < imgHeight && tileWidth * (tileIndex - sizeOffset[tileSize]) < size_t(imgWidth)) {
+						if (tileWidth * (tileIndex - sizeOffset[tileSize]) < size_t(gPngWidth)) {
 							// Open new tile file for a while
 							snprintf(tmpString, tmpLen, "%s/x%dy%dz%d.png", g_TilePath,
 									int(tileIndex - sizeOffset[tileSize]), int((y / pow(2, 12 - tileSize))), int(tileSize));
@@ -275,8 +272,8 @@ bool saveImage(int cropLeft, int cropRight, int cropTop, int cropBottom)
 			const size_t tileWidth = pow(2, 12 - tileSize);
 			for (size_t tileIndex = sizeOffset[tileSize]; tileIndex < sizeOffset[tileSize+1]; ++tileIndex) {
 				if (tile[tileIndex].fileHandle == NULL) continue;
-				const int imgEnd = (((imgHeight - 1) / tileWidth) + 1) * tileWidth;
-				for (int i = imgHeight; i < imgEnd; ++i) {
+				const int imgEnd = (((gPngHeight - 1) / tileWidth) + 1) * tileWidth;
+				for (int i = gPngHeight; i < imgEnd; ++i) {
 					png_write_row(tile[tileIndex].pngPtr, png_bytep(tempLine));
 				}
 				png_write_end(tile[tileIndex].pngPtr, NULL);

@@ -312,6 +312,14 @@ int main(int argc, char **argv)
 	// Mem check
 	int bitmapX, bitmapY;
 	uint64_t bitmapBytes = calcImageSize(g_ToChunkX - g_FromChunkX, g_ToChunkZ - g_FromChunkZ, g_MapsizeY, bitmapX, bitmapY, false);
+	// Cropping
+	int cropLeft = 0, cropRight = 0, cropTop = 0, cropBottom = 0;
+	if (wholeworld) {
+		calcBitmapOverdraw(cropLeft, cropRight, cropTop, cropBottom);
+		bitmapX -= (cropLeft + cropRight);
+		bitmapY -= (cropTop + cropBottom);
+		bitmapBytes = uint64_t(bitmapX) * BYTESPERPIXEL * uint64_t(bitmapY);
+	}
 	bool splitImage = false;
 	int numSplitsX = 0;
 	int numSplitsZ = 0;
@@ -386,8 +394,6 @@ int main(int argc, char **argv)
 		createImageBuffer(bitmapX, bitmapY, splitImage);
 	}
 
-	int cropLeft = 0, cropRight = 0, cropTop = 0, cropBottom = 0;
-
 	// Now here's the loop rendering all the required parts of the image.
 	// All the vars previously used to define bounds will be set on each loop,
 	// to create something like a virtual window inside the map.
@@ -405,7 +411,7 @@ int main(int argc, char **argv)
 				const int sizex = (g_ToChunkX - g_FromChunkX) * CHUNKSIZE_X * 2 + (g_ToChunkZ - g_FromChunkZ) * CHUNKSIZE_Z * 2;
 				const int sizey = (int)g_MapsizeY * g_OffsetY + (g_ToChunkX - g_FromChunkX) * CHUNKSIZE_X + (g_ToChunkZ - g_FromChunkZ) * CHUNKSIZE_Z + 3;
 				if (sizex <= 0 || sizey <= 0) continue; // Don't know if this is right, might also be that the size calulation is plain wrong
-				int res = loadImagePart(bitmapStartX, bitmapStartY, sizex, sizey);
+				int res = loadImagePart(bitmapStartX - cropLeft, bitmapStartY - cropTop, sizex, sizey);
 				if (res == -1) {
 					printf("Error loading partial image to render to.\n");
 					return 1;
@@ -447,12 +453,7 @@ int main(int argc, char **argv)
 			}
 		}
 
-		// Calc cropping here if image fits in memory to make optimization faster
-		if (numSplitsX == 0) {
-			calcBitmapOverdraw(cropLeft, cropRight, cropTop, cropBottom);
-		}
-
-		// Also load biome data if requested
+		// Load biome data if requested
 		if (g_UseBiomes) {
 			loadBiomeMap(biomepath);
 		}
@@ -463,15 +464,15 @@ int main(int argc, char **argv)
 		}
 
 		if (g_OffsetY == 2) {
-			optimizeTerrain2(cropLeft, cropRight);
+			optimizeTerrain2((numSplitsX == 0 ? cropLeft : 0), (numSplitsX == 0 ? cropRight : 0));
 		} else {
 			optimizeTerrain3();
 		}
 
 		if (infoFile != NULL) {
 			writeInfoFile(infoFile,
-					int((g_MapsizeZ - CHUNKSIZE_Z) * 2 -CHUNKSIZE_X * 2 + bitmapStartX),
-					int(g_MapsizeY * g_OffsetY - CHUNKSIZE_Z - CHUNKSIZE_X + bitmapStartY) + 2);
+					int((g_MapsizeZ - CHUNKSIZE_Z) * 2 -CHUNKSIZE_X * 2 + (bitmapStartX - cropLeft)),
+					int(g_MapsizeY * g_OffsetY - CHUNKSIZE_Z - CHUNKSIZE_X + (bitmapStartY - cropTop)) + 2);
 			infoFile = NULL;
 		}
 
@@ -495,8 +496,8 @@ int main(int argc, char **argv)
 					colors[BIRCHLEAVES][PBLUE] = clamp(int32_t(colors[LEAVES][PBLUE]) + (avg - int32_t(colors[LEAVES][PBLUE])) / 2 + 15);
 				}
 				//
-				const int bmpPosX = int((g_MapsizeZ - z - CHUNKSIZE_Z) * 2 + (x - CHUNKSIZE_X) * 2 + (splitImage ? -2 : bitmapStartX));
-				int bmpPosY = int(g_MapsizeY * g_OffsetY + z + x - CHUNKSIZE_Z - CHUNKSIZE_X + (splitImage ? 0 : bitmapStartY)) + 2 - (HEIGHTAT(x, z) & 0xFF) * g_OffsetY;
+				const int bmpPosX = int((g_MapsizeZ - z - CHUNKSIZE_Z) * 2 + (x - CHUNKSIZE_X) * 2 + (splitImage ? -2 : bitmapStartX - cropLeft));
+				int bmpPosY = int(g_MapsizeY * g_OffsetY + z + x - CHUNKSIZE_Z - CHUNKSIZE_X + (splitImage ? 0 : bitmapStartY - cropTop)) + 2 - (HEIGHTAT(x, z) & 0xFF) * g_OffsetY;
 				const size_t max = (HEIGHTAT(x, z) & 0xFF00) >> 8;
 				for (size_t y = uint8_t(HEIGHTAT(x, z)); y < max; ++y) {
 					bmpPosY -= g_OffsetY;
@@ -584,7 +585,7 @@ int main(int argc, char **argv)
 			}
 			undergroundMode(true);
 			if (g_OffsetY == 2) {
-				optimizeTerrain2(cropLeft, cropRight);
+				optimizeTerrain2((numSplitsX == 0 ? cropLeft : 0), (numSplitsX == 0 ? cropRight : 0));
 			} else {
 				optimizeTerrain3();
 			}
@@ -592,8 +593,8 @@ int main(int argc, char **argv)
 			for (size_t x = CHUNKSIZE_X; x < g_MapsizeX - CHUNKSIZE_X; ++x) {
 				printProgress(x - CHUNKSIZE_X, g_MapsizeX);
 				for (size_t z = CHUNKSIZE_Z; z < g_MapsizeZ - CHUNKSIZE_Z; ++z) {
-					const size_t bmpPosX = (g_MapsizeZ - z - CHUNKSIZE_Z) * 2 + (x - CHUNKSIZE_X) * 2 + (splitImage ? -2 : bitmapStartX);
-					size_t bmpPosY = g_MapsizeY * g_OffsetY + z + x - CHUNKSIZE_Z - CHUNKSIZE_X + (splitImage ? 0 : bitmapStartY);
+					const size_t bmpPosX = (g_MapsizeZ - z - CHUNKSIZE_Z) * 2 + (x - CHUNKSIZE_X) * 2 + (splitImage ? -2 : bitmapStartX) - cropLeft;
+					size_t bmpPosY = g_MapsizeY * g_OffsetY + z + x - CHUNKSIZE_Z - CHUNKSIZE_X + (splitImage ? 0 : bitmapStartY) - cropTop;
 					for (size_t y = 0; y < MIN(g_MapsizeY, 64); ++y) {
 						uint8_t &c = BLOCKAT(x, y, z);
 						if (c != AIR) { // If block is not air (colors[c][3] != 0)
@@ -616,14 +617,9 @@ int main(int argc, char **argv)
 		}
 	}
 	// Drawing complete, now either just save the image or compose it if disk caching was used
-	// Cropping
-	if (wholeworld) {
-		// TODO: Technically now cropping would also work with -from/-to... Maybe add an option for it
-		calcBitmapOverdraw(cropLeft, cropRight, cropTop, cropBottom);
-	}
 	// Saving
 	if (!splitImage) {
-		saveImage(cropLeft, cropRight, cropTop, cropBottom);
+		saveImage();
 	} else {
 		composeFinalImage();
 	}
@@ -964,7 +960,6 @@ bool prepareNextArea(int splitX, int splitZ, int &bitmapStartX, int &bitmapStart
 	return false; // not done yet, return false
 }
 
-#define RIGHTSTRING(x,y) ((x) + strlen(x) - ((y) > strlen(x) ? strlen(x) : (y)))
 void writeInfoFile(const char* file, int xo, int yo)
 {
 	char *direction = NULL;

@@ -23,7 +23,7 @@ namespace
 		int x;
 		int z;
 		char *filename;
-		Chunk(const char *source, int sx, int sz) {
+		Chunk(const char *source, const int sx, const int sz) {
 			filename = strdup(source);
 			x = sx;
 			z = sz;
@@ -32,15 +32,22 @@ namespace
 			free(filename);
 		}
 	};
+	struct Point {
+		int x;
+		int z;
+		Point(const int sx, const int sz) {
+			x = sx;
+			z = sz;
+		}
+	};
 	typedef std::list<char *> charList; // List that holds C-Strings
 	typedef std::list<Chunk *> chunkList; // List that holds Chunk structs (see above)
+	typedef std::list<Point *> pointList; // List that holds Point structs (see above)
 	typedef std::map<uint32_t, uint32_t> chunkMap;
 
 	size_t lightsize; // Size of lightmap
 	chunkList chunks; // list of all chunks/regions of a world
-
-	// For cropping
-	int32_t cropChunkLeft = 0xFFFFFF, cropChunkRight = 0xFFFFFF, cropChunkTop = 0xFFFFFF, cropChunkBottom = 0xFFFFFF;
+	pointList points; // all existing chunk X|Z found in region files
 
 	// network byte order to host byte order (32 bit, reads from 8 bit stream/array)
 	inline uint32_t _ntohl(uint8_t *val)
@@ -177,42 +184,69 @@ static bool scanWorldDirectoryRegion(const char *fromPath)
 				char *s = region.name;
 				// Extract x coordinate from region filename
 				s += 2;
-				int valX = atoi(s) * REGIONSIZE;
+				const int valX = atoi(s) * REGIONSIZE;
 				// Extract z coordinate from region filename
 				while (*s != '.' && *s != '\0') {
 					++s;
 				}
-				int valZ = atoi(s+1) * REGIONSIZE;
-				if (valX > -4000 && valX < 4000 && valZ > -4000 && valZ < 4000) {
-					// Update bounds
-					if (valX < g_FromChunkX) {
-						g_FromChunkX = valX;
+				if (*s == '.') {
+					const int valZ = atoi(s+1) * REGIONSIZE;
+					if (valX > -4000 && valX < 4000 && valZ > -4000 && valZ < 4000) {
+						string full = path + "/" + region.name;
+						chunks.push_back(new Chunk(full.c_str(), valX, valZ));
+					} else {
+						printf("Ignoring bad region at %d %d\n", valX, valZ);
 					}
-					if (valX + 31 > g_ToChunkX) {
-						g_ToChunkX = valX + 31;
-					}
-					if (valZ < g_FromChunkZ) {
-						g_FromChunkZ = valZ;
-					}
-					if (valZ + 31 > g_ToChunkZ) {
-						g_ToChunkZ = valZ + 31;
-					}
-					string full = path + "/" + region.name;
-					chunks.push_back(new Chunk(full.c_str(), valX, valZ));
-				} else {
-					printf("Ignoring bad region at %d %d\n", valX, valZ);
 				}
 			}
 		} while (Dir::next(sd, (char *)path.c_str(), region));
 		Dir::close(sd);
 	}
-	if (g_RegionFormat) {
-		g_ToChunkX += REGIONSIZE;
-		g_ToChunkZ += REGIONSIZE;
-	} else {
-		g_ToChunkX++;
-		g_ToChunkZ++;
+	// Read all region files' headers to figure out which chunks actually exist
+	// It would be sufficient to just do this on those which form the edge
+	// Have yet to find out how slow this is on big maps to see if it's worth the effort
+	for (pointList::iterator it = points.begin(); it != points.end(); it++) {
+		delete *it;
 	}
+	points.clear();
+	for (chunkList::iterator it = chunks.begin(); it != chunks.end(); it++) {
+		Chunk &chunk = (**it);
+		FILE *fh = fopen(chunk.filename, "rb");
+		if (fh == NULL) {
+			printf("Cannot scan region %s\n",chunk.filename);
+			*chunk.filename = '\0';
+			continue;
+		}
+		uint8_t buffer[REGIONSIZE * REGIONSIZE * 4];
+		if (fread(buffer, 4, REGIONSIZE * REGIONSIZE, fh) != REGIONSIZE * REGIONSIZE) {
+			printf("Could not read header from %s\n", chunk.filename);
+			*chunk.filename = '\0';
+			continue;
+		}
+		fclose(fh);
+		// Check for existing chunks in region and update bounds
+		for (int i = 0; i < REGIONSIZE * REGIONSIZE; ++i) {
+			const uint32_t offset = (_ntohl(buffer + i * 4) >> 8) * 4096;
+			if (offset == 0) continue;
+			const int valX = chunk.x + i % REGIONSIZE;
+			const int valZ = chunk.z + i / REGIONSIZE;
+			points.push_back(new Point(valX, valZ));
+			if (valX < g_FromChunkX) {
+				g_FromChunkX = valX;
+			}
+			if (valX > g_ToChunkX) {
+				g_ToChunkX = valX;
+			}
+			if (valZ < g_FromChunkZ) {
+				g_FromChunkZ = valZ;
+			}
+			if (valZ > g_ToChunkZ) {
+				g_ToChunkZ = valZ;
+			}
+		}
+	}
+	g_ToChunkX++;
+	g_ToChunkZ++;
 	//
 	printf("Min: (%d|%d) Max: (%d|%d)\n", g_FromChunkX, g_FromChunkZ, g_ToChunkX, g_ToChunkZ);
 	return true;
@@ -231,7 +265,9 @@ bool loadEntireTerrain()
 	for (chunkList::iterator it = chunks.begin(); it != chunks.end(); it++) {
 		printProgress(count++, max);
 		loadChunk((**it).filename);
+		delete *it;
 	}
+	chunks.clear();
 	printProgress(10, 10);
 	return true;
 }
@@ -319,61 +355,6 @@ static bool loadChunk(const char *streamOrFile, size_t streamLen)
 		if (!ok || len < (CHUNKSIZE_X * CHUNKSIZE_Z * CHUNKSIZE_Y) / 2) {
 			return false;
 		}
-	}
-	// Update bounds for cropping if necessary
-	int crop;
-	if (g_Orientation == North) {
-		// Right
-		crop = (chunkZ - g_TotalFromChunkZ) + (g_TotalToChunkX - chunkX) - 1;
-		if (crop < cropChunkRight) cropChunkRight = crop;
-		// Left
-		crop = (chunkX - g_TotalFromChunkX) + (g_TotalToChunkZ - chunkZ) - 1;
-		if (crop < cropChunkLeft) cropChunkLeft = crop;
-		// Top
-		crop = (chunkX - g_TotalFromChunkX) + (chunkZ - g_TotalFromChunkZ);
-		if (crop < cropChunkTop) cropChunkTop = crop;
-		// Bottom
-		crop = (g_TotalToChunkZ - chunkZ) + (g_TotalToChunkX - chunkX) - 2;
-		if (crop < cropChunkBottom) cropChunkBottom = crop;
-	} else if (g_Orientation == South) {
-		// Right
-		crop = (g_TotalToChunkZ - chunkZ) + (chunkX - g_TotalFromChunkX) - 1;
-		if (crop < cropChunkRight) cropChunkRight = crop;
-		// Left
-		crop = (g_TotalToChunkX - chunkX) + (chunkZ - g_TotalFromChunkZ) - 1;
-		if (crop < cropChunkLeft) cropChunkLeft = crop;
-		// Top
-		crop = (g_TotalToChunkZ - chunkZ) + (g_TotalToChunkX - chunkX) - 2;
-		if (crop < cropChunkTop) cropChunkTop = crop;
-		// Bottom
-		crop = (chunkX - g_TotalFromChunkX) + (chunkZ - g_TotalFromChunkZ);
-		if (crop < cropChunkBottom) cropChunkBottom = crop;
-	} else if (g_Orientation == East) {
-		// Right
-		crop = (g_TotalToChunkZ - chunkZ) + (g_TotalToChunkX - chunkX) - 2;
-		if (crop < cropChunkRight) cropChunkRight = crop;
-		// Left
-		crop = (chunkX - g_TotalFromChunkX) + (chunkZ - g_TotalFromChunkZ);
-		if (crop < cropChunkLeft) cropChunkLeft = crop;
-		// Top
-		crop = (g_TotalToChunkX - chunkX) + (chunkZ - g_TotalFromChunkZ)  - 1;
-		if (crop < cropChunkTop) cropChunkTop = crop;
-		// Bottom
-		crop = (g_TotalToChunkZ - chunkZ) + (chunkX - g_TotalFromChunkX) - 1;
-		if (crop < cropChunkBottom) cropChunkBottom = crop;
-	} else {
-		// Right
-		crop = (chunkX - g_TotalFromChunkX) + (chunkZ - g_TotalFromChunkZ);
-		if (crop < cropChunkRight) cropChunkRight = crop;
-		// Left
-		crop = (g_TotalToChunkZ - chunkZ) + (g_TotalToChunkX - chunkX) - 2;
-		if (crop < cropChunkLeft) cropChunkLeft = crop;
-		// Top
-		crop = (g_TotalToChunkZ - chunkZ) + (chunkX - g_TotalFromChunkX) - 1;
-		if (crop < cropChunkTop) cropChunkTop = crop;
-		// Bottom
-		crop = (g_TotalToChunkX - chunkX) + (chunkZ - g_TotalFromChunkZ) - 1;
-		if (crop < cropChunkBottom) cropChunkBottom = crop;
 	}
 	//
 	const int offsetz = (chunkZ - g_FromChunkZ) * CHUNKSIZE_Z;
@@ -575,18 +556,125 @@ uint64_t calcTerrainSize(int chunksX, int chunksZ)
 
 void calcBitmapOverdraw(int &left, int &right, int &top, int &bottom)
 {
-	// This wont work on rectangular chunks...
-	left = cropChunkLeft * (CHUNKSIZE_X + CHUNKSIZE_Z);
-	right = cropChunkRight * (CHUNKSIZE_X + CHUNKSIZE_Z);
-	top = cropChunkTop * CHUNKSIZE_X;
-	bottom = cropChunkBottom * CHUNKSIZE_X;
-	if (left < 0) left = 0;
-	if (right < 0) right = 0;
-	if (top < 0) top = 0;
-	if (bottom < 0) bottom = 0;
-#ifdef _DEBUG
-	printf("left: %d; right: %d; top: %d; bottom: %d\n", left, right, top, bottom);
-#endif
+	top = left = bottom = right = 0x0fffffff;
+	int val, x, z;
+	chunkList::iterator itC;
+	pointList::iterator itP;
+	if (g_RegionFormat) {
+		itP = points.begin();
+	} else {
+		itC = chunks.begin();
+	}
+	for (;;) {
+		if (g_RegionFormat) {
+			if (itP == points.end()) break;
+			x = (**itP).x;
+			z = (**itP).z;
+		} else {
+			if (itC == chunks.end()) break;
+			x = (**itC).x;
+			z = (**itC).z;
+		}
+		if (g_Orientation == North) {
+			// Right
+			val = (((g_ToChunkX - 1) - x) * CHUNKSIZE_X * 2)
+			      + ((z - g_FromChunkZ) * CHUNKSIZE_Z * 2);
+			if (val < right) {
+				right = val;
+			}
+			// Left
+			val = (((g_ToChunkZ - 1) - z) * CHUNKSIZE_Z * 2)
+			      + ((x - g_FromChunkX) * CHUNKSIZE_X * 2);
+			if (val < left) {
+				left = val;
+			}
+			// Top
+			val = (z - g_FromChunkZ) * CHUNKSIZE_Z + (x - g_FromChunkX) * CHUNKSIZE_X;
+			if (val < top) {
+				top = val;
+			}
+			// Bottom
+			val = (((g_ToChunkX - 1) - x) * CHUNKSIZE_X) + (((g_ToChunkZ - 1) - z) * CHUNKSIZE_Z);
+			if (val < bottom) {
+				bottom = val;
+			}
+		} else if (g_Orientation == South) {
+			// Right
+			val = (((g_ToChunkZ - 1) - z) * CHUNKSIZE_Z * 2)
+			      + ((x - g_FromChunkX) * CHUNKSIZE_X * 2);
+			if (val < right) {
+				right = val;
+			}
+			// Left
+			val = (((g_ToChunkX - 1) - x) * CHUNKSIZE_X * 2)
+			      + ((z - g_FromChunkZ) * CHUNKSIZE_Z * 2);
+			if (val < left) {
+				left = val;
+			}
+			// Top
+			val = ((g_ToChunkZ - 1) - z) * CHUNKSIZE_Z + ((g_ToChunkX - 1) - x) * CHUNKSIZE_X;
+			if (val < top) {
+				top = val;
+			}
+			// Bottom
+			val = ((x - g_FromChunkX) * CHUNKSIZE_X) + ((z - g_FromChunkZ) * CHUNKSIZE_Z);
+			if (val < bottom) {
+				bottom = val;
+			}
+		} else if (g_Orientation == East) {
+			// Right
+			val = ((g_ToChunkZ - 1) - z) * CHUNKSIZE_Z * 2 + ((g_ToChunkX - 1) - x) * CHUNKSIZE_X * 2;
+			if (val < right) {
+				right = val;
+			}
+			// Left
+			val = ((x - g_FromChunkX) * CHUNKSIZE_X) * 2 +  + ((z - g_FromChunkZ) * CHUNKSIZE_Z) * 2;
+			if (val < left) {
+				left = val;
+			}
+			// Top
+			val = ((g_ToChunkX - 1) - x) * CHUNKSIZE_X
+			      + (z - g_FromChunkZ) * CHUNKSIZE_Z;
+			if (val < top) {
+				top = val;
+			}
+			// Bottom
+			val = ((g_ToChunkZ - 1) - z) * CHUNKSIZE_Z
+			      + (x - g_FromChunkX) * CHUNKSIZE_X;
+			if (val < bottom) {
+				bottom = val;
+			}
+		} else {
+			// Right
+			val = ((x - g_FromChunkX) * CHUNKSIZE_X) * 2 +  + ((z - g_FromChunkZ) * CHUNKSIZE_Z) * 2;
+			if (val < right) {
+				right = val;
+			}
+			// Left
+			val = ((g_ToChunkZ - 1) - z) * CHUNKSIZE_Z * 2 + ((g_ToChunkX - 1) - x) * CHUNKSIZE_X * 2;
+			if (val < left) {
+				left = val;
+			}
+			// Top
+			val = ((g_ToChunkZ - 1) - z) * CHUNKSIZE_Z
+			      + (x - g_FromChunkX) * CHUNKSIZE_X;
+			if (val < top) {
+				top = val;
+			}
+			// Bottom
+			val = ((g_ToChunkX - 1) - x) * CHUNKSIZE_X
+			      + (z - g_FromChunkZ) * CHUNKSIZE_Z;
+			if (val < bottom) {
+				bottom = val;
+			}
+		}
+		//
+		if (g_RegionFormat) {
+			itP++;
+		} else {
+			itC++;
+		}
+	}
 }
 
 static void allocateTerrain()
@@ -694,7 +782,9 @@ static bool loadAllRegions()
 		printProgress(count++, max);
 		int i;
 		loadRegion((**it).filename, true, i);
+		delete *it;
 	}
+	chunks.clear();
 	printProgress(10, 10);
 	return true;
 }
