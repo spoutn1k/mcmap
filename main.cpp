@@ -1052,7 +1052,7 @@ void printHelp(char *binary)
 	   "  -biomecolors PATH  load grasscolor.png and foliagecolor.png from 'PATH'\n"
 	   "  -info NAME    Write information about map to file 'NAME' You can choose the\n"
 	   "                format by using file extensions .xml, .json or .txt (default)\n"
-	   "  -split PATH   create tiled output in given PATH (128x128 to 4096x4096)\n"
+	   "  -split PATH   create tiled output (128x128 to 4096x4096) in given PATH\n"
 	   "\n    WORLDPATH is the path of the desired alpha/beta world.\n\n"
 	   ////////////////////////////////////////////////////////////////////////////////
 	   "Examples:\n\n"

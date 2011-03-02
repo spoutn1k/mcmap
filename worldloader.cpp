@@ -904,7 +904,7 @@ static void loadBiomeChunk(const char* path, int chunkX, int chunkZ)
 #	define RECORDS_PER_LINE CHUNKSIZE_X * CHUNKS_PER_BIOME_FILE
 	const size_t size = strlen(path) + 50;
 	char *file = new char[size];
-	snprintf(file, size, "%s/b.%d.%d.biome", path, chunkX, chunkZ);
+	snprintf(file, size, "%s/b.%d.%d.biome", path, chunkX / CHUNKS_PER_BIOME_FILE, chunkZ / CHUNKS_PER_BIOME_FILE);
 	if (!fileExists(file)) {
 		printf("'%s' doesn't exist. Please update biome cache.\n", file);
 		delete[] file;
