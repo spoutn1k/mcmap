@@ -1,6 +1,6 @@
 /***
  * mcmap - create isometric maps of your minecraft alpha/beta world
- * v2.0a, 02-2011 by Zahl
+ * v2.0b, 02-2011 by Zahl
  */
 
 #include "helper.h"
@@ -297,7 +297,7 @@ int main(int argc, char **argv)
 	if (g_UseBiomes) {
 		char *bpath = new char[strlen(filename) + 30];
 		strcpy(bpath, filename);
-		strcat(bpath, "/EXTRACTEDBIOMES");
+		strcat(bpath, "/biomes");
 		if (!dirExists(bpath)) {
 			printf("Error loading biome information. '%s' does not exist.\n", bpath);
 			return 1;

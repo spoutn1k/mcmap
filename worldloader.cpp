@@ -11,7 +11,7 @@
 #include <cstdio>
 #include <zlib.h>
 
-#define CHUNKS_PER_BIOME_FILE 8
+#define CHUNKS_PER_BIOME_FILE 32
 #define REGIONSIZE 32
 
 using std::string;
@@ -720,7 +720,7 @@ void clearLightmap()
 /**
  * Round down to the nearest multiple of 8, e.g. floor8(-5) == 8
  */
-static const int floor8(const int val)
+static const int floorBiome(const int val)
 {
 	if (val < 0) {
 		return ((val - (CHUNKS_PER_BIOME_FILE - 1)) / CHUNKS_PER_BIOME_FILE) * CHUNKS_PER_BIOME_FILE;
@@ -731,7 +731,7 @@ static const int floor8(const int val)
 /**
  * Round down to the nearest multiple of 32, e.g. floor32(-5) == 32
  */
-static const int floor32(const int val)
+static const int floorRegion(const int val)
 {
 	if (val < 0) {
 		return ((val - (REGIONSIZE - 1)) / REGIONSIZE) * REGIONSIZE;
@@ -753,10 +753,10 @@ void loadBiomeMap(const char* path)
 	}
 	memset(g_BiomeMap, 0, size * sizeof(uint16_t));
 	//
-	const int tmpMin = -floor8(g_FromChunkX);
-	for (int x = floor8(g_FromChunkX); x <= floor8(g_ToChunkX); x += CHUNKS_PER_BIOME_FILE) {
-		printProgress(size_t(x + tmpMin), size_t(floor8(g_ToChunkX) + tmpMin));
-		for (int z = floor8(g_FromChunkZ); z <= floor8(g_ToChunkZ); z += CHUNKS_PER_BIOME_FILE) {
+	const int tmpMin = -floorBiome(g_FromChunkX);
+	for (int x = floorBiome(g_FromChunkX); x <= floorBiome(g_ToChunkX); x += CHUNKS_PER_BIOME_FILE) {
+		printProgress(size_t(x + tmpMin), size_t(floorBiome(g_ToChunkX) + tmpMin));
+		for (int z = floorBiome(g_FromChunkZ); z <= floorBiome(g_ToChunkZ); z += CHUNKS_PER_BIOME_FILE) {
 			loadBiomeChunk(path, x, z);
 		}
 	}
@@ -804,10 +804,10 @@ static bool loadTerrainRegion(const char *fromPath, int &loadedChunks)
 
 	printf("Loading all chunks..\n");
 	//
-	const int tmpMin = -floor32(g_FromChunkX);
-	for (int x = floor32(g_FromChunkX); x <= floor32(g_ToChunkX); x += REGIONSIZE) {
-		printProgress(size_t(x + tmpMin), size_t(floor32(g_ToChunkX) + tmpMin));
-		for (int z = floor32(g_FromChunkZ); z <= floor32(g_ToChunkZ); z += REGIONSIZE) {
+	const int tmpMin = -floorRegion(g_FromChunkX);
+	for (int x = floorRegion(g_FromChunkX); x <= floorRegion(g_ToChunkX); x += REGIONSIZE) {
+		printProgress(size_t(x + tmpMin), size_t(floorRegion(g_ToChunkX) + tmpMin));
+		for (int z = floorRegion(g_FromChunkZ); z <= floorRegion(g_ToChunkZ); z += REGIONSIZE) {
 			snprintf(path, maxlen, "%s/region/r.%d.%d.mcr", fromPath, int(x / REGIONSIZE), int(z / REGIONSIZE));
 			if (!loadRegion(path, false, loadedChunks)) {
 				snprintf(path, maxlen, "%s/region/r.%d.%d.data", fromPath, int(x / REGIONSIZE), int(z / REGIONSIZE));
@@ -904,7 +904,7 @@ static void loadBiomeChunk(const char* path, int chunkX, int chunkZ)
 #	define RECORDS_PER_LINE CHUNKSIZE_X * CHUNKS_PER_BIOME_FILE
 	const size_t size = strlen(path) + 50;
 	char *file = new char[size];
-	snprintf(file, size, "%s/%d.%d.biome", path, chunkX, chunkZ);
+	snprintf(file, size, "%s/b.%d.%d.biome", path, chunkX, chunkZ);
 	if (!fileExists(file)) {
 		printf("'%s' doesn't exist. Please update biome cache.\n", file);
 		delete[] file;

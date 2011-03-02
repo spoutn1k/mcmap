@@ -414,21 +414,46 @@ bool discardImagePart()
 
 bool composeFinalImage()
 {
-	uint8_t *lineWrite = new uint8_t[gPngLineWidthChans];
-	uint8_t *lineRead = new uint8_t[gPngLineWidthChans];
-	if (setjmp(png_jmpbuf(pngPtrMain))) { // libpng will issue a longjmp on error, so code flow will end up
-		delete[] lineWrite;
-		delete[] lineRead;
-		png_destroy_write_struct(&pngPtrMain, NULL); // here if something goes wrong in the code below
-		return false;
+	char *tmpString = NULL;
+	size_t tmpLen = 0;
+	if (g_TilePath == NULL) {
+		printf("Composing final png file...\n");
+		if (setjmp(png_jmpbuf(pngPtrMain))) {
+			png_destroy_write_struct(&pngPtrMain, NULL);
+			return false;
+		}
+	} else {
+		// Tiled output, suitable for google maps
+		printf("Composing final png files...\n");
+		tmpLen = strlen(g_TilePath) + 40;
+		tmpString = new char[tmpLen];
+		// Prepare a temporary buffer to copy the current line to, since we need the width to be a multiple of 4096
+		// and adjusting the whole image to that would be a waste of memory
 	}
-	printf("Composing final png file...\n");
+	const size_t tempWidth = (g_TilePath == NULL ? gPngLineWidthChans : ((gPngWidth - 5) / 4096 + 1) * 4096);
+	const size_t tempWidthChans = tempWidth * CHANSPERPIXEL;
+
+	uint8_t *lineWrite = new uint8_t[tempWidthChans];
+	uint8_t *lineRead = new uint8_t[gPngLineWidthChans];
+
+	// Prepare an array of png structs that will output simultaneously to the various tiles
+	size_t sizeOffset[7], last = 0;
+	ImageTile *tile = NULL;
+	if (g_TilePath != NULL) {
+		for (size_t i = 0; i < 7; ++i) {
+			sizeOffset[i] = last;
+			last += ((tempWidth - 1) / pow(2, 12 - i)) + 1;
+		}
+		tile = new ImageTile[sizeOffset[6]];
+		memset(tile, 0, sizeOffset[6] * sizeof(ImageTile));
+	}
+
 	for (int y = 0; y < gPngHeight; ++y) {
 		if (y % 50 == 0) {
 			printProgress(size_t(y), size_t(gPngHeight));
 		}
 		// paint each image on this one
-		memset(lineWrite, 0, gPngLineWidthChans);
+		memset(lineWrite, 0, tempWidthChans);
 		// the partial images are kept in this list. they're already in the correct order in which they have to me merged and blended
 		for (imageList::iterator it = partialImages.begin(); it != partialImages.end(); it++) {
 			ImagePart *img = *it;
@@ -468,12 +493,103 @@ bool composeFinalImage()
 				img->pngPtr = NULL;
 				remove(img->filename);
 			}
-		} // Done composing this line, write to final image
-		png_write_row(pngPtrMain, (png_bytep)lineWrite);
+		}
+		// Done composing this line, write to final image
+		if (g_TilePath == NULL) {
+			// Single file
+			png_write_row(pngPtrMain, (png_bytep)lineWrite);
+		} else {
+			// Tiled output
+			// Handle all png files
+			if (y % 128 == 0) {
+				size_t start;
+				if (y % 4096 == 0) start = 0;
+				else if (y % 2048 == 0) start = 1;
+				else if (y % 1024 == 0) start = 2;
+				else if (y % 512 == 0) start = 3;
+				else if (y % 256 == 0) start = 4;
+				else start = 5;
+				for (size_t tileSize = start; tileSize < 6; ++tileSize) {
+					const size_t tileWidth = pow(2, 12 - tileSize);
+					for (size_t tileIndex = sizeOffset[tileSize]; tileIndex < sizeOffset[tileSize+1]; ++tileIndex) {
+						ImageTile &t = tile[tileIndex];
+						if (t.fileHandle != NULL) { // Unload/close first
+							//printf("Calling end with ptr == %p, y == %d, start == %d, tileSize == %d, tileIndex == %d, to == %d, numpng == %d\n",
+									//t.pngPtr, y, (int)start, (int)tileSize, (int)tileIndex, (int)sizeOffset[tileSize+1], (int)numpng);
+							png_write_end(t.pngPtr, NULL);
+							png_destroy_write_struct(&(t.pngPtr), &(t.pngInfo));
+							fclose(t.fileHandle);
+							t.fileHandle = NULL;
+						}
+						if (tileWidth * (tileIndex - sizeOffset[tileSize]) < size_t(gPngWidth)) {
+							// Open new tile file for a while
+							snprintf(tmpString, tmpLen, "%s/x%dy%dz%d.png", g_TilePath,
+									int(tileIndex - sizeOffset[tileSize]), int((y / pow(2, 12 - tileSize))), int(tileSize));
+#ifdef _DEBUG
+							printf("Starting tile %s of size %d...\n", tmpString, (int)pow(2, 12 - tileSize));
+#endif
+							t.fileHandle = fopen(tmpString, "wb");
+							if (t.fileHandle == NULL) {
+								printf("Error opening file!\n");
+								return false;
+							}
+							t.pngPtr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+							if (t.pngPtr == NULL) {
+								printf("Error creating png write struct!\n");
+								return false;
+							}
+							if (setjmp(png_jmpbuf(t.pngPtr))) {
+								return false;
+							}
+							t.pngInfo = png_create_info_struct(t.pngPtr);
+							if (t.pngInfo == NULL) {
+								printf("Error creating png info struct!\n");
+								png_destroy_write_struct(&(t.pngPtr), NULL);
+								return false;
+							}
+							png_init_io(t.pngPtr, t.fileHandle);
+							png_set_IHDR(t.pngPtr, t.pngInfo,
+									uint32_t(pow(2, 12 - tileSize)), uint32_t(pow(2, 12 - tileSize)),
+									8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE,
+									PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+							png_write_info(t.pngPtr, t.pngInfo);
+						}
+					}
+				}
+			} // done preparing tiles
+			// Write data to all current tiles
+			for (size_t tileSize = 0; tileSize < 6; ++tileSize) {
+				const size_t tileWidth = pow(2, 12 - tileSize);
+				for (size_t tileIndex = sizeOffset[tileSize]; tileIndex < sizeOffset[tileSize+1]; ++tileIndex) {
+					if (tile[tileIndex].fileHandle == NULL) continue;
+					png_write_row(tile[tileIndex].pngPtr, png_bytep(lineWrite + tileWidth * (tileIndex - sizeOffset[tileSize]) * CHANSPERPIXEL));
+				}
+			} // done writing line
+			//
+		}
+		// Y-Loop
+	}
+	if (g_TilePath == NULL) {
+		png_write_end(pngPtrMain, NULL);
+		png_destroy_write_struct(&pngPtrMain, &pngInfoPtrMain);
+	} else {
+		// Finish all current tiles
+		memset(lineWrite, 0, tempWidth * BYTESPERPIXEL);
+		for (size_t tileSize = 0; tileSize < 6; ++tileSize) {
+			const size_t tileWidth = pow(2, 12 - tileSize);
+			for (size_t tileIndex = sizeOffset[tileSize]; tileIndex < sizeOffset[tileSize+1]; ++tileIndex) {
+				if (tile[tileIndex].fileHandle == NULL) continue;
+				const int imgEnd = (((gPngHeight - 1) / tileWidth) + 1) * tileWidth;
+				for (int i = gPngHeight; i < imgEnd; ++i) {
+					png_write_row(tile[tileIndex].pngPtr, png_bytep(lineWrite));
+				}
+				png_write_end(tile[tileIndex].pngPtr, NULL);
+				png_destroy_write_struct(&(tile[tileIndex].pngPtr), &(tile[tileIndex].pngInfo));
+				fclose(tile[tileIndex].fileHandle);
+			}
+		}
 	}
 	printProgress(10, 10);
-	png_write_end(pngPtrMain, NULL);
-	png_destroy_write_struct(&pngPtrMain, &pngInfoPtrMain);
 	delete[] lineWrite;
 	delete[] lineRead;
 	return true;
