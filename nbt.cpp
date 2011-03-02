@@ -114,6 +114,7 @@ NBT::NBT(const char *file, bool &success)
 
 NBT::NBT(uint8_t * const file, size_t len, bool shared, bool &success)
 {
+	_filename = NULL;
 	if (shared) {
 		_blob = NULL;
 	} else {

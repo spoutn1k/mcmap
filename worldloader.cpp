@@ -310,6 +310,7 @@ static bool loadChunk(const char *streamOrFile, size_t streamLen)
 		chunkPointer = new NBT((uint8_t*)streamOrFile, streamLen, true, ok);
 	}
 	if (!ok) {
+		delete chunkPointer;
 		return false; // chunk does not exist
 	}
 	NBT &chunk = *chunkPointer;
@@ -317,6 +318,7 @@ static bool loadChunk(const char *streamOrFile, size_t streamLen)
 	ok = chunk.getCompound("Level", level);
 	if (!ok) {
 		printf("No level\n");
+		delete chunkPointer;
 		return false;
 	}
 	int32_t chunkX, chunkZ;
@@ -324,11 +326,13 @@ static bool loadChunk(const char *streamOrFile, size_t streamLen)
 	ok = ok && level->getInt("zPos", chunkZ);
 	if (!ok) {
 		printf("No pos\n");
+		delete chunkPointer;
 		return false;
 	}
 	// Check if chunk is in desired bounds (not a chunk where the filename tells a different position)
 	if (chunkX < g_FromChunkX || chunkX >= g_ToChunkX || chunkZ < g_FromChunkZ || chunkZ >= g_ToChunkZ) {
 		if (streamLen == 0) printf("Chunk is out of bounds. %d %d\n", chunkX, chunkZ);
+		delete chunkPointer;
 		return false; // Nope, its not...
 	}
 	uint8_t *blockdata, *lightdata, *skydata, *justData;
@@ -336,23 +340,27 @@ static bool loadChunk(const char *streamOrFile, size_t streamLen)
 	ok = level->getByteArray("Blocks", blockdata, len);
 	if (!ok || len < CHUNKSIZE_X * CHUNKSIZE_Z * CHUNKSIZE_Y) {
 		printf("No blocks\n");
+		delete chunkPointer;
 		return false;
 	}
 	ok = level->getByteArray("Data", justData, len);
 	if (!ok || len < (CHUNKSIZE_X * CHUNKSIZE_Z * CHUNKSIZE_Y) / 2) {
 		printf("No block data\n");
+		delete chunkPointer;
 		return false;
 	}
 	if (g_Nightmode || g_Skylight) { // If nightmode, we need the light information too
 		ok = level->getByteArray("BlockLight", lightdata, len);
 		if (!ok || len < (CHUNKSIZE_X * CHUNKSIZE_Z * CHUNKSIZE_Y) / 2) {
 			printf("No block light\n");
+			delete chunkPointer;
 			return false;
 		}
 	}
 	if (g_Skylight) { // Skylight desired - wish granted
 		ok = level->getByteArray("SkyLight", skydata, len);
 		if (!ok || len < (CHUNKSIZE_X * CHUNKSIZE_Z * CHUNKSIZE_Y) / 2) {
+			delete chunkPointer;
 			return false;
 		}
 	}
@@ -539,6 +547,7 @@ static bool loadChunk(const char *streamOrFile, size_t streamLen)
 			}
 		} // z
 	} // x
+	delete chunkPointer;
 	return true;
 }
 
@@ -815,6 +824,7 @@ static bool loadTerrainRegion(const char *fromPath, int &loadedChunks)
 			}
 		}
 	}
+	delete[] path;
 	return true;
 }
 
