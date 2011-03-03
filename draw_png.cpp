@@ -19,6 +19,10 @@
 #  include <direct.h>
 #endif
 
+#ifndef Z_BEST_SPEED
+#	define Z_BEST_SPEED 6
+#endif
+
 #define PIXEL(x,y) (gImageBuffer[((x) + gOffsetX) * CHANSPERPIXEL + ((y) + gOffsetY) * gPngLocalLineWidthChans])
 
 namespace

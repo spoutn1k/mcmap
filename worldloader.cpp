@@ -791,9 +791,7 @@ static bool loadAllRegions()
 		printProgress(count++, max);
 		int i;
 		loadRegion((**it).filename, true, i);
-		delete *it;
 	}
-	chunks.clear();
 	printProgress(10, 10);
 	return true;
 }
