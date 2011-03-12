@@ -43,11 +43,11 @@ private:
 	void parseData(uint8_t* &position, const uint8_t *end, string *name = NULL);
 
 public:
-	bool getCompound(string name, NBT_Tag* &compound);
-	bool getShort(string name, int16_t &value);
-	bool getInt(string name, int32_t &value);
-	bool getLong(string name, int64_t &value);
-	bool getByteArray(string name, uint8_t* &data, int &len);
+	bool getCompound(const string name, NBT_Tag* &compound);
+	bool getShort(const string name, int16_t &value);
+	bool getInt(const string name, int32_t &value);
+	bool getLong(const string name, int64_t &value);
+	bool getByteArray(const string name, uint8_t* &data, int &len);
 	TagType getType() {
 		return _type;
 	}
@@ -62,7 +62,8 @@ private:
 	size_t _bloblen;
 public:
 	explicit NBT(const char *file, bool &success);
-	explicit NBT(uint8_t * const file, size_t len, bool shared, bool &success);
+	explicit NBT(uint8_t * const file, const size_t len, const bool shared, bool &success);
+	explicit NBT();
 	virtual ~NBT();
 	//bool save();
 };

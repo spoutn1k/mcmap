@@ -60,11 +60,11 @@ namespace
 
 }
 
-static bool loadChunk(const char *streamOrFile, size_t len = 0);
+static bool loadChunk(const char *streamOrFile, const size_t len = 0);
 static void allocateTerrain();
-static void loadBiomeChunk(const char* path, int chunkX, int chunkZ);
+static void loadBiomeChunk(const char* path, const int chunkX, const int chunkZ);
 static bool loadAllRegions();
-static bool loadRegion(const char* file, bool mustExist, int &loadedChunks);
+static bool loadRegion(const char* file, const bool mustExist, int &loadedChunks);
 static bool loadTerrainRegion(const char *fromPath, int &loadedChunks);
 static bool scanWorldDirectoryRegion(const char *fromPath);
 
@@ -300,25 +300,24 @@ bool loadTerrain(const char *fromPath, int &loadedChunks)
 	return true;
 }
 
-static bool loadChunk(const char *streamOrFile, size_t streamLen)
+static bool loadChunk(const char *streamOrFile, const size_t streamLen)
 {
 	bool ok = false;
-	NBT *chunkPointer;
+	NBT *chunk;
 	if (streamLen == 0) { // File
-		chunkPointer = new NBT(streamOrFile, ok);
+		chunk = new NBT(streamOrFile, ok);
 	} else {
-		chunkPointer = new NBT((uint8_t*)streamOrFile, streamLen, true, ok);
+		chunk = new NBT((uint8_t*)streamOrFile, streamLen, true, ok);
 	}
 	if (!ok) {
-		delete chunkPointer;
+		delete chunk;
 		return false; // chunk does not exist
 	}
-	NBT &chunk = *chunkPointer;
 	NBT_Tag *level = NULL;
-	ok = chunk.getCompound("Level", level);
+	ok = chunk->getCompound("Level", level);
 	if (!ok) {
 		printf("No level\n");
-		delete chunkPointer;
+		delete chunk;
 		return false;
 	}
 	int32_t chunkX, chunkZ;
@@ -326,13 +325,13 @@ static bool loadChunk(const char *streamOrFile, size_t streamLen)
 	ok = ok && level->getInt("zPos", chunkZ);
 	if (!ok) {
 		printf("No pos\n");
-		delete chunkPointer;
+		delete chunk;
 		return false;
 	}
 	// Check if chunk is in desired bounds (not a chunk where the filename tells a different position)
 	if (chunkX < g_FromChunkX || chunkX >= g_ToChunkX || chunkZ < g_FromChunkZ || chunkZ >= g_ToChunkZ) {
 		if (streamLen == 0) printf("Chunk is out of bounds. %d %d\n", chunkX, chunkZ);
-		delete chunkPointer;
+		delete chunk;
 		return false; // Nope, its not...
 	}
 	uint8_t *blockdata, *lightdata, *skydata, *justData;
@@ -340,27 +339,27 @@ static bool loadChunk(const char *streamOrFile, size_t streamLen)
 	ok = level->getByteArray("Blocks", blockdata, len);
 	if (!ok || len < CHUNKSIZE_X * CHUNKSIZE_Z * CHUNKSIZE_Y) {
 		printf("No blocks\n");
-		delete chunkPointer;
+		delete chunk;
 		return false;
 	}
 	ok = level->getByteArray("Data", justData, len);
 	if (!ok || len < (CHUNKSIZE_X * CHUNKSIZE_Z * CHUNKSIZE_Y) / 2) {
 		printf("No block data\n");
-		delete chunkPointer;
+		delete chunk;
 		return false;
 	}
 	if (g_Nightmode || g_Skylight) { // If nightmode, we need the light information too
 		ok = level->getByteArray("BlockLight", lightdata, len);
 		if (!ok || len < (CHUNKSIZE_X * CHUNKSIZE_Z * CHUNKSIZE_Y) / 2) {
 			printf("No block light\n");
-			delete chunkPointer;
+			delete chunk;
 			return false;
 		}
 	}
 	if (g_Skylight) { // Skylight desired - wish granted
 		ok = level->getByteArray("SkyLight", skydata, len);
 		if (!ok || len < (CHUNKSIZE_X * CHUNKSIZE_Z * CHUNKSIZE_Y) / 2) {
-			delete chunkPointer;
+			delete chunk;
 			return false;
 		}
 	}
@@ -547,11 +546,11 @@ static bool loadChunk(const char *streamOrFile, size_t streamLen)
 			}
 		} // z
 	} // x
-	delete chunkPointer;
+	delete chunk;
 	return true;
 }
 
-uint64_t calcTerrainSize(int chunksX, int chunksZ)
+uint64_t calcTerrainSize(const int chunksX, const int chunksZ)
 {
 	uint64_t size = uint64_t(chunksX+2) * CHUNKSIZE_X * uint64_t(chunksZ+2) * CHUNKSIZE_Z * uint64_t(g_MapsizeY);
 	if (g_Nightmode || g_Underground || g_Skylight || g_BlendUnderground) {
@@ -729,7 +728,7 @@ void clearLightmap()
 /**
  * Round down to the nearest multiple of 8, e.g. floor8(-5) == 8
  */
-static const int floorBiome(const int val)
+static const inline int floorBiome(const int val)
 {
 	if (val < 0) {
 		return ((val - (CHUNKS_PER_BIOME_FILE - 1)) / CHUNKS_PER_BIOME_FILE) * CHUNKS_PER_BIOME_FILE;
@@ -740,7 +739,7 @@ static const int floorBiome(const int val)
 /**
  * Round down to the nearest multiple of 32, e.g. floor32(-5) == 32
  */
-static const int floorRegion(const int val)
+static const inline int floorRegion(const int val)
 {
 	if (val < 0) {
 		return ((val - (REGIONSIZE - 1)) / REGIONSIZE) * REGIONSIZE;
@@ -773,8 +772,8 @@ void loadBiomeMap(const char* path)
 }
 
 #define REGION_HEADER_SIZE REGIONSIZE * REGIONSIZE * 4
-#define DECOMPRESSED_BUFFER 150 * 1024
-#define COMPRESSED_BUFFER 16 * 1024
+#define DECOMPRESSED_BUFFER 1000 * 1024
+#define COMPRESSED_BUFFER 100 * 1024
 /**
  * Load all the 32x32-region-files containing chunks information
  */
@@ -826,7 +825,7 @@ static bool loadTerrainRegion(const char *fromPath, int &loadedChunks)
 	return true;
 }
 
-static bool loadRegion(const char* file, bool mustExist, int &loadedChunks)
+static bool loadRegion(const char* file, const bool mustExist, int &loadedChunks)
 {
 	uint8_t buffer[COMPRESSED_BUFFER], decompressedBuffer[DECOMPRESSED_BUFFER];
 	FILE *rp = fopen(file, "rb");
@@ -891,7 +890,7 @@ static bool loadRegion(const char* file, bool mustExist, int &loadedChunks)
 
 			len = zlibStream.total_out;
 		} else {
-			printf("Unsupported McRegion version: %c\n", version);
+			printf("Unsupported McRegion version: %d\n", (int)version);
 			continue;
 		}
 		if (loadChunk((char*)decompressedBuffer, len)) {
@@ -906,7 +905,7 @@ static const inline uint16_t ntoh16(const uint16_t val)
 	return (uint16_t(*(uint8_t*)&val) << 8) + uint16_t(*(((uint8_t*)&val) + 1));
 }
 
-static void loadBiomeChunk(const char* path, int chunkX, int chunkZ)
+static void loadBiomeChunk(const char* path, const int chunkX, const int chunkZ)
 {
 #	define BIOME_ENTRIES CHUNKS_PER_BIOME_FILE * CHUNKS_PER_BIOME_FILE * CHUNKSIZE_X * CHUNKSIZE_Z
 #	define RECORDS_PER_LINE CHUNKSIZE_X * CHUNKS_PER_BIOME_FILE

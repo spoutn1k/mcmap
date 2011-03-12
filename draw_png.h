@@ -8,15 +8,15 @@
 
 #include "helper.h"
 
-void createImageBuffer(size_t width, size_t height, bool splitUp);
-bool createImage(FILE *fh, size_t width, size_t height, bool splitUp);
+void createImageBuffer(const size_t width, const size_t height, const bool splitUp);
+bool createImage(FILE *fh, const size_t width, const size_t height, const bool splitUp);
 bool saveImage();
-int loadImagePart(int startx, int starty, int width, int height);
-void setPixel(size_t x, size_t y, uint8_t color, float fsub);
-void blendPixel(size_t x, size_t y, uint8_t color, float fsub);
+int loadImagePart(const int startx, const int starty, const int width, const int height);
+void setPixel(const size_t x, const size_t y, const uint8_t color, const float fsub);
+void blendPixel(const size_t x, const size_t y, const uint8_t color, const float fsub);
 bool saveImagePart();
 bool discardImagePart();
 bool composeFinalImage();
-uint64_t calcImageSize(int mapChunksX, int mapChunksZ, size_t mapHeight, int &pixelsX, int &pixelsY, bool tight = false);
+uint64_t calcImageSize(const int mapChunksX, const int mapChunksZ, const size_t mapHeight, int &pixelsX, int &pixelsY, const bool tight = false);
 
 #endif

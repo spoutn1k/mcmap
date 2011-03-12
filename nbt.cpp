@@ -71,6 +71,12 @@ static inline uint32_t _ntohl(uint8_t *val)
 	       + (uint32_t(val[3]));
 }
 
+NBT::NBT()
+{
+	_blob = NULL;
+	_filename = NULL;
+}
+
 ///-------------------------------------------
 
 NBT::NBT(const char *file, bool &success)
@@ -112,7 +118,7 @@ NBT::NBT(const char *file, bool &success)
 	success = (position != NULL);
 }
 
-NBT::NBT(uint8_t * const file, size_t len, bool shared, bool &success)
+NBT::NBT(uint8_t * const file, const size_t len, const bool shared, bool &success)
 {
 	_filename = NULL;
 	if (shared) {
@@ -340,7 +346,7 @@ NBT_Tag::~NBT_Tag()
 // Protip: Always perform a check if the array really has at least the size you expect it
 // to have, to save you some headache.
 
-bool NBT_Tag::getCompound(string name, NBT_Tag* &compound)
+bool NBT_Tag::getCompound(const string name, NBT_Tag* &compound)
 {
 	if (_type != tagCompound || _elems->find(name) == _elems->end() || (*_elems)[name]->getType() != tagCompound) {
 		return false;
@@ -349,7 +355,7 @@ bool NBT_Tag::getCompound(string name, NBT_Tag* &compound)
 	return true;
 }
 
-bool NBT_Tag::getShort(string name, int16_t &value)
+bool NBT_Tag::getShort(const string name, int16_t &value)
 {
 	if (_type != tagCompound || _elems->find(name) == _elems->end() || (*_elems)[name]->getType() != tagInt) {
 		return false;
@@ -358,7 +364,7 @@ bool NBT_Tag::getShort(string name, int16_t &value)
 	return true;
 }
 
-bool NBT_Tag::getInt(string name, int32_t &value)
+bool NBT_Tag::getInt(const string name, int32_t &value)
 {
 	if (_type != tagCompound || _elems->find(name) == _elems->end() || (*_elems)[name]->getType() != tagInt) {
 		return false;
@@ -367,7 +373,7 @@ bool NBT_Tag::getInt(string name, int32_t &value)
 	return true;
 }
 
-bool NBT_Tag::getLong(string name, int64_t &value)
+bool NBT_Tag::getLong(const string name, int64_t &value)
 {
 	if (_type != tagCompound || _elems->find(name) == _elems->end() || (*_elems)[name]->getType() != tagLong) {
 		return false;
@@ -385,7 +391,7 @@ bool NBT_Tag::getLong(string name, int64_t &value)
 	return true;
 }
 
-bool NBT_Tag::getByteArray(string name, uint8_t* &data, int &len)
+bool NBT_Tag::getByteArray(const string name, uint8_t* &data, int &len)
 {
 	if (_type != tagCompound || _elems->find(name) == _elems->end() || (*_elems)[name]->getType() != tagByteArray) {
 		return false;

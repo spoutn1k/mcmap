@@ -1,6 +1,6 @@
 /***
  * mcmap - create isometric maps of your minecraft alpha/beta world
- * v2.0b, 02-2011 by Zahl
+ * v2.0d, 02-2011 by Zahl
  */
 
 #include "helper.h"
@@ -634,29 +634,25 @@ static size_t gBlocksRemoved = 0;
 #endif
 void optimizeTerrain2(int cropLeft, int cropRight)
 {
-	// Remove invisible blocks from map (covered by other blocks from isometric pov)
-	// Do so by "raytracing" every block from front to back..
 	printf("Optimizing terrain...\n");
 #ifdef _DEBUG
 	gBlocksRemoved = 0;
 #endif
-	printProgress(0, 10);
-	const int top = (int)g_MapsizeY;
-	uint8_t blocked[CHUNKSIZE_Y]; // Helper array to remember which block is blocked from being seen. This allows to traverse the array in a slightly more sequential way, which leads to better usage of the CPU cache
-	const int max = (int)MIN(g_MapsizeX - CHUNKSIZE_X * 2, g_MapsizeZ - CHUNKSIZE_Z * 2);
-	const int maxX = int(g_MapsizeX - CHUNKSIZE_X - 1);
-	const int maxZ = int(g_MapsizeZ - CHUNKSIZE_Z - 1);
-	const size_t maxProgress = size_t(maxX + maxZ);
-	// The following needs to be done twice, once for the X-Y front plane, once for the Z-Y front plane
-	for (int x = CHUNKSIZE_X + cropLeft / 2; x <= maxX; ++x) {
-		memset(blocked, 0, CHUNKSIZE_Y); // Nothing is blocked at first
-		int offset = 0; // The helper array had to be shifted after each run of the inner most loop. As this is expensive, just use an offset that increases instead
-		const int max2 = MIN(max, x - CHUNKSIZE_X + 1); // Block array will be traversed diagonally, determine how many blocks there are
-		for (int i = 0; i < max2; ++i) { // This traverses the block array diagonally, which would be upwards in the image
-			uint8_t *block = &BLOCKAT(x - i, 0, maxZ - i); // Get the lowest block at that point
+	const int maxX = g_MapsizeX - CHUNKSIZE_X;
+	const int maxZ = g_MapsizeZ - CHUNKSIZE_Z;
+	const int modZ = maxZ * g_MapsizeY;
+	uint8_t * const blocked = new uint8_t[modZ];
+	int offsetZ = 0, offsetY = 0, offsetGlobal = 0;
+	memset(blocked, 0, modZ);
+	for (int x = maxX - 1; x >= CHUNKSIZE_X; --x) {
+		printProgress(maxX - (x + 1), maxX);
+		offsetZ = offsetGlobal;
+		for (int z = CHUNKSIZE_Z; z < maxZ; ++z) {
+			const uint8_t *block = &BLOCKAT(x, 0, z); // Get the lowest block at that point
 			int highest = 0, lowest = 0xFF; // remember lowest and highest block which are visible to limit the Y-for-loop later
-			for (int j = 0; j < top; ++j) { // Go up
-				if (blocked[(j+offset) % top]) { // Block is hidden, remove
+			for (size_t y = 0; y < g_MapsizeY; ++y) { // Go up
+				uint8_t &current = blocked[((y+offsetY) % g_MapsizeY) + (offsetZ % modZ)];
+				if (current) { // Block is hidden, remove
 #ifdef _DEBUG
 					if (*block != AIR) {
 						++gBlocksRemoved;
@@ -664,53 +660,26 @@ void optimizeTerrain2(int cropLeft, int cropRight)
 #endif
 				} else { // block is not hidden by another block
 					if (*block != AIR && lowest == 0xFF) { // if it's not air, this is the lowest block to draw
-						lowest = j;
+						lowest = y;
 					}
 					if (colors[*block][PALPHA] == 255) { // Block is not hidden, do not remove, but mark spot as blocked for next iteration
-						blocked[(j+offset) % top] = 1;
+						current = 1;
 					}
-					if (*block != AIR) highest = j; // it it's not air, it's the new highest block encountered so far
+					if (*block != AIR) highest = y; // if it's not air, it's the new highest block encountered so far
 				}
 				++block; // Go up
 			}
-			HEIGHTAT(x - i, maxZ - i) = (((uint16_t)highest + 1) << 8) | (uint16_t)lowest; // cram them both into a 16bit int
-			blocked[offset % top] = 0; // This will be the array index responsible for the top most block in the next itaration. Set it to 0 as it can't be hidden.
-			++offset; // Increase offset, as block at height n in current row will hide block at n-1 in next row
+			HEIGHTAT(x, z) = (((uint16_t)highest + 1) << 8) | (uint16_t)lowest; // cram them both into a 16bit int
+			blocked[(offsetY % g_MapsizeY) + (offsetZ % modZ)] = 0;
+			offsetZ += g_MapsizeY;
 		}
-		printProgress(size_t(x), maxProgress);
-	}
-	// Again for other plane
-	for (int z = CHUNKSIZE_Z + cropRight / 2; z < maxZ; ++z) {
-		memset(blocked, 0, CHUNKSIZE_Y);
-		int offset = 0;
-		const int max2 = MIN(max, z - CHUNKSIZE_Z + 1);
-		for (int i = 0; i < max2; ++i) {
-			uint8_t *block = &BLOCKAT(maxX - i, 0, z - i);
-			int highest = 0, lowest = 0xFF;
-			for (int j = 0; j < top; ++j) {
-				if (blocked[(j+offset) % top]) { // Block is hidden, remove
-#ifdef _DEBUG
-					if (*block != AIR) {
-						++gBlocksRemoved;
-					}
-#endif
-				} else {
-					if (*block != AIR && lowest == 0xFF) {
-						lowest = j;
-					}
-					if (colors[*block][PALPHA] == 255) { // Block is not hidden, do not remove, but mark spot as blocked for next iteration
-						blocked[(j+offset) % top] = 1;
-					}
-					if (*block != AIR) highest = j;
-				}
-				++block;
-			}
-			HEIGHTAT(maxX - i, z - i) = (((uint16_t)highest + 1) << 8) | (uint16_t)lowest;
-			blocked[offset % top] = 0;
-			++offset;
+		for (size_t y = 0; y < g_MapsizeY; ++y) {
+			blocked[y + (offsetGlobal % modZ)] = 0;
 		}
-		printProgress(size_t(z + maxX), maxProgress);
+		offsetGlobal += g_MapsizeY;
+		++offsetY;
 	}
+	delete[] blocked;
 	printProgress(10, 10);
 #ifdef _DEBUG
 	printf("Removed %lu blocks\n", (unsigned long) gBlocksRemoved);
