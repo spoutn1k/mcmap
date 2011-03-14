@@ -52,7 +52,12 @@ int main(int argc, char **argv)
 	char *filename = NULL, *outfile = NULL, *colorfile = NULL, *texturefile = NULL, *infoFile = NULL;
 	bool dumpColors = false;
 	char *biomepath = NULL;
-	uint64_t memlimit = 1800 * uint64_t(1024 * 1024);
+	uint64_t memlimit;
+	if (sizeof(size_t) < 8) {
+		memlimit = 1500 * uint64_t(1024 * 1024);
+	} else {
+		memlimit = 2000 * uint64_t(1024 * 1024);
+	}
 	bool memlimitSet = false;
 
 	// First, for the sake of backward compatibility, try to parse command line arguments the old way first
@@ -330,9 +335,9 @@ int main(int argc, char **argv)
 			if (!memlimitSet && sizeof(size_t) > 4) {
 				printf(" ***** PLEASE NOTE *****\n"
 				       "mcmap is using disk cached rendering as it has a default memory limit\n"
-				       "of 1800MiB. If you want to use more memory to render (=faster) use\n"
+				       "of %d MiB. If you want to use more memory to render (=faster) use\n"
 				       "the -mem switch followed by the amount of memory in MiB to use.\n"
-				       "Start mcmap without any arguments to get more help.\n");
+				       "Start mcmap without any arguments to get more help.\n", int(memlimit / (1024 * 1024)));
 			} else {
 				printf("Choosing disk caching strategy...\n");
 			}
@@ -623,7 +628,7 @@ int main(int argc, char **argv)
 	} else {
 		composeFinalImage();
 	}
-	fclose(fileHandle);
+	if (fileHandle != NULL) fclose(fileHandle);
 
 	printf("Job complete.\n");
 	return 0;
