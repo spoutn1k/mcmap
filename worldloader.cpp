@@ -363,6 +363,13 @@ static bool loadChunk(const char *streamOrFile, const size_t streamLen)
 			return false;
 		}
 	}
+	// Markers
+	if (g_MarkerCount != 0) for (int i = 0; i < g_MarkerCount; ++i) {
+		Marker &m = g_Markers[i];
+		if (m.chunkX == chunkX && m.chunkZ == chunkZ) {
+			memset(blockdata + ((m.offsetZ + (m.offsetX * CHUNKSIZE_Z)) * CHUNKSIZE_Y), m.color, CHUNKSIZE_Y);
+		}
+	}
 	//
 	const int offsetz = (chunkZ - g_FromChunkZ) * CHUNKSIZE_Z;
 	const int offsetx = (chunkX - g_FromChunkX) * CHUNKSIZE_X;
@@ -407,7 +414,7 @@ static bool loadChunk(const char *streamOrFile, const size_t streamLen)
 			} else {
 				targetBlock = &BLOCKWEST(x + offsetx, 0, z + offsetz);
 			}
-			// Following code applies only to modes (ab)using the lightmap, and for block remapping (wool color, trees, steps)
+			// Following code applies only to modes (ab)using the light map, and for block remapping (wool color, trees, steps)
 			const size_t toY = g_MapsizeY + g_MapminY;
 			for (size_t y = (g_MapminY / 2) * 2; y < toY; ++y) {
 				const size_t oy = y - g_MapminY;
@@ -835,6 +842,7 @@ static bool loadRegion(const char* file, const bool mustExist, int &loadedChunks
 	}
 	if (fread(buffer, 4, REGIONSIZE * REGIONSIZE, rp) != REGIONSIZE * REGIONSIZE) {
 		printf("Header too short in %s\n", file);
+		fclose(rp);
 		return false;
 	}
 	// Sort chunks using a map, so we access the file as sequential as possible
@@ -897,6 +905,7 @@ static bool loadRegion(const char* file, const bool mustExist, int &loadedChunks
 			loadedChunks++;
 		}
 	}
+	fclose(rp);
 	return true;
 }
 

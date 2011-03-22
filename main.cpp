@@ -1,6 +1,6 @@
 /***
  * mcmap - create isometric maps of your minecraft alpha/beta world
- * v2.0d, 02-2011 by Zahl
+ * v2.0e, 02-2011 by Zahl
  */
 
 #include "helper.h"
@@ -39,6 +39,8 @@ void optimizeTerrain3();
 void undergroundMode(bool explore);
 bool prepareNextArea(int splitX, int splitZ, int &bitmapStartX, int &bitmapStartY);
 void writeInfoFile(const char* file, int xo, int yo);
+static const inline int floorChunkX(const int val);
+static const inline int floorChunkZ(const int val);
 void printHelp(char *binary);
 
 int main(int argc, char **argv)
@@ -194,6 +196,36 @@ int main(int argc, char **argv)
 			} else if (strcmp(option, "-help") == 0 || strcmp(option, "-h") == 0 || strcmp(option, "-?") == 0) {
 				printHelp(argv[0]);
 				return 0;
+			} else if (strcmp(option, "-marker") == 0) {
+				if (g_MarkerCount >= MAX_MARKERS) {
+					printf("Too many markers, ignoring additional ones\n");
+					continue;
+				}
+				if (!MOREARGS(3) || !isNumeric(POLLARG(2)) || !isNumeric(POLLARG(3))) {
+					printf("Error: %s needs a char and two integer arguments, ie: %s r -15 240\n", option, option);
+					return 1;
+				}
+				Marker &marker = g_Markers[g_MarkerCount];
+				switch (*NEXTARG) {
+				case 'r':
+					marker.color = 253;
+					break;
+				case 'g':
+					marker.color = 244;
+					break;
+				case 'b':
+					marker.color = 242;
+					break;
+				default:
+					marker.color = 35;
+				}
+				int x = atoi(NEXTARG);
+				int z = atoi(NEXTARG);
+				marker.chunkX = floorChunkX(x);
+				marker.chunkZ = floorChunkZ(z);
+				marker.offsetX = x - (marker.chunkX * CHUNKSIZE_X);
+				marker.offsetZ = z - (marker.chunkZ * CHUNKSIZE_Z);
+				g_MarkerCount++;
 			} else {
 				filename = (char *) option;
 			}
@@ -626,7 +658,10 @@ int main(int argc, char **argv)
 	if (!splitImage) {
 		saveImage();
 	} else {
-		composeFinalImage();
+		if (!composeFinalImage()) {
+			printf("Aborted.\n");
+			return 1;
+		}
 	}
 	if (fileHandle != NULL) fclose(fileHandle);
 
@@ -988,6 +1023,28 @@ void writeInfoFile(const char* file, int xo, int yo)
 	fclose(fh);
 }
 
+/**
+ * Round down to the nearest multiple of 16
+ */
+static const inline int floorChunkX(const int val)
+{
+	if (val < 0) {
+		return ((val - (CHUNKSIZE_X - 1)) / CHUNKSIZE_X);
+	}
+	return (val / CHUNKSIZE_X);
+}
+
+/**
+ * Round down to the nearest multiple of 16
+ */
+static const inline int floorChunkZ(const int val)
+{
+	if (val < 0) {
+		return ((val - (CHUNKSIZE_Z - 1)) / CHUNKSIZE_Z);
+	}
+	return (val / CHUNKSIZE_Z);
+}
+
 void printHelp(char *binary)
 {
 	printf(
@@ -1027,6 +1084,7 @@ void printHelp(char *binary)
 	   "  -info NAME    Write information about map to file 'NAME' You can choose the\n"
 	   "                format by using file extensions .xml, .json or .txt (default)\n"
 	   "  -split PATH   create tiled output (128x128 to 4096x4096) in given PATH\n"
+	   "  -marker c x z place marker at x z with color c (r g b w)\n"
 	   "\n    WORLDPATH is the path of the desired alpha/beta world.\n\n"
 	   ////////////////////////////////////////////////////////////////////////////////
 	   "Examples:\n\n"

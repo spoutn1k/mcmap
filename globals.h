@@ -1,18 +1,24 @@
 #ifndef _GLOBALS_H_
 #define _GLOBALS_H_
 
-#define VERSION "2.0d"
+#define VERSION "2.0e"
 
 #include <stdint.h>
 #include <cstdlib>
 
 #define UNDEFINED 0x7FFFFFFF
+#define MAX_MARKERS 200
 
 enum Orientation {
 	North,
 	East,
 	South,
 	West
+};
+
+struct Marker {
+	int chunkX, chunkZ, offsetX, offsetZ;
+	uint8_t color;
 };
 
 // Global area of world being rendered
@@ -40,6 +46,9 @@ extern uint64_t g_BiomeMapSize;
 extern uint8_t *g_Grasscolor, *g_Leafcolor;
 extern uint16_t *g_BiomeMap;
 extern int g_GrasscolorDepth, g_FoliageDepth;
+
+extern int g_MarkerCount;
+extern Marker g_Markers[MAX_MARKERS];
 
 // 3D arrays holding terrain/lightmap
 extern uint8_t *g_Terrain, *g_Light;

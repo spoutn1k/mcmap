@@ -455,7 +455,7 @@ bool composeFinalImage()
 	}
 
 	for (int y = 0; y < gPngHeight; ++y) {
-		if (y % 50 == 0) {
+		if (y % 100 == 0) {
 			printProgress(size_t(y), size_t(gPngHeight));
 		}
 		// paint each image on this one
@@ -466,17 +466,30 @@ bool composeFinalImage()
 			// do we have to open this image?
 			if (img->y == y && img->pngPtr == NULL) {
 				img->pngFileHandle = fopen(img->filename, "rb");
+				if (img->pngFileHandle == NULL) {
+					printf("Error opening temporary image %s\n", img->filename);
+					return false;
+				}
 				img->pngPtr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-				if (img->pngPtr == NULL || img->pngFileHandle == NULL) {
+				if (img->pngPtr == NULL) {
+					printf("Error creating read struct for temporary image %s\n", img->filename);
 					return false; // Not really cleaning up here, but program will terminate anyways, so why bother
 				}
 				img->pngInfo = png_create_info_struct(img->pngPtr);
 				if (img->pngInfo == NULL || setjmp(png_jmpbuf(img->pngPtr))) {
+					printf("Error reading data from temporary image %s\n", img->filename);
 					return false; // Same here
 				}
 				png_init_io(img->pngPtr, img->pngFileHandle);
 				png_read_info(img->pngPtr, img->pngInfo);
-				// TODO: maybe check image dimensions reported by libpng here. They should never really be different from what's expected
+				// Check if image dimensions match what is expected
+				int type, interlace, comp, filter, bitDepth;
+				png_uint_32 width, height;
+				png_uint_32 ret = png_get_IHDR(img->pngPtr, img->pngInfo, &width, &height, &bitDepth, &type, &interlace, &comp, &filter);
+				if (ret == 0 || width != (png_uint_32)img->width || height != (png_uint_32)img->height) {
+					printf("Temp image %s has wrong dimensions; expected %dx%d, got %dx%d\n", img->filename, img->width, img->height, (int)width, (int)height);
+					return false;
+				}
 			}
 			// Here, the image is either open and ready for reading another line, or its not open when it doesn't have to be copied/blended here, or is already finished
 			if (img->pngPtr == NULL) {
