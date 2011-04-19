@@ -43,6 +43,8 @@ bool loadBiomeColors(const char* path);
 #define LEAVES 18
 #define SANDSTONE 24
 #define BED 26
+#define POW_RAILROAD 27
+#define DET_RAILROAD 28
 #define WOOL 35
 #define FLOWERY 37
 #define FLOWERR 38

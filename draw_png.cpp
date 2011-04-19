@@ -657,7 +657,7 @@ void setPixel(const size_t x, const size_t y, const uint8_t color, const float f
 			setRedwire(x, y, c);
 			return;
 		}
-		if (color == RAILROAD) {
+		if (color == RAILROAD || color == POW_RAILROAD || color == DET_RAILROAD) {
 			setRailroad(x, y, c);
 			return;
 		}
@@ -702,7 +702,7 @@ void setPixel(const size_t x, const size_t y, const uint8_t color, const float f
 			setRedwire(x, y, c);
 			return;
 		}
-		if (color == RAILROAD) {
+		if (color == RAILROAD || color == POW_RAILROAD || color == DET_RAILROAD) {
 			setRailroad(x, y, c);
 			return;
 		}
