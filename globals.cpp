@@ -18,7 +18,7 @@ bool g_Hell = false, g_ServerHell = false;
 
 bool g_UseBiomes = false;
 uint64_t g_BiomeMapSize = 0;
-uint8_t *g_Grasscolor = NULL, *g_Leafcolor = NULL;
+uint8_t *g_Grasscolor = NULL, *g_Leafcolor = NULL, *g_TallGrasscolor = NULL;
 uint16_t *g_BiomeMap = NULL;
 int g_GrasscolorDepth = 0, g_FoliageDepth = 0;
 

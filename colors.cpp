@@ -35,11 +35,10 @@ uint8_t colors[256][8];
 
 void loadColors()
 {
-	// Colors are mostly the same as in Cartograph
 	memset(colors, 0, sizeof colors);
 	SETCOLOR(AIR, 255,255,255,0);
 	SETCOLORNOISE(STONE, 128,128,128,255, 16);
-	SETCOLORNOISE(GRASS, 100,150,60,255, 14);
+	SETCOLORNOISE(GRASS, 102,142,62,255, 14);
 	SETCOLORNOISE(DIRT, 134,96,67,255, 22);
 	SETCOLORNOISE(COBBLESTONE, 115,115,115,255, 24);
 	SETCOLORNOISE(WOOD, 157,128,79,255, 11);
@@ -65,6 +64,12 @@ void loadColors()
 	SETCOLOR(BED, 175,116,116, 254); // Not fully opaque to prevent culling on this one
 	SETCOLOR(POW_RAILROAD, 160,134,72,250);
 	SETCOLOR(DET_RAILROAD, 120,114,92,250);
+	SETCOLOR(29, 106,102,95,255);
+	SETCOLOR(COBWEB, 220,220,220,190);
+	SETCOLORNOISE(TALL_GRASS, 110,166,68,254, 12);
+	SETCOLORNOISE(SHRUB, 123,79,25,254, 25);
+	SETCOLOR(33, 106,102,95,255);
+	SETCOLOR(34, 153,129,89,255);
 	SETCOLOR(WOOL, 222,222,222,255); //Color(143,143,143,255);
 	//SETCOLOR(36, 222,222,222,255);
 	SETCOLOR(FLOWERR, 255,0,0,254); // Not fully opaque to prevent culling on this one
@@ -119,6 +124,21 @@ void loadColors()
 	SETCOLORNOISE(CAKE, 228, 205, 206, 255, 7);
 	SETCOLORNOISE(93, 151,147,147, 255, 2);
 	SETCOLORNOISE(94, 161,147,147, 255, 2);
+	SETCOLOR(95, 125,91,38,255);
+	SETCOLORNOISE(TRAPDOOR, 126,93,45,240, 5);
+	SETCOLORNOISE(97, 128,128,128,255, 16);
+	SETCOLORNOISE(98, 122,122,122,255, 7);
+	SETCOLORNOISE(99, 141,106,83,255, 0);
+	SETCOLORNOISE(100, 182,37,36,255, 6);
+	SETCOLORNOISE(IRON_BARS, 109,108,106,254, 6);
+	SETCOLOR(102, 255,255,255,40);
+	SETCOLORNOISE(103, 151,153,36,255, 10);
+	SETCOLOR(PUMPKIN_STEM, 115,170,73,254);
+	SETCOLOR(MELON_STEM, 115,170,73,254);
+	SETCOLORNOISE(VINES, 51,130,36,180, 12);
+	SETCOLOR(FENCE_GATE, 137,112,65,225);
+	SETCOLOR(108, 170,86,62,255);
+	SETCOLORNOISE(109, 122,122,122,255, 7);
 	SETCOLORNOISE(SANDSTEP, 218, 210, 158, 254, 7); // Not fully opaque to prevent culling on this one
 	SETCOLORNOISE(WOODSTEP, 157,128,79,254, 11); // Not fully opaque to prevent culling on this one
 	SETCOLORNOISE(COBBLESTEP, 115,115,115,254, 26); // Not fully opaque to prevent culling on this one
@@ -285,10 +305,12 @@ bool loadBiomeColors(const char* path)
 	g_GrasscolorDepth = pngGrass->getBytesPerPixel();
 	g_FoliageDepth = pngLeaf->getBytesPerPixel();
 	g_Grasscolor = pngGrass->getImageData();
+	g_TallGrasscolor = new uint8_t[pngGrass->getBytesPerPixel() * 256 * 256];
 	g_Leafcolor = pngLeaf->getImageData();
 	// Adjust brightness to what colors.txt says
 	const int maxG = pngGrass->getWidth() * pngGrass->getHeight() * g_GrasscolorDepth;
 	for (int i = 0; i < maxG; ++i) {
+		g_TallGrasscolor[i] = ((int)g_Grasscolor[i] * (int)colors[TALL_GRASS][BRIGHTNESS]) / 255;
 		g_Grasscolor[i] = ((int)g_Grasscolor[i] * (int)colors[GRASS][BRIGHTNESS]) / 255;
 	}
 	const int maxT = pngLeaf->getWidth() * pngLeaf->getHeight() * g_FoliageDepth;

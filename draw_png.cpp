@@ -637,7 +637,7 @@ void setPixel(const size_t x, const size_t y, const uint8_t color, const float f
 	modColor(c, sub);
 	if (g_BlendAll) {
 		// Then check the block type, as some types will be drawn differently
-		if (color == SNOW) {
+		if (color == SNOW || color == TRAPDOOR) {
 			setSnowBA(x, y, c);
 			return;
 		}
@@ -645,11 +645,11 @@ void setPixel(const size_t x, const size_t y, const uint8_t color, const float f
 			setTorchBA(x, y, c);
 			return;
 		}
-		if (color == FLOWERR || color == FLOWERY || color == MUSHROOMB || color == MUSHROOMR) {
+		if (color == FLOWERR || color == FLOWERY || color == MUSHROOMB || color == MUSHROOMR || color == MELON_STEM || color == PUMPKIN_STEM || color == SHRUB || color == COBWEB) {
 			setFlowerBA(x, y, c);
 			return;
 		}
-		if (color == FENCE) {
+		if (color == FENCE || color == FENCE_GATE || color == VINES || color == IRON_BARS) {
 			setFence(x, y, c);
 			return;
 		}
@@ -672,7 +672,7 @@ void setPixel(const size_t x, const size_t y, const uint8_t color, const float f
 			setGrassBA(x, y, c, L, D, sub);
 			return;
 		}
-		if (color == FIRE) {
+		if (color == FIRE || color == TALL_GRASS) {
 			setFire(x, y, c, L, D);
 			return;
 		}
@@ -682,7 +682,7 @@ void setPixel(const size_t x, const size_t y, const uint8_t color, const float f
 		}
 	} else {
 		// Then check the block type, as some types will be drawn differently
-		if (color == SNOW) {
+		if (color == SNOW || color == TRAPDOOR) {
 			setSnow(x, y, c);
 			return;
 		}
@@ -690,11 +690,11 @@ void setPixel(const size_t x, const size_t y, const uint8_t color, const float f
 			setTorch(x, y, c);
 			return;
 		}
-		if (color == FLOWERR || color == FLOWERY || color == MUSHROOMB || color == MUSHROOMR) {
+		if (color == FLOWERR || color == FLOWERY || color == MUSHROOMB || color == MUSHROOMR || color == MELON_STEM || color == PUMPKIN_STEM || color == SHRUB || color == COBWEB) {
 			setFlower(x, y, c);
 			return;
 		}
-		if (color == FENCE) {
+		if (color == FENCE || color == FENCE_GATE || color == VINES || color == IRON_BARS) {
 			setFence(x, y, c);
 			return;
 		}
@@ -717,7 +717,7 @@ void setPixel(const size_t x, const size_t y, const uint8_t color, const float f
 			setGrass(x, y, c, L, D, sub);
 			return;
 		}
-		if (color == FIRE) {
+		if (color == FIRE || color == TALL_GRASS) {
 			setFire(x, y, c, L, D);
 			return;
 		}
@@ -913,14 +913,13 @@ namespace
 		// This basically just leaves out a few pixels
 		// Top row
 		uint8_t *pos = &PIXEL(x, y);
-		for (size_t i = 0; i < 2; ++i, pos += CHANSPERPIXEL * 2) {
-			blend(pos, color);
-		}
+		blend(pos, light);
+		blend(pos + CHANSPERPIXEL*2, dark);
 		// Second and third row
 		for (size_t i = 1; i < 3; ++i) {
 			pos = &PIXEL(x, y+i);
 			blend(pos, dark);
-			blend(pos+(CHANSPERPIXEL*i), dark);
+			blend(pos+(CHANSPERPIXEL*i), color);
 			blend(pos+(CHANSPERPIXEL*3), light);
 		}
 		// Last row

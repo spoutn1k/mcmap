@@ -1,7 +1,7 @@
 #ifndef _GLOBALS_H_
 #define _GLOBALS_H_
 
-#define VERSION "2.0g"
+#define VERSION "2.1"
 
 #include <stdint.h>
 #include <cstdlib>
@@ -43,7 +43,7 @@ extern bool g_Hell, g_ServerHell; // rendering the nether
 // For rendering biome colors properly, external png files are used
 extern bool g_UseBiomes;
 extern uint64_t g_BiomeMapSize;
-extern uint8_t *g_Grasscolor, *g_Leafcolor;
+extern uint8_t *g_Grasscolor, *g_Leafcolor, *g_TallGrasscolor;
 extern uint16_t *g_BiomeMap;
 extern int g_GrasscolorDepth, g_FoliageDepth;
 

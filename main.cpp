@@ -523,6 +523,10 @@ int main(int argc, char **argv)
 					uint16_t &offset = BIOMEAT(x,z);
 					memcpy(colors[GRASS], g_Grasscolor + offset * g_GrasscolorDepth, 3);
 					memcpy(colors[LEAVES], g_Leafcolor + offset * g_FoliageDepth, 3);
+					memcpy(colors[TALL_GRASS], g_TallGrasscolor + offset * g_GrasscolorDepth, 3);
+					memcpy(colors[PUMPKIN_STEM], g_TallGrasscolor + offset * g_GrasscolorDepth, 3);
+					memcpy(colors[MELON_STEM], g_TallGrasscolor + offset * g_GrasscolorDepth, 3);
+					memcpy(colors[VINES], g_Grasscolor + offset * g_GrasscolorDepth, 3);
 					// Leaves: This is just an approximation to get different leaf colors at all
 					colors[PINELEAVES][PRED] = clamp(int32_t(colors[LEAVES][PRED]) - 17);
 					colors[PINELEAVES][PGREEN] = clamp(int32_t(colors[LEAVES][PGREEN]) - 12);
