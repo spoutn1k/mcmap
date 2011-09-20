@@ -676,7 +676,7 @@ void setPixel(const size_t x, const size_t y, const uint8_t color, const float f
 			setFire(x, y, c, L, D);
 			return;
 		}
-		if (color == STEP || color == CAKE || color == BED || color == SANDSTEP || color == WOODSTEP || color == COBBLESTEP) {
+		if (color == STEP || color == CAKE || color == BED || color == SANDSTEP || color == WOODSTEP || color == COBBLESTEP || color == BRICKSTEP || color == STONEBRICKSTEP) {
 			setStepBA(x, y, c, L, D);
 			return;
 		}

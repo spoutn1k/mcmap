@@ -425,7 +425,7 @@ static bool loadChunk(const char *streamOrFile, const size_t streamLen)
 					uint8_t col = (justData[(y / 2) + (z + (x * CHUNKSIZE_Z)) * (CHUNKSIZE_Y / 2)] >> ((y % 2) * 4)) & 0xF;
 					if (block == LEAVES) {
 						if ((col & 0x3) != 0) { // Map to pine or birch
-							*targetBlock++ = 235 + ((col & 0x3) - 1) % 2 + 1;
+							*targetBlock++ = 230 + ((col & 0x3) - 1) % 2 + 1;
 						} else {
 							*targetBlock++ = block;
 						}
