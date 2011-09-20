@@ -546,6 +546,12 @@ int main(int argc, char **argv)
 					if (c == AIR) {
 						continue;
 					}
+                    uint8_t topBlock;
+                    if (y + 1 < g_MapsizeY) {
+                        topBlock = BLOCKAT(x, y + 1, z);
+                    } else {
+                        topBlock = AIR;
+                    }
 					//float col = float(y) * .78f - 91;
 					float brightnessAdjustment = (100.0f / (1.0f + exp(- (1.3f * float(y) / 16.0f) + 6.0f))) - 91;   // thx Donkey Kong
 					if (g_BlendUnderground) {
@@ -589,6 +595,10 @@ int main(int argc, char **argv)
 						if (l < 0) {
 							l = 0;
 						}
+                        if ((topBlock == WATER || topBlock == STAT_WATER) &&
+                                !g_Nightmode) {
+                            l = 15;
+                        }
 						if (!g_Skylight) { // Night
 							brightnessAdjustment -= (125 - l * 9);
 						} else { // Day
