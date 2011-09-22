@@ -9,6 +9,8 @@ bool g_RegionFormat = false;
 
 Orientation g_Orientation = East;
 bool g_Nightmode = false;
+bool g_Oceanmode = false;
+int g_Oceanlevel = 0;
 bool g_Underground = false;
 bool g_BlendUnderground = false;
 bool g_Skylight = false;

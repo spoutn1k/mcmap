@@ -41,6 +41,7 @@ bool prepareNextArea(int splitX, int splitZ, int &bitmapStartX, int &bitmapStart
 void writeInfoFile(const char* file, int xo, int yo);
 static const inline int floorChunkX(const int val);
 static const inline int floorChunkZ(const int val);
+static inline bool isOceanWater(size_t x, size_t y, size_t z);
 void printHelp(char *binary);
 
 int main(int argc, char **argv)
@@ -102,6 +103,17 @@ int main(int argc, char **argv)
 				g_ToChunkZ = atoi(NEXTARG) + 1;
 			} else if (strcmp(option, "-night") == 0) {
 				g_Nightmode = true;
+            } else if (strcmp(option, "-ocean") == 0) {
+                if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
+                    printf("Error: %s needs an integer argument, ie: %s 6\n", option, option);
+                    return 1;
+                }
+                g_Oceanmode = true;
+                g_Oceanlevel = atoi(NEXTARG);
+                if (g_Oceanlevel < 1 || g_Oceanlevel > 15) {
+                    printf("Error: %s needs an integer in the interval (1-15)\n", option);
+                    return 1;
+                }
 			} else if (strcmp(option, "-cave") == 0 || strcmp(option, "-caves") == 0 || strcmp(option, "-underground") == 0) {
 				g_Underground = true;
 			} else if (strcmp(option, "-blendcave") == 0 || strcmp(option, "-blendcaves") == 0) {
@@ -546,11 +558,16 @@ int main(int argc, char **argv)
 					if (c == AIR) {
 						continue;
 					}
+                    bool oceanWater = isOceanWater(x, y, z);
                     uint8_t topBlock;
                     if (y + 1 < g_MapsizeY) {
                         topBlock = BLOCKAT(x, y + 1, z);
                     } else {
                         topBlock = AIR;
+                    }
+                    if (oceanWater && g_Oceanmode) {
+                        // ocean water = water block "ocluded" by other water block
+                        continue;
                     }
 					//float col = float(y) * .78f - 91;
 					float brightnessAdjustment = (100.0f / (1.0f + exp(- (1.3f * float(y) / 16.0f) + 6.0f))) - 91;   // thx Donkey Kong
@@ -596,8 +613,11 @@ int main(int argc, char **argv)
 							l = 0;
 						}
                         if ((topBlock == WATER || topBlock == STAT_WATER) &&
-                                !g_Nightmode) {
-                            l = 15;
+                                !g_Nightmode && g_Oceanmode) {
+                            if (l < g_Oceanlevel) {
+                                // Blocks under water are severly unlit otherwise
+                                l = g_Oceanlevel;
+                            }
                         }
 						if (!g_Skylight) { // Night
 							brightnessAdjustment -= (125 - l * 9);
@@ -1059,6 +1079,37 @@ static const inline int floorChunkZ(const int val)
 	return (val / CHUNKSIZE_Z);
 }
 
+static inline bool isOceanWater(size_t x, size_t y, size_t z)
+{
+#define ISWATER(b) (b == WATER || b == STAT_WATER)
+    uint8_t& thisBlock = BLOCKAT(x, y, z);
+    if (!ISWATER(thisBlock)) {
+        return false;
+    }
+    if (x + 1 >= g_MapsizeX || x < 1 ||
+            (z + 1 >= g_MapsizeZ || z < 1)) {
+        return false;
+    }
+    uint8_t& topBlock = BLOCKAT(x, y + 1, z);
+    // Should use current orientation
+    uint8_t& side1Block = BLOCKAT(x + 1, y, z);
+    uint8_t& side2Block = BLOCKAT(x, y, z + 1);
+    uint8_t& side3Block = BLOCKAT(x - 1, y, z);
+    uint8_t& side4Block = BLOCKAT(x, y, z - 1);
+    if (!ISWATER(topBlock) || !ISWATER(side1Block) ||
+            !ISWATER(side2Block) || !ISWATER(side3Block) ||
+            !ISWATER(side4Block)) {
+        return false;
+    }
+    for (size_t seekY = y + 2; seekY < g_MapsizeY; ++seekY) {
+        uint8_t& seekBlock = BLOCKAT(x, seekY, z);
+        if (!ISWATER(seekBlock) && seekBlock != AIR) {
+            return false;
+        }
+    }
+    return true;
+}
+
 void printHelp(char *binary)
 {
 	printf(
@@ -1073,6 +1124,8 @@ void printHelp(char *binary)
 	   "  -blendcave    overlay caves over normal map; doesn't work with incremental\n"
 	   "                rendering (some parts will be hidden)\n"
 	   "  -night        renders the world at night using blocklight (torches)\n"
+       "  -ocean VAL    set the minimum light for the ocean floor, making it\n"
+       "                more visible (range: 1-15)\n"
 	   "  -skylight     use skylight when rendering map (shadows below trees etc.)\n"
 	   "                hint: using this with -night makes a difference\n"
 	   "  -noise VAL    adds some noise to certain blocks, reasonable values are 0-20\n"

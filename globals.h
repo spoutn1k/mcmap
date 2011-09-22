@@ -33,6 +33,8 @@ extern int g_OffsetY; // y pixel offset in the final image for one y step in 3d 
 extern bool g_RegionFormat;
 extern Orientation g_Orientation; // North, West, South, East
 extern bool g_Nightmode;
+extern bool g_Oceanmode;
+extern int g_Oceanlevel;
 extern bool g_Underground;
 extern bool g_BlendUnderground;
 extern bool g_Skylight;
