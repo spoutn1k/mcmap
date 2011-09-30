@@ -75,6 +75,7 @@ bool loadBiomeColors(const char* path);
 #define NETHER_BRICK 112
 #define NETHER_BRICK_FENCE 113
 #define NETHER_BRICK_STAIRS 114
+#define NETHER_WART 115
 
 #define SANDSTEP 233
 #define WOODSTEP 234

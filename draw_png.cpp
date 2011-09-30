@@ -645,7 +645,7 @@ void setPixel(const size_t x, const size_t y, const uint8_t color, const float f
 			setTorchBA(x, y, c);
 			return;
 		}
-		if (color == FLOWERR || color == FLOWERY || color == MUSHROOMB || color == MUSHROOMR || color == MELON_STEM || color == PUMPKIN_STEM || color == SHRUB || color == COBWEB) {
+		if (color == FLOWERR || color == FLOWERY || color == MUSHROOMB || color == MUSHROOMR || color == MELON_STEM || color == PUMPKIN_STEM || color == SHRUB || color == COBWEB || color == LILYPAD || color == NETHER_WART) {
 			setFlowerBA(x, y, c);
 			return;
 		}
@@ -690,7 +690,7 @@ void setPixel(const size_t x, const size_t y, const uint8_t color, const float f
 			setTorch(x, y, c);
 			return;
 		}
-		if (color == FLOWERR || color == FLOWERY || color == MUSHROOMB || color == MUSHROOMR || color == MELON_STEM || color == PUMPKIN_STEM || color == SHRUB || color == COBWEB || color == LILYPAD) {
+		if (color == FLOWERR || color == FLOWERY || color == MUSHROOMB || color == MUSHROOMR || color == MELON_STEM || color == PUMPKIN_STEM || color == SHRUB || color == COBWEB || color == LILYPAD || color == NETHER_WART) {
 			setFlower(x, y, c);
 			return;
 		}
