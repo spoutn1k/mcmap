@@ -147,6 +147,7 @@ void loadColors()
 	SETCOLOR(NETHER_BRICK_FENCE, 54,24,30,225);
 	SETCOLOR(NETHER_BRICK_STAIRS, 54,24,30,255);
 	SETCOLOR(NETHER_WART, 112,8,28,254);
+	SETCOLORNOISE(SANDSTEP, 218, 210, 158, 254, 7); // Not fully opaque to prevent culling on this one
 	SETCOLORNOISE(WOODSTEP, 157,128,79,254, 11); // Not fully opaque to prevent culling on this one
 	SETCOLORNOISE(COBBLESTEP, 115,115,115,254, 26); // Not fully opaque to prevent culling on this one
 	SETCOLORNOISE(PINELEAVES, 44,84,44,160, 20); // Pine leaves
