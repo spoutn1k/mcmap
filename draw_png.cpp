@@ -649,7 +649,7 @@ void setPixel(const size_t x, const size_t y, const uint8_t color, const float f
 			setFlowerBA(x, y, c);
 			return;
 		}
-		if (color == FENCE || color == FENCE_GATE || color == VINES || color == IRON_BARS) {
+		if (color == FENCE || color == FENCE_GATE || color == VINES || color == IRON_BARS || color == NETHER_BRICK_FENCE) {
 			setFence(x, y, c);
 			return;
 		}
@@ -690,11 +690,11 @@ void setPixel(const size_t x, const size_t y, const uint8_t color, const float f
 			setTorch(x, y, c);
 			return;
 		}
-		if (color == FLOWERR || color == FLOWERY || color == MUSHROOMB || color == MUSHROOMR || color == MELON_STEM || color == PUMPKIN_STEM || color == SHRUB || color == COBWEB) {
+		if (color == FLOWERR || color == FLOWERY || color == MUSHROOMB || color == MUSHROOMR || color == MELON_STEM || color == PUMPKIN_STEM || color == SHRUB || color == COBWEB || color == LILYPAD) {
 			setFlower(x, y, c);
 			return;
 		}
-		if (color == FENCE || color == FENCE_GATE || color == VINES || color == IRON_BARS) {
+		if (color == FENCE || color == FENCE_GATE || color == VINES || color == IRON_BARS || color == NETHER_BRICK_FENCE) {
 			setFence(x, y, c);
 			return;
 		}

@@ -70,6 +70,11 @@ bool loadBiomeColors(const char* path);
 #define MELON_STEM 105
 #define VINES 106
 #define FENCE_GATE 107
+#define MYCELIUM 110
+#define LILYPAD 111
+#define NETHER_BRICK 112
+#define NETHER_BRICK_FENCE 113
+#define NETHER_BRICK_STAIRS 114
 
 #define SANDSTEP 233
 #define WOODSTEP 234
