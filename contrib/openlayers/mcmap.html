@@ -1,0 +1,35 @@
+<html>
+<head>
+  <title>mcmap Sample</title>
+    <script src="http://openlayers.org/api/OpenLayers.js"></script>
+    <script src="http://code.jquery.com/jquery-1.6.4.min.js"></script>
+    <script defer="defer" type="text/javascript">
+	var map;
+	
+	$(document).ready(function(){
+		init();
+	});
+	
+	function init(){
+        	map = new OpenLayers.Map('map', {
+			numZoomLevels:6,
+			eventListeners: {
+				"zoomend": mapEvent,
+				"moveend": mapEvent
+			}
+		});
+        	var xyz = new OpenLayers.Layer.XYZ("mcmap Layer", "./tiles/x${x}y${y}z${z}.png");
+        	map.addLayer(xyz);
+        	map.zoomToMaxExtent();
+	}
+
+	function mapEvent(event){
+	    $(".zoomLevel").html(map.getZoom());	
+	}
+      </script>
+    </head>
+    <body>
+      <p>Zoom:<span class="zoomLevel"></span></p>
+      <div style="width:100%; height:100%; border:1px solid black;" id="map"></div>
+    </body>
+</html>
