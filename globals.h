@@ -1,7 +1,7 @@
 #ifndef _GLOBALS_H_
 #define _GLOBALS_H_
 
-#define VERSION "2.1"
+#define VERSION "2.2"
 
 #include <stdint.h>
 #include <cstdlib>

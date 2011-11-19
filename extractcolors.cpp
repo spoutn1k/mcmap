@@ -126,19 +126,19 @@ static const int special_sauce[256][3] = {
 	{	 5,	 1,	 9	},
 	{	 7,	 0,	10	},
 	{	 6,	 3,	10	},
-	{	-1,	-1,	10	}, /* 110 */
-	{	-1,	-1,	10	},
-	{	-1,	-1,	10	},
-	{	-1,	-1,	10	},
-	{	-1,	-1,	10	},
-	{	-1,	-1,	10	},
-	{	-1,	-1,	10	},
-	{	-1,	-1,	10	},
-	{	-1,	-1,	10	},
-	{	-1,	-1,	10	},
-	{	-1,	-1,	10	}, /* 120 */
-	{	-1,	-1,	10	},
-	{	-1,	-1,	10	},
+	{	13,	 4,	10	}, /* 110 */
+	{	12,	 4,	10	},
+	{	 0,	14,	10	},
+	{	 0,	14,	10	},
+	{	 0,	14,	10	},
+	{	 4,	14,	10	},
+	{	 6,	10,	10	},
+	{	13,	 9,	10	},
+	{	11,	 8,	10	},
+	{	 7,	11,	 5	},
+	{	14,	 9,	10	}, /* 120 */
+	{	15,	10,	10	},
+	{	 5,	 2,	10	},
 	{	-1,	-1,	10	},
 	{	-1,	-1,	10	},
 	{	-1,	-1,	10	},
@@ -247,13 +247,13 @@ static const int special_sauce[256][3] = {
 	{	-1,	-1,	10	},
 	{	-1,	-1,	10	},
 	{	-1,	-1,	10	}, /* 230 */
-	{	-1,	-1,	10	},
-	{	-1,	-1,	10	},
+	{	 4,	 8,	10	}, // Pine leaves (should be darker, more green)
+	{	 4,	 3,	10	}, // Birch leaves (should be lighter)
 	{	 0,	11,	10	}, // Sandstone half step
 	{	 4,	 0,	10	}, // Wooden half step
 	{	 0,	 1,	10	}, // Cooblestone half step
-	{	 4,	 8,	10	}, // Pine leaves (should be darker, more green)
-	{	 4,	 3,	10	}, // Birch leaves (should be lighter)
+	{	 7,	 0,	10	}, // Brick half step
+	{	 6,	 3,	10	}, // Stone brick half step
 	{	 4,	 7,	10	}, // Pine trees get remapped here
 	{	 5,	 7,	10	}, // Birches get remapped here
 	// Dyed wool gets remapped to these block ids. Works up to the point where Notch will actually use these IDs

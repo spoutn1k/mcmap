@@ -61,7 +61,7 @@ void optimizeTerrain2(int cropLeft, int cropRight);
 void optimizeTerrain3();
 void undergroundMode(bool explore);
 bool prepareNextArea(int splitX, int splitZ, int &bitmapStartX, int &bitmapStartY);
-void writeInfoFile(const char* file, int xo, int yo);
+void writeInfoFile(const char* file, int xo, int yo, int bitmapx, int bitmapy);
 static const inline int floorChunkX(const int val);
 static const inline int floorChunkZ(const int val);
 void printHelp(char *binary);
@@ -75,7 +75,7 @@ int main(int argc, char **argv)
 	}
 	bool wholeworld = false;
 	char *filename = NULL, *outfile = NULL, *colorfile = NULL, *texturefile = NULL, *infoFile = NULL;
-	bool dumpColors = false;
+	bool dumpColors = false, infoOnly = false, end = false;
 	char *biomepath = NULL;
 	uint64_t memlimit;
 	if (sizeof(size_t) < 8) {
@@ -133,6 +133,8 @@ int main(int argc, char **argv)
 				g_Skylight = true;
 			} else if (strcmp(option, "-nether") == 0 || strcmp(option, "-hell") == 0 || strcmp(option, "-slip") == 0) {
 				g_Hell = true;
+			} else if (strcmp(option, "-end") == 0) {
+				end = true;
 			} else if (strcmp(option, "-serverhell") == 0) {
 				g_ServerHell = true;
 			} else if (strcmp(option, "-biomes") == 0) {
@@ -198,6 +200,8 @@ int main(int argc, char **argv)
 					return 1;
 				}
 				infoFile = NEXTARG;
+			} else if (strcmp(option, "-infoonly") == 0) {
+				infoOnly = true;
 			} else if (strcmp(option, "-dumpcolors") == 0) {
 				dumpColors = true;
 			} else if (strcmp(option, "-north") == 0) {
@@ -256,9 +260,9 @@ int main(int argc, char **argv)
 		wholeworld = (g_FromChunkX == UNDEFINED || g_ToChunkX == UNDEFINED);
 	}
 	// ########## end of command line parsing ##########
-	if (g_Hell || g_ServerHell) g_UseBiomes = false;
+	if (g_Hell || g_ServerHell || end) g_UseBiomes = false;
 
-	printf("mcmap " VERSION "\n");
+	printf("mcmap " VERSION " by Zahl\n");
 
 	if (sizeof(size_t) < 8 && memlimit > 1800 * uint64_t(1024 * 1024)) {
 		memlimit = 1800 * uint64_t(1024 * 1024);
@@ -310,6 +314,15 @@ int main(int argc, char **argv)
 		strcat(tmp, "/DIM-1");
 		if (!dirExists(tmp)) {
 			printf("Error: This world does not have a hell world yet. Build a portal first!\n");
+			return 1;
+		}
+		filename = tmp;
+	} else if (end) {
+		char *tmp = new char[strlen(filename) + 20];
+		strcpy(tmp, filename);
+		strcat(tmp, "/DIM1");
+		if (!dirExists(tmp)) {
+			printf("Error: This world does not have an end-world yet. Find an ender portal first!\n");
 			return 1;
 		}
 		filename = tmp;
@@ -380,6 +393,16 @@ int main(int argc, char **argv)
 		bitmapY -= (cropTop + cropBottom);
 		bitmapBytes = uint64_t(bitmapX) * BYTESPERPIXEL * uint64_t(bitmapY);
 	}
+
+	if (infoFile != NULL) {
+		writeInfoFile(infoFile,
+				-cropLeft,
+				-cropTop,
+				bitmapX, bitmapY);
+		infoFile = NULL;
+		if (infoOnly) exit(0);
+	}
+
 	bool splitImage = false;
 	int numSplitsX = 0;
 	int numSplitsZ = 0;
@@ -529,13 +552,6 @@ int main(int argc, char **argv)
 			optimizeTerrain3();
 		}
 
-		if (infoFile != NULL) {
-			writeInfoFile(infoFile,
-					int((g_MapsizeZ - CHUNKSIZE_Z) * 2 -CHUNKSIZE_X * 2 + (bitmapStartX - cropLeft)),
-					int(g_MapsizeY * g_OffsetY - CHUNKSIZE_Z - CHUNKSIZE_X + (bitmapStartY - cropTop)) + 2);
-			infoFile = NULL;
-		}
-
 		// Finally, render terrain to file
 		printf("Drawing map...\n");
 		for (size_t x = CHUNKSIZE_X; x < g_MapsizeX - CHUNKSIZE_X; ++x) {
@@ -544,12 +560,14 @@ int main(int argc, char **argv)
 				// Biome colors
 				if (g_BiomeMap != NULL) {
 					uint16_t &offset = BIOMEAT(x,z);
+					// This is getting a bit stupid here, there should be a better solution than a dozen copy ops
 					memcpy(colors[GRASS], g_Grasscolor + offset * g_GrasscolorDepth, 3);
 					memcpy(colors[LEAVES], g_Leafcolor + offset * g_FoliageDepth, 3);
 					memcpy(colors[TALL_GRASS], g_TallGrasscolor + offset * g_GrasscolorDepth, 3);
 					memcpy(colors[PUMPKIN_STEM], g_TallGrasscolor + offset * g_GrasscolorDepth, 3);
 					memcpy(colors[MELON_STEM], g_TallGrasscolor + offset * g_GrasscolorDepth, 3);
 					memcpy(colors[VINES], g_Grasscolor + offset * g_GrasscolorDepth, 3);
+					memcpy(colors[LILYPAD], g_Grasscolor + offset * g_GrasscolorDepth, 3);
 					// Leaves: This is just an approximation to get different leaf colors at all
 					colors[PINELEAVES][PRED] = clamp(int32_t(colors[LEAVES][PRED]) - 17);
 					colors[PINELEAVES][PGREEN] = clamp(int32_t(colors[LEAVES][PGREEN]) - 12);
@@ -996,30 +1014,29 @@ bool prepareNextArea(int splitX, int splitZ, int &bitmapStartX, int &bitmapStart
 	return false; // not done yet, return false
 }
 
-void writeInfoFile(const char* file, int xo, int yo)
+void writeInfoFile(const char* file, int xo, int yo, int bitmapX, int bitmapY)
 {
 	char *direction = NULL;
 	if (g_Orientation == North) {
-		xo += (-g_FromChunkX * 16 + g_FromChunkZ * 16) * g_OffsetY;
-		yo -= (g_FromChunkX * 16 + g_FromChunkZ * 16);
+		xo += (g_TotalToChunkZ * CHUNKSIZE_Z - g_FromChunkX * CHUNKSIZE_X) * 2 + 4;
+		yo -= (g_TotalFromChunkX * CHUNKSIZE_X + g_TotalFromChunkZ * CHUNKSIZE_Z) - CHUNKSIZE_Y * g_OffsetY;
 		direction = (char*)"North";
 	} else if (g_Orientation == South) {
-		xo -= (-g_ToChunkX * 16 + g_ToChunkZ * 16) * g_OffsetY;
-		yo += (g_ToChunkX * 16 + g_ToChunkZ * 16);
+		xo += (g_TotalToChunkX * CHUNKSIZE_X - g_TotalFromChunkZ * CHUNKSIZE_Z) * 2 + 4;
+		yo += ((g_TotalToChunkX) * CHUNKSIZE_X + (g_TotalToChunkZ) * CHUNKSIZE_Z) + CHUNKSIZE_Y * g_OffsetY;
 		direction = (char*)"South";
 	} else if (g_Orientation == East) {
-		xo += (-g_ToChunkX * 16 - g_FromChunkZ * 16) * g_OffsetY;
-		yo += (g_ToChunkX * 16 - g_FromChunkZ * 16);
+		xo -= (g_TotalFromChunkX * CHUNKSIZE_X + g_TotalFromChunkZ * CHUNKSIZE_Z) * g_OffsetY - 6;
+		yo += ((g_TotalToChunkX) * CHUNKSIZE_X - g_TotalFromChunkZ * CHUNKSIZE_Z) + CHUNKSIZE_Y * g_OffsetY;
 		direction = (char*)"East";
 	} else {
-		xo -= (-g_FromChunkX * 16 - g_ToChunkZ * 16) * g_OffsetY;
-		yo -= (g_FromChunkX * 16 - g_ToChunkZ * 16);
+		xo += (g_TotalToChunkX * CHUNKSIZE_X + g_TotalToChunkZ * CHUNKSIZE_Z) * g_OffsetY + 2;
+		yo += ((g_TotalToChunkZ) * CHUNKSIZE_Z - g_TotalFromChunkX * CHUNKSIZE_X) + CHUNKSIZE_Y * g_OffsetY;
 		direction = (char*)"West";
 	}
 	FILE *fh = fopen(file, "w");
 	if (fh == NULL) return;
-	xo += 1;
-	yo -= 2;
+	yo += 4;
 	if (strcmp(".json", RIGHTSTRING(file, 5)) == 0) {
 		fprintf(fh, "{\n"
 				" \"origin\" : {\n"
@@ -1030,22 +1047,28 @@ void writeInfoFile(const char* file, int xo, int yo)
 				"  \"scaling\" : %d,\n"
 				"  \"orientation\" : \"%s\"\n"
 				" },\n"
+				" \"image\" : {\n"
+				"  \"x\" : %d,\n"
+				"  \"y\" : %d\n"
+				" },\n"
 				" \"meta\" : {\n"
 				"  \"timestamp\" : %lu\n"
 				" }\n"
-				"}\n", xo, yo, g_OffsetY, direction, (unsigned long)time(NULL));
+				"}\n", xo, yo, g_OffsetY, direction, bitmapX, bitmapY, (unsigned long)time(NULL));
 	} else if (strcmp(".xml", RIGHTSTRING(file, 4)) == 0) {
 		fprintf(fh, "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
 				"<map>\n"
 				" <origin x=\"%d\" y=\"%d\" />\n"
 				" <geometry scaling=\"%d\" orientation=\"%s\" />\n"
+				" <image x=\"%d\" y=\"%d\" />\n"
 				" <meta timestamp=\"%lu\" />\n"
-				"</map>\n", xo, yo, g_OffsetY, direction, (unsigned long)time(NULL));
+				"</map>\n", xo, yo, g_OffsetY, direction, bitmapX, bitmapY, (unsigned long)time(NULL));
 	} else {
 		time_t t = time(NULL);
 		fprintf(fh, "Origin at %d, %d\n"
 				"Y-Offset: %d, Orientation: %s\n"
-				"Rendered on: %s\n", xo, yo, g_OffsetY, direction, asctime(localtime(&t)));
+				"Image resolution: %dx%d\n"
+				"Rendered on: %s\n", xo, yo, g_OffsetY, direction, bitmapX, bitmapY, asctime(localtime(&t)));
 	}
 	fclose(fh);
 }
@@ -1055,10 +1078,7 @@ void writeInfoFile(const char* file, int xo, int yo)
  */
 static const inline int floorChunkX(const int val)
 {
-	if (val < 0) {
-		return ((val - (CHUNKSIZE_X - 1)) / CHUNKSIZE_X);
-	}
-	return (val / CHUNKSIZE_X);
+	return val & ~(CHUNKSIZE_X - 1);
 }
 
 /**
@@ -1066,10 +1086,7 @@ static const inline int floorChunkX(const int val)
  */
 static const inline int floorChunkZ(const int val)
 {
-	if (val < 0) {
-		return ((val - (CHUNKSIZE_Z - 1)) / CHUNKSIZE_Z);
-	}
-	return (val / CHUNKSIZE_Z);
+	return val & ~(CHUNKSIZE_Z - 1);
 }
 
 void printHelp(char *binary)
@@ -1103,6 +1120,7 @@ void printHelp(char *binary)
 	   "                it only makes sense to pass one of them; East is default\n"
 	   "  -blendall     always use blending mode for blocks\n"
 	   "  -hell         render the hell/nether dimension of the given world\n"
+	   "  -end          render the end dimension of the given world\n"
 	   "  -serverhell   force cropping of blocks at the top (use for nether servers)\n"
 	   "  -texture NAME extract colors from png file 'NAME'; eg. terrain.png\n"
 	   "  -biomes       apply biome colors to grass/leaves; requires that you run\n"
