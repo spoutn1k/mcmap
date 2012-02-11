@@ -2,7 +2,7 @@
 
 int g_TotalFromChunkX, g_TotalFromChunkZ, g_TotalToChunkX, g_TotalToChunkZ;
 int g_FromChunkX = UNDEFINED, g_FromChunkZ = UNDEFINED, g_ToChunkX = UNDEFINED, g_ToChunkZ = UNDEFINED;
-size_t g_MapsizeZ = 0, g_MapsizeY = 128, g_MapminY = 0, g_MapsizeX = 0;
+size_t g_MapsizeZ = 0, g_MapsizeY = 0xfffffff, g_MapminY = 0, g_MapsizeX = 0;
 int g_OffsetY = 2;
 
 bool g_RegionFormat = false;

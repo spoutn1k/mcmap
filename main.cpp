@@ -1106,7 +1106,7 @@ void printHelp(char *binary)
 	   "  -skylight     use skylight when rendering map (shadows below trees etc.)\n"
 	   "                hint: using this with -night makes a difference\n"
 	   "  -noise VAL    adds some noise to certain blocks, reasonable values are 0-20\n"
-	   "  -height VAL   maximum height at which blocks will be rendered (1-128)\n"
+	   "  -height VAL   maximum height at which blocks will be rendered (1-%d)\n"
 	   "  -min/max VAL  minimum/maximum Y index (height) of blocks to render (0-127)\n"
 	   "  -file NAME    sets the output filename to 'NAME'; default is output.png\n"
 	   "  -mem VAL      sets the amount of memory (in MiB) used for rendering. mcmap\n"
@@ -1146,5 +1146,5 @@ void printHelp(char *binary)
 	   "  - This would render the same world but at night, and only\n"
 	   "    from chunk (-10 -10) to chunk (10 10)\n"
 #endif
-	   , binary, binary, binary);
+	   , binary,(int)CHUNKSIZE_Y, binary, binary);
 }
