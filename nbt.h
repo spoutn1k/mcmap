@@ -24,7 +24,8 @@ enum TagType {
 	tagByteArray = 7,
 	tagString = 8,
 	tagList = 9,
-	tagCompound = 10
+	tagCompound = 10,
+	tagIntArray = 11
 };
 
 class NBT_Tag

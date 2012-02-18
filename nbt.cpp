@@ -84,6 +84,7 @@ NBT::NBT(const char *file, bool &success)
 	_blob = NULL;
 	_filename = NULL;
 	if (file == NULL || *file == '\0' || !fileExists(file)) {
+		//fprintf(stderr, "File not found: %s\n", file);
 		success = false;
 		return;
 	}
@@ -97,14 +98,16 @@ NBT::NBT(const char *file, bool &success)
 	}
 	success = (fh != 0);
 	if (!success) {
+		//fprintf(stderr, "Error opening file %s\n", file);
 		return;
 	}
 	// File is open, read data
-	int length = 150000; // I checked a few chunk files in their decompressed form, I think they can't really get any bigger than 80~90KiB, but just to be sure...
+	int length = 150000 * (CHUNKSIZE_Y / 128); // I checked a few chunk files in their decompressed form, I think they can't really get any bigger than 80~90KiB, but just to be sure...
 	_blob = new uint8_t[length];
 	int ret = gzread(fh, _blob, length);
 	gzclose(fh);
 	if (ret == -1 || _blob[0] != 10) { // Has to start with TAG_Compound
+		//fprintf(stderr, "Ret: %d/%d - start: %d\n", ret, length, (int)_blob[0]);
 		success = false;
 		return;
 	}
@@ -113,7 +116,7 @@ NBT::NBT(const char *file, bool &success)
 	_type = tagCompound;
 	NBT_Tag::parseData(position, end);
 	if (position == NULL) {
-		//printf("Error parsing NBT from file\n");
+		//fprintf(stderr, "Error parsing NBT from file\n");
 	}
 	success = (position != NULL);
 }
@@ -132,7 +135,7 @@ NBT::NBT(uint8_t * const file, const size_t len, const bool shared, bool &succes
 	_type = tagCompound;
 	NBT_Tag::parseData(position, end);
 	if (position == NULL) {
-		//printf("Error parsing NBT from stream\n");
+		//fprintf(stderr, "Error parsing NBT from stream\n");
 	}
 	success = (position != NULL);
 }
@@ -140,7 +143,7 @@ NBT::NBT(uint8_t * const file, const size_t len, const bool shared, bool &succes
 NBT::~NBT()
 {
 	if (_blob != NULL) {
-		////printf("DELETE BLOB\n");
+		//fprintf(stderr, "DELETE BLOB\n");
 		delete[] _blob;
 	}
 	if (_filename != NULL) {
@@ -176,7 +179,7 @@ bool NBT::save()
 	}
 	//remove(tmpfile);
 	delete[] tmpfile;
-	//printf("Saved %s\n", _filename);
+	//fprintf(stderr, "Saved %s\n", _filename);
 	return true;
 }
 */
@@ -195,7 +198,7 @@ NBT_Tag::NBT_Tag(uint8_t* &position, const uint8_t *end, string &name)
 	_elems = NULL;
 	_data = NULL;
 	_type = tagUnknown;
-	if (*position < 1 || *position > 10 || end - position < 3) {
+	if (*position < 1 || *position > 11 || end - position < 3) {
 		position = NULL;
 		return;
 	}
@@ -207,7 +210,7 @@ NBT_Tag::NBT_Tag(uint8_t* &position, const uint8_t *end, string &name)
 	}
 	name = string((char *)position+3, len);
 	position += 3 + len;
-	//printf("Tag name is %s\n", name.c_str());
+	//fprintf(stderr, "Tag name is %s\n", name.c_str());
 	this->parseData(position, end, &name);
 }
 
@@ -224,29 +227,29 @@ NBT_Tag::NBT_Tag(uint8_t* &position, const uint8_t *end, TagType type)
 void NBT_Tag::parseData(uint8_t* &position, const uint8_t *end, string *name)
 {
 	// position should now point to start of data (for named tags, right after the name)
-	//printf("Have Tag of type %d\n", (int)_type);
+	//fprintf(stderr, "Have Tag of type %d\n", (int)_type);
 	switch (_type) {
 	case tagCompound:
 		_elems = new tagmap;
 		while (*position != 0 && position < end) { // No end tag, go on...
-			//printf("Having a child....*plopp*..\n");
+			//fprintf(stderr, "Having a child....*plopp*..\n");
 			string thisname;
 			NBT_Tag *tmp = new NBT_Tag(position, end, thisname);
 			if (position == NULL) {
-				//printf("DELETE tmp in compound because of invalid\n");
+				//fprintf(stderr, "DELETE tmp in compound because of invalid\n");
 				delete tmp;
 				return;
 			}
 			if (name != NULL) {
-				//printf(" ** Adding %s to %s\n", thisname.c_str(), name->c_str());
+				//fprintf(stderr, " ** Adding %s to %s\n", thisname.c_str(), name->c_str());
 			}
 			(*_elems)[thisname] = tmp;
 		}
 		++position;
 		break;
 	case tagList: {
-		if (*position < 1 || *position > 10) {
-			//printf("Invalid list type!\n");
+		if (*position < 1 || *position > 11) {
+			//fprintf(stderr, "Invalid list type!\n");
 			position = NULL;
 			return;
 		}
@@ -254,11 +257,11 @@ void NBT_Tag::parseData(uint8_t* &position, const uint8_t *end, string *name)
 		uint32_t count = _ntohl(position+1);
 		position += 5;
 		_list = new list<NBT_Tag *>;
-		//printf("List contains %d elements of type %d\n", (int)count, (int)type);
+		//fprintf(stderr, "List contains %d elements of type %d\n", (int)count, (int)type);
 		while (count-- && position < end) { // No end tag, go on...
 			NBT_Tag *tmp = new NBT_Tag(position, end, type);
 			if (position == NULL) {
-				//printf("DELETE tmp in list because of invalid\n");
+				//fprintf(stderr, "DELETE tmp in list because of invalid\n");
 				delete tmp;
 				return;
 			}
@@ -292,9 +295,9 @@ void NBT_Tag::parseData(uint8_t* &position, const uint8_t *end, string *name)
 		break;
 	case tagByteArray:
 		_len = _ntohl(position);
-		//printf("Array size is %d\n", (int)_len);
+		//fprintf(stderr, "Array size is %d\n", (int)_len);
 		if (position + _len + 4 >= end) {
-			//printf("Too long b< %d bytes!\n", int((position + _len + 4) - end));
+			printf("ByteArray too long by %d bytes!\n", int((position + _len + 4) - end));
 			position = NULL;
 			return;
 		}
@@ -303,18 +306,29 @@ void NBT_Tag::parseData(uint8_t* &position, const uint8_t *end, string *name)
 		break;
 	case tagString:
 		_len = _ntohs(position);
-		//printf("Stringlen is %d\n", (int)_len);
+		//fprintf(stderr, "Stringlen is %d\n", (int)_len);
 		if (position + _len + 2 >= end) {
-			//printf("Too long!\n");
+			//fprintf(stderr, "Too long!\n");
 			position = NULL;
 			return;
 		}
 		_data = position;
 		position += 2 + _len;
 		break;
+	case tagIntArray:
+		_len = _ntohl(position) * 4;
+		//fprintf(stderr, "Array size is %d\n", (int)_len);
+		if (position + _len + 4 >= end) {
+			printf("IntArray too long by %d bytes!\n", int((position + _len + 4) - end));
+			position = NULL;
+			return;
+		}
+		_data = position + 4;
+		position += 4 + _len;
+		break;
 	case tagUnknown:
 	default:
-		//printf("UNKNOWN TAG!\n");
+		printf("UNKNOWN TAG_ %d!\n", (int)_type);
 		position = NULL;
 		break;
 	}
@@ -322,17 +336,16 @@ void NBT_Tag::parseData(uint8_t* &position, const uint8_t *end, string *name)
 
 NBT_Tag::~NBT_Tag()
 {
-	////printf("Tag Destructor for %p\n", this);
 	if (_elems) {
 		for (tagmap::iterator it = _elems->begin(); it != _elems->end(); it++) {
-			////printf("_elems Deleting %p\n", (it->second));
+			////fprintf(stderr, "_elems Deleting %p\n", (it->second));
 			delete (it->second);
 		}
 		delete _elems;
 	}
 	if (_list) {
 		for (list<NBT_Tag *>::iterator it = _list->begin(); it != _list->end(); it++) {
-			////printf("_list Deleting %p\n", *it);
+			////fprintf(stderr, "_list Deleting %p\n", *it);
 			delete *it;
 		}
 		delete _list;

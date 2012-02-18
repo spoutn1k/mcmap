@@ -310,6 +310,7 @@ static bool loadChunk(const char *streamOrFile, const size_t streamLen)
 		chunk = new NBT((uint8_t*)streamOrFile, streamLen, true, ok);
 	}
 	if (!ok) {
+		//printf("Error loading chunk.\n");
 		delete chunk;
 		return false; // chunk does not exist
 	}
