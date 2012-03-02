@@ -915,7 +915,7 @@ static bool loadTerrainRegion(const char *fromPath, int &loadedChunks)
 		for (int z = floorRegion(g_FromChunkZ); z <= floorRegion(g_ToChunkZ); z += REGIONSIZE) {
 			if (g_WorldFormat == 2) {
 				snprintf(path, maxlen, "%s/region/r.%d.%d.mca", fromPath, int(x / REGIONSIZE), int(z / REGIONSIZE));
-				loadRegion(path, false, loadedChunks)
+				loadRegion(path, false, loadedChunks);
 			} else {
 				snprintf(path, maxlen, "%s/region/r.%d.%d.mcr", fromPath, int(x / REGIONSIZE), int(z / REGIONSIZE));
 				if (!loadRegion(path, false, loadedChunks)) {
