@@ -913,10 +913,15 @@ static bool loadTerrainRegion(const char *fromPath, int &loadedChunks)
 	for (int x = floorRegion(g_FromChunkX); x <= floorRegion(g_ToChunkX); x += REGIONSIZE) {
 		printProgress(size_t(x + tmpMin), size_t(floorRegion(g_ToChunkX) + tmpMin));
 		for (int z = floorRegion(g_FromChunkZ); z <= floorRegion(g_ToChunkZ); z += REGIONSIZE) {
-			snprintf(path, maxlen, "%s/region/r.%d.%d.mcr", fromPath, int(x / REGIONSIZE), int(z / REGIONSIZE));
-			if (!loadRegion(path, false, loadedChunks)) {
-				snprintf(path, maxlen, "%s/region/r.%d.%d.data", fromPath, int(x / REGIONSIZE), int(z / REGIONSIZE));
-				loadRegion(path, false, loadedChunks);
+			if (g_WorldFormat == 2) {
+				snprintf(path, maxlen, "%s/region/r.%d.%d.mca", fromPath, int(x / REGIONSIZE), int(z / REGIONSIZE));
+				loadRegion(path, false, loadedChunks)
+			} else {
+				snprintf(path, maxlen, "%s/region/r.%d.%d.mcr", fromPath, int(x / REGIONSIZE), int(z / REGIONSIZE));
+				if (!loadRegion(path, false, loadedChunks)) {
+					snprintf(path, maxlen, "%s/region/r.%d.%d.data", fromPath, int(x / REGIONSIZE), int(z / REGIONSIZE));
+					loadRegion(path, false, loadedChunks);
+				}
 			}
 		}
 	}
