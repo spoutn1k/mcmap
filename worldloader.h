@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <stdint.h>
 
+int getWorldFormat(const char *worldPath);
 bool scanWorldDirectory(const char *fromPath);
 bool loadTerrain(const char *fromPath, int &loadedChunks);
 bool loadEntireTerrain();

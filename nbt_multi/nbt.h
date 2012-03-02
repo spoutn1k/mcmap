@@ -3,15 +3,19 @@
 #include <cstring>
 #include <map>
 #include <list>
+#include <vector>
 #include <string>
 #include "helper.h"
 
 using std::string;
 using std::map;
+using std::vector;
 using std::list;
 
 class NBT_Tag;
-typedef map<string, NBT_Tag *> tagmap;
+typedef list<NBT_Tag *> taglist;
+typedef vector<NBT_Tag *> tagvector;
+typedef map<string, tagvector *> tagmap;
 
 enum TagType {
 	tagUnknown = 0, // Tag_End is not made available, so 0 should never be in any list of available elements
@@ -33,7 +37,7 @@ class NBT_Tag
 	friend class NBT;
 private:
 	tagmap *_elems;
-	list<NBT_Tag *> *_list;
+	taglist *_list;
 	TagType _type;
 	uint8_t *_data;
 	uint32_t _len;
@@ -42,16 +46,14 @@ private:
 	explicit NBT_Tag(uint8_t* &position, const uint8_t *end, TagType type);
 	explicit NBT_Tag();
 	void parseData(uint8_t* &position, const uint8_t *end, string *name = NULL);
+	NBT_Tag* getAs(const string &name, const size_t index);
 
 public:
-	void printTags();
-	bool getCompound(const string name, NBT_Tag* &compound);
-	bool getList(const string name, list<NBT_Tag *>* &lst);
-	bool getByte(const string name, int8_t &value);
-	bool getShort(const string name, int16_t &value);
-	bool getInt(const string name, int32_t &value);
-	bool getLong(const string name, int64_t &value);
-	bool getByteArray(const string name, uint8_t* &data, int &len);
+	bool getCompound(const string name, NBT_Tag* &compound, int index = 0);
+	bool getShort(const string name, int16_t &value, int index = 0);
+	bool getInt(const string name, int32_t &value, int index = 0);
+	bool getLong(const string name, int64_t &value, int index = 0);
+	bool getByteArray(const string name, uint8_t* &data, int &len, int index = 0);
 	TagType getType() {
 		return _type;
 	}

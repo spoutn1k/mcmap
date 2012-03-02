@@ -305,7 +305,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 	if (!isAlphaWorld(filename)) {
-		printf("Error: Given path does not contain an alpha/beta world.\n");
+		printf("Error: Given path does not contain a Minecraft world.\n");
 		return 1;
 	}
 	if (g_Hell) {
@@ -327,19 +327,16 @@ int main(int argc, char **argv)
 		}
 		filename = tmp;
 	}
-	{ // Figure out whether this is the old save format or McRegion
-		char tmp[1000];
-		snprintf(tmp, 1000, "%s/region", filename);
-		if (dirExists(tmp)) {
-			printf("McRegion world format detected.\n");
-			g_RegionFormat = true;
+	// Figure out whether this is the old save format or McRegion or Anvil
+	g_WorldFormat = getWorldFormat(filename);
+
+	if (g_WorldFormat < 2) {
+		if (g_MapsizeY > CHUNKSIZE_Y) {
+			g_MapsizeY = CHUNKSIZE_Y;
 		}
-	}
-	if (g_MapsizeY > CHUNKSIZE_Y) {
-		g_MapsizeY = CHUNKSIZE_Y;
-	}
-	if (g_MapminY > CHUNKSIZE_Y) {
-		g_MapminY = CHUNKSIZE_Y;
+		if (g_MapminY > CHUNKSIZE_Y) {
+			g_MapminY = CHUNKSIZE_Y;
+		}
 	}
 	if (wholeworld && !scanWorldDirectory(filename)) {
 		printf("Error accessing terrain at '%s'\n", filename);
@@ -353,7 +350,10 @@ int main(int argc, char **argv)
 		printf("Nothing to render: -min Y has to be < -max/-height Y\n");
 		return 1;
 	}
+	g_SectionMin = g_MapminY >> SECTION_Y_SHIFT;
+	g_SectionMax = (g_MapsizeY - 1) >> SECTION_Y_SHIFT;
 	g_MapsizeY -= g_MapminY;
+	printf("MinY: %d ... MaxY: %d ... MinSecY: %d ... MaxSecY: %d\n", g_MapminY, g_MapsizeY, g_SectionMin, g_SectionMax);
 	// Whole area to be rendered, in chunks
 	// If -mem is omitted or high enough, this won't be needed
 	g_TotalFromChunkX = g_FromChunkX;
@@ -477,6 +477,12 @@ int main(int argc, char **argv)
 		createImageBuffer(bitmapX, bitmapY, splitImage);
 	}
 
+	// Precompute brightness adjustment factor
+	float *brightnessLookup = new float[g_MapsizeY];
+	for (int y = 0; y < g_MapsizeY; ++y) {
+		brightnessLookup[y] = ((100.0f / (1.0f + exp(- (1.3f * (float(y) * 128.0f / g_MapsizeY) / 16.0f) + 6.0f))) - 91);   // thx Donkey Kong
+	}
+
 	// Now here's the loop rendering all the required parts of the image.
 	// All the vars previously used to define bounds will be set on each loop,
 	// to create something like a virtual window inside the map.
@@ -580,15 +586,15 @@ int main(int argc, char **argv)
 				//
 				const int bmpPosX = int((g_MapsizeZ - z - CHUNKSIZE_Z) * 2 + (x - CHUNKSIZE_X) * 2 + (splitImage ? -2 : bitmapStartX - cropLeft));
 				int bmpPosY = int(g_MapsizeY * g_OffsetY + z + x - CHUNKSIZE_Z - CHUNKSIZE_X + (splitImage ? 0 : bitmapStartY - cropTop)) + 2 - (HEIGHTAT(x, z) & 0xFF) * g_OffsetY;
-				const size_t max = (HEIGHTAT(x, z) & 0xFF00) >> 8;
-				for (size_t y = uint8_t(HEIGHTAT(x, z)); y < max; ++y) {
+				const int max = (HEIGHTAT(x, z) & 0xFF00) >> 8;
+				for (int y = uint8_t(HEIGHTAT(x, z)); y < max; ++y) {
 					bmpPosY -= g_OffsetY;
 					uint8_t &c = BLOCKAT(x, y, z);
 					if (c == AIR) {
 						continue;
 					}
 					//float col = float(y) * .78f - 91;
-					float brightnessAdjustment = (100.0f / (1.0f + exp(- (1.3f * float(y) / 16.0f) + 6.0f))) - 91;   // thx Donkey Kong
+					float brightnessAdjustment = brightnessLookup[y];
 					if (g_BlendUnderground) {
 						brightnessAdjustment -= 168;
 					}
@@ -735,7 +741,7 @@ void optimizeTerrain2(int cropLeft, int cropRight)
 		for (int z = CHUNKSIZE_Z; z < maxZ; ++z) {
 			const uint8_t *block = &BLOCKAT(x, 0, z); // Get the lowest block at that point
 			int highest = 0, lowest = 0xFF; // remember lowest and highest block which are visible to limit the Y-for-loop later
-			for (size_t y = 0; y < g_MapsizeY; ++y) { // Go up
+			for (int y = 0; y < g_MapsizeY; ++y) { // Go up
 				uint8_t &current = blocked[((y+offsetY) % g_MapsizeY) + (offsetZ % modZ)];
 				if (current) { // Block is hidden, remove
 #ifdef _DEBUG
@@ -758,7 +764,7 @@ void optimizeTerrain2(int cropLeft, int cropRight)
 			blocked[(offsetY % g_MapsizeY) + (offsetZ % modZ)] = 0;
 			offsetZ += g_MapsizeY;
 		}
-		for (size_t y = 0; y < g_MapsizeY; ++y) {
+		for (int y = 0; y < g_MapsizeY; ++y) {
 			blocked[y + (offsetGlobal % modZ)] = 0;
 		}
 		offsetGlobal += g_MapsizeY;
@@ -780,24 +786,23 @@ void optimizeTerrain3()
 	gBlocksRemoved = 0;
 #endif
 	printProgress(0, 10);
-	const int top = (int)g_MapsizeY;
 	// Helper arrays to remember which block is blocked from being seen. This allows to traverse the array in a slightly more sequential way, which leads to better usage of the CPU cache
-	uint8_t blocked[CHUNKSIZE_Y*3];
+	uint8_t *blocked = new uint8_t[g_MapsizeY*3];
 	const int max = (int)MIN(g_MapsizeX - CHUNKSIZE_X * 2, g_MapsizeZ - CHUNKSIZE_Z * 2);
 	const int maxX = int(g_MapsizeX - CHUNKSIZE_X - 1);
 	const int maxZ = int(g_MapsizeZ - CHUNKSIZE_Z - 1);
 	const size_t maxProgress = size_t(maxX + maxZ);
 	// The following needs to be done twice, once for the X-Y front plane, once for the Z-Y front plane
 	for (int x = CHUNKSIZE_X; x <= maxX; ++x) {
-		memset(blocked, 0, CHUNKSIZE_Y*3); // Nothing is blocked at first
+		memset(blocked, 0, g_MapsizeY*3); // Nothing is blocked at first
 		int offset = 0; // The helper array had to be shifted after each run of the inner most loop. As this is expensive, just use an offset that increases instead
 		const int max2 = MIN(max, x - CHUNKSIZE_X + 1); // Block array will be traversed diagonally, determine how many blocks there are
 		for (int i = 0; i < max2; ++i) { // This traverses the block array diagonally, which would be upwards in the image
-			const int blockedOffset = CHUNKSIZE_Y * (i % 3);
+			const int blockedOffset = g_MapsizeY * (i % 3);
 			uint8_t *block = &BLOCKAT(x - i, 0, maxZ - i); // Get the lowest block at that point
 			int highest = 0, lowest = 0xFF;
-			for (int j = 0; j < top; ++j) { // Go up
-				if (blocked[blockedOffset + (j+offset) % top]) { // Block is hidden, remove
+			for (int j = 0; j < g_MapsizeY; ++j) { // Go up
+				if (blocked[blockedOffset + (j+offset) % g_MapsizeY]) { // Block is hidden, remove
 #ifdef _DEBUG
 					if (*block != AIR) {
 						++gBlocksRemoved;
@@ -808,15 +813,15 @@ void optimizeTerrain3()
 						lowest = j;
 					}
 					if (colors[*block][PALPHA] == 255) { // Block is not hidden, do not remove, but mark spot as blocked for next iteration
-						blocked[blockedOffset + (j+offset) % top] = 1;
+						blocked[blockedOffset + (j+offset) % g_MapsizeY] = 1;
 					}
 					if (*block != AIR) highest = j;
 				}
 				++block; // Go up
 			}
 			HEIGHTAT(x - i, maxZ - i) = (((uint16_t)highest + 1) << 8) | (uint16_t)lowest;
-			blocked[blockedOffset + ((offset + 1) % top)] = 0; // This will be the array index responsible for the top most block in the next itaration. Set it to 0 as it can't be hidden.
-			blocked[blockedOffset + (offset % top)] = 0;
+			blocked[blockedOffset + ((offset + 1) % g_MapsizeY)] = 0; // This will be the array index responsible for the top most block in the next itaration. Set it to 0 as it can't be hidden.
+			blocked[blockedOffset + (offset % g_MapsizeY)] = 0;
 			if (i % 3 == 2) {
 				offset += 2; // Increase offset, as block at height n in current row will hide block at n-1 in next row
 			}
@@ -824,15 +829,15 @@ void optimizeTerrain3()
 		printProgress(size_t(x), maxProgress);
 	}
 	for (int z = CHUNKSIZE_Z; z < maxZ; ++z) {
-		memset(blocked, 0, CHUNKSIZE_Y*3);
+		memset(blocked, 0, g_MapsizeY*3);
 		int offset = 0;
 		const int max2 = MIN(max, z - CHUNKSIZE_Z + 1);
 		for (int i = 0; i < max2; ++i) {
-			const int blockedOffset = CHUNKSIZE_Y * (i % 3);
+			const int blockedOffset = g_MapsizeY * (i % 3);
 			uint8_t *block = &BLOCKAT(maxX - i, 0, z - i);
 			int highest = 0, lowest = 0xFF;
-			for (int j = 0; j < top; ++j) {
-				if (blocked[blockedOffset + (j+offset) % top]) {
+			for (int j = 0; j < g_MapsizeY; ++j) {
+				if (blocked[blockedOffset + (j+offset) % g_MapsizeY]) {
 #ifdef _DEBUG
 					if (*block != AIR) {
 						++gBlocksRemoved;
@@ -843,21 +848,22 @@ void optimizeTerrain3()
 						lowest = j;
 					}
 					if (colors[*block][PALPHA] == 255) {
-						blocked[blockedOffset + (j+offset) % top] = 1;
+						blocked[blockedOffset + (j+offset) % g_MapsizeY] = 1;
 					}
 					if (*block != AIR) highest = j;
 				}
 				++block;
 			}
 			HEIGHTAT(maxX - i, z - i) = (((uint16_t)highest + 1) << 8) | (uint16_t)lowest;
-			blocked[blockedOffset + ((offset + 1) % top)] = 0;
-			blocked[blockedOffset + (offset % top)] = 0;
+			blocked[blockedOffset + ((offset + 1) % g_MapsizeY)] = 0;
+			blocked[blockedOffset + (offset % g_MapsizeY)] = 0;
 			if (i % 3 == 2) {
 				offset += 2;
 			}
 		}
 		printProgress(size_t(z + maxX), maxProgress);
 	}
+	delete[] blocked;
 	printProgress(10, 10);
 #ifdef _DEBUG
 	printf("Removed %lu blocks\n", (unsigned long) gBlocksRemoved);
@@ -875,7 +881,7 @@ void undergroundMode(bool explore)
 		for (size_t x = CHUNKSIZE_X; x < g_MapsizeX - CHUNKSIZE_X; ++x) {
 			printProgress(x - CHUNKSIZE_X, g_MapsizeX);
 			for (size_t z = CHUNKSIZE_Z; z < g_MapsizeZ - CHUNKSIZE_Z; ++z) {
-				for (size_t y = 0; y < MIN(g_MapsizeY, 64) - 1; y++) {
+				for (int y = 0; y < MIN(g_MapsizeY, 64) - 1; y++) {
 					if (BLOCKAT(x, y, z) == TORCH) {
 						// Torch
 						BLOCKAT(x, y, z) = AIR;
@@ -915,7 +921,7 @@ void undergroundMode(bool explore)
 		for (size_t z = 0; z < g_MapsizeZ; ++z) {
 			size_t ground = 0;
 			size_t cave = 0;
-			for (size_t y = g_MapsizeY - 1; y < g_MapsizeY; --y) {
+			for (int y = g_MapsizeY - 1; y < g_MapsizeY; --y) {
 				uint8_t &c = BLOCKAT(x, y, z);
 				if (c != AIR && cave > 0) { // Found a cave, leave floor
 					if (c == GRASS || c == LEAVES || c == SNOW || GETLIGHTAT(x, y, z) == 0) {
@@ -1019,19 +1025,19 @@ void writeInfoFile(const char* file, int xo, int yo, int bitmapX, int bitmapY)
 	char *direction = NULL;
 	if (g_Orientation == North) {
 		xo += (g_TotalToChunkZ * CHUNKSIZE_Z - g_FromChunkX * CHUNKSIZE_X) * 2 + 4;
-		yo -= (g_TotalFromChunkX * CHUNKSIZE_X + g_TotalFromChunkZ * CHUNKSIZE_Z) - CHUNKSIZE_Y * g_OffsetY;
+		yo -= (g_TotalFromChunkX * CHUNKSIZE_X + g_TotalFromChunkZ * CHUNKSIZE_Z) - g_MapsizeY * g_OffsetY;
 		direction = (char*)"North";
 	} else if (g_Orientation == South) {
 		xo += (g_TotalToChunkX * CHUNKSIZE_X - g_TotalFromChunkZ * CHUNKSIZE_Z) * 2 + 4;
-		yo += ((g_TotalToChunkX) * CHUNKSIZE_X + (g_TotalToChunkZ) * CHUNKSIZE_Z) + CHUNKSIZE_Y * g_OffsetY;
+		yo += ((g_TotalToChunkX) * CHUNKSIZE_X + (g_TotalToChunkZ) * CHUNKSIZE_Z) + g_MapsizeY * g_OffsetY;
 		direction = (char*)"South";
 	} else if (g_Orientation == East) {
 		xo -= (g_TotalFromChunkX * CHUNKSIZE_X + g_TotalFromChunkZ * CHUNKSIZE_Z) * g_OffsetY - 6;
-		yo += ((g_TotalToChunkX) * CHUNKSIZE_X - g_TotalFromChunkZ * CHUNKSIZE_Z) + CHUNKSIZE_Y * g_OffsetY;
+		yo += ((g_TotalToChunkX) * CHUNKSIZE_X - g_TotalFromChunkZ * CHUNKSIZE_Z) + g_MapsizeY * g_OffsetY;
 		direction = (char*)"East";
 	} else {
 		xo += (g_TotalToChunkX * CHUNKSIZE_X + g_TotalToChunkZ * CHUNKSIZE_Z) * g_OffsetY + 2;
-		yo += ((g_TotalToChunkZ) * CHUNKSIZE_Z - g_TotalFromChunkX * CHUNKSIZE_X) + CHUNKSIZE_Y * g_OffsetY;
+		yo += ((g_TotalToChunkZ) * CHUNKSIZE_Z - g_TotalFromChunkX * CHUNKSIZE_X) + g_MapsizeY * g_OffsetY;
 		direction = (char*)"West";
 	}
 	FILE *fh = fopen(file, "w");
@@ -1106,8 +1112,8 @@ void printHelp(char *binary)
 	   "  -skylight     use skylight when rendering map (shadows below trees etc.)\n"
 	   "                hint: using this with -night makes a difference\n"
 	   "  -noise VAL    adds some noise to certain blocks, reasonable values are 0-20\n"
-	   "  -height VAL   maximum height at which blocks will be rendered (1-%d)\n"
-	   "  -min/max VAL  minimum/maximum Y index (height) of blocks to render (0-127)\n"
+	   "  -height VAL   maximum height at which blocks will be rendered\n"
+	   "  -min/max VAL  minimum/maximum Y index (height) of blocks to render\n"
 	   "  -file NAME    sets the output filename to 'NAME'; default is output.png\n"
 	   "  -mem VAL      sets the amount of memory (in MiB) used for rendering. mcmap\n"
 	   "                will use incremental rendering or disk caching to stick to\n"
@@ -1146,5 +1152,5 @@ void printHelp(char *binary)
 	   "  - This would render the same world but at night, and only\n"
 	   "    from chunk (-10 -10) to chunk (10 10)\n"
 #endif
-	   , binary,(int)CHUNKSIZE_Y, binary, binary);
+	   , binary, binary, binary);
 }

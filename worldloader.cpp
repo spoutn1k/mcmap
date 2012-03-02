@@ -61,16 +61,41 @@ namespace
 }
 
 static bool loadChunk(const char *streamOrFile, const size_t len = 0);
+static bool loadAnvilChunk(NBT_Tag * const level, const int32_t chunkX, const int32_t chunkZ);
 static void allocateTerrain();
 static void loadBiomeChunk(const char* path, const int chunkX, const int chunkZ);
 static bool loadAllRegions();
 static bool loadRegion(const char* file, const bool mustExist, int &loadedChunks);
 static bool loadTerrainRegion(const char *fromPath, int &loadedChunks);
 static bool scanWorldDirectoryRegion(const char *fromPath);
+static inline void assignBlock(const uint8_t &source, uint8_t* &dest, int &x, int &y, int &z, uint8_t* &justData);
+
+int getWorldFormat(const char *worldPath)
+{
+	int format = 0; // alpha (single chunk files)
+	size_t len = strlen(worldPath);
+	char *path = new char[len + 40];
+	memcpy(path, worldPath, len);
+	memcpy(path + len, "/region", 8);
+	myFile file;
+	DIRHANDLE sd = Dir::open(path, file);
+	if (sd != NULL) {
+		do { // Here we finally arrived at the region files
+			if (strcmp(".mca", RIGHTSTRING(file.name, 4)) == 0) {
+				format = 2;
+				break;
+			} else if (format != 1 && strcmp(".mcr", RIGHTSTRING(file.name, 4)) == 0) {
+				format = 1;
+			}
+		} while (Dir::next(sd, path, file));
+		Dir::close(sd);
+	}
+	return format;
+}
 
 bool scanWorldDirectory(const char *fromPath)
 {
-	if (g_RegionFormat) return scanWorldDirectoryRegion(fromPath);
+	if (g_WorldFormat != 0) return scanWorldDirectoryRegion(fromPath);
 	charList subdirs;
 	myFile file;
 	DIRHANDLE d = Dir::open((char *)fromPath, file);
@@ -182,20 +207,23 @@ static bool scanWorldDirectoryRegion(const char *fromPath)
 		do { // Here we finally arrived at the region files
 			if (!region.isdir && region.name[0] == 'r' && region.name[1] == '.') { // Make sure filename is a region
 				char *s = region.name;
-				// Extract x coordinate from region filename
-				s += 2;
-				const int valX = atoi(s) * REGIONSIZE;
-				// Extract z coordinate from region filename
-				while (*s != '.' && *s != '\0') {
-					++s;
-				}
-				if (*s == '.') {
-					const int valZ = atoi(s+1) * REGIONSIZE;
-					if (valX > -4000 && valX < 4000 && valZ > -4000 && valZ < 4000) {
-						string full = path + "/" + region.name;
-						chunks.push_back(new Chunk(full.c_str(), valX, valZ));
-					} else {
-						printf("Ignoring bad region at %d %d\n", valX, valZ);
+				const bool anvilFile = strcmp(".mca", RIGHTSTRING(s, 4)) == 0;
+				if ((g_WorldFormat == 2 && anvilFile) || (g_WorldFormat == 1 && !anvilFile)) {
+					// Extract x coordinate from region filename
+					s += 2;
+					const int valX = atoi(s) * REGIONSIZE;
+					// Extract z coordinate from region filename
+					while (*s != '.' && *s != '\0') {
+						++s;
+					}
+					if (*s == '.') {
+						const int valZ = atoi(s+1) * REGIONSIZE;
+						if (valX > -4000 && valX < 4000 && valZ > -4000 && valZ < 4000) {
+							string full = path + "/" + region.name;
+							chunks.push_back(new Chunk(full.c_str(), valX, valZ));
+						} else {
+							printf("Ignoring bad region at %d %d\n", valX, valZ);
+						}
 					}
 				}
 			}
@@ -254,7 +282,7 @@ static bool scanWorldDirectoryRegion(const char *fromPath)
 
 bool loadEntireTerrain()
 {
-	if (g_RegionFormat) return loadAllRegions();
+	if (g_WorldFormat != 0) return loadAllRegions();
 	if (chunks.empty()) {
 		return false;
 	}
@@ -275,7 +303,7 @@ bool loadEntireTerrain()
 bool loadTerrain(const char *fromPath, int &loadedChunks)
 {
 	loadedChunks = 0;
-	if (g_RegionFormat) return loadTerrainRegion(fromPath, loadedChunks);
+	if (g_WorldFormat != 0) return loadTerrainRegion(fromPath, loadedChunks);
 	if (fromPath == NULL || *fromPath == '\0') {
 		return false;
 	}
@@ -335,6 +363,14 @@ static bool loadChunk(const char *streamOrFile, const size_t streamLen)
 		delete chunk;
 		return false; // Nope, its not...
 	}
+	if (g_WorldFormat == 2) {
+		bool ret = loadAnvilChunk(level, chunkX, chunkZ);
+		delete chunk;
+		return ret;
+	}
+	//
+	const int offsetz = (chunkZ - g_FromChunkZ) * CHUNKSIZE_Z;
+	const int offsetx = (chunkX - g_FromChunkX) * CHUNKSIZE_X;
 	uint8_t *blockdata, *lightdata, *skydata, *justData;
 	int32_t len;
 	ok = level->getByteArray("Blocks", blockdata, len);
@@ -371,9 +407,6 @@ static bool loadChunk(const char *streamOrFile, const size_t streamLen)
 			memset(blockdata + ((m.offsetZ + (m.offsetX * CHUNKSIZE_Z)) * CHUNKSIZE_Y), m.color, CHUNKSIZE_Y);
 		}
 	}
-	//
-	const int offsetz = (chunkZ - g_FromChunkZ) * CHUNKSIZE_Z;
-	const int offsetx = (chunkX - g_FromChunkX) * CHUNKSIZE_X;
 	// Now read all blocks from this chunk and copy them to the world array
 	// Rotation introduces lots of if-else blocks here :-(
 	// Maybe make the macros functions and then use pointers.... Probably not faster
@@ -416,52 +449,13 @@ static bool loadChunk(const char *streamOrFile, const size_t streamLen)
 				targetBlock = &BLOCKWEST(x + offsetx, 0, z + offsetz);
 			}
 			// Following code applies only to modes (ab)using the light map, and for block remapping (wool color, trees, steps)
-			const size_t toY = g_MapsizeY + g_MapminY;
-			for (size_t y = (g_MapminY / 2) * 2; y < toY; ++y) {
-				const size_t oy = y - g_MapminY;
+			const int toY = g_MapsizeY + g_MapminY;
+			for (int y = (g_MapminY / 2) * 2; y < toY; ++y) {
+				const int oy = y - g_MapminY;
 				uint8_t &block = blockdata[y + (z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y];
 				// Wool/wood/leaves block hack: Additional block data determines type of this block, here those get remapped to other block ids
 				// Ignore leaves for now if biomes are used, since I have no clue how the color shifting works then
-				if (block == WOOL || block == LOG || block == LEAVES || block == STEP || block == DOUBLESTEP) {
-					uint8_t col = (justData[(y / 2) + (z + (x * CHUNKSIZE_Z)) * (CHUNKSIZE_Y / 2)] >> ((y % 2) * 4)) & 0xF;
-					if (block == LEAVES) {
-						if ((col & 0x3) != 0) { // Map to pine or birch
-							*targetBlock++ = 230 + ((col & 0x3) - 1) % 2 + 1;
-						} else {
-							*targetBlock++ = block;
-						}
-					} else if (block == LOG) {
-						if (col != 0) { // Map to pine or birch
-							*targetBlock++ = 237 + col;
-						} else {
-							*targetBlock++ = block;
-						}
-					} else if (block == WOOL) {
-						if (col != 0) {
-							*targetBlock++ = 239 + col;
-						} else {
-							*targetBlock++ = block;
-						}
-					} else if (block == STEP) {
-						if (col != 0) {
-							*targetBlock++ = 232 + col;
-						} else {
-							*targetBlock++ = block;
-						}
-					} else /*if (block == DOUBLESTEP)*/ {
-						if (col == 1) {
-							*targetBlock++ = SANDSTONE;
-						} else if (col == 2) {
-							*targetBlock++ = WOOD;
-						} else if (col == 3) {
-							*targetBlock++ = COBBLESTONE;
-						} else {
-							*targetBlock++ = block;
-						}
-					}
-				} else {
-					*targetBlock++ = block;
-				}
+				assignBlock(block, targetBlock, x, y, z, justData);
 				if (g_Underground) {
 					if (y < g_MapminY) continue; // As we start at even numbers there might be no block data here
 					if (block == TORCH) {
@@ -558,6 +552,102 @@ static bool loadChunk(const char *streamOrFile, const size_t streamLen)
 	return true;
 }
 
+static bool loadAnvilChunk(NBT_Tag * const level, const int32_t chunkX, const int32_t chunkZ)
+{
+	uint8_t *blockdata, *lightdata, *skydata, *justData;
+	int32_t len, yoffset, yoffsetsomething = (g_MapminY + SECTION_Y * 10000) % SECTION_Y;
+	int8_t yo;
+	list<NBT_Tag *> *sections = NULL;
+	bool ok;
+	ok = level->getList("Sections", sections);
+	if (!ok) {
+		printf("No sections found in region\n");
+		return false;
+	}
+	//
+	const int offsetz = (chunkZ - g_FromChunkZ) * CHUNKSIZE_Z;
+	const int offsetx = (chunkX - g_FromChunkX) * CHUNKSIZE_X;
+	for (list<NBT_Tag *>::iterator it = sections->begin(); it != sections->end(); it++) {
+		NBT_Tag *section = *it;
+		ok = section->getByte("Y", yo);
+		if (!ok) {
+			printf("Y-Offset not found in section\n");
+			return false;
+		}
+		if (yo < g_SectionMin || yo > g_SectionMax) continue;
+		yoffset = (SECTION_Y * (int)(yo - g_SectionMin)) - yoffsetsomething;
+		if (yoffset < 0) yoffset = 0;
+		ok = section->getByteArray("Blocks", blockdata, len);
+		if (!ok || len < CHUNKSIZE_X * CHUNKSIZE_Z * SECTION_Y) {
+			printf("No blocks\n");
+			return false;
+		}
+		ok = section->getByteArray("Data", justData, len);
+		if (!ok || len < (CHUNKSIZE_X * CHUNKSIZE_Z * SECTION_Y) / 2) {
+			printf("No block data\n");
+			return false;
+		}
+		if (g_Nightmode || g_Skylight) { // If nightmode, we need the light information too
+			ok = section->getByteArray("BlockLight", lightdata, len);
+			if (!ok || len < (CHUNKSIZE_X * CHUNKSIZE_Z * SECTION_Y) / 2) {
+				printf("No block light\n");
+				return false;
+			}
+		}
+		if (g_Skylight) { // Skylight desired - wish granted
+			ok = section->getByteArray("SkyLight", skydata, len);
+			if (!ok || len < (CHUNKSIZE_X * CHUNKSIZE_Z * SECTION_Y) / 2) {
+				return false;
+			}
+		}
+		// Copy data
+		for (int x = 0; x < CHUNKSIZE_X; ++x) {
+			for (int z = 0; z < CHUNKSIZE_Z; ++z) {
+				uint8_t *targetBlock, *lightByte;
+				if (g_Orientation == East) {
+					targetBlock = &BLOCKEAST(x + offsetx, yoffset, z + offsetz);
+					if (g_Skylight || g_Nightmode) lightByte = &SETLIGHTEAST(x + offsetx, yoffset, z + offsetz);
+				} else if (g_Orientation == North) {
+					targetBlock = &BLOCKNORTH(x + offsetx, yoffset, z + offsetz);
+					if (g_Skylight || g_Nightmode) lightByte = &SETLIGHTNORTH(x + offsetx, yoffset, z + offsetz);
+				} else if (g_Orientation == South) {
+					targetBlock = &BLOCKSOUTH(x + offsetx, yoffset, z + offsetz);
+					if (g_Skylight || g_Nightmode) lightByte = &SETLIGHTSOUTH(x + offsetx, yoffset, z + offsetz);
+				} else {
+					targetBlock = &BLOCKWEST(x + offsetx, yoffset, z + offsetz);
+					if (g_Skylight || g_Nightmode) lightByte = &SETLIGHTWEST(x + offsetx, yoffset, z + offsetz);
+				}
+				//const int toY = g_MapsizeY + g_MapminY;
+				for (int y = 0; y < SECTION_Y; ++y) {
+					// In bounds check
+					if (g_SectionMin == yo && y < yoffsetsomething) continue;
+					if (g_SectionMax == yo && y + yoffset >= g_MapsizeY) break;
+					// Block data
+					uint8_t &block = blockdata[x + (z + (y * CHUNKSIZE_Z)) * CHUNKSIZE_X];
+					assignBlock(block, targetBlock, x, y, z, justData);
+					// Light
+					if (g_Skylight && (y & 1) == 0) {
+						const uint8_t &light = lightdata[(x + (z + (y * CHUNKSIZE_Z)) * CHUNKSIZE_X) / 2];
+						const uint8_t highlight = (light >> 4) & 0x0F;
+						const uint8_t lowlight =  (light & 0x0F);
+						const uint8_t &sky = skydata[(x + (z + (y * CHUNKSIZE_Z)) * CHUNKSIZE_X) / 2];
+						uint8_t highsky = ((sky >> 4) & 0x0F);
+						uint8_t lowsky =  (sky & 0x0F);
+						if (g_Nightmode) {
+							highsky = clamp(highsky / 3 - 2);
+							lowsky = clamp(lowsky / 3 - 2);
+						}
+						*lightByte++ = (MAX(highlight, highsky) << 4) | (MAX(lowlight, lowsky) & 0x0F);
+					} else if (g_Nightmode && (y & 1) == 0) {
+						*lightByte++ = lightdata[(x + (z + (y * CHUNKSIZE_Z)) * CHUNKSIZE_X) / 2];
+					}
+				} // for y
+			} // for z
+		} // for x
+	}
+	return true;
+}
+
 uint64_t calcTerrainSize(const int chunksX, const int chunksZ)
 {
 	uint64_t size = uint64_t(chunksX+2) * CHUNKSIZE_X * uint64_t(chunksZ+2) * CHUNKSIZE_Z * uint64_t(g_MapsizeY);
@@ -576,13 +666,13 @@ void calcBitmapOverdraw(int &left, int &right, int &top, int &bottom)
 	int val, x, z;
 	chunkList::iterator itC;
 	pointList::iterator itP;
-	if (g_RegionFormat) {
+	if (g_WorldFormat != 0) {
 		itP = points.begin();
 	} else {
 		itC = chunks.begin();
 	}
 	for (;;) {
-		if (g_RegionFormat) {
+		if (g_WorldFormat != 0) {
 			if (itP == points.end()) break;
 			x = (**itP).x;
 			z = (**itP).z;
@@ -685,7 +775,7 @@ void calcBitmapOverdraw(int &left, int &right, int &top, int &bottom)
 			}
 		}
 		//
-		if (g_RegionFormat) {
+		if (g_WorldFormat != 0) {
 			itP++;
 		} else {
 			itC++;
@@ -795,9 +885,10 @@ static bool loadAllRegions()
 	size_t count = 0;
 	printf("Loading all chunks..\n");
 	for (chunkList::iterator it = chunks.begin(); it != chunks.end(); it++) {
+		Chunk &chunk = (**it);
 		printProgress(count++, max);
 		int i;
-		loadRegion((**it).filename, true, i);
+		loadRegion(chunk.filename, true, i);
 	}
 	printProgress(10, 10);
 	return true;
@@ -958,4 +1049,48 @@ static void loadBiomeChunk(const char* path, const int chunkX, const int chunkZ)
 	}
 	delete[] data;
 	delete[] file;
+}
+
+static inline void assignBlock(const uint8_t &block, uint8_t* &targetBlock, int &x, int &y, int &z, uint8_t* &justData)
+{
+	if (block == WOOL || block == LOG || block == LEAVES || block == STEP || block == DOUBLESTEP) {
+		uint8_t col = (justData[(x + (z + (y * CHUNKSIZE_Z)) * CHUNKSIZE_X) / 2] >> ((y % 2) * 4)) & 0xF;
+		if (block == LEAVES) {
+			if ((col & 0x3) != 0) { // Map to pine or birch
+				*targetBlock++ = 230 + ((col & 0x3) - 1) % 2 + 1;
+			} else {
+				*targetBlock++ = block;
+			}
+		} else if (block == LOG) {
+			if (col != 0) { // Map to pine or birch
+				*targetBlock++ = 237 + col;
+			} else {
+				*targetBlock++ = block;
+			}
+		} else if (block == WOOL) {
+			if (col != 0) {
+				*targetBlock++ = 239 + col;
+			} else {
+				*targetBlock++ = block;
+			}
+		} else if (block == STEP) {
+			if (col != 0) {
+				*targetBlock++ = 232 + col;
+			} else {
+				*targetBlock++ = block;
+			}
+		} else /*if (block == DOUBLESTEP)*/ {
+			if (col == 1) {
+				*targetBlock++ = SANDSTONE;
+			} else if (col == 2) {
+				*targetBlock++ = WOOD;
+			} else if (col == 3) {
+				*targetBlock++ = COBBLESTONE;
+			} else {
+				*targetBlock++ = block;
+			}
+		}
+	} else {
+		*targetBlock++ = block;
+	}
 }

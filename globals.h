@@ -1,7 +1,7 @@
 #ifndef _GLOBALS_H_
 #define _GLOBALS_H_
 
-#define VERSION "2.2"
+#define VERSION "2.3"
 
 #include <stdint.h>
 #include <cstdlib>
@@ -26,11 +26,12 @@ extern int g_TotalFromChunkX, g_TotalFromChunkZ, g_TotalToChunkX, g_TotalToChunk
 // Current area of world being rendered
 extern int g_FromChunkX, g_FromChunkZ, g_ToChunkX, g_ToChunkZ;
 // size of that area in blocks (no offset)
-extern size_t g_MapsizeY, g_MapminY, g_MapsizeZ, g_MapsizeX;
+extern size_t g_MapsizeZ, g_MapsizeX;
+extern int g_MapminY, g_MapsizeY;
 
 extern int g_OffsetY; // y pixel offset in the final image for one y step in 3d array (2 or 3)
 
-extern bool g_RegionFormat;
+extern int g_WorldFormat;
 extern Orientation g_Orientation; // North, West, South, East
 extern bool g_Nightmode;
 extern bool g_Underground;
@@ -57,5 +58,7 @@ extern uint16_t *g_HeightMap;
 
 // If output is to be split up (for google maps etc) this contains the path to output to, NULL otherwise
 extern char *g_TilePath;
+
+extern int8_t g_SectionMin, g_SectionMax;
 
 #endif

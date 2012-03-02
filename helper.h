@@ -5,6 +5,8 @@
 #define CHUNKSIZE_Z 16
 #define CHUNKSIZE_X 16
 #define CHUNKSIZE_Y 128
+#define SECTION_Y 16
+#define SECTION_Y_SHIFT 4
 // Some macros for easier array access
 // First: Block array
 #define BLOCKAT(x,y,z) g_Terrain[(y) + ((z) + ((x) * g_MapsizeZ)) * g_MapsizeY]
@@ -32,7 +34,8 @@
 
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
-#define RIGHTSTRING(x,y) ((x) + strlen(x) - ((y) > strlen(x) ? strlen(x) : (y)))
+//#define RIGHTSTRING(x,y) ((x) + strlen(x) - ((y) > strlen(x) ? strlen(x) : (y)))
+#define RIGHTSTRING(x,y) (strlen(x) >= (y) ? (x) + strlen(x) - (y) : (x))
 
 #include <string>
 

@@ -154,6 +154,8 @@ void loadColors()
 	SETCOLORNOISE(120, 89,117,96,255, 6);
 	SETCOLORNOISE(121, 221,223,165,255, 3);
 	SETCOLOR(122, 20,18,29,255);
+	SETCOLORNOISE(123, 70,43,26,255, 2);
+	SETCOLORNOISE(124, 119,89,55,255, 7);
 	SETCOLORNOISE(SANDSTEP, 218, 210, 158, 254, 7); // Not fully opaque to prevent culling on this one
 	SETCOLORNOISE(WOODSTEP, 157,128,79,254, 11); // Not fully opaque to prevent culling on this one
 	SETCOLORNOISE(COBBLESTEP, 115,115,115,254, 26); // Not fully opaque to prevent culling on this one
