@@ -627,19 +627,18 @@ static bool loadAnvilChunk(NBT_Tag * const level, const int32_t chunkX, const in
 					assignBlock(block, targetBlock, x, y, z, justData);
 					// Light
 					if (g_Skylight && (y & 1) == 0) {
-						const uint8_t &light = lightdata[(x + (z + (y * CHUNKSIZE_Z)) * CHUNKSIZE_X) / 2];
-						const uint8_t highlight = (light >> 4) & 0x0F;
-						const uint8_t lowlight =  (light & 0x0F);
-						const uint8_t &sky = skydata[(x + (z + (y * CHUNKSIZE_Z)) * CHUNKSIZE_X) / 2];
-						uint8_t highsky = ((sky >> 4) & 0x0F);
-						uint8_t lowsky =  (sky & 0x0F);
+						const uint8_t highlight = ((lightdata[(x + (z + ((y + 1) * CHUNKSIZE_Z)) * CHUNKSIZE_X) / 2] >> ((x & 1) * 4)) & 0x0F);
+						const uint8_t lowlight =  ((lightdata[(x + (z + (y * CHUNKSIZE_Z)) * CHUNKSIZE_X) / 2] >> ((x & 1) * 4)) & 0x0F);
+						uint8_t highsky = ((skydata[(x + (z + ((y + 1) * CHUNKSIZE_Z)) * CHUNKSIZE_X) / 2] >> ((x & 1) * 4)) & 0x0F);
+						uint8_t lowsky =  ((skydata[(x + (z + (y * CHUNKSIZE_Z)) * CHUNKSIZE_X) / 2] >> ((x & 1) * 4)) & 0x0F);
 						if (g_Nightmode) {
 							highsky = clamp(highsky / 3 - 2);
 							lowsky = clamp(lowsky / 3 - 2);
 						}
-						*lightByte++ = (MAX(highlight, highsky) << 4) | (MAX(lowlight, lowsky) & 0x0F);
+						*lightByte++ = ((MAX(highlight, highsky) & 0x0F) << 4) | (MAX(lowlight, lowsky) & 0x0F);
 					} else if (g_Nightmode && (y & 1) == 0) {
-						*lightByte++ = lightdata[(x + (z + (y * CHUNKSIZE_Z)) * CHUNKSIZE_X) / 2];
+						*lightByte++ = ((lightdata[(x + (z + (y * CHUNKSIZE_Z)) * CHUNKSIZE_X) / 2] >> ((x & 1) * 4)) & 0x0F)
+							| ((lightdata[(x + (z + ((y + 1) * CHUNKSIZE_Z)) * CHUNKSIZE_X) / 2] >> ((x & 1) * 4)) << 4);
 					}
 				} // for y
 			} // for z
@@ -1059,7 +1058,7 @@ static void loadBiomeChunk(const char* path, const int chunkX, const int chunkZ)
 static inline void assignBlock(const uint8_t &block, uint8_t* &targetBlock, int &x, int &y, int &z, uint8_t* &justData)
 {
 	if (block == WOOL || block == LOG || block == LEAVES || block == STEP || block == DOUBLESTEP) {
-		uint8_t col = (justData[(x + (z + (y * CHUNKSIZE_Z)) * CHUNKSIZE_X) / 2] >> ((y % 2) * 4)) & 0xF;
+		uint8_t col = (justData[(x + (z + (y * CHUNKSIZE_Z)) * CHUNKSIZE_X) / 2] >> ((x % 2) * 4)) & 0xF;
 		if (block == LEAVES) {
 			if ((col & 0x3) != 0) { // Map to pine or birch
 				*targetBlock++ = 230 + ((col & 0x3) - 1) % 2 + 1;

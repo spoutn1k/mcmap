@@ -480,7 +480,7 @@ int main(int argc, char **argv)
 	// Precompute brightness adjustment factor
 	float *brightnessLookup = new float[g_MapsizeY];
 	for (int y = 0; y < g_MapsizeY; ++y) {
-		brightnessLookup[y] = ((100.0f / (1.0f + exp(- (1.3f * (float(y) * 128.0f / g_MapsizeY) / 16.0f) + 6.0f))) - 91);   // thx Donkey Kong
+		brightnessLookup[y] = ((100.0f / (1.0f + exp(- (1.3f * (float(y) * MIN(g_MapsizeY, 200) / g_MapsizeY) / 16.0f) + 6.0f))) - 91);   // thx Donkey Kong
 	}
 
 	// Now here's the loop rendering all the required parts of the image.
@@ -683,7 +683,7 @@ int main(int argc, char **argv)
 				for (size_t z = CHUNKSIZE_Z; z < g_MapsizeZ - CHUNKSIZE_Z; ++z) {
 					const size_t bmpPosX = (g_MapsizeZ - z - CHUNKSIZE_Z) * 2 + (x - CHUNKSIZE_X) * 2 + (splitImage ? -2 : bitmapStartX) - cropLeft;
 					size_t bmpPosY = g_MapsizeY * g_OffsetY + z + x - CHUNKSIZE_Z - CHUNKSIZE_X + (splitImage ? 0 : bitmapStartY) - cropTop;
-					for (size_t y = 0; y < MIN(g_MapsizeY, 64); ++y) {
+					for (int y = 0; y < MIN(g_MapsizeY, 64); ++y) {
 						uint8_t &c = BLOCKAT(x, y, z);
 						if (c != AIR) { // If block is not air (colors[c][3] != 0)
 							blendPixel(bmpPosX, bmpPosY, c, float(y + 30) * .0048f);
