@@ -921,7 +921,7 @@ void undergroundMode(bool explore)
 		for (size_t z = 0; z < g_MapsizeZ; ++z) {
 			size_t ground = 0;
 			size_t cave = 0;
-			for (int y = g_MapsizeY - 1; y < g_MapsizeY; --y) {
+			for (int y = g_MapsizeY - 1; y >= 0; --y) {
 				uint8_t &c = BLOCKAT(x, y, z);
 				if (c != AIR && cave > 0) { // Found a cave, leave floor
 					if (c == GRASS || c == LEAVES || c == SNOW || GETLIGHTAT(x, y, z) == 0) {
