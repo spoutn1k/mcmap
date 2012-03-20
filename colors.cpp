@@ -162,8 +162,9 @@ void loadColors()
 	SETCOLORNOISE(SANDSTEP, 218, 210, 158, 254, 7); // Not fully opaque to prevent culling on this one
 	SETCOLORNOISE(WOODSTEP, 157,128,79,254, 11); // Not fully opaque to prevent culling on this one
 	SETCOLORNOISE(COBBLESTEP, 115,115,115,254, 26); // Not fully opaque to prevent culling on this one
-	SETCOLOR(238, 70,50,32, 255); // Pine trunk
-	SETCOLORNOISE(239, 206,206,201, 255, 5); // Birch trunk
+	SETCOLOR(237, 70,50,32, 255); // Pine trunk
+	SETCOLORNOISE(238, 206,206,201, 255, 5); // Birch trunk
+	SETCOLOR(239, 122,91,51, 255); // Jungle trunk
 	SETCOLOR(240, 244,137,54, 255); // Dyed wool
 	SETCOLOR(241, 200,75,210,255);
 	SETCOLOR(242, 120,158,241, 255);
