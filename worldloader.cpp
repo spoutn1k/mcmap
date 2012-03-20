@@ -69,6 +69,7 @@ static bool loadRegion(const char* file, const bool mustExist, int &loadedChunks
 static bool loadTerrainRegion(const char *fromPath, int &loadedChunks);
 static bool scanWorldDirectoryRegion(const char *fromPath);
 static inline void assignBlock(const uint8_t &source, uint8_t* &dest, int &x, int &y, int &z, uint8_t* &justData);
+static inline void lightCave(const int x, const int y, const int z, const int offsetx, const int offsetz);
 
 int getWorldFormat(const char *worldPath)
 {
@@ -461,58 +462,7 @@ static bool loadChunk(const char *streamOrFile, const size_t streamLen)
 					if (block == TORCH) {
 						// In underground mode, the lightmap is also used, but the values are calculated manually, to only show
 						// caves the players have discovered yet. It's not perfect of course, but works ok.
-						for (int ty = int(y) - 9; ty < int(y) + 9; ty+=2) { // The trick here is to only take into account
-							const int oty = ty - (int)g_MapminY;
-							if (oty < 0) {
-								continue;   // areas around torches.
-							}
-							if (oty >= int(g_MapsizeY)) {
-								break;
-							}
-							for (int tz = int(z) - 18 + offsetz; tz < int(z) + 18 + offsetz; ++tz) {
-								if (tz < CHUNKSIZE_Z) {
-									continue;
-								}
-								for (int tx = int(x) - 18 + offsetx; tx < int(x) + 18 + offsetx; ++tx) {
-									if (tx < CHUNKSIZE_X) {
-										continue;
-									}
-									if (g_Orientation == East) {
-										if (tx >= int(g_MapsizeZ)-CHUNKSIZE_Z) {
-											break;
-										}
-										if (tz >= int(g_MapsizeX)-CHUNKSIZE_X) {
-											break;
-										}
-										SETLIGHTEAST(tx, oty, tz) = 0xFF;
-									} else if (g_Orientation == North) {
-										if (tx >= int(g_MapsizeX)-CHUNKSIZE_X) {
-											break;
-										}
-										if (tz >= int(g_MapsizeZ)-CHUNKSIZE_Z) {
-											break;
-										}
-										SETLIGHTNORTH(tx, oty, tz) = 0xFF;
-									} else if (g_Orientation == South) {
-										if (tx >= int(g_MapsizeX)-CHUNKSIZE_X) {
-											break;
-										}
-										if (tz >= int(g_MapsizeZ)-CHUNKSIZE_Z) {
-											break;
-										}
-										SETLIGHTSOUTH(tx, oty, tz) = 0xFF;
-									} else {
-										if (tx >= int(g_MapsizeZ)-CHUNKSIZE_Z) {
-											break;
-										}
-										if (tz >= int(g_MapsizeX)-CHUNKSIZE_X) {
-											break;
-										}
-										SETLIGHTWEST(tx , oty, tz) = 0xFF;
-									}
-								}
-							}
-						}
+						lightCave(x, y, z, offsetx, offsetz);
 					}
 				} else if (g_Skylight && y % 2 == 0 && y >= g_MapminY) { // copy light info too. Only every other time, since light info is 4 bits
 					const uint8_t &light = lightdata[(y / 2) + (z + (x * CHUNKSIZE_Z)) * (CHUNKSIZE_Y / 2)];
@@ -626,7 +576,12 @@ static bool loadAnvilChunk(NBT_Tag * const level, const int32_t chunkX, const in
 					uint8_t &block = blockdata[x + (z + (y * CHUNKSIZE_Z)) * CHUNKSIZE_X];
 					assignBlock(block, targetBlock, x, y, z, justData);
 					// Light
-					if (g_Skylight && (y & 1) == 0) {
+					if (g_Underground) {
+						if (y < g_MapminY) continue;
+						if (block == TORCH) {
+							lightCave(x, y, z, offsetx, offsetz);
+						}
+					} else if (g_Skylight && (y & 1) == 0) {
 						const uint8_t highlight = ((lightdata[(x + (z + ((y + 1) * CHUNKSIZE_Z)) * CHUNKSIZE_X) / 2] >> ((x & 1) * 4)) & 0x0F);
 						const uint8_t lowlight =  ((lightdata[(x + (z + (y * CHUNKSIZE_Z)) * CHUNKSIZE_X) / 2] >> ((x & 1) * 4)) & 0x0F);
 						uint8_t highsky = ((skydata[(x + (z + ((y + 1) * CHUNKSIZE_Z)) * CHUNKSIZE_X) / 2] >> ((x & 1) * 4)) & 0x0F);
@@ -1061,13 +1016,13 @@ static inline void assignBlock(const uint8_t &block, uint8_t* &targetBlock, int 
 		uint8_t col = (justData[(x + (z + (y * CHUNKSIZE_Z)) * CHUNKSIZE_X) / 2] >> ((x % 2) * 4)) & 0xF;
 		if (block == LEAVES) {
 			if ((col & 0x3) != 0) { // Map to pine or birch
-				*targetBlock++ = 230 + ((col & 0x3) - 1) % 2 + 1;
+				*targetBlock++ = 228 + (col & 0x3);
 			} else {
 				*targetBlock++ = block;
 			}
 		} else if (block == LOG) {
 			if (col != 0) { // Map to pine or birch
-				*targetBlock++ = 237 + col;
+				*targetBlock++ = 236 + (col & 0x3);
 			} else {
 				*targetBlock++ = block;
 			}
@@ -1079,7 +1034,7 @@ static inline void assignBlock(const uint8_t &block, uint8_t* &targetBlock, int 
 			}
 		} else if (block == STEP) {
 			if (col != 0) {
-				*targetBlock++ = 232 + col;
+				*targetBlock++ = 231 + col;
 			} else {
 				*targetBlock++ = block;
 			}
@@ -1097,4 +1052,97 @@ static inline void assignBlock(const uint8_t &block, uint8_t* &targetBlock, int 
 	} else {
 		*targetBlock++ = block;
 	}
+}
+
+static inline void lightCave(const int x, const int y, const int z, const int offsetx, const int offsetz)
+{
+	for (int ty = int(y) - 9; ty < int(y) + 9; ty+=2) { // The trick here is to only take into account
+		const int oty = ty - g_MapminY;
+		if (oty < 0) {
+			continue;   // areas around torches.
+		}
+		if (oty >= int(g_MapsizeY)) {
+			break;
+		}
+		for (int tz = int(z) - 18 + offsetz; tz < int(z) + 18 + offsetz; ++tz) {
+			if (tz < CHUNKSIZE_Z) {
+				continue;
+			}
+			for (int tx = int(x) - 18 + offsetx; tx < int(x) + 18 + offsetx; ++tx) {
+				if (tx < CHUNKSIZE_X) {
+					continue;
+				}
+				if (g_Orientation == East) {
+					if (tx >= int(g_MapsizeZ)-CHUNKSIZE_Z) {
+						break;
+					}
+					if (tz >= int(g_MapsizeX)-CHUNKSIZE_X) {
+						break;
+					}
+					SETLIGHTEAST(tx, oty, tz) = 0xFF;
+				} else if (g_Orientation == North) {
+					if (tx >= int(g_MapsizeX)-CHUNKSIZE_X) {
+						break;
+					}
+					if (tz >= int(g_MapsizeZ)-CHUNKSIZE_Z) {
+						break;
+					}
+					SETLIGHTNORTH(tx, oty, tz) = 0xFF;
+				} else if (g_Orientation == South) {
+					if (tx >= int(g_MapsizeX)-CHUNKSIZE_X) {
+						break;
+					}
+					if (tz >= int(g_MapsizeZ)-CHUNKSIZE_Z) {
+						break;
+					}
+					SETLIGHTSOUTH(tx, oty, tz) = 0xFF;
+				} else {
+					if (tx >= int(g_MapsizeZ)-CHUNKSIZE_Z) {
+						break;
+					}
+					if (tz >= int(g_MapsizeX)-CHUNKSIZE_X) {
+						break;
+					}
+					SETLIGHTWEST(tx , oty, tz) = 0xFF;
+				}
+			}
+		}
+	}
+}
+
+void uncoverNether()
+{
+	const int cap = (g_MapsizeY - g_MapminY) - 57;
+	const int to = (g_MapsizeY - g_MapminY) - 52;
+	printf("Uncovering Nether...\n");
+	for (size_t x = CHUNKSIZE_X; x < g_MapsizeX - CHUNKSIZE_X; ++x) {
+		printProgress(x - CHUNKSIZE_X, g_MapsizeX);
+		for (size_t z = CHUNKSIZE_Z; z < g_MapsizeZ - CHUNKSIZE_Z; ++z) {
+			// Remove blocks on top, otherwise there is not much to see here
+			int massive = 0;
+			uint8_t *bp = g_Terrain + ((z + (x * g_MapsizeZ) + 1) * g_MapsizeY) - 1;
+			int i;
+			for (i = 0; i < to; ++i) { // Go down 74 blocks from the ceiling to see if there is anything except solid
+				if (massive && (*bp == AIR || *bp == LAVA || *bp == STAT_LAVA)) {
+					if (--massive == 0) {
+						break;   // Ignore caves that are only 2 blocks high
+					}
+				}
+				if (*bp != AIR && *bp != LAVA && *bp != STAT_LAVA) {
+					massive = 3;
+				}
+				--bp;
+			}
+			// So there was some cave or anything before going down 70 blocks, everything above will get removed
+			// If not, only 45 blocks starting at the ceiling will be removed
+			if (i > cap) {
+				i = cap - 25;   // TODO: Make this configurable
+			}
+			bp = g_Terrain + ((z + (x * g_MapsizeZ) + 1) * g_MapsizeY) - 1;
+			for (int j = 0; j < i; ++j) {
+				*bp-- = AIR;
+			}
+		}
+	}
+	printProgress(10, 10);
 }

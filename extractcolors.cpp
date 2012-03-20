@@ -245,10 +245,9 @@ static const int special_sauce[256][3] = {
 	{	-1,	-1,	10	},
 	{	-1,	-1,	10	},
 	{	-1,	-1,	10	},
-	{	-1,	-1,	10	},
-	{	-1,	-1,	10	}, /* 230 */
 	{	 4,	 8,	10	}, // Pine leaves (should be darker, more green)
-	{	 4,	 3,	10	}, // Birch leaves (should be lighter)
+	{	 4,	 3,	10	}, /* 230 */ // Birch leaves (should be lighter)
+	{	 9,	 9,	10	}, // Jungle leaves
 	{	 0,	11,	10	}, // Sandstone half step
 	{	 4,	 0,	10	}, // Wooden half step
 	{	 0,	 1,	10	}, // Cooblestone half step
@@ -256,6 +255,7 @@ static const int special_sauce[256][3] = {
 	{	 6,	 3,	10	}, // Stone brick half step
 	{	 4,	 7,	10	}, // Pine trees get remapped here
 	{	 5,	 7,	10	}, // Birches get remapped here
+	{	 4,	12,	10	}, // Jungle trees get remapped here
 	// Dyed wool gets remapped to these block ids. Works up to the point where Notch will actually use these IDs
 	{	 2,	13,	10	}, /* 240 */ /// Orange Wool
 	{	 2,	12,	10	}, // Magenta

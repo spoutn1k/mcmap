@@ -542,6 +542,10 @@ int main(int argc, char **argv)
 			}
 		}
 
+		if (g_WorldFormat == 2 && (g_Hell || g_ServerHell)) {
+			uncoverNether();
+		}
+
 		// Load biome data if requested
 		if (g_UseBiomes) {
 			loadBiomeMap(biomepath);

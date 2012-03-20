@@ -156,11 +156,12 @@ void loadColors()
 	SETCOLOR(122, 20,18,29,255);
 	SETCOLORNOISE(123, 70,43,26,255, 2);
 	SETCOLORNOISE(124, 119,89,55,255, 7);
+	SETCOLORNOISE(PINELEAVES, 44,84,44,160, 20); // Pine leaves
+	SETCOLORNOISE(BIRCHLEAVES, 85,124,60,170, 11); // Birch leaves
+	SETCOLORNOISE(JUNGLELEAVES, 44,135,50,175, 11); // Birch leaves
 	SETCOLORNOISE(SANDSTEP, 218, 210, 158, 254, 7); // Not fully opaque to prevent culling on this one
 	SETCOLORNOISE(WOODSTEP, 157,128,79,254, 11); // Not fully opaque to prevent culling on this one
 	SETCOLORNOISE(COBBLESTEP, 115,115,115,254, 26); // Not fully opaque to prevent culling on this one
-	SETCOLORNOISE(PINELEAVES, 44,84,44,160, 20); // Pine leaves
-	SETCOLORNOISE(BIRCHLEAVES, 85,124,60,170, 11); // Birch leaves
 	SETCOLOR(238, 70,50,32, 255); // Pine trunk
 	SETCOLORNOISE(239, 206,206,201, 255, 5); // Birch trunk
 	SETCOLOR(240, 244,137,54, 255); // Dyed wool
@@ -245,7 +246,7 @@ bool dumpColorsToFile(const char *file)
 				"# If you want to set alpha of grass to <255, use -blendall or you won't get what you expect.\n"
 				"# Noise is supposed to look normal using -noise 10\n"
 				"# Dyed wool ranges from ID 240 to 254, it's orange to black in the order described at http://www.minecraftwiki.net/wiki/Data_values#Wool\n"
-				"# half-steps of sand, wood and cobblestone are 233 to 235\n\n");
+				"# half-steps of sand, wood and cobblestone are 232 to 236\n\n");
 	for (size_t i = 1; i < 255; ++i) {
 		uint8_t *c = colors[i];
 		if (i % 15 == 1) {
