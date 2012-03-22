@@ -1013,7 +1013,12 @@ static void loadBiomeChunk(const char* path, const int chunkX, const int chunkZ)
 static inline void assignBlock(const uint8_t &block, uint8_t* &targetBlock, int &x, int &y, int &z, uint8_t* &justData)
 {
 	if (block == WOOL || block == LOG || block == LEAVES || block == STEP || block == DOUBLESTEP) {
-		uint8_t col = (justData[(x + (z + (y * CHUNKSIZE_Z)) * CHUNKSIZE_X) / 2] >> ((x % 2) * 4)) & 0xF;
+		uint8_t col;
+		if (g_WorldFormat == 2) {
+			col = (justData[(x + (z + (y * CHUNKSIZE_Z)) * CHUNKSIZE_X) / 2] >> ((x % 2) * 4)) & 0xF;
+		} else {
+			col = (justData[(y + (z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y) / 2] >> ((y % 2) * 4)) & 0xF;
+		}
 		if (block == LEAVES) {
 			if ((col & 0x3) != 0) { // Map to pine or birch
 				*targetBlock++ = 228 + (col & 0x3);
