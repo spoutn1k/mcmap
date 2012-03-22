@@ -69,7 +69,7 @@ static bool loadRegion(const char* file, const bool mustExist, int &loadedChunks
 static bool loadTerrainRegion(const char *fromPath, int &loadedChunks);
 static bool scanWorldDirectoryRegion(const char *fromPath);
 static inline void assignBlock(const uint8_t &source, uint8_t* &dest, int &x, int &y, int &z, uint8_t* &justData);
-static inline void lightCave(const int x, const int y, const int z, const int offsetx, const int offsetz);
+static inline void lightCave(const int x, const int y, const int z);
 
 int getWorldFormat(const char *worldPath)
 {
@@ -462,7 +462,7 @@ static bool loadChunk(const char *streamOrFile, const size_t streamLen)
 					if (block == TORCH) {
 						// In underground mode, the lightmap is also used, but the values are calculated manually, to only show
 						// caves the players have discovered yet. It's not perfect of course, but works ok.
-						lightCave(x, y, z, offsetx, offsetz);
+						lightCave(x + offsetx, y, z + offsetz);
 					}
 				} else if (g_Skylight && y % 2 == 0 && y >= g_MapminY) { // copy light info too. Only every other time, since light info is 4 bits
 					const uint8_t &light = lightdata[(y / 2) + (z + (x * CHUNKSIZE_Z)) * (CHUNKSIZE_Y / 2)];
@@ -577,9 +577,10 @@ static bool loadAnvilChunk(NBT_Tag * const level, const int32_t chunkX, const in
 					assignBlock(block, targetBlock, x, y, z, justData);
 					// Light
 					if (g_Underground) {
-						if (y < g_MapminY) continue;
 						if (block == TORCH) {
-							lightCave(x, y, z, offsetx, offsetz);
+							if (y + yoffset < g_MapminY) continue;
+							printf("Torch at %d %d %d\n", x + offsetx, yoffset + y, z + offsetz);
+							lightCave(x + offsetx, yoffset + y, z + offsetz);
 						}
 					} else if (g_Skylight && (y & 1) == 0) {
 						const uint8_t highlight = ((lightdata[(x + (z + ((y + 1) * CHUNKSIZE_Z)) * CHUNKSIZE_X) / 2] >> ((x & 1) * 4)) & 0x0F);
@@ -1063,21 +1064,21 @@ static inline void assignBlock(const uint8_t &block, uint8_t* &targetBlock, int 
 	}
 }
 
-static inline void lightCave(const int x, const int y, const int z, const int offsetx, const int offsetz)
+static inline void lightCave(const int x, const int y, const int z)
 {
-	for (int ty = int(y) - 9; ty < int(y) + 9; ty+=2) { // The trick here is to only take into account
+	for (int ty = y - 9; ty < y + 9; ty+=2) { // The trick here is to only take into account
 		const int oty = ty - g_MapminY;
 		if (oty < 0) {
 			continue;   // areas around torches.
 		}
-		if (oty >= int(g_MapsizeY)) {
+		if (oty >= g_MapsizeY) {
 			break;
 		}
-		for (int tz = int(z) - 18 + offsetz; tz < int(z) + 18 + offsetz; ++tz) {
+		for (int tz = z - 18; tz < z + 18; ++tz) {
 			if (tz < CHUNKSIZE_Z) {
 				continue;
 			}
-			for (int tx = int(x) - 18 + offsetx; tx < int(x) + 18 + offsetx; ++tx) {
+			for (int tx = x - 18; tx < x + 18; ++tx) {
 				if (tx < CHUNKSIZE_X) {
 					continue;
 				}

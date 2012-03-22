@@ -610,35 +610,36 @@ int main(int argc, char **argv)
 						int l = GETLIGHTAT(x, y, z);  // find out how much light hits that block
 						if (l == 0 && y + 1 == g_MapsizeY) {
 							l = (g_Nightmode ? 3 : 15);   // quickfix: assume maximum strength at highest level
-						}
-						bool blocked[4] = {false, false, false, false}; // if light is blocked in one direction
-						for (int i = 1; i < 3 && l <= 0; ++i) {
-							// Need to make this a loop to deal with half-steps, fences, flowers and other special blocks
-							blocked[0] |= (colors[BLOCKAT(x+i, y, z) ][PALPHA] == 255);
-							blocked[1] |= (colors[BLOCKAT(x, y, z+i) ][PALPHA] == 255);
-							blocked[2] |= (y + i >= g_MapsizeY || colors[BLOCKAT(x, y+i, z) ][PALPHA] == 255);
-							blocked[3] |= (colors[BLOCKAT(x+i, y+i, z+i) ][PALPHA] == 255);
-							if (l <= 0 // if block is still dark and there are no translucent blocks around, stop
-							      && blocked[0] && blocked[1] && blocked[2] && blocked[3]) {
-								break;
+						} else {
+							bool blocked[4] = {false, false, false, false}; // if light is blocked in one direction
+							for (int i = 1; i < 3 && l <= 0; ++i) {
+								// Need to make this a loop to deal with half-steps, fences, flowers and other special blocks
+								blocked[0] |= (colors[BLOCKAT(x+i, y, z) ][PALPHA] == 255);
+								blocked[1] |= (colors[BLOCKAT(x, y, z+i) ][PALPHA] == 255);
+								blocked[2] |= (y + i >= g_MapsizeY || colors[BLOCKAT(x, y+i, z) ][PALPHA] == 255);
+								blocked[3] |= (colors[BLOCKAT(x+i, y+i, z+i) ][PALPHA] == 255);
+								if (l <= 0 // if block is still dark and there are no translucent blocks around, stop
+									  && blocked[0] && blocked[1] && blocked[2] && blocked[3]) {
+									break;
+								}
+								//
+								if (!blocked[2] && l <= 0 && y + i < g_MapsizeY) {
+									l = GETLIGHTAT(x, y + i, z);
+								}
+								if (!blocked[0] && l <= 0) {
+									l = GETLIGHTAT(x + i, y, z) - i / 2;
+								}
+								if (!blocked[1] && l <= 0) {
+									l = GETLIGHTAT(x, y, z + i) - i / 2;
+								}
+								if (!blocked[3] && l <= 0 && y + i < g_MapsizeY) {
+									l = (int)GETLIGHTAT(x + i - 1, y + i, z + i - 1) - i;
+								}
+								//if (!blocked[2] && l <= 0 && y+i < g_MapsizeY) l = GETLIGHTAT(x+i/2, y+i/2, z+i/2) - i/2;
 							}
-							//
-							if (!blocked[2] && l <= 0 && y + i < g_MapsizeY) {
-								l = GETLIGHTAT(x, y + i, z);
+							if (l < 0) {
+								l = 0;
 							}
-							if (!blocked[0] && l <= 0) {
-								l = GETLIGHTAT(x + i, y, z) - i / 2;
-							}
-							if (!blocked[1] && l <= 0) {
-								l = GETLIGHTAT(x, y, z + i) - i / 2;
-							}
-							if (!blocked[3] && l <= 0 && y + i < g_MapsizeY) {
-								l = (int)GETLIGHTAT(x + i - 1, y + i, z + i - 1) - i;
-							}
-							//if (!blocked[2] && l <= 0 && y+i < g_MapsizeY) l = GETLIGHTAT(x+i/2, y+i/2, z+i/2) - i/2;
-						}
-						if (l < 0) {
-							l = 0;
 						}
 						if (!g_Skylight) { // Night
 							brightnessAdjustment -= (125 - l * 9);
@@ -939,7 +940,7 @@ void undergroundMode(bool explore)
 					if (c != LOG && c != LEAVES && c != SNOW && c != WOOD && c != WATER && c != STAT_WATER) {
 						++ground;
 					}
-				} else if (ground < 3) { // Block is air, if there was not enough ground above, don't trat that as a cave
+				} else if (ground < 3) { // Block is air, if there was not enough ground above, don't treat that as a cave
 					ground = 0;
 				} else { // Thats a cave, draw next two blocks below it
 					cave = 2;
