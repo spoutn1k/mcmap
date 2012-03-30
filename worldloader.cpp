@@ -1039,14 +1039,10 @@ static inline void assignBlock(const uint8_t &block, uint8_t* &targetBlock, int 
 				*targetBlock++ = block;
 			}
 		} else if (block == STEP) {
-			// Color upside down steps properly
-			if (col >= 8) {
-				col -= 8;
-			}
-			if (col != 0) {
-				*targetBlock++ = 231 + col;
-			} else {
+			if (col == 0) {
 				*targetBlock++ = block;
+			} else {
+				*targetBlock++ = 200 + col;
 			}
 		} else /*if (block == DOUBLESTEP)*/ {
 			if (col == 1) {
