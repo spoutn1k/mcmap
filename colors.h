@@ -77,11 +77,18 @@ bool loadBiomeColors(const char* path);
 #define NETHER_BRICK_STAIRS 114
 #define NETHER_WART 115
 
-#define SANDSTEP 232
-#define WOODSTEP 233
-#define COBBLESTEP 234
-#define BRICKSTEP 235
-#define STONEBRICKSTEP 236
+#define SANDSTEP 201
+#define WOODSTEP 202
+#define COBBLESTEP 203
+#define BRICKSTEP 204
+#define STONEBRICKSTEP 205
+
+#define UP_STEP 208
+#define UP_SANDSTEP 209
+#define UP_WOODSTEP 210
+#define UP_COBBLESTEP 211
+#define UP_BRICKSTEP 212
+#define UP_STONEBRICKSTEP 213
 
 #define PINELEAVES 229
 #define BIRCHLEAVES 230
