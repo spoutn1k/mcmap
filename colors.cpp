@@ -80,8 +80,10 @@ void loadColors()
 	SETCOLOR(42, 191,191,191,255);
 	SETCOLOR(DOUBLESTEP, 200,200,200,255);
 	SETCOLOR(STEP, 200,200,200,254); // Not fully opaque to prevent culling on this one
+	SETCOLOR(UP_STEP, 200,200,200,254); // Not fully opaque to prevent culling on this one
 	SETCOLOR(45, 170,86,62,255);
 	SETCOLOR(BRICKSTEP, 170,86,62,254);
+	SETCOLOR(UP_BRICKSTEP, 170,86,62,254);
 	SETCOLOR(46, 160,83,65,255);
 	SETCOLORNOISE(48, 90,108,90,255, 27);
 	SETCOLOR(49, 26,11,43,255);
@@ -130,6 +132,7 @@ void loadColors()
 	SETCOLORNOISE(97, 128,128,128,255, 16);
 	SETCOLORNOISE(98, 122,122,122,255, 7);
 	SETCOLORNOISE(STONEBRICKSTEP, 122,122,122,254, 7);
+	SETCOLORNOISE(UP_STONEBRICKSTEP, 122,122,122,254, 7);
 	SETCOLORNOISE(99, 141,106,83,255, 0);
 	SETCOLORNOISE(100, 182,37,36,255, 6);
 	SETCOLORNOISE(IRON_BARS, 109,108,106,254, 6);
@@ -160,8 +163,11 @@ void loadColors()
 	SETCOLORNOISE(BIRCHLEAVES, 85,124,60,170, 11); // Birch leaves
 	SETCOLORNOISE(JUNGLELEAVES, 44,135,50,175, 11); // Birch leaves
 	SETCOLORNOISE(SANDSTEP, 218, 210, 158, 254, 7); // Not fully opaque to prevent culling on this one
+	SETCOLORNOISE(UP_SANDSTEP, 218, 210, 158, 254, 7); // Not fully opaque to prevent culling on this one
 	SETCOLORNOISE(WOODSTEP, 157,128,79,254, 11); // Not fully opaque to prevent culling on this one
+	SETCOLORNOISE(UP_WOODSTEP, 157,128,79,254, 11); // Not fully opaque to prevent culling on this one
 	SETCOLORNOISE(COBBLESTEP, 115,115,115,254, 26); // Not fully opaque to prevent culling on this one
+	SETCOLORNOISE(UP_COBBLESTEP, 115,115,115,254, 26); // Not fully opaque to prevent culling on this one
 	SETCOLOR(237, 70,50,32, 255); // Pine trunk
 	SETCOLORNOISE(238, 206,206,201, 255, 5); // Birch trunk
 	SETCOLOR(239, 122,91,51, 255); // Jungle trunk
