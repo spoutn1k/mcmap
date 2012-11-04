@@ -81,6 +81,8 @@ bool loadBiomeColors(const char* path);
 #define COCOA_PLANT 127
 #define TRIPWIRE_HOOK 131
 #define TRIPWIRE 132
+#define COBBLESTONE_WALL 139
+#define MOSSY_COBBLESTONE_WALL 140 // fake id
 
 #define SANDSTEP 201
 #define WOODSTEP 202

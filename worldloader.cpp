@@ -1011,10 +1011,23 @@ static void loadBiomeChunk(const char* path, const int chunkX, const int chunkZ)
 	delete[] file;
 }
 
+/**
+ * Re-Assigns blocks for sub-type detection
+ * such as COBBLESTONE_WALL and its MOSSY_COBBLESTONE_WALL variant
+ * @param block       The original block
+ * @param targetBlock The target replacement block
+ * @param x           [description]
+ * @param y           [description]
+ * @param z           [description]
+ * @param justData    [description]
+ */
 static inline void assignBlock(const uint8_t &block, uint8_t* &targetBlock, int &x, int &y, int &z, uint8_t* &justData)
 {
-	if (block == WOOL || block == LOG || block == LEAVES || block == STEP || block == DOUBLESTEP || block == WOOD || block == WOODEN_STEP || block == WOODEN_DOUBLE_STEP) {
+	if (block == WOOL || block == LOG || block == LEAVES || block == STEP || block == DOUBLESTEP || block == WOOD || block == WOODEN_STEP || block == WOODEN_DOUBLE_STEP || block == COBBLESTONE_WALL) {
+		
+		// an offset if the block has variants
 		uint8_t col;
+		
 		if (g_WorldFormat == 2) {
 			col = (justData[(x + (z + (y * CHUNKSIZE_Z)) * CHUNKSIZE_X) / 2] >> ((x % 2) * 4)) & 0xF;
 		} else {
@@ -1053,6 +1066,13 @@ static inline void assignBlock(const uint8_t &block, uint8_t* &targetBlock, int 
 		} else if (block == WOOD || block == WOODEN_DOUBLE_STEP) {
 			if (col != 0) {
 				*targetBlock++ = 225 + (col & 0x3);
+			} else {
+				*targetBlock++ = block;
+			}
+		} else if (block == COBBLESTONE_WALL) {
+			if (col != 0) {
+				// make mossy
+				*targetBlock++ = 139 + col;
 			} else {
 				*targetBlock++ = block;
 			}

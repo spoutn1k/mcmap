@@ -77,6 +77,7 @@ namespace
 	void setFire(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark);
 	void setGrass(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark, const int sub);
 	void setFence(const size_t x, const size_t y, const uint8_t * const color);
+	void setWall(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark);
 	void setStep(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark);
 	void setUpStep(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark);
 #  define setRailroad setSnowBA
@@ -670,6 +671,10 @@ void setPixel(const size_t x, const size_t y, const uint8_t color, const float f
 		modColor(L, -17);
 		modColor(D, -27);
 		// A few more blocks with special handling... Those need the two colors we just mixed
+		if(color == COBBLESTONE_WALL || color == MOSSY_COBBLESTONE_WALL) {
+			setWall(x, y, c, L, D);
+			return;
+		}
 		if (color == GRASS) {
 			setGrassBA(x, y, c, L, D, sub);
 			return;
@@ -719,6 +724,10 @@ void setPixel(const size_t x, const size_t y, const uint8_t color, const float f
 		modColor(L, -17);
 		modColor(D, -27);
 		// A few more blocks with special handling... Those need the two colors we just mixed
+		if(color == COBBLESTONE_WALL || color == MOSSY_COBBLESTONE_WALL) {
+			setWall(x, y, c, L, D);
+			return;
+		}
 		if (color == GRASS) {
 			setGrass(x, y, c, L, D, sub);
 			return;
@@ -991,6 +1000,35 @@ namespace
 		pos = &PIXEL(x, y+2);
 		blend(pos+CHANSPERPIXEL, color);
 		blend(pos+CHANSPERPIXEL*2, color);
+	}
+	
+	void setWall(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark)
+	{
+		// First row
+		// do nothing
+		
+		// Second row
+		// only two middle pixels using the light variant of the color
+		uint8_t *pos = &PIXEL(x+1, y+1);
+		for (size_t i = 0; i < 2; ++i, pos += CHANSPERPIXEL) {
+			memcpy(pos, light, BYTESPERPIXEL);
+		}
+		
+		// left most pixel
+		pos = &PIXEL(x, y+1);
+		blend(pos, color);
+		
+		// right most pixel
+		pos = &PIXEL(x+3, y+1);
+		blend(pos, color);
+		
+		
+		// Third row
+		// using the dark color variant
+		pos = &PIXEL(x, y+2);
+		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
+			memcpy(pos, dark, BYTESPERPIXEL);
+		}
 	}
 
 	void setStep(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark)

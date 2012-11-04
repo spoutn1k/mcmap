@@ -8,9 +8,9 @@
 
 #define SETCOLOR(col,r,g,b,a) do { \
 		colors[col][PBLUE]		= b; \
-		colors[col][PGREEN] 		= g; \
+		colors[col][PGREEN] 	= g; \
 		colors[col][PRED] 		= r; \
-		colors[col][PALPHA] 		= a; \
+		colors[col][PALPHA] 	= a; \
 		colors[col][BRIGHTNESS]	= (uint8_t)sqrt( \
 		                          double(r) *  double(r) * .236 + \
 		                          double(g) *  double(g) * .601 + \
@@ -19,9 +19,9 @@
 
 #define SETCOLORNOISE(col,r,g,b,a,n) do { \
 		colors[col][PBLUE]		= b; \
-		colors[col][PGREEN] 		= g; \
+		colors[col][PGREEN] 	= g; \
 		colors[col][PRED] 		= r; \
-		colors[col][PALPHA] 		= a; \
+		colors[col][PALPHA] 	= a; \
 		colors[col][NOISE]		= n; \
 		colors[col][BRIGHTNESS]	= (uint8_t)sqrt( \
 		                          double(r) *  double(r) * .236 + \
@@ -171,6 +171,8 @@ void loadColors()
 	SETCOLORNOISE(134, 103,77,46,255, 1);
 	SETCOLORNOISE(135, 195,179,123,255, 3);
 	SETCOLORNOISE(136, 154,110,77,255, 2);
+	SETCOLORNOISE(COBBLESTONE_WALL, 115,115,115,254, 26);
+	SETCOLORNOISE(MOSSY_COBBLESTONE_WALL, 90,108,90,254, 26);
 	
 	SETCOLORNOISE(PINELEAVES, 44,84,44,160, 20); // Pine leaves
 	SETCOLORNOISE(BIRCHLEAVES, 85,124,60,170, 11); // Birch leaves
