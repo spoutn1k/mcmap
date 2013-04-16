@@ -31,3 +31,5 @@ Marker g_Markers[MAX_MARKERS];
 char *g_TilePath = NULL;
 
 int8_t g_SectionMin, g_SectionMax;
+
+uint8_t g_MystCraftAge;

@@ -253,6 +253,12 @@ int main(int argc, char **argv)
 				marker.offsetX = x - (marker.chunkX * CHUNKSIZE_X);
 				marker.offsetZ = z - (marker.chunkZ * CHUNKSIZE_Z);
 				g_MarkerCount++;
+            } else if (strcmp(option, "-mystcraftage") == 0) {
+                if (!MOREARGS(1)) {
+                    printf("Error: %s needs an integer age number argument", option);
+                    return 1;
+                }
+                g_MystCraftAge = atoi(NEXTARG);
 			} else {
 				filename = (char *) option;
 			}
@@ -326,7 +332,15 @@ int main(int argc, char **argv)
 			return 1;
 		}
 		filename = tmp;
-	}
+	} else if (g_MystCraftAge) {
+        char *tmp = new char[strlen(filename) + 20];
+        sprintf(tmp, "%s/DIM_MYST%d", filename, g_MystCraftAge);
+		if (!dirExists(tmp)) {
+			printf("Error: This world does not have Age %d!\n", g_MystCraftAge);
+			return 1;
+		}
+        filename = tmp;
+    }
 	// Figure out whether this is the old save format or McRegion or Anvil
 	g_WorldFormat = getWorldFormat(filename);
 
