@@ -61,4 +61,6 @@ extern char *g_TilePath;
 
 extern int8_t g_SectionMin, g_SectionMax;
 
+extern uint8_t g_MystCraftAge;
+
 #endif
