@@ -36,6 +36,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
+#include <sys/stat.h>
 #ifdef _DEBUG
 #include <cassert>
 #endif
