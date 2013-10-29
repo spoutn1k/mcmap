@@ -248,7 +248,7 @@ void NBT_Tag::parseData(uint8_t* &position, const uint8_t *end, string *name)
 		++position;
 		break;
 	case tagList: {
-		if (*position < 1 || *position > 11) {
+		if (*position < 0 || *position > 11) {
 			//fprintf(stderr, "Invalid list type!\n");
 			position = NULL;
 			return;
