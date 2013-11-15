@@ -222,6 +222,7 @@ static bool scanWorldDirectoryRegion(const char *fromPath)
 						if (valX > -4000 && valX < 4000 && valZ > -4000 && valZ < 4000) {
 							string full = path + "/" + region.name;
 							chunks.push_back(new Chunk(full.c_str(), valX, valZ));
+							//printf("Good region at %d %d\n", valX, valZ);
 						} else {
 							printf("Ignoring bad region at %d %d\n", valX, valZ);
 						}
@@ -241,6 +242,7 @@ static bool scanWorldDirectoryRegion(const char *fromPath)
 	for (chunkList::iterator it = chunks.begin(); it != chunks.end(); it++) {
 		Chunk &chunk = (**it);
 		FILE *fh = fopen(chunk.filename, "rb");
+		//printf("Plik %s\n",chunk.filename);
 		if (fh == NULL) {
 			printf("Cannot scan region %s\n",chunk.filename);
 			*chunk.filename = '\0';
@@ -257,6 +259,8 @@ static bool scanWorldDirectoryRegion(const char *fromPath)
 		for (int i = 0; i < REGIONSIZE * REGIONSIZE; ++i) {
 			const uint32_t offset = (_ntohl(buffer + i * 4) >> 8) * 4096;
 			if (offset == 0) continue;
+			//printf("Scan region %s, offset %d (%d)\n",chunk.filename,offset,i);
+
 			const int valX = chunk.x + i % REGIONSIZE;
 			const int valZ = chunk.z + i / REGIONSIZE;
 			points.push_back(new Point(valX, valZ));
@@ -599,6 +603,18 @@ static bool loadAnvilChunk(NBT_Tag * const level, const int32_t chunkX, const in
 				} // for y
 			} // for z
 		} // for x
+
+/*
+		// Markers Anvil - TODO
+		if (g_MarkerCount != 0) for (int i = 0; i < g_MarkerCount; ++i) {
+			Marker &m = g_Markers[i];
+			if (m.chunkX == chunkX && m.chunkZ == chunkZ) {
+				memset(blockdata + ((m.offsetZ + (m.offsetX * CHUNKSIZE_Z)) * SECTION_Y), m.color, SECTION_Y - 1);
+		printf("marker-%d-%d---%d-%d---%d---\n\n",chunkX,chunkZ,m.offsetX,m.offsetZ,m.color);
+			}
+		}
+*/
+
 	}
 	return true;
 }
@@ -750,6 +766,7 @@ static void allocateTerrain()
 		delete[] g_HeightMap;
 	}
 	g_HeightMap = new uint16_t[g_MapsizeX * g_MapsizeZ];
+	//printf("%d -- %d\n", g_MapsizeX, g_MapsizeZ); //dimensions of terrain map (in memory)
 	memset(g_HeightMap, 0, g_MapsizeX * g_MapsizeZ * sizeof(uint16_t));
 	const size_t terrainsize = g_MapsizeZ * g_MapsizeX * g_MapsizeY;
 	printf("Terrain takes up %.2fMiB", float(terrainsize / float(1024 * 1024)));
@@ -903,7 +920,7 @@ static bool loadRegion(const char* file, const bool mustExist, int &loadedChunks
 		uint32_t offset = (_ntohl(buffer + i) >> 8) * 4096;
 		if (offset == 0) continue;
 		localChunks[offset] = i;
-	}
+		}
 	if (localChunks.size() == 0) return false;
 	z_stream zlibStream;
 	for (chunkMap::iterator ci = localChunks.begin(); ci != localChunks.end(); ci++) {
@@ -1013,14 +1030,29 @@ static void loadBiomeChunk(const char* path, const int chunkX, const int chunkZ)
 
 static inline void assignBlock(const uint8_t &block, uint8_t* &targetBlock, int &x, int &y, int &z, uint8_t* &justData)
 {
-	if (block == WOOL || block == LOG || block == LEAVES || block == STEP || block == DOUBLESTEP || block == WOOD || block == WOODEN_STEP || block == WOODEN_DOUBLE_STEP) {
+	if (block == WOOL || block == LOG || block == LEAVES || block == STEP || block == DOUBLESTEP 
+		|| block == 95 || block == 160 || block == 159 || block == 171 || block == 38 || block == 175 || block == SAND || block == 153
+		|| block == 141 || block == 142 || block == 158 || block == 149
+		|| block == 131 || block == 132 || block == 150 || block == 147 || block == 148 || block == 68 || block == 69 || block == 70
+		|| block == 72 || block == 77 || block == 143 || block == 36) {  //three last lines contains colors for carpets
 		uint8_t col;
 		if (g_WorldFormat == 2) {
 			col = (justData[(x + (z + (y * CHUNKSIZE_Z)) * CHUNKSIZE_X) / 2] >> ((x % 2) * 4)) & 0xF;
 		} else {
 			col = (justData[(y + (z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y) / 2] >> ((y % 2) * 4)) & 0xF;
 		}
-		if (block == LEAVES) {
+		if (block == 131 || block == 132 || block == 150 || block == 147 || block == 148 || block == 68 || block == 69 || block == 70
+			|| block == 72 || block == 77 || block == 143 || block == 36) {		//not visible blocks replaced to air, therefore we have 12 ID's more
+				*targetBlock++ = 0;
+		} else if (block == 141 || block == 142) {		//carrots and potatoes -> wheat
+				*targetBlock++ = 59;
+		} else if (block == 158) {		//dropper -> dispenser
+				*targetBlock++ = 23;
+		} else if (block == 149) {		//comparator -> repeater
+				*targetBlock++ = 93;
+		} else if (block == 153) {		//nether ore -> netherrack
+				*targetBlock++ = 87;
+		} else if (block == LEAVES) {
 			if ((col & 0x3) != 0) { // Map to pine or birch
 				*targetBlock++ = 228 + (col & 0x3);
 			} else {
@@ -1032,27 +1064,156 @@ static inline void assignBlock(const uint8_t &block, uint8_t* &targetBlock, int 
 			} else {
 				*targetBlock++ = block;
 			}
-		} else if (block == WOOL) {
+		} else if (block == WOOL) {	
 			if (col != 0) {
 				*targetBlock++ = 239 + col;
 			} else {
 				*targetBlock++ = block;
 			}
+		} else if (block == 171) {	//carpets
+			switch (col)
+			{
+			case 0:
+				*targetBlock++ = 36;
+				break;
+			case 1:
+				*targetBlock++ = 68;
+				break;
+			case 2:
+				*targetBlock++ = 69;
+				break;
+			case 3:
+				*targetBlock++ = 70;
+				break;
+			case 4:
+				*targetBlock++ = 72;
+				break;
+			case 5:
+				*targetBlock++ = 77;
+				break;
+			case 6:
+				*targetBlock++ = 131;
+				break;
+			case 7:
+				*targetBlock++ = 132;
+				break;
+			case 8:
+				*targetBlock++ = 141;
+				break;
+			case 9:
+				*targetBlock++ = 142;
+				break;
+			case 10:
+				*targetBlock++ = 143;
+				break;
+			case 11:
+				*targetBlock++ = 147;
+				break;
+			case 12:
+				*targetBlock++ = 148;
+				break;
+			case 13:
+				*targetBlock++ = 149;
+				break;
+			case 14:
+				*targetBlock++ = 150;
+				break;
+			case 15:
+				*targetBlock++ = 158;
+				break;
+			}
+		} else if (block == 159) {
+			if (col != 0) {
+				*targetBlock++ = 185 + col;
+			} else {
+				*targetBlock++ = block;
+			}
+		} else if (block == SAND) { //red sand
+			if (col != 0) {
+				*targetBlock++ = REDSAND;
+			} else {
+				*targetBlock++ = block;
+			}
+		} else if (block == 95 || block == 160) { //stained glass and pane
+			switch (col)
+			{
+			case 0:
+				*targetBlock++ = block;
+				break;
+			case 1:
+				*targetBlock++ = 207;
+				break;
+			case 2:
+				*targetBlock++ = 225;
+				break;
+			case 3:
+				*targetBlock++ = 255;
+				break;
+			case 4:
+			case 5:
+			case 6:
+			case 7:
+				*targetBlock++ = 162 + col;
+				break;
+			default:
+				*targetBlock++ = 170 + col;
+			}
+		} else if (block == 38) {
+			switch (col)
+			{
+			case 0:
+				*targetBlock++ = block;
+				break;
+			case 1:
+				*targetBlock++ = BLUE_ORCHID;
+				break;
+			case 2:
+				*targetBlock++ = ALLIUM;
+				break;
+			case 3:
+				*targetBlock++ = AZURE_BLUET;
+				break;
+			case 4:
+				*targetBlock++ = RED_TULIP;
+				break;
+			case 5:
+				*targetBlock++ = ORANGE_TULIP;
+				break;
+			case 6:
+				*targetBlock++ = WHITE_TULIP;
+				break;
+			case 7:
+				*targetBlock++ = PINK_TULIP;
+				break;
+			case 8:
+				*targetBlock++ = OXEYE_DAISY;
+			}
+		} else if (block == 175) {
+			switch (col)
+			{
+			case 2:
+			case 3:
+				*targetBlock++ = 31;
+				break;
+			case 0:
+				*targetBlock++ = SUNFLOWER;
+				break;
+			case 1:
+				*targetBlock++ = LILAC;
+				break;
+			case 4:
+				*targetBlock++ = 38;
+				break;
+			case 5:
+				*targetBlock++ = PEONY;
+			}
 		} else if (block == STEP) {
-			if (col == 0) {
-				*targetBlock++ = block;
-			} else {
-				*targetBlock++ = 200 + col;
+			// Color upside down steps properly
+			if (col >= 8) {
+				col -= 8;
 			}
-		} else if (block == WOODEN_STEP) {
 			if (col != 0) {
-				*targetBlock++ = 213 + col;
-			} else {
-				*targetBlock++ = block;
-			}
-		} else if (block == WOOD || block == WOODEN_DOUBLE_STEP) {
-			if (col != 0) {
-				*targetBlock++ = 225 + (col & 0x3);
+				*targetBlock++ = 231 + col;
 			} else {
 				*targetBlock++ = block;
 			}

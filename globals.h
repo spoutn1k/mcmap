@@ -1,7 +1,7 @@
 #ifndef _GLOBALS_H_
 #define _GLOBALS_H_
 
-#define VERSION "2.3b"
+#define VERSION "2.4 (compatible with Minecraft 1.7.2)"
 
 #include <stdint.h>
 #include <cstdlib>
@@ -60,7 +60,5 @@ extern uint16_t *g_HeightMap;
 extern char *g_TilePath;
 
 extern int8_t g_SectionMin, g_SectionMax;
-
-extern uint8_t g_MystCraftAge;
 
 #endif

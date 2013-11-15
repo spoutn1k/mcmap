@@ -82,7 +82,7 @@ void printProgress(const size_t current, const size_t max)
 		float proc = (float(current) / float(max)) * 100.0f;
 		if (proc > lastp + 0.99f || current == max) {
 			// Keep user updated but don't spam the console
-			printf("[%.2f%%]\n", proc);
+			printf("[%.2f%%]\r", proc);
 			fflush(stdout);
 			lastt = now;
 			lastp = proc;

@@ -138,6 +138,10 @@ NBT::NBT(uint8_t * const file, const size_t len, const bool shared, bool &succes
 		//fprintf(stderr, "Error parsing NBT from stream\n");
 	}
 	success = (position != NULL);
+	/*
+	if (success) printf("\x1B[33m success!\x1B[0m\n");
+	if (!success) printf("\x1B[31m fail!\x1B[0m\n");
+	*/
 }
 
 NBT::~NBT()
@@ -248,15 +252,29 @@ void NBT_Tag::parseData(uint8_t* &position, const uint8_t *end, string *name)
 		++position;
 		break;
 	case tagList: {
-		if (*position < 1 || *position > 11) {
+	/*
+	just for debugging
+	printf("\x1B[32mList data: \x1B[0m");
+	for (int i = 0;i<100;i++)
+	{
+	printf("%d, ",*(position+i));
+	}
+	*/
+		if (*position < 0 || *position > 11) {
+			//printf("Invalid list type (%d)!\n", *position );
 			//fprintf(stderr, "Invalid list type!\n");
 			position = NULL;
 			return;
 		}
-		TagType type = (TagType)*position;
+		TagType type;
+		if (*position == 0)
+			type = (TagType)1; // ((*position)+1);
+		else
+			type = (TagType)*position;
 		uint32_t count = _ntohl(position+1);
 		position += 5;
 		_list = new list<NBT_Tag *>;
+		//printf("List contains %d elements of type %d\n", (int)count, (int)type);
 		//fprintf(stderr, "List contains %d elements of type %d\n", (int)count, (int)type);
 		while (count-- && position < end) { // No end tag, go on...
 			NBT_Tag *tmp = new NBT_Tag(position, end, type);
