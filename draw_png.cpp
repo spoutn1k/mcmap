@@ -78,6 +78,7 @@ namespace
 	void setGrass(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark, const int sub);
 	void setFence(const size_t x, const size_t y, const uint8_t * const color);
 	void setStep(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark);
+	void setUpStep(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark);
 #  define setRailroad setSnowBA
 
 	// Then make duplicate copies so it is one hell of a mess
@@ -87,6 +88,7 @@ namespace
 	void setFlowerBA(const size_t x, const size_t y, const uint8_t * const color);
 	void setGrassBA(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark, const int sub);
 	void setStepBA(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark);
+	void setUpStepBA(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark);
 }
 
 void createImageBuffer(const size_t width, const size_t height, const bool splitUp)
@@ -658,7 +660,7 @@ void setPixel(const size_t x, const size_t y, const uint8_t color, const float f
 			setFence(x, y, c);
 			return;
 		}
-		if (color == REDWIRE) {
+		if (color == REDWIRE || color == TRIPWIRE) {
 			setRedwire(x, y, c);
 			return;
 		}
@@ -677,12 +679,17 @@ void setPixel(const size_t x, const size_t y, const uint8_t color, const float f
 			setGrassBA(x, y, c, L, D, sub);
 			return;
 		}
-		if (color == FIRE || color == TALL_GRASS) {
+		if (color == FIRE || color == TALL_GRASS || color == COCOA_PLANT) {
 			setFire(x, y, c, L, D);
 			return;
 		}
-		if (color == STEP || color == CAKE || color == BED || color == SANDSTEP || color == WOODSTEP || color == COBBLESTEP || color == BRICKSTEP || color == STONEBRICKSTEP) {
+		if (color == STEP || color == CAKE || color == BED || color == SANDSTEP || color == WOODSTEP || color == COBBLESTEP || color == BRICKSTEP || color == STONEBRICKSTEP || color == PINESTEP || color == BIRCHSTEP || color == JUNGLESTEP
+			|| color == 151) {
 			setStepBA(x, y, c, L, D);
+			return;
+		}
+		if (color == UP_STEP || color == UP_SANDSTEP || color == UP_WOODSTEP || color == UP_COBBLESTEP || color == UP_BRICKSTEP || color == UP_STONEBRICKSTEP || color == UP_WOODSTEP2 || color == UP_PINESTEP || color == UP_BIRCHSTEP || color == UP_JUNGLESTEP) {
+			setUpStepBA(x, y, c, L, D);
 			return;
 		}
 	} else {
@@ -707,7 +714,7 @@ void setPixel(const size_t x, const size_t y, const uint8_t color, const float f
 			setFence(x, y, c);
 			return;
 		}
-		if (color == REDWIRE) {
+		if (color == REDWIRE || color == TRIPWIRE) {
 			setRedwire(x, y, c);
 			return;
 		}
@@ -726,12 +733,17 @@ void setPixel(const size_t x, const size_t y, const uint8_t color, const float f
 			setGrass(x, y, c, L, D, sub);
 			return;
 		}
-		if (color == FIRE || color == TALL_GRASS) {
+		if (color == FIRE || color == TALL_GRASS || color == COCOA_PLANT) {
 			setFire(x, y, c, L, D);
 			return;
 		}
-		if (color == STEP || color == CAKE || color == BED || color == SANDSTEP || color == WOODSTEP || color == COBBLESTEP) {
+		if (color == STEP || color == CAKE || color == BED || color == SANDSTEP || color == WOODSTEP || color == COBBLESTEP || color == BRICKSTEP || color == STONEBRICKSTEP || color == PINESTEP || color == BIRCHSTEP || color == JUNGLESTEP
+			|| color == 151) {
 			setStep(x, y, c, L, D);
+			return;
+		}
+		if (color == UP_STEP || color == UP_SANDSTEP || color == UP_WOODSTEP || color == UP_COBBLESTEP || color == UP_BRICKSTEP || color == UP_STONEBRICKSTEP || color == UP_WOODSTEP2 || color == UP_PINESTEP || color == UP_BIRCHSTEP || color == UP_JUNGLESTEP) {
+			setUpStep(x, y, c, L, D);
 			return;
 		}
 	}
@@ -1004,6 +1016,18 @@ namespace
 		}
 	}
 
+	void setUpStep(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark)
+	{
+		uint8_t *pos = &PIXEL(x, y);
+		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
+			memcpy(pos, color, BYTESPERPIXEL);
+		}
+		pos = &PIXEL(x, y+1);
+		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
+			memcpy(pos, color, BYTESPERPIXEL);
+		}
+	}
+
 	void setRedwire(const size_t x, const size_t y, const uint8_t * const color)
 	{
 		uint8_t *pos = &PIXEL(x+1, y+2);
@@ -1095,4 +1119,15 @@ namespace
 		}
 	}
 
+	void setUpStepBA(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark)
+	{
+		uint8_t *pos = &PIXEL(x, y);
+		for (size_t i = 0; i < 3; ++i, pos += CHANSPERPIXEL) {
+			blend(pos, color);
+		}
+		pos = &PIXEL(x, y+1);
+		for (size_t i = 0; i < 10; ++i, pos += CHANSPERPIXEL) {
+			blend(pos, color);
+		}
+	}
 }

@@ -80,8 +80,10 @@ void loadColors()
 	SETCOLOR(42, 191,191,191,255);
 	SETCOLOR(DOUBLESTEP, 200,200,200,255);
 	SETCOLOR(STEP, 200,200,200,254); // Not fully opaque to prevent culling on this one
+	SETCOLOR(UP_STEP, 200,200,200,254); // Not fully opaque to prevent culling on this one
 	SETCOLOR(45, 170,86,62,255);
 	SETCOLOR(BRICKSTEP, 170,86,62,254);
+	SETCOLOR(UP_BRICKSTEP, 170,86,62,254);
 	SETCOLOR(46, 160,83,65,255);
 	SETCOLORNOISE(48, 90,108,90,255, 27);
 	SETCOLOR(49, 26,11,43,255);
@@ -130,6 +132,7 @@ void loadColors()
 	SETCOLORNOISE(97, 128,128,128,255, 16);
 	SETCOLORNOISE(98, 122,122,122,255, 7);
 	SETCOLORNOISE(STONEBRICKSTEP, 122,122,122,254, 7);
+	SETCOLORNOISE(UP_STONEBRICKSTEP, 122,122,122,254, 7);
 	SETCOLORNOISE(99, 141,106,83,255, 0);
 	SETCOLORNOISE(100, 182,37,36,255, 6);
 	SETCOLORNOISE(IRON_BARS, 109,108,106,254, 6);
@@ -156,12 +159,42 @@ void loadColors()
 	SETCOLOR(122, 20,18,29,255);
 	SETCOLORNOISE(123, 70,43,26,255, 2);
 	SETCOLORNOISE(124, 119,89,55,255, 7);
+	SETCOLORNOISE(WOODEN_DOUBLE_STEP, 156,127,78,255, 11);
+	SETCOLORNOISE(WOODEN_STEP, 156,127,78,254, 11);
+	SETCOLOR(COCOA_PLANT, 145,80,30,200);
+	SETCOLORNOISE(128, 218,210,158,255, 15);
+	SETCOLORNOISE(129, 109,128,116,255, 18);
+	SETCOLORNOISE(130, 18,16,27,255, 5);
+	SETCOLORNOISE(131, 138,129,113,255, 28);
+	SETCOLORNOISE(132, 129,129,129,107, 25);
+	SETCOLOR(133, 81,217,117,255);
+	SETCOLORNOISE(134, 103,77,46,255, 1);
+	SETCOLORNOISE(135, 195,179,123,255, 3);
+	SETCOLORNOISE(136, 154,110,77,255, 2);
+	
 	SETCOLORNOISE(PINELEAVES, 44,84,44,160, 20); // Pine leaves
 	SETCOLORNOISE(BIRCHLEAVES, 85,124,60,170, 11); // Birch leaves
 	SETCOLORNOISE(JUNGLELEAVES, 44,135,50,175, 11); // Birch leaves
 	SETCOLORNOISE(SANDSTEP, 218, 210, 158, 254, 7); // Not fully opaque to prevent culling on this one
+	SETCOLORNOISE(UP_SANDSTEP, 218, 210, 158, 254, 7); // Not fully opaque to prevent culling on this one
 	SETCOLORNOISE(WOODSTEP, 157,128,79,254, 11); // Not fully opaque to prevent culling on this one
+	SETCOLORNOISE(UP_WOODSTEP, 157,128,79,254, 11); // Not fully opaque to prevent culling on this one
 	SETCOLORNOISE(COBBLESTEP, 115,115,115,254, 26); // Not fully opaque to prevent culling on this one
+	SETCOLORNOISE(UP_COBBLESTEP, 115,115,115,254, 26); // Not fully opaque to prevent culling on this one
+
+	SETCOLORNOISE(PINESTEP, 103,77,46,254, 1);
+	SETCOLORNOISE(BIRCHSTEP, 195,179,123,254, 3);
+	SETCOLORNOISE(JUNGLESTEP, 154,110,77,254, 2);
+	
+	SETCOLORNOISE(UP_WOODSTEP2, 157,128,79,254, 11);
+	SETCOLORNOISE(UP_PINESTEP, 103,77,46,255, 1);
+	SETCOLORNOISE(UP_BIRCHSTEP, 195,179,123,255, 3);
+	SETCOLORNOISE(UP_JUNGLESTEP, 154,110,77,255, 2);
+	
+	SETCOLORNOISE(226, 103,77,46,255, 1);
+	SETCOLORNOISE(227, 195,179,123,255, 3);
+	SETCOLORNOISE(228, 154,110,77,255, 2);
+	
 	SETCOLOR(237, 70,50,32, 255); // Pine trunk
 	SETCOLORNOISE(238, 206,206,201, 255, 5); // Birch trunk
 	SETCOLOR(239, 122,91,51, 255); // Jungle trunk
@@ -188,10 +221,12 @@ void loadColors()
 	SETCOLORNOISE(139,    128,   128,   128,   255,   16); // cobblestone wall
 	SETCOLOR(145, 110, 110, 110, 255 ); //anvil
 	SETCOLOR(146, 125,    91,    38,   255   ); //trapped chest
+	SETCOLOR(151, 187, 158, 109, 255 ); //daylight sensor
 	SETCOLOR(152, 227,  38,  12, 255 ); //redstone block
 	SETCOLOR(154, 110, 110, 110, 255 ); //hopper
 	SETCOLOR(155, 240, 238, 232, 255 ); //quartz
 	SETCOLOR(156, 240, 238, 232, 255 ); //quartz stairs
+	SETCOLOR(207, 240, 238, 232, 255 ); //quartz slab
 	//SETCOLOR(159, 209, 177, 160, 255 ); //white stained clay !
 	SETCOLOR(161, 54, 135, 40, 180 ); //leaves Acacia/Dark Oak
 	SETCOLOR(162, 72,  72, 72, 255 ); //log Acacia/Dark Oak
@@ -199,10 +234,11 @@ void loadColors()
 	SETCOLORNOISE(164, 106, 127, 98, 255, 11); // Dark Oak Wood Stairs
 	SETCOLOR(170, 172, 145, 18,  255 ); //haystack
 	SETCOLOR(171, 224, 224, 224, 255 ); //white carpet
-	SETCOLOR(172, 209, 177, 160, 255 ); //hardened clay
+	SETCOLOR(172, 184, 126, 99, 255 ); //hardened clay
 	SETCOLOR(173, 21,  21,  21,  255 ); //coal block
 	SETCOLOR(174, 159, 189, 239, 255 ); //packed ice
 	SETCOLOR(175, 0, 255, 0, 254 ); //Large flower
+	SETCOLOR(206, 54, 24, 30, 255 ); //nether bricks slab
 
 	// carpets
 	SETCOLOR(36 ,  255, 255, 255,  254   ); //White carpet
@@ -223,30 +259,30 @@ void loadColors()
 	SETCOLOR(158,   32,  27,  27,  254   ); //Black carpet
 
 	// clays
-	SETCOLOR(159,  225, 225,  225, 255   ); //White Stained Clay
+	SETCOLOR(159,  241, 210, 192, 255   ); //White Stained Clay
 
-	SETCOLOR(186,  214, 107,  24,  255   ); //Orange Stained Clay
-	SETCOLOR(187,  170,  45, 180,  255   ); //Magenta Stained Clay
-	SETCOLOR(188,  90 , 128, 211,  255   ); //Light Blue Stained Clay
-	SETCOLOR(189,  174, 170,   0,  255   ); //Yellow Stained Clay
-	SETCOLOR(190,   29, 180,  17,  255   ); //Lime Stained Clay
-	SETCOLOR(191,  207, 111, 134,  255   ); //Pink Stained Clay
-	SETCOLOR(192,   46,  46,  46,  255   ); //Gray Stained Clay
-	SETCOLOR(193,  138, 142, 142,  255   ); //Light Gray Stained Clay
-	SETCOLOR(194,    9,  86, 119,  255   ); //Cyan Stained Clay
-	SETCOLOR(195,  103,  23, 165,  255   ); //Purple Stained Clay
-	SETCOLOR(196,   38,  51, 160,  255   ); //Blue Stained Clay
-	SETCOLOR(197,   85,  51,   0,  255   ); //Brown Stained Clay
-	SETCOLOR(198,   55,  77,   0,  255   ); //Green Stained Clay
-	SETCOLOR(199,  143,  14,  10,  255   ); //Red Stained Clay
-	SETCOLOR(200,    2,   0,   0,  255   ); //Black Stained Clay
+	SETCOLOR(186,  194, 116,  69, 255   ); //Orange Stained Clay
+	SETCOLOR(187,  182, 120, 140, 255   ); //Magenta Stained Clay
+	SETCOLOR(188,  141, 137, 167, 255   ); //Light Blue Stained Clay
+	SETCOLOR(189,  219, 165,  66, 255   ); //Yellow Stained Clay
+	SETCOLOR(190,  137, 149,  84, 255   ); //Lime Stained Clay
+	SETCOLOR(191,  194, 110, 110, 255   ); //Pink Stained Clay
+	SETCOLOR(192,   97,  82,  75, 255   ); //Gray Stained Clay
+	SETCOLOR(193,  168, 138, 128, 255   ); //Light Gray Stained Clay
+	SETCOLOR(194,  119, 122, 122, 255   ); //Cyan Stained Clay
+	SETCOLOR(195,  152, 102, 117, 255   ); //Purple Stained Clay
+	SETCOLOR(196,  103,  88, 120, 255   ); //Blue Stained Clay
+	SETCOLOR(197,  109,  82,  66, 255   ); //Brown Stained Clay
+	SETCOLOR(198,  105, 112,  70, 255   ); //Green Stained Clay
+	SETCOLOR(199,  176,  93,  78, 255   ); //Red Stained Clay
+	SETCOLOR(200,   67,  52,  46, 255   ); //Black Stained Clay
 
-	SETCOLOR(153,  254, 167,  54,  255   ); //Red Sand
+	SETCOLOR(153,  225, 140,  73, 255   ); //Red Sand
 
 	// glass
 	SETCOLOR(95 , 255, 255,  255,  100  ); //White Stained Glass
 	SETCOLOR(160, 255, 255,  255,  100  ); //White Stained Glass pane
-	SETCOLOR(207,  244, 137,  54,  40   ); //Orange Stained Glass [pane]
+	SETCOLOR(234,  244, 137,  54,  40   ); //Orange Stained Glass [pane]
 	SETCOLOR(225,  200,  75, 210,  40   ); //Magenta Stained Glass [pane]
 	SETCOLOR(255,  120, 158, 241,  40   ); //Light Blue Stained Glass [pane]
 	SETCOLOR(166,  204, 200,  28,  40   ); //Yellow Stained Glass [pane]
@@ -265,7 +301,7 @@ void loadColors()
 	// flowers
 	SETCOLOR(165, 120, 158, 241, 254   ); //BLUE_ORCHID 165
 	SETCOLOR(176, 200,  75, 210, 254 ); //ALLIUM 176
-	SETCOLOR(206, 168, 172, 172, 254 ); //AZURE_BLUET 206
+	SETCOLOR(235, 168, 172, 172, 254 ); //AZURE_BLUET 235
 	// 38, 173  44  40 254, ); //RED_TULIP 38
 	SETCOLOR(217, 244, 137,  54, 254 ); //ORANGE_TULIP 217
 	SETCOLOR(218, 255, 255, 255, 254 ); //WHITE_TULIP 218

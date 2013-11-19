@@ -1,0 +1,21 @@
+mcmap changelog
+Latest version is available at: http://wrim.pl/mcmap/
+------------------------------------------------------
+
+2.4.1 [nov 19 2013] - Minecraft 1.7.2 compatible
+fixed:
+-wooden slabs and stairs
+-sandstone stairs
+-better colours of stained clays
+-little corrections in color.txt
+
+2.4 [nov 15 2013] - Minecraft 1.7.2 compatible
+added:
+-carrots and potatoes
+-redstone block, coal block, anvil, hopper, emerald block etc.
+-packed ice, red sand, hardened clay, wood and leafs introduced in 1.7.2
+-various colors of flowers
+-carpets, stained clays, stained glass and glass panes with 16 colors
+
+2.3b [long time ago] - Minecraft 1.3.1 compatible
+-last Zahl's version

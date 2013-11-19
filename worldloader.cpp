@@ -920,7 +920,7 @@ static bool loadRegion(const char* file, const bool mustExist, int &loadedChunks
 		uint32_t offset = (_ntohl(buffer + i) >> 8) * 4096;
 		if (offset == 0) continue;
 		localChunks[offset] = i;
-		}
+	}
 	if (localChunks.size() == 0) return false;
 	z_stream zlibStream;
 	for (chunkMap::iterator ci = localChunks.begin(); ci != localChunks.end(); ci++) {
@@ -1030,9 +1030,9 @@ static void loadBiomeChunk(const char* path, const int chunkX, const int chunkZ)
 
 static inline void assignBlock(const uint8_t &block, uint8_t* &targetBlock, int &x, int &y, int &z, uint8_t* &justData)
 {
-	if (block == WOOL || block == LOG || block == LEAVES || block == STEP || block == DOUBLESTEP 
+	if (block == WOOL || block == LOG || block == LEAVES || block == STEP || block == DOUBLESTEP || block == WOOD || block == WOODEN_STEP || block == WOODEN_DOUBLE_STEP 
 		|| block == 95 || block == 160 || block == 159 || block == 171 || block == 38 || block == 175 || block == SAND || block == 153
-		|| block == 141 || block == 142 || block == 158 || block == 149
+		|| block == 141 || block == 142 || block == 158 || block == 149 || block == 157
 		|| block == 131 || block == 132 || block == 150 || block == 147 || block == 148 || block == 68 || block == 69 || block == 70
 		|| block == 72 || block == 77 || block == 143 || block == 36) {  //three last lines contains colors for carpets
 		uint8_t col;
@@ -1052,6 +1052,8 @@ static inline void assignBlock(const uint8_t &block, uint8_t* &targetBlock, int 
 				*targetBlock++ = 93;
 		} else if (block == 153) {		//nether ore -> netherrack
 				*targetBlock++ = 87;
+		} else if (block == 157) {		//activator rail -> detector rail
+				*targetBlock++ = 28;
 		} else if (block == LEAVES) {
 			if ((col & 0x3) != 0) { // Map to pine or birch
 				*targetBlock++ = 228 + (col & 0x3);
@@ -1141,7 +1143,7 @@ static inline void assignBlock(const uint8_t &block, uint8_t* &targetBlock, int 
 				*targetBlock++ = block;
 				break;
 			case 1:
-				*targetBlock++ = 207;
+				*targetBlock++ = 234;
 				break;
 			case 2:
 				*targetBlock++ = 225;
@@ -1208,12 +1210,20 @@ static inline void assignBlock(const uint8_t &block, uint8_t* &targetBlock, int 
 				*targetBlock++ = PEONY;
 			}
 		} else if (block == STEP) {
-			// Color upside down steps properly
-			if (col >= 8) {
-				col -= 8;
+			if (col == 0) {
+				*targetBlock++ = block;
+			} else {
+				*targetBlock++ = 200 + col;
 			}
+		} else if (block == WOODEN_STEP) {
 			if (col != 0) {
-				*targetBlock++ = 231 + col;
+				*targetBlock++ = 213 + col;
+			} else {
+				*targetBlock++ = block;
+			}
+		} else if (block == WOOD || block == WOODEN_DOUBLE_STEP) {
+			if (col != 0) {
+				*targetBlock++ = 225 + (col & 0x3);
 			} else {
 				*targetBlock++ = block;
 			}

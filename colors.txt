@@ -1,0 +1,98 @@
+# various
+133	  61	 255	  61	 255 	 0	# emerald
+137	 203	 163	 136	 255	 0	# command block
+138	  21	 255	 255	 255	 0	# beacon
+139	 128	 128	 128	 255	 16	# cobblestone wall
+145	 110	 110	 110	 255	 0	# anvil
+146	 125	  91	  38	 255	 0	# trapped chest
+151	 187	 158	 109	 255	 0	# daylight sensor
+152	 227	  38	  12	 255	 0	# redstone block
+154	 110	 110	 110	 255	 0	# hopper
+155	 240	 238	 232	 255	 0	# quartz
+156	 240	 238	 232	 255	 0	# quartz stairs
+207	 240	 238	 232	 255	 0	# quartz slab
+161	  54	 135	  40	 180	 0	# leaves Acacia/Dark Oak
+162	  72	  72	  72	 255	 0	# log Acacia/Dark Oak
+163	 154	 110	  77	 255	 2	# Acacia Wood Stairs
+164	 106	 127	  98	 255	 11	# Dark Oak Wood Stairs
+170	 172	 145	  18	 255	 0	# haystack
+171	 224	 224	 224	 255	 0	# white carpet
+172	 184	 126	 99	 255	 0	# hardened clay
+173	  21	  21	  21	 255	 0	# coal block
+174	 159	 189	 239	 255 	 0	# packed ice
+175	   0	 255	   0	 254	 0	# Large flower
+206	  54	  24	  30	 255 	 0	# nether bricks slab
+
+# carpets
+36   255 255 255  254   0	# White carpet
+68   244 137  54  254   0	# Orange carpet
+69   200  75 210  254   0	# Magenta carpet
+70   120 158 241  254   0	# Light Blue carpet
+72   204 200  28  254   0	# Yellow carpet
+77    59 210  47  254   0	# Lime carpet
+131  237 141 164  254   0	# Pink carpet
+132   76  76  76  254   0	# Gray carpet
+141  168 172 172  254   0	# Light Gray
+142   39 116 149  254   0	# Cyan carpet
+143  133  53 195  254   0	# Purple carpet
+147   38  51 160  254   0	# Blue carpet
+148   85  51  27  254   0	# Brown carpet
+149   55  77  24  254   0	# Green carpet
+150  173  44  40  254   0	# Red carpet
+158   32  27  27  254   0	# Black carpet
+
+# clays
+159  241  210  192  255   0 	# White Stained Clay
+
+186  194  116   69  255   0 	# Orange Stained Clay
+187  182  120  140  255   0 	# Magenta Stained Clay
+188  141  137  167  255   0 	# Light Blue Stained Clay
+189  219  165   66  255   0 	# Yellow Stained Clay
+190  137  149   84  255   0 	# Lime Stained Clay
+191  194  110  110  255   0 	# Pink Stained Clay
+192   97   82   75  255   0 	# Gray Stained Clay
+193  168  138  128  255   0 	# Light Gray Stained Clay
+194  119  122  122  255   0 	# Cyan Stained Clay
+195  152  102  117  255   0 	# Purple Stained Clay
+196  103   88  120  255   0 	# Blue Stained Clay
+197  109   82   66  255   0 	# Brown Stained Clay
+198  105  112   70  255   0 	# Green Stained Clay
+199  176   93   78  255   0 	# Red Stained Clay
+200   67   52   46  255   0 	# Black Stained Clay
+
+153  225  140   73  255   0 	# Red Sand
+
+# glass
+95  255 255  255  100  0	# White Stained Glass
+160 255 255  255  100  0	# White Stained Glass pane
+234  244 137  54  40   0	# Orange Stained Glass [pane]
+225  200  75 210  40   0	# Magenta Stained Glass [pane]
+255  120 158 241  40   0	# Light Blue Stained Glass [pane]
+166  204 200  28  40   0	# Yellow Stained Glass [pane]
+167   59 210  47  40   0	# Lime Stained Glass [pane]
+168  237 141 164  40   0	# Pink Stained Glass [pane]
+169   76  76  76  40   0	# Gray Stained Glass [pane]
+178  168 172 172  40   0	# Light Gray Stained Glass [pane]
+179   39 116 149  40   0	# Cyan Stained Glass [pane]
+180  133  53 195  40   0	# Purple Stained Glass [pane]
+181   38  51 160  40   0	# Blue Stained Glass [pane]
+182   85  51  27  40   0	# Brown Stained Glass [pane]
+183   55  77  24  40   0	# Green Stained Glass [pane]
+184  173  44  40  40   0	# Red Stained Glass [pane]
+185   32  27  27  40   0	# Black Stained Glass [pane]
+
+# flowers
+165	 120 158 241 254	 0	# BLUE_ORCHID 165
+176	 200  75 210 254	 0	# ALLIUM 176
+235	 168 172 172 254	 0	# AZURE_BLUET 235
+# 38	 173  44  40 254	 0	# RED_TULIP 38
+217	 244 137  54 254	 0	# ORANGE_TULIP 217
+218	 255 255 255 254	 0	# WHITE_TULIP 218
+219	 237 141 164 254	 0	# PINK_TULIP 219
+220	 168 172 172 254	 0	# OXEYE_DAISY 220
+# 37	 255 255  0  254	 0	# SUNFLOWER 37
+233	 200  75 210 254	 0	# LILAC 233
+177	 237 141 164 254	 0	# PEONY 177
+
+# nether
+238  206 206 201  255   5	# Birch Wood / quartz slab (sic!)

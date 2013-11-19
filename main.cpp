@@ -253,6 +253,12 @@ int main(int argc, char **argv)
 				marker.offsetX = x - (marker.chunkX * CHUNKSIZE_X);
 				marker.offsetZ = z - (marker.chunkZ * CHUNKSIZE_Z);
 				g_MarkerCount++;
+            } else if (strcmp(option, "-mystcraftage") == 0) {
+                if (!MOREARGS(1)) {
+                    printf("Error: %s needs an integer age number argument", option);
+                    return 1;
+                }
+                g_MystCraftAge = atoi(NEXTARG);
 			} else {
 				filename = (char *) option;
 			}
@@ -326,7 +332,15 @@ int main(int argc, char **argv)
 			return 1;
 		}
 		filename = tmp;
-	}
+	} else if (g_MystCraftAge) {
+        char *tmp = new char[strlen(filename) + 20];
+        sprintf(tmp, "%s/DIM_MYST%d", filename, g_MystCraftAge);
+		if (!dirExists(tmp)) {
+			printf("Error: This world does not have Age %d!\n", g_MystCraftAge);
+			return 1;
+		}
+        filename = tmp;
+    }
 	// Figure out whether this is the old save format or McRegion or Anvil
 	g_WorldFormat = getWorldFormat(filename);
 
@@ -586,6 +600,9 @@ int main(int argc, char **argv)
 					colors[BIRCHLEAVES][PRED] = clamp(int32_t(colors[LEAVES][PRED]) + (avg - int32_t(colors[LEAVES][PRED])) / 2 + 15);
 					colors[BIRCHLEAVES][PGREEN] = clamp(int32_t(colors[LEAVES][PGREEN]) + (avg - int32_t(colors[LEAVES][PGREEN])) / 2 + 16);
 					colors[BIRCHLEAVES][PBLUE] = clamp(int32_t(colors[LEAVES][PBLUE]) + (avg - int32_t(colors[LEAVES][PBLUE])) / 2 + 15);
+					colors[JUNGLELEAVES][PRED] = clamp(int32_t(colors[LEAVES][PRED]));
+					colors[JUNGLELEAVES][PGREEN] = clamp(int32_t(colors[LEAVES][PGREEN]) + 18);
+					colors[JUNGLELEAVES][PBLUE] = colors[LEAVES][PBLUE];
 				}
 				//
 				const int bmpPosX = int((g_MapsizeZ - z - CHUNKSIZE_Z) * 2 + (x - CHUNKSIZE_X) * 2 + (splitImage ? -2 : bitmapStartX - cropLeft));
@@ -611,38 +628,20 @@ int main(int argc, char **argv)
 						if (l == 0 && y + 1 == g_MapsizeY) {
 							l = (g_Nightmode ? 3 : 15);   // quickfix: assume maximum strength at highest level
 						} else {
-							bool blocked[4] = {false, false, false, false}; // if light is blocked in one direction
-							for (int i = 1; i < 3 && l <= 0; ++i) {
-								// Need to make this a loop to deal with half-steps, fences, flowers and other special blocks
-								blocked[0] |= (colors[BLOCKAT(x+i, y, z) ][PALPHA] == 255);
-								blocked[1] |= (colors[BLOCKAT(x, y, z+i) ][PALPHA] == 255);
-								blocked[2] |= (y + i >= g_MapsizeY || colors[BLOCKAT(x, y+i, z) ][PALPHA] == 255);
-								blocked[3] |= (colors[BLOCKAT(x+i, y+i, z+i) ][PALPHA] == 255);
-								if (l <= 0 // if block is still dark and there are no translucent blocks around, stop
-									  && blocked[0] && blocked[1] && blocked[2] && blocked[3]) {
-									break;
-								}
-								//
-								if (!blocked[2] && l <= 0 && y + i < g_MapsizeY) {
-									l = GETLIGHTAT(x, y + i, z);
-								}
-								if (!blocked[0] && l <= 0) {
-									l = GETLIGHTAT(x + i, y, z) - i / 2;
-								}
-								if (!blocked[1] && l <= 0) {
-									l = GETLIGHTAT(x, y, z + i) - i / 2;
-								}
-								if (!blocked[3] && l <= 0 && y + i < g_MapsizeY) {
-									l = (int)GETLIGHTAT(x + i - 1, y + i, z + i - 1) - i;
-								}
-								//if (!blocked[2] && l <= 0 && y+i < g_MapsizeY) l = GETLIGHTAT(x+i/2, y+i/2, z+i/2) - i/2;
+							const bool up = y + 1 < g_MapsizeY;
+							if (x + 1 < g_MapsizeX && (!up || BLOCKAT(x + 1, y + 1, z) == 0)) {
+								l = MAX(l, GETLIGHTAT(x + 1, y, z));
+								if (x + 2 < g_MapsizeX) l = MAX(l, GETLIGHTAT(x + 2, y, z) - 1);
 							}
-							if (l < 0) {
-								l = 0;
+							if (z + 1 < g_MapsizeZ && (!up || BLOCKAT(x, y + 1, z + 1) == 0)) {
+								l = MAX(l, GETLIGHTAT(x, y, z + 1));
+								if (z + 2 < g_MapsizeZ) l = MAX(l, GETLIGHTAT(x, y, z + 2) - 1);
 							}
+							if (up) l = MAX(l, GETLIGHTAT(x, y + 1, z));
+							//if (y + 2 < g_MapsizeY) l = MAX(l, GETLIGHTAT(x, y + 2, z) - 1);
 						}
 						if (!g_Skylight) { // Night
-							brightnessAdjustment -= (125 - l * 9);
+							brightnessAdjustment -= (100 - l * 8);
 						} else { // Day
 							brightnessAdjustment -= (210 - l * 14);
 						}
