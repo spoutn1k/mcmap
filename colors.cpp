@@ -332,7 +332,7 @@ bool loadColorsFromFile(const char *file)
 		while (*ptr == ' ' || *ptr == '\t') {
 			++ptr;
 		}
-		if (*ptr == '\0' || *ptr == '#') {
+		if (*ptr == '\0' || *ptr == '#' || *ptr == '\12') {
 			continue;   // This is a comment or empty line, skip
 		}
 		int blockid = atoi(ptr);

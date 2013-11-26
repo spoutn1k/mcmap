@@ -11,9 +11,16 @@ DOBJECTS=$(SOURCES:.cpp=.debug.o)
 OBJECTS64=$(SOURCES:.cpp=.64.o)
 EXECUTABLE=mcmap
 
+CFLAGSX11=-O3 -c -Wall -fomit-frame-pointer -pedantic -DWITHPNG -I/usr/local/include -I/usr/X11/include
+LDFLAGSX11=-O3 -lz -lpng -fomit-frame-pointer -L/usr/local/lib -L/usr/X11/lib
+
 # default, zlib and libpng shared
 all: $(OBJECTS)
 	$(CC) $(OBJECTS) $(LDFLAGS) -o $(EXECUTABLE)
+
+# fixing for X11 dependency
+x11: $(OBJECTS)
+	$(CC) $(OBJECTS) $(LDFLAGSX11) -o $(EXECUTABLE)
 
 # use this one on windows so you don't have to supply zlib1.dll
 static: $(OBJECTS)
