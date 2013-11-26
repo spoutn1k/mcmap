@@ -376,7 +376,7 @@ bool dumpColorsToFile(const char *file)
 		return false;
 	}
 	fprintf(f, "# For Block IDs see http://minecraftwiki.net/wiki/Data_values\n"
-				"and http://wrim.pl/mcmap (for blocks introduced since Minecraft 1.3.1 and mcmap 2.4)\n"
+				"# and http://wrim.pl/mcmap (for blocks introduced since Minecraft 1.3.1 and mcmap 2.4)\n"
 				"# Note that noise or alpha (or both) do not work for a few blocks like snow, torches, fences, steps, ...\n"
 				"# Actually, if you see any block has an alpha value of 254 you should leave it that way to prevent black artifacts.\n"
 				"# If you want to set alpha of grass to <255, use -blendall or you won't get what you expect.\n"
