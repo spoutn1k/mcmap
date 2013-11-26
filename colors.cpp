@@ -349,7 +349,7 @@ bool loadColorsFromFile(const char *file)
 			while (*ptr == ' ' || *ptr == '\t') {
 				++ptr;
 			}
-			if (*ptr == '\0') {
+			if (*ptr == '\0' || *ptr == '#') {
 				printf("Too few arguments for block %d, ignoring line.\n", blockid);
 				valid = false;
 				break;
