@@ -4,7 +4,7 @@ Latest version is available at: http://wrim.pl/mcmap/
 
 2.4.2 (nov 27 2013) - Minecraft 1.7.2 compatible
 fixed:
--skipping empty lines in colors file
+-ignoring empty lines in colors file
 
 2.4.1 (nov 19 2013) - Minecraft 1.7.2 compatible
 fixed:
