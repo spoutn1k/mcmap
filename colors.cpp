@@ -328,6 +328,7 @@ bool loadColorsFromFile(const char *file)
 		if (fgets(buffer, 500, f) == NULL) {
 			break;
 		}
+		//printf("%s %d %d.\n",buffer,*buffer,*(buffer+1));
 		char *ptr = buffer;
 		while (*ptr == ' ' || *ptr == '\t') {
 			++ptr;
@@ -335,21 +336,32 @@ bool loadColorsFromFile(const char *file)
 		if (*ptr == '\0' || *ptr == '#' || *ptr == '\12') {
 			continue;   // This is a comment or empty line, skip
 		}
-		int blockid = atoi(ptr);
+		float blockid2 = atof(ptr);
+		int blockid = (int)blockid2;
 		if (blockid < 1 || blockid > 255) {
-			printf("Skipping invalid blockid %d in colors file\n", blockid);
+			printf("Skipping invalid blockid %.4f in colors file\n", blockid2);
 			continue;
 		}
+		
 		while (*ptr != ' ' && *ptr != '\t' && *ptr != '\0') {
+			if (*ptr == ':')
+			{
+				int blockid3 = atoi(++ptr);
+				printf("Druga wartosc %d:%d in colors file\n", blockid, blockid3);
+			}
 			++ptr;
 		}
+
+		//int blockid3 = atoi(ptr);
+			//printf("Druga wartoœæ %d in colors file\n", blockid3);
+
 		uint8_t vals[5];
 		bool valid = true;
 		for (int i = 0; i < 5; ++i) {
 			while (*ptr == ' ' || *ptr == '\t') {
 				++ptr;
 			}
-			if (*ptr == '\0') {
+			if (*ptr == '\0' || *ptr == '#') {
 				printf("Too few arguments for block %d, ignoring line.\n", blockid);
 				valid = false;
 				break;
