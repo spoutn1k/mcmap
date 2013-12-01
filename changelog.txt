@@ -2,6 +2,12 @@ mcmap changelog
 Latest version is available at: http://wrim.pl/mcmap/
 ------------------------------------------------------
 
+2.4.2b (dec 1 2013) - Minecraft 1.7.2 compatible
+added:
+-Windows 64bit version
+fixed:
+-small fixes in loading colors
+
 2.4.2 (nov 27 2013) - Minecraft 1.7.2 compatible
 fixed:
 -ignoring empty lines in colors file

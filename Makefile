@@ -10,6 +10,7 @@ OBJECTS_TURBO=$(SOURCES:.cpp=.turbo.o)
 DOBJECTS=$(SOURCES:.cpp=.debug.o)
 OBJECTS64=$(SOURCES:.cpp=.64.o)
 EXECUTABLE=mcmap
+EXECUTABLE64=mcmap64
 
 CFLAGSX11=-O3 -c -Wall -fomit-frame-pointer -pedantic -DWITHPNG -I/usr/local/include -I/usr/X11/include
 LDFLAGSX11=-O3 -lz -lpng -fomit-frame-pointer -L/usr/local/lib -L/usr/X11/lib
@@ -28,7 +29,7 @@ static: $(OBJECTS)
 
 # crosscompile static version for win 64bit (using this one on windows)
 x64: $(OBJECTS64)
-	x86_64-w64-mingw32-g++ $(OBJECTS64) $(LDFLAGS) -m64 -static -o $(EXECUTABLE)
+	x86_64-w64-mingw32-g++ $(OBJECTS64) $(LDFLAGS) -m64 -static -o $(EXECUTABLE64)
 
 # debug, zlib shared
 debug: $(DOBJECTS)

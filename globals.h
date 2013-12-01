@@ -1,7 +1,7 @@
 #ifndef _GLOBALS_H_
 #define _GLOBALS_H_
 
-#define VERSION "2.4.2 (compatible with Minecraft 1.7.2)"
+#define VERSION "2.4.2b (compatible with Minecraft 1.7.2)"
 
 #include <stdint.h>
 #include <cstdlib>

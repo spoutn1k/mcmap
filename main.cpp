@@ -268,7 +268,7 @@ int main(int argc, char **argv)
 	// ########## end of command line parsing ##########
 	if (g_Hell || g_ServerHell || end) g_UseBiomes = false;
 
-	printf("mcmap " VERSION " by Zahl\n");
+	printf("mcmap " VERSION " %dbit by Zahl\n", 8*sizeof(size_t));
 
 	if (sizeof(size_t) < 8 && memlimit > 1800 * uint64_t(1024 * 1024)) {
 		memlimit = 1800 * uint64_t(1024 * 1024);
@@ -1104,7 +1104,7 @@ void printHelp(char *binary)
 	printf(
 	   ////////////////////////////////////////////////////////////////////////////////
 	   "\nmcmap by Zahl - an isometric minecraft map rendering tool.\n"
-	   "Version " VERSION "\n\n"
+	   "Version " VERSION " %dbit\n\n"
 	   "Usage: %s [-from X Z -to X Z] [-night] [-cave] [-noise VAL] [...] WORLDPATH\n\n"
 	   "  -from X Z     sets the coordinate of the chunk to start rendering at\n"
 	   "  -to X Z       sets the coordinate of the chunk to end rendering at\n"
@@ -1157,5 +1157,5 @@ void printHelp(char *binary)
 	   "  - This would render the same world but at night, and only\n"
 	   "    from chunk (-10 -10) to chunk (10 10)\n"
 #endif
-	   , binary, binary, binary);
+	   , 8*sizeof(size_t), binary, binary, binary);
 }
