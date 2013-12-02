@@ -623,8 +623,12 @@ uint64_t calcImageSize(const int mapChunksX, const int mapChunksZ, const size_t 
 	return uint64_t(pixelsX) * BYTESPERPIXEL * uint64_t(pixelsY);
 }
 
-void setPixel(const size_t x, const size_t y, const uint8_t color, const float fsub)
+void setPixel(const size_t x, const size_t y, uint16_t color, const float fsub) //color should be const - wrim
 {
+	if (color > 255){
+		//printf("%10d",color); //wrim piksele > 256
+		//color %= 4096;
+	}
 	// Sets pixels around x,y where A is the anchor
 	// T = given color, D = darker, L = lighter
 	// A T T T

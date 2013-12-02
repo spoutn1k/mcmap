@@ -30,7 +30,7 @@
 	} while (false)
 
 // See header for description
-uint8_t colors[256][8];
+uint8_t colors[65536][8];
 
 
 void loadColors()
@@ -343,14 +343,21 @@ bool loadColorsFromFile(const char *file)
 			continue;
 		}
 		
+		int suffix = 0;
 		while (*ptr != ' ' && *ptr != '\t' && *ptr != '\0') {
 			if (*ptr == ':')
 			{
 				int blockid3 = atoi(++ptr);
-				printf("Druga wartosc %d:%d in colors file\n", blockid, blockid3);
+				if (blockid3 < 0 || blockid3 > 15) {
+					printf("Skipping invalid blockid %d:%d in colors file\n", blockid, blockid3);
+					suffix = -1;
+				}
+				printf("Druga wartosc %d:%d in colors file\n", blockid, blockid3); //wrim
+				suffix = 1;
 			}
 			++ptr;
 		}
+		if (suffix < 0) continue;
 
 		//int blockid3 = atoi(ptr);
 			//printf("Druga wartoœæ %d in colors file\n", blockid3);

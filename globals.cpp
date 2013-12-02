@@ -22,7 +22,8 @@ uint8_t *g_Grasscolor = NULL, *g_Leafcolor = NULL, *g_TallGrasscolor = NULL;
 uint16_t *g_BiomeMap = NULL;
 int g_GrasscolorDepth = 0, g_FoliageDepth = 0;
 
-uint8_t *g_Terrain = NULL, *g_Light = NULL;
+uint16_t *g_Terrain = NULL;
+uint8_t *g_Light = NULL;
 uint16_t *g_HeightMap = NULL;
 
 int g_MarkerCount = 0;

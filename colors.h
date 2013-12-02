@@ -8,13 +8,14 @@
 // Brightness is precalculated to speed up calculations later
 // Colors are stored twice since BMP and PNG need them in different order
 // Noise is supposed to look normal when -noise 10 is given
-extern uint8_t colors[256][8];
+extern uint8_t colors[65536][8];
 #define PRED 0
 #define PGREEN 1
 #define PBLUE 2
 #define PALPHA 3
 #define NOISE 4
 #define BRIGHTNESS 5
+#define BLOCKTYPE 6
 
 #define GETBRIGHTNESS(c) (uint8_t)sqrt( \
                                         double(PRED[c]) *  double(PRED[c]) * .236 + \

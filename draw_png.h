@@ -12,7 +12,8 @@ void createImageBuffer(const size_t width, const size_t height, const bool split
 bool createImage(FILE *fh, const size_t width, const size_t height, const bool splitUp);
 bool saveImage();
 int loadImagePart(const int startx, const int starty, const int width, const int height);
-void setPixel(const size_t x, const size_t y, const uint8_t color, const float fsub);
+void setPixel(const size_t x, const size_t y,  uint16_t color, const float fsub); //color not const - temporary - wrim
+//void setPixel(const size_t x, const size_t y, const uint16_t color, const float fsub);
 void blendPixel(const size_t x, const size_t y, const uint8_t color, const float fsub);
 bool saveImagePart();
 bool discardImagePart();
