@@ -239,6 +239,7 @@ void loadColors()
 	SETCOLOR(174, 159, 189, 239, 255 ); //packed ice
 	SETCOLOR(175, 0, 255, 0, 254 ); //Large flower
 	SETCOLOR(206, 54, 24, 30, 255 ); //nether bricks slab
+	SETCOLOR(165, 61, 255, 61, 96  ); //slime block
 
 	// carpets
 	SETCOLOR(36 ,  255, 255, 255,  254   ); //White carpet
@@ -299,7 +300,7 @@ void loadColors()
 	SETCOLOR(185,   32,  27,  27,  40   ); //Black Stained Glass [pane]
 
 	// flowers
-	SETCOLOR(165, 120, 158, 241, 254   ); //BLUE_ORCHID 165
+//	SETCOLOR(165, 120, 158, 241, 254   ); //BLUE_ORCHID 165
 	SETCOLOR(176, 200,  75, 210, 254 ); //ALLIUM 176
 	SETCOLOR(235, 168, 172, 172, 254 ); //AZURE_BLUET 235
 	// 38, 173  44  40 254, ); //RED_TULIP 38

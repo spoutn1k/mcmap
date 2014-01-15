@@ -2,6 +2,10 @@ mcmap changelog
 Latest version is available at: http://wrim.pl/mcmap/
 ------------------------------------------------------
 
+2.4.2c (jan 10 2014) - snapshot 14w02a compatible (MC 1.7.4)
+added:
+-slime block
+
 2.4.2b (dec 1 2013) - Minecraft 1.7.2 compatible
 added:
 -Windows 64bit version

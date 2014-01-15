@@ -22,6 +22,7 @@
 174	 159	 189	 239	 255 	 0	# packed ice
 175	   0	 255	   0	 254	 0	# Large flower
 206	  54	  24	  30	 255 	 0	# nether bricks slab
+165	  61	 255	  61	  96 	 0	# slime block
 
 # carpets
 36   255 255 255  254   0	# White carpet
@@ -82,8 +83,7 @@
 185   32  27  27  40   0	# Black Stained Glass [pane]
 
 # flowers
-165	 120 158 241 254	 0	# BLUE_ORCHID 165
-176	 200  75 210 254	 0	# ALLIUM 176
+176	 200  75 210 254	 0	# BLUE_ORCHID / ALLIUM 176
 235	 168 172 172 254	 0	# AZURE_BLUET 235
 # 38	 173  44  40 254	 0	# RED_TULIP 38
 217	 244 137  54 254	 0	# ORANGE_TULIP 217

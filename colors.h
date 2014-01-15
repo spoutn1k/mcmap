@@ -108,7 +108,8 @@ bool loadBiomeColors(const char* path);
 #define BIRCHLEAVES 230
 #define JUNGLELEAVES 231
 
-#define BLUE_ORCHID 165
+#define BLUE_ORCHID 176
+//165
 #define ALLIUM 176
 #define AZURE_BLUET 235
 #define RED_TULIP 38

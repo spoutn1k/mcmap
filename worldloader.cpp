@@ -1216,13 +1216,13 @@ static inline void assignBlock(const uint8_t &block, uint8_t* &targetBlock, int 
 				*targetBlock++ = 200 + col;
 			}
 		} else if (block == WOODEN_STEP) {
-			if (col != 0) {
+			if (col != 0 && col < 4) {
 				*targetBlock++ = 213 + col;
 			} else {
 				*targetBlock++ = block;
 			}
 		} else if (block == WOOD || block == WOODEN_DOUBLE_STEP) {
-			if (col != 0) {
+			if (col != 0 && col < 4) {
 				*targetBlock++ = 225 + (col & 0x3);
 			} else {
 				*targetBlock++ = block;
