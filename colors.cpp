@@ -466,10 +466,10 @@ bool loadColorsFromFile(const char *file)
 		if (*ptr == '\0' || *ptr == '#' || *ptr == '\12') {
 			continue;   // This is a comment or empty line, skip
 		}
-		float blockid2 = atof(ptr);
-		int blockid = (int)blockid2;
-		if (blockid < 1 || blockid > 255) {
-			printf("Skipping invalid blockid %.4f in colors file\n", blockid2);
+		int blockid = atoi(ptr);
+		int blockid3;
+		if (blockid < 1 || blockid > 4095) {
+			printf("Skipping invalid blockid %d in colors file\n", blockid);
 			continue;
 		}
 		
@@ -477,7 +477,7 @@ bool loadColorsFromFile(const char *file)
 		while (*ptr != ' ' && *ptr != '\t' && *ptr != '\0') {
 			if (*ptr == ':')
 			{
-				int blockid3 = atoi(++ptr);
+				blockid3 = atoi(++ptr);
 				if (blockid3 < 0 || blockid3 > 15) {
 					printf("Skipping invalid blockid %d:%d in colors file\n", blockid, blockid3);
 					suffix = -1;
@@ -488,9 +488,6 @@ bool loadColorsFromFile(const char *file)
 			++ptr;
 		}
 		if (suffix < 0) continue;
-
-		//int blockid3 = atoi(ptr);
-			//printf("Druga wartoœæ %d in colors file\n", blockid3);
 
 		uint8_t vals[5];
 		bool valid = true;
@@ -511,8 +508,19 @@ bool loadColorsFromFile(const char *file)
 		if (!valid) {
 			continue;
 		}
-		memcpy(colors[blockid], vals, 5);
-		colors[blockid][BRIGHTNESS] = GETBRIGHTNESS(colors[blockid]);
+		if (!suffix)
+		{
+		    for (int blockid3 = 0; blockid3 < 16; blockid3++)
+		    {
+			memcpy(colors[(blockid3 << 12)+blockid], vals, 5);
+			colors[(blockid3 << 12)+blockid][BRIGHTNESS] = GETBRIGHTNESS(colors[(blockid3 << 12)+blockid]);
+		    }
+		}
+		else
+		{
+		    memcpy(colors[(blockid3 << 12)+blockid], vals, 5);
+		    colors[(blockid3 << 12)+blockid][BRIGHTNESS] = GETBRIGHTNESS(colors[(blockid3 << 12)+blockid]);
+		}
 	}
 	fclose(f);
 	return true;
