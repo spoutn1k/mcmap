@@ -623,12 +623,8 @@ uint64_t calcImageSize(const int mapChunksX, const int mapChunksZ, const size_t 
 	return uint64_t(pixelsX) * BYTESPERPIXEL * uint64_t(pixelsY);
 }
 
-void setPixel(const size_t x, const size_t y, uint16_t color, const float fsub) //color should be const - wrim
+void setPixel(const size_t x, const size_t y, const uint16_t color, const float fsub)
 {
-	if (color > 255){
-		//printf("%10d",color); //wrim piksele > 256
-		//color %= 4096;
-	}
 	// Sets pixels around x,y where A is the anchor
 	// T = given color, D = darker, L = lighter
 	// A T T T
@@ -641,8 +637,31 @@ void setPixel(const size_t x, const size_t y, uint16_t color, const float fsub) 
 	// Now make a local copy of the color that we can modify just for this one block
 	memcpy(c, colors[color], BYTESPERPIXEL);
 	modColor(c, sub);
+	uint8_t colortype = colors[color][BLOCKTYPE];
+
 	if (g_BlendAll) {
 		// Then check the block type, as some types will be drawn differently
+		switch (colortype)
+		{
+		case BLOCKFLAT:
+			setSnowBA(x, y, c);
+			return;
+		case BLOCKTORCH:
+			setTorchBA(x, y, c);
+			return;
+		case BLOCKFLOWER:
+			setFlowerBA(x, y, c);
+			return;
+		case BLOCKFENCE:
+			setFence(x, y, c);
+			return;
+		case BLOCKWIRE:
+			setRedwire(x, y, c);
+			return;
+		case BLOCKRAILROAD:
+			setRailroad(x, y, c);
+			return;
+		}		/*
 		if (color == SNOW || color == TRAPDOOR
 			|| color == 141 || color == 142 || color == 158 || color == 149
 			|| color == 131 || color == 132 || color == 150 || color == 147 || color == 148 || color == 68 || color == 69 || color == 70
@@ -672,6 +691,7 @@ void setPixel(const size_t x, const size_t y, uint16_t color, const float fsub) 
 			setRailroad(x, y, c);
 			return;
 		}
+		*/
 		// All the above blocks didn't need the shaded down versions of the color, so we only calc them here
 		// They are for the sides of blocks
 		memcpy(L, c, BYTESPERPIXEL);
@@ -679,6 +699,22 @@ void setPixel(const size_t x, const size_t y, uint16_t color, const float fsub) 
 		modColor(L, -17);
 		modColor(D, -27);
 		// A few more blocks with special handling... Those need the two colors we just mixed
+		switch (colortype)
+		{
+		case BLOCKGRASS:
+			setGrassBA(x, y, c, L, D, sub);
+			return;
+		case BLOCKFIRE:
+			setFire(x, y, c, L, D);
+			return;
+		case BLOCKSTEP:
+			setStepBA(x, y, c, L, D);
+			return;
+		case BLOCKUPSTEP:
+			setUpStepBA(x, y, c, L, D);
+			return;
+		}
+		/*
 		if (color == GRASS) {
 			setGrassBA(x, y, c, L, D, sub);
 			return;
@@ -696,8 +732,31 @@ void setPixel(const size_t x, const size_t y, uint16_t color, const float fsub) 
 			setUpStepBA(x, y, c, L, D);
 			return;
 		}
+		*/
 	} else {
 		// Then check the block type, as some types will be drawn differently
+		switch (colortype)
+		{
+		case BLOCKFLAT:
+			setSnow(x, y, c);
+			return;
+		case BLOCKTORCH:
+			setTorch(x, y, c);
+			return;
+		case BLOCKFLOWER:
+			setFlower(x, y, c);
+			return;
+		case BLOCKFENCE:
+			setFence(x, y, c);
+			return;
+		case BLOCKWIRE:
+			setRedwire(x, y, c);
+			return;
+		case BLOCKRAILROAD:
+			setRailroad(x, y, c);
+			return;
+		}
+		/*
 		if (color == SNOW || color == TRAPDOOR
 			|| color == 141 || color == 142 || color == 158 || color == 149
 			|| color == 131 || color == 132 || color == 150 || color == 147 || color == 148 || color == 68 || color == 69 || color == 70
@@ -726,6 +785,7 @@ void setPixel(const size_t x, const size_t y, uint16_t color, const float fsub) 
 			setRailroad(x, y, c);
 			return;
 		}
+		*/
 		// All the above blocks didn't need the shaded down versions of the color, so we only calc them here
 		// They are for the sides of blocks
 		memcpy(L, c, BYTESPERPIXEL);
@@ -733,6 +793,22 @@ void setPixel(const size_t x, const size_t y, uint16_t color, const float fsub) 
 		modColor(L, -17);
 		modColor(D, -27);
 		// A few more blocks with special handling... Those need the two colors we just mixed
+		switch (colortype)
+		{
+		case BLOCKGRASS:
+			setGrass(x, y, c, L, D, sub);
+			return;
+		case BLOCKFIRE:
+			setFire(x, y, c, L, D);
+			return;
+		case BLOCKSTEP:
+			setStep(x, y, c, L, D);
+			return;
+		case BLOCKUPSTEP:
+			setUpStep(x, y, c, L, D);
+			return;
+		}
+		/*
 		if (color == GRASS) {
 			setGrass(x, y, c, L, D, sub);
 			return;
@@ -750,6 +826,7 @@ void setPixel(const size_t x, const size_t y, uint16_t color, const float fsub) 
 			setUpStep(x, y, c, L, D);
 			return;
 		}
+		*/
 	}
 	// In case the user wants noise, calc the strength now, depending on the desired intensity and the block's brightness
 	int noise = 0;
@@ -956,8 +1033,8 @@ namespace
 	{
 		// this will make grass look like dirt from the side
 		uint8_t L[CHANSPERPIXEL], D[CHANSPERPIXEL];
-		memcpy(L, colors[DIRT], BYTESPERPIXEL);
-		memcpy(D, colors[DIRT], BYTESPERPIXEL);
+		memcpy(L, colors[GRASSBOTTOM], BYTESPERPIXEL);
+		memcpy(D, colors[GRASSBOTTOM], BYTESPERPIXEL);
 		modColor(L, sub - 15);
 		modColor(D, sub - 25);
 		// consider noise

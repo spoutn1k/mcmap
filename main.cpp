@@ -268,8 +268,7 @@ int main(int argc, char **argv)
 	// ########## end of command line parsing ##########
 	if (g_Hell || g_ServerHell || end) g_UseBiomes = false;
 
-	printf("mcmap " VERSION " by Zahl & mcmap3 by WRIM\n");
-	printf("%8d%8d\n\n",4<<12, 8194>>12);
+	printf("mcmap " VERSION " %dbit\nby Zahl & mcmap3 by WRIM\n",8*sizeof(size_t));
 
 	if (sizeof(size_t) < 8 && memlimit > 1800 * uint64_t(1024 * 1024)) {
 		memlimit = 1800 * uint64_t(1024 * 1024);
@@ -526,6 +525,7 @@ int main(int argc, char **argv)
 		// More chunks are needed at the sides to get light and edge detection right at the edges
 		// This makes code below a bit messy, as most of the time the surrounding chunks are ignored
 		// By starting loops at CHUNKSIZE_X instead of 0.
+		// printf("CHUNKS: X: %d %d, Z: %d %d\n",g_FromChunkX,g_ToChunkX,g_FromChunkZ,g_ToChunkZ);
 		++g_ToChunkX;
 		++g_ToChunkZ;
 		--g_FromChunkX;
@@ -1105,7 +1105,7 @@ void printHelp(char *binary)
 	printf(
 	   ////////////////////////////////////////////////////////////////////////////////
 	   "\nmcmap by Zahl - an isometric minecraft map rendering tool.\n"
-	   "Version " VERSION "\n\n"
+	   "Version " VERSION " %dbit\n\n"
 	   "Usage: %s [-from X Z -to X Z] [-night] [-cave] [-noise VAL] [...] WORLDPATH\n\n"
 	   "  -from X Z     sets the coordinate of the chunk to start rendering at\n"
 	   "  -to X Z       sets the coordinate of the chunk to end rendering at\n"
@@ -1158,5 +1158,5 @@ void printHelp(char *binary)
 	   "  - This would render the same world but at night, and only\n"
 	   "    from chunk (-10 -10) to chunk (10 10)\n"
 #endif
-	   , binary, binary, binary);
+	   , 8*sizeof(size_t), binary, binary, binary);
 }
