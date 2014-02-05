@@ -65,9 +65,11 @@ namespace
 	png_structp pngPtrCurrent = NULL; // This will be either the same as above, or a temp image when using disk caching
 	FILE *gPngPartialFileHandle = NULL;
 
+	inline void assignBiome(uint8_t* const color, const uint8_t biome);
 	inline void blend(uint8_t * const destination, const uint8_t * const source);
 	inline void modColor(uint8_t * const color, const int mod);
 	inline void addColor(uint8_t * const color, const uint8_t * const add);
+	inline void addColorSimple(uint8_t * const color, const uint8_t * const add);
 
 	// Split them up so setPixel won't be one hell of a mess
 	void setSnow(const size_t x, const size_t y, const uint8_t * const color);
@@ -623,7 +625,7 @@ uint64_t calcImageSize(const int mapChunksX, const int mapChunksZ, const size_t 
 	return uint64_t(pixelsX) * BYTESPERPIXEL * uint64_t(pixelsY);
 }
 
-void setPixel(const size_t x, const size_t y, const uint16_t color, const float fsub)
+void setPixel(const size_t x, const size_t y, const uint16_t color, const float fsub, const uint8_t biome)
 {
 	// Sets pixels around x,y where A is the anchor
 	// T = given color, D = darker, L = lighter
@@ -637,6 +639,7 @@ void setPixel(const size_t x, const size_t y, const uint16_t color, const float 
 	// Now make a local copy of the color that we can modify just for this one block
 	memcpy(c, colors[color], BYTESPERPIXEL);
 	modColor(c, sub);
+	if (g_UseBiomes && g_WorldFormat == 2) assignBiome(c, biome);
 	uint8_t colortype = colors[color][BLOCKTYPE];
 
 	if (g_BlendAll) {
@@ -952,6 +955,21 @@ void blendPixel(const size_t x, const size_t y, const uint8_t color, const float
 namespace
 {
 
+	inline void assignBiome(uint8_t* const color, const uint8_t biome)
+	{
+		//do there what you want, this code response for changing single pixel depending on its biome
+		//note this works only for anvli format. old one still requires donkey kong biome extractor
+		if (biome)
+		{
+		    color[0] = clamp(color[0]);
+		    color[1] = clamp(color[1]);
+		    color[2] = clamp(color[2]);
+
+		    uint8_t c[3] = {0, 0, 0};
+		    addColorSimple(color, c);
+		}
+	}
+
 	inline void blend(uint8_t * const destination, const uint8_t * const source)
 	{
 		if (destination[PALPHA] == 0 || source[PALPHA] == 255) {
@@ -979,6 +997,13 @@ namespace
 		color[0] = clamp(uint16_t(float(color[0]) * v1 + float(add[0]) * v2));
 		color[1] = clamp(uint16_t(float(color[1]) * v1 + float(add[1]) * v2));
 		color[2] = clamp(uint16_t(float(color[2]) * v1 + float(add[2]) * v2));
+	}
+
+	inline void addColorSimple(uint8_t * const color, const uint8_t * const add)
+	{
+		color[0] = clamp(color[0] + add[0]);
+		color[1] = clamp(color[1] + add[1]);
+		color[2] = clamp(color[2] + add[2]);
 	}
 
 	void setSnow(const size_t x, const size_t y, const uint8_t * const color)

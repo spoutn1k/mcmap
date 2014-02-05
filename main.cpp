@@ -381,14 +381,15 @@ int main(int argc, char **argv)
 	}
 
 	// Load biomes
-	if (g_UseBiomes) {
+	if (g_UseBiomes) if (g_WorldFormat != 2) {
 		char *bpath = new char[strlen(filename) + 30];
 		strcpy(bpath, filename);
 		strcat(bpath, "/biomes");
 		if (!dirExists(bpath)) {
 			printf("Error loading biome information. '%s' does not exist.\n", bpath);
-			return 1;
+			g_UseBiomes = false;	//user want biomes but world is non-anvil and biome folder is missing
 		}
+		else
 		if (biomepath == NULL) {
 			biomepath = bpath;
 		}
@@ -562,7 +563,7 @@ int main(int argc, char **argv)
 		}
 
 		// Load biome data if requested
-		if (g_UseBiomes) {
+		if (g_UseBiomes && g_WorldFormat != 2) {
 			loadBiomeMap(biomepath);
 		}
 
@@ -583,7 +584,8 @@ int main(int argc, char **argv)
 			printProgress(x - CHUNKSIZE_X, g_MapsizeX);
 			for (size_t z = CHUNKSIZE_Z; z < g_MapsizeZ - CHUNKSIZE_Z; ++z) {
 				// Biome colors
-				if (g_BiomeMap != NULL) {
+				uint16_t biome = 0; //wrim - should be 8bit, fix it
+				if (g_BiomeMap != NULL) if (g_WorldFormat != 2) {
 					uint16_t &offset = BIOMEAT(x,z);
 					// This is getting a bit stupid here, there should be a better solution than a dozen copy ops
 					memcpy(colors[GRASS], g_Grasscolor + offset * g_GrasscolorDepth, 3);
@@ -604,6 +606,10 @@ int main(int argc, char **argv)
 					colors[JUNGLELEAVES][PRED] = clamp(int32_t(colors[LEAVES][PRED]));
 					colors[JUNGLELEAVES][PGREEN] = clamp(int32_t(colors[LEAVES][PGREEN]) + 18);
 					colors[JUNGLELEAVES][PBLUE] = colors[LEAVES][PBLUE];
+				}
+				else
+				{
+				    biome = BIOMEAT(x, z);
 				}
 				//
 				const int bmpPosX = int((g_MapsizeZ - z - CHUNKSIZE_Z) * 2 + (x - CHUNKSIZE_X) * 2 + (splitImage ? -2 : bitmapStartX - cropLeft));
@@ -656,7 +662,7 @@ int main(int argc, char **argv)
 					      && (BLOCKAT(x - 1, y, z) == AIR || BLOCKAT(x, y, z - 1) == AIR)) {   // block TL/TR from this one is air = edge
 						brightnessAdjustment += 13;
 					}
-					setPixel(bmpPosX, bmpPosY, c, brightnessAdjustment);
+					setPixel(bmpPosX, bmpPosY, c, brightnessAdjustment, biome);
 				}
 			}
 		}

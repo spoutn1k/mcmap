@@ -509,14 +509,22 @@ static bool loadChunk(const char *streamOrFile, const size_t streamLen)
 
 static bool loadAnvilChunk(NBT_Tag * const level, const int32_t chunkX, const int32_t chunkZ)
 {
-	uint8_t *blockdata, *lightdata, *skydata, *justData, *addData = 0;
+	uint8_t *blockdata, *lightdata, *skydata, *justData, *addData = 0, *biomesdata;
 	int32_t len, yoffset, yoffsetsomething = (g_MapminY + SECTION_Y * 10000) % SECTION_Y;
 	int8_t yo;
 	list<NBT_Tag *> *sections = NULL;
 	bool ok;
+	if (g_UseBiomes) {
+		ok = level->getByteArray("Biomes", biomesdata, len);
+		if (!ok) {
+			printf("No biomes found in region\n");	//wrim - biomes
+			return false;
+		}
+	}
+	//
 	ok = level->getList("Sections", sections);
 	if (!ok) {
-		printf("No sections found in region\n");//wrim - biomes
+		printf("No sections found in region\n");
 		return false;
 	}
 	//
@@ -572,15 +580,19 @@ static bool loadAnvilChunk(NBT_Tag * const level, const int32_t chunkX, const in
 				if (g_Orientation == East) {
 					targetBlock = &BLOCKEAST(x + offsetx, yoffset, z + offsetz);
 					if (g_Skylight || g_Nightmode) lightByte = &SETLIGHTEAST(x + offsetx, yoffset, z + offsetz);
+					if (g_UseBiomes) BIOMEEAST(x + offsetx, z + offsetz) = biomesdata[x + (z * CHUNKSIZE_X)];
 				} else if (g_Orientation == North) {
 					targetBlock = &BLOCKNORTH(x + offsetx, yoffset, z + offsetz);
 					if (g_Skylight || g_Nightmode) lightByte = &SETLIGHTNORTH(x + offsetx, yoffset, z + offsetz);
+					if (g_UseBiomes) BIOMENORTH(x + offsetx, z + offsetz) = biomesdata[x + (z * CHUNKSIZE_X)];
 				} else if (g_Orientation == South) {
 					targetBlock = &BLOCKSOUTH(x + offsetx, yoffset, z + offsetz);
 					if (g_Skylight || g_Nightmode) lightByte = &SETLIGHTSOUTH(x + offsetx, yoffset, z + offsetz);
+					if (g_UseBiomes) BIOMESOUTH(x + offsetx, z + offsetz) = biomesdata[x + (z * CHUNKSIZE_X)];
 				} else {
 					targetBlock = &BLOCKWEST(x + offsetx, yoffset, z + offsetz);
 					if (g_Skylight || g_Nightmode) lightByte = &SETLIGHTWEST(x + offsetx, yoffset, z + offsetz);
+					if (g_UseBiomes) BIOMEWEST(x + offsetx, z + offsetz) = biomesdata[x + (z * CHUNKSIZE_X)];
 				}
 				//const int toY = g_MapsizeY + g_MapminY;
 				for (int y = 0; y < SECTION_Y; ++y) {
@@ -776,6 +788,15 @@ static void allocateTerrain()
 	if (g_HeightMap != NULL) {
 		delete[] g_HeightMap;
 	}
+	if (g_UseBiomes && g_WorldFormat == 2)
+	{
+	    if (g_BiomeMap != NULL) {
+		delete[] g_BiomeMap;
+	    }
+	    g_BiomeMapSize = g_MapsizeX * g_MapsizeZ;
+	    g_BiomeMap = new uint16_t[g_BiomeMapSize];
+	    memset(g_BiomeMap, 0, g_BiomeMapSize * sizeof(uint16_t));
+	}
 	g_HeightMap = new uint16_t[g_MapsizeX * g_MapsizeZ];
 	//printf("%d -- %d\n", g_MapsizeX, g_MapsizeZ); //dimensions of terrain map (in memory)
 	memset(g_HeightMap, 0, g_MapsizeX * g_MapsizeZ * sizeof(uint16_t));
@@ -836,7 +857,7 @@ void loadBiomeMap(const char* path)
 	printf("Loading biome data...\n");
 	const uint64_t size = g_MapsizeX * g_MapsizeZ;
 	if (g_BiomeMapSize == 0 || size > g_BiomeMapSize) {
-		if (g_BiomeMap == NULL) delete[] g_BiomeMap;
+		if (g_BiomeMap != NULL) delete[] g_BiomeMap;
 		g_BiomeMapSize = size;
 		g_BiomeMap = new uint16_t[size];
 	}
