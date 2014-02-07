@@ -65,11 +65,11 @@ namespace
 	png_structp pngPtrCurrent = NULL; // This will be either the same as above, or a temp image when using disk caching
 	FILE *gPngPartialFileHandle = NULL;
 
-	inline void assignBiome(uint8_t* const color, const uint8_t biome);
+	inline void assignBiome(uint8_t* const color, const uint8_t biome, const uint16_t block);
 	inline void blend(uint8_t * const destination, const uint8_t * const source);
 	inline void modColor(uint8_t * const color, const int mod);
-	inline void addColor(uint8_t * const color, const uint8_t * const add);
-	inline void addColorSimple(uint8_t * const color, const uint8_t * const add);
+	inline void addColor(uint8_t * const color, const int16_t * const add);
+	inline void addColorSimple(uint8_t * const color, const int16_t * const add);
 
 	// Split them up so setPixel won't be one hell of a mess
 	void setSnow(const size_t x, const size_t y, const uint8_t * const color);
@@ -639,7 +639,7 @@ void setPixel(const size_t x, const size_t y, const uint16_t color, const float 
 	// Now make a local copy of the color that we can modify just for this one block
 	memcpy(c, colors[color], BYTESPERPIXEL);
 	modColor(c, sub);
-	if (g_UseBiomes && g_WorldFormat == 2) assignBiome(c, biome);
+	if (g_UseBiomes && g_WorldFormat == 2) assignBiome(c, biome, color);
 	uint8_t colortype = colors[color][BLOCKTYPE];
 
 	if (g_BlendAll) {
@@ -955,18 +955,36 @@ void blendPixel(const size_t x, const size_t y, const uint8_t color, const float
 namespace
 {
 
-	inline void assignBiome(uint8_t* const color, const uint8_t biome)
+	inline void assignBiome(uint8_t* const color, const uint8_t biome, const uint16_t block)
 	{
 		//do there what you want, this code response for changing single pixel depending on its biome
 		//note this works only for anvli format. old one still requires donkey kong biome extractor
-		if (biome)
+	    if (block == 2 || block == LEAVES||block==TALL_GRASS)
+		switch (biome)
 		{
-		    color[0] = clamp(color[0]);
-		    color[1] = clamp(color[1]);
-		    color[2] = clamp(color[2]);
-
-		    uint8_t c[3] = {0, 0, 0};
-		    addColorSimple(color, c);
+		case 4:
+		case 29:
+		    {
+			int16_t c[4] = {255, 250, 250, 160};
+		    //memcpy(color, c, 3);
+		    addColor(color, c);
+		    }
+		    break;
+		case 2:
+		case 1:
+		    {
+			int16_t c[4] = {255, 0, 0, 100};
+		    //memcpy(color, c, 3);
+		    addColor(color, c);
+		    }
+		    break;
+		case 35:
+		    {
+			int16_t c1[4] = {0, 255, 0, 70};
+		    //memcpy(color, c1, 3);
+		    addColor(color, c1);
+		    }
+		    break;
 		}
 	}
 
@@ -990,7 +1008,7 @@ namespace
 		color[2] = clamp(color[2] + mod);
 	}
 
-	inline void addColor(uint8_t * const color, const uint8_t * const add)
+	inline void addColor(uint8_t * const color, const int16_t * const add)
 	{
 		const float v2 = (float(add[PALPHA]) / 255.0f);
 		const float v1 = (1.0f - (v2 * .2f));
@@ -999,7 +1017,7 @@ namespace
 		color[2] = clamp(uint16_t(float(color[2]) * v1 + float(add[2]) * v2));
 	}
 
-	inline void addColorSimple(uint8_t * const color, const uint8_t * const add)
+	inline void addColorSimple(uint8_t * const color, const int16_t * const add)
 	{
 		color[0] = clamp(color[0] + add[0]);
 		color[1] = clamp(color[1] + add[1]);

@@ -557,8 +557,6 @@ static bool loadAnvilChunk(NBT_Tag * const level, const int32_t chunkX, const in
 			return false;
 		}
 		*/
-		//printf ("%d\n",addData);
-		//else printf("%s \n",justData); // wrim
 		if (g_Nightmode || g_Skylight) { // If nightmode, we need the light information too
 			ok = section->getByteArray("BlockLight", lightdata, len);
 			if (!ok || len < (CHUNKSIZE_X * CHUNKSIZE_Z * SECTION_Y) / 2) {
@@ -1067,7 +1065,7 @@ static inline void assignBlock(const uint16_t &block, uint16_t* &targetBlock, in
 		col = (justData[(x + (z + (y * CHUNKSIZE_Z)) * CHUNKSIZE_X) / 2] >> ((x % 2) * 4)) & 0xF;
 		if (addData != 0)
 		{
-			add = ( addData[(x + (z + (y * CHUNKSIZE_Z)) * CHUNKSIZE_X) / 2] >> ((x % 2) * 4)) & 0xF;
+		    add = ( addData[(x + (z + (y * CHUNKSIZE_Z)) * CHUNKSIZE_X) / 2] >> ((x % 2) * 4)) & 0xF;
 		}
 	} else {
 		col = (justData[(y + (z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y) / 2] >> ((y % 2) * 4)) & 0xF;

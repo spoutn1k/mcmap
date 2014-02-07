@@ -1,6 +1,40 @@
+mcmap3 changelog
+Latest version is available at: http://wrim.pl/mcmap/
+------------------------------------------------------
+
+beta 3.0.2 (feb )
+added:
+-support for biomes in anvil worlds (not implemented yet)
+-new option - -lowmemory - lets render up to 256 blocks but saves 50% memory during renderring
+
+beta 3.0.1 (feb 04 2014)
+added:
+-really implemented support for all blocks and data values
+-new algorithm for renderring various types of blocks (snow, torches, slabs etc.)
+
+beta 3.0.0 (dec 02 2013)
+added:
+-support for blocks ID's higger than 255 and data values (in theory for now)
+
 mcmap changelog
 Latest version is available at: http://wrim.pl/mcmap/
 ------------------------------------------------------
+
+2.4.2d (jan 31 2014) - snapshot 14w05a compatible (MC 1.7.4)
+added:
+-barrier block support (previous recognized as yellow glass pane)
+fixed:
+-sideways oak logs not renderred
+
+2.4.2c (jan 10 2014) - snapshot 14w02a compatible (MC 1.7.4)
+added:
+-slime block
+
+2.4.2b (dec 1 2013) - Minecraft 1.7.2 compatible
+added:
+-Windows 64bit version
+fixed:
+-small fixes in loading colors
 
 2.4.2 (nov 27 2013) - Minecraft 1.7.2 compatible
 fixed:
