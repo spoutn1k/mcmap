@@ -14,6 +14,13 @@
 #define BLOCKWEST(x,y,z) g_Terrain[(y) + ((x) + ((g_MapsizeX - ((z) + 1)) * g_MapsizeZ)) * g_MapsizeY]
 #define BLOCKNORTH(x,y,z) g_Terrain[(y) + ((z) + ((x) * g_MapsizeZ)) * g_MapsizeY]
 #define BLOCKSOUTH(x,y,z) g_Terrain[(y) + ((g_MapsizeZ - ((z) + 1)) + ((g_MapsizeX - ((x) + 1)) * g_MapsizeZ)) * g_MapsizeY]
+// Some macros for easier array access
+// First: Block array
+#define BLOCKAT8(x,y,z) g_TerrainLow[(y) + ((z) + ((x) * g_MapsizeZ)) * g_MapsizeY]
+#define BLOCKEAST8(x,y,z) g_TerrainLow[(y) + ((g_MapsizeZ - ((x) + 1)) + ((z) * g_MapsizeZ)) * g_MapsizeY]
+#define BLOCKWEST8(x,y,z) g_TerrainLow[(y) + ((x) + ((g_MapsizeX - ((z) + 1)) * g_MapsizeZ)) * g_MapsizeY]
+#define BLOCKNORTH8(x,y,z) g_TerrainLow[(y) + ((z) + ((x) * g_MapsizeZ)) * g_MapsizeY]
+#define BLOCKSOUTH8(x,y,z) g_TerrainLow[(y) + ((g_MapsizeZ - ((z) + 1)) + ((g_MapsizeX - ((x) + 1)) * g_MapsizeZ)) * g_MapsizeY]
 //#define BLOCKAT(x,y,z) g_Terrain[(x) + ((z) + ((y) * g_MapsizeZ)) * g_MapsizeX]
 //#define BLOCKEAST(x,y,z) g_Terrain[(z) + ((g_MapsizeZ - ((x) + 1)) + ((y) * g_MapsizeZ)) * g_MapsizeX]
 // Same for lightmap

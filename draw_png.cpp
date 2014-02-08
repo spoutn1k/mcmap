@@ -625,6 +625,12 @@ uint64_t calcImageSize(const int mapChunksX, const int mapChunksZ, const size_t 
 	return uint64_t(pixelsX) * BYTESPERPIXEL * uint64_t(pixelsY);
 }
 
+void setPixel(const size_t x, const size_t y, const uint8_t color, const float fsub, const uint8_t biome)	//not used but left just in case
+{
+    uint16_t color16 = colorsToID[color];
+    setPixel(x, y, color, fsub, biome);
+}
+
 void setPixel(const size_t x, const size_t y, const uint16_t color, const float fsub, const uint8_t biome)
 {
 	// Sets pixels around x,y where A is the anchor

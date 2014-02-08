@@ -40,6 +40,7 @@ extern bool g_Skylight;
 extern int g_Noise;
 extern bool g_BlendAll; // If set, do not assume certain blocks (like grass) are always opaque
 extern bool g_Hell, g_ServerHell; // rendering the nether
+extern bool g_lowMemory;
 
 // For rendering biome colors properly, external png files are used
 extern bool g_UseBiomes;
@@ -53,7 +54,7 @@ extern Marker g_Markers[MAX_MARKERS];
 
 // 3D arrays holding terrain/lightmap
 extern uint16_t *g_Terrain;
-extern uint8_t *g_Light;
+extern uint8_t *g_TerrainLow, *g_Light;
 // 2D array to store min and max block height per X/Z - it's 2 bytes per index, upper for highest, lower for lowest (don't ask!)
 extern uint16_t *g_HeightMap;
 

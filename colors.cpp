@@ -32,11 +32,12 @@
 // See header for description
 uint8_t colors[65536][8];
 uint8_t biomes[256][4];
-uint8_t colorsLow[65536];
-uint16_t colorsLow2[256] =
+uint8_t colorsToMap[65536];
+uint16_t colorsToID[256] =
 {
-	1, 2, 3, 4, 5, 6, 7, 8,  //renderring blocks ID's
-	9
+	0, 1, 2, 3, 4, 5, 6, 7,  //renderring blocks ID's, first is ALWAYS 0
+	8, 9, 10, 11, 12, 13, 14, 15,
+	133, 162, 17, 18, 170, 31, 20
 };
 
 void SET_COLORNOISE(uint16_t col, uint16_t r, uint16_t g, uint16_t b, uint16_t a, uint16_t n)
@@ -89,11 +90,12 @@ void SET_BLOCK(uint8_t type, uint8_t block)
 void loadColors()
 {
 	memset(colors, 0, sizeof colors);
-	memset(colorsLow, 0, sizeof colorsLow);
-	for (int i = 0; i < 256; i++)
+	memset(colorsToMap, 0, sizeof colorsToMap);
+	for (int i = 1; i < 256; i++)
 	{
-		colorsLow[colorsLow2[i]] = colorsLow2[i];
+		colorsToMap[colorsToID[i]] = i;
 	}
+	colorsToMap[0] = 0;
 
 	//uint8_t x[10] = {SNOW, TRAPDOOR, 171, 0, 0, 0, 0, 0, 0, 0};
 	//SET_BLOCK(BLOCKFLAT, x);

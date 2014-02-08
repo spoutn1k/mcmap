@@ -68,6 +68,8 @@ static bool loadAllRegions();
 static bool loadRegion(const char* file, const bool mustExist, int &loadedChunks);
 static bool loadTerrainRegion(const char *fromPath, int &loadedChunks);
 static bool scanWorldDirectoryRegion(const char *fromPath);
+static inline void assignBlock(const uint16_t &source, uint8_t* &dest, int &x, int &y, int &z, uint8_t* &justData);
+static inline void assignBlock(const uint16_t &source, uint8_t* &dest, int &x, int &y, int &z, uint8_t* &justData, uint8_t* &addData);
 static inline void assignBlock(const uint16_t &source, uint16_t* &dest, int &x, int &y, int &z, uint8_t* &justData);
 static inline void assignBlock(const uint16_t &source, uint16_t* &dest, int &x, int &y, int &z, uint8_t* &justData, uint8_t* &addData);
 static inline void lightCave(const int x, const int y, const int z);
@@ -444,16 +446,31 @@ static bool loadChunk(const char *streamOrFile, const size_t streamLen)
 					*bp-- = AIR;
 				}
 			}
+			if (g_lowMemory);
 			uint16_t *targetBlock;
-			if (g_Orientation == East) {
-				targetBlock = &BLOCKEAST(x + offsetx, 0, z + offsetz);
-			} else if (g_Orientation == North) {
-				targetBlock = &BLOCKNORTH(x + offsetx, 0, z + offsetz);
-			} else if (g_Orientation == South) {
-				targetBlock = &BLOCKSOUTH(x + offsetx, 0, z + offsetz);
+			uint8_t *targetBlock8;
+			if (g_lowMemory) {
+				if (g_Orientation == East) {
+					targetBlock8 = &BLOCKEAST8(x + offsetx, 0, z + offsetz);
+				} else if (g_Orientation == North) {
+					targetBlock8 = &BLOCKNORTH8(x + offsetx, 0, z + offsetz);
+				} else if (g_Orientation == South) {
+					targetBlock8 = &BLOCKSOUTH8(x + offsetx, 0, z + offsetz);
+				} else {
+					targetBlock8 = &BLOCKWEST8(x + offsetx, 0, z + offsetz);
+				}
 			} else {
-				targetBlock = &BLOCKWEST(x + offsetx, 0, z + offsetz);
+				if (g_Orientation == East) {
+					targetBlock = &BLOCKEAST(x + offsetx, 0, z + offsetz);
+				} else if (g_Orientation == North) {
+					targetBlock = &BLOCKNORTH(x + offsetx, 0, z + offsetz);
+				} else if (g_Orientation == South) {
+					targetBlock = &BLOCKSOUTH(x + offsetx, 0, z + offsetz);
+				} else {
+					targetBlock = &BLOCKWEST(x + offsetx, 0, z + offsetz);
 			}
+			}
+
 			// Following code applies only to modes (ab)using the light map, and for block remapping (wool color, trees, steps)
 			const int toY = g_MapsizeY + g_MapminY;
 			for (int y = (g_MapminY / 2) * 2; y < toY; ++y) {
@@ -461,7 +478,8 @@ static bool loadChunk(const char *streamOrFile, const size_t streamLen)
 				uint8_t &block = blockdata[y + (z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y];
 				// Wool/wood/leaves block hack: Additional block data determines type of this block, here those get remapped to other block ids
 				// Ignore leaves for now if biomes are used, since I have no clue how the color shifting works then
-				assignBlock(block, targetBlock, x, y, z, justData);
+				if (g_lowMemory) assignBlock(block, targetBlock8, x, y, z, justData);
+					else assignBlock(block, targetBlock, x, y, z, justData);
 				if (g_Underground) {
 					if (y < g_MapminY) continue; // As we start at even numbers there might be no block data here
 					if (block == TORCH) {
@@ -574,24 +592,45 @@ static bool loadAnvilChunk(NBT_Tag * const level, const int32_t chunkX, const in
 		for (int x = 0; x < CHUNKSIZE_X; ++x) {
 			for (int z = 0; z < CHUNKSIZE_Z; ++z) {
 				uint16_t *targetBlock;
-				uint8_t *lightByte;
-				if (g_Orientation == East) {
-					targetBlock = &BLOCKEAST(x + offsetx, yoffset, z + offsetz);
-					if (g_Skylight || g_Nightmode) lightByte = &SETLIGHTEAST(x + offsetx, yoffset, z + offsetz);
-					if (g_UseBiomes) BIOMEEAST(x + offsetx, z + offsetz) = biomesdata[x + (z * CHUNKSIZE_X)];
-				} else if (g_Orientation == North) {
-					targetBlock = &BLOCKNORTH(x + offsetx, yoffset, z + offsetz);
-					if (g_Skylight || g_Nightmode) lightByte = &SETLIGHTNORTH(x + offsetx, yoffset, z + offsetz);
-					if (g_UseBiomes) BIOMENORTH(x + offsetx, z + offsetz) = biomesdata[x + (z * CHUNKSIZE_X)];
-				} else if (g_Orientation == South) {
-					targetBlock = &BLOCKSOUTH(x + offsetx, yoffset, z + offsetz);
-					if (g_Skylight || g_Nightmode) lightByte = &SETLIGHTSOUTH(x + offsetx, yoffset, z + offsetz);
-					if (g_UseBiomes) BIOMESOUTH(x + offsetx, z + offsetz) = biomesdata[x + (z * CHUNKSIZE_X)];
+				uint8_t *targetBlock8, *lightByte;
+				if (g_lowMemory) {
+					if (g_Orientation == East) {
+						targetBlock8 = &BLOCKEAST8(x + offsetx, yoffset, z + offsetz);
+						if (g_Skylight || g_Nightmode) lightByte = &SETLIGHTEAST(x + offsetx, yoffset, z + offsetz);
+						if (g_UseBiomes) BIOMEEAST(x + offsetx, z + offsetz) = biomesdata[x + (z * CHUNKSIZE_X)];
+					} else if (g_Orientation == North) {
+						targetBlock8 = &BLOCKNORTH8(x + offsetx, yoffset, z + offsetz);
+						if (g_Skylight || g_Nightmode) lightByte = &SETLIGHTNORTH(x + offsetx, yoffset, z + offsetz);
+						if (g_UseBiomes) BIOMENORTH(x + offsetx, z + offsetz) = biomesdata[x + (z * CHUNKSIZE_X)];
+					} else if (g_Orientation == South) {
+						targetBlock8 = &BLOCKSOUTH8(x + offsetx, yoffset, z + offsetz);
+						if (g_Skylight || g_Nightmode) lightByte = &SETLIGHTSOUTH(x + offsetx, yoffset, z + offsetz);
+						if (g_UseBiomes) BIOMESOUTH(x + offsetx, z + offsetz) = biomesdata[x + (z * CHUNKSIZE_X)];
+					} else {
+						targetBlock8 = &BLOCKWEST8(x + offsetx, yoffset, z + offsetz);
+						if (g_Skylight || g_Nightmode) lightByte = &SETLIGHTWEST(x + offsetx, yoffset, z + offsetz);
+						if (g_UseBiomes) BIOMEWEST(x + offsetx, z + offsetz) = biomesdata[x + (z * CHUNKSIZE_X)];
+					}
 				} else {
-					targetBlock = &BLOCKWEST(x + offsetx, yoffset, z + offsetz);
-					if (g_Skylight || g_Nightmode) lightByte = &SETLIGHTWEST(x + offsetx, yoffset, z + offsetz);
-					if (g_UseBiomes) BIOMEWEST(x + offsetx, z + offsetz) = biomesdata[x + (z * CHUNKSIZE_X)];
+					if (g_Orientation == East) {
+						targetBlock = &BLOCKEAST(x + offsetx, yoffset, z + offsetz);
+						if (g_Skylight || g_Nightmode) lightByte = &SETLIGHTEAST(x + offsetx, yoffset, z + offsetz);
+						if (g_UseBiomes) BIOMEEAST(x + offsetx, z + offsetz) = biomesdata[x + (z * CHUNKSIZE_X)];
+					} else if (g_Orientation == North) {
+						targetBlock = &BLOCKNORTH(x + offsetx, yoffset, z + offsetz);
+						if (g_Skylight || g_Nightmode) lightByte = &SETLIGHTNORTH(x + offsetx, yoffset, z + offsetz);
+						if (g_UseBiomes) BIOMENORTH(x + offsetx, z + offsetz) = biomesdata[x + (z * CHUNKSIZE_X)];
+					} else if (g_Orientation == South) {
+						targetBlock = &BLOCKSOUTH(x + offsetx, yoffset, z + offsetz);
+						if (g_Skylight || g_Nightmode) lightByte = &SETLIGHTSOUTH(x + offsetx, yoffset, z + offsetz);
+						if (g_UseBiomes) BIOMESOUTH(x + offsetx, z + offsetz) = biomesdata[x + (z * CHUNKSIZE_X)];
+					} else {
+						targetBlock = &BLOCKWEST(x + offsetx, yoffset, z + offsetz);
+						if (g_Skylight || g_Nightmode) lightByte = &SETLIGHTWEST(x + offsetx, yoffset, z + offsetz);
+						if (g_UseBiomes) BIOMEWEST(x + offsetx, z + offsetz) = biomesdata[x + (z * CHUNKSIZE_X)];
+					}
 				}
+
 				//const int toY = g_MapsizeY + g_MapminY;
 				for (int y = 0; y < SECTION_Y; ++y) {
 					// In bounds check
@@ -599,7 +638,8 @@ static bool loadAnvilChunk(NBT_Tag * const level, const int32_t chunkX, const in
 					if (g_SectionMax == yo && y + yoffset >= g_MapsizeY) break;
 					// Block data
 					uint8_t &block = blockdata[x + (z + (y * CHUNKSIZE_Z)) * CHUNKSIZE_X];
-					assignBlock(block, targetBlock, x, y, z, justData, addData);
+					if (g_lowMemory) assignBlock(block, targetBlock8, x, y, z, justData, addData);
+						else assignBlock(block, targetBlock, x, y, z, justData, addData);
 					// Light
 					if (g_Underground) {
 						if (block == TORCH) {
@@ -642,7 +682,11 @@ static bool loadAnvilChunk(NBT_Tag * const level, const int32_t chunkX, const in
 
 uint64_t calcTerrainSize(const int chunksX, const int chunksZ)
 {
-	uint64_t size = 2 * uint64_t(chunksX+2) * CHUNKSIZE_X * uint64_t(chunksZ+2) * CHUNKSIZE_Z * uint64_t(g_MapsizeY);
+	uint64_t size;
+	if (g_lowMemory)
+		size =     uint64_t(chunksX+2) * CHUNKSIZE_X * uint64_t(chunksZ+2) * CHUNKSIZE_Z * uint64_t(g_MapsizeY);
+	else
+		size = 2 * uint64_t(chunksX+2) * CHUNKSIZE_X * uint64_t(chunksZ+2) * CHUNKSIZE_Z * uint64_t(g_MapsizeY);
 	if (g_Nightmode || g_Underground || g_Skylight || g_BlendUnderground) {
 		size += size / 4;
 	}
@@ -780,6 +824,9 @@ static void allocateTerrain()
 	if (g_Terrain != NULL) {
 		delete[] g_Terrain;
 	}
+	if (g_TerrainLow != NULL) {
+		delete[] g_TerrainLow;
+	}
 	if (g_Light != NULL) {
 		delete[] g_Light;
 	}
@@ -799,9 +846,15 @@ static void allocateTerrain()
 	//printf("%d -- %d\n", g_MapsizeX, g_MapsizeZ); //dimensions of terrain map (in memory)
 	memset(g_HeightMap, 0, g_MapsizeX * g_MapsizeZ * sizeof(uint16_t));
 	const size_t terrainsize = g_MapsizeZ * g_MapsizeX * g_MapsizeY;
-	printf("Terrain takes up %.2fMiB", float(terrainsize * 2 / float(1024 * 1024)));
-	g_Terrain = new uint16_t[terrainsize];
-	memset(g_Terrain, 0, terrainsize); // Preset: Air
+	if (g_lowMemory) {
+		printf("Terrain takes up %.2fMiB", float(terrainsize / float(1024 * 1024)));
+		g_TerrainLow = new uint8_t[terrainsize];
+		memset(g_TerrainLow, 0, terrainsize); // Preset: Air
+	} else {
+		printf("Terrain takes up %.2fMiB", float(terrainsize * 2 / float(1024 * 1024)));
+		g_Terrain = new uint16_t[terrainsize];
+		memset(g_Terrain, 0, terrainsize); // Preset: Air
+	}
 	if (g_Nightmode || g_Underground || g_BlendUnderground || g_Skylight) {
 		lightsize = g_MapsizeZ * g_MapsizeX * ((g_MapsizeY + (g_MapminY % 2 == 0 ? 1 : 2)) / 2);
 		printf(", lightmap %.2fMiB", float(lightsize / float(1024 * 1024)));
@@ -1056,6 +1109,30 @@ static void loadBiomeChunk(const char* path, const int chunkX, const int chunkZ)
 	}
 	delete[] data;
 	delete[] file;
+}
+
+static inline void assignBlock(const uint16_t &block, uint8_t* &targetBlock, int &x, int &y, int &z, uint8_t* &justData, uint8_t* &addData)
+{
+	uint8_t col, add = 0;
+	col = (justData[(x + (z + (y * CHUNKSIZE_Z)) * CHUNKSIZE_X) / 2] >> ((x % 2) * 4)) & 0xF;
+	if (addData != 0)
+	{
+		add = ( addData[(x + (z + (y * CHUNKSIZE_Z)) * CHUNKSIZE_X) / 2] >> ((x % 2) * 4)) & 0xF;
+	}
+	if (colorsToMap[block + (add << 8) + (col << 12)] == 0)
+		*targetBlock++ = colorsToMap[block + (add << 8)];
+	else
+		*targetBlock++ = colorsToMap[block + (add << 8) + (col << 12)];
+	return;
+}
+static inline void assignBlock(const uint16_t &block, uint8_t* &targetBlock, int &x, int &y, int &z, uint8_t* &justData)
+{
+	uint8_t col;
+	col = (justData[(y + (z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y) / 2] >> ((y % 2) * 4)) & 0xF;
+	if (colorsToMap[block + (col << 12)] == 0)
+		*targetBlock++ = colorsToMap[block];
+	else
+		*targetBlock++ = colorsToMap[block + (col << 12)];
 }
 
 static inline void assignBlock(const uint16_t &block, uint16_t* &targetBlock, int &x, int &y, int &z, uint8_t* &justData, uint8_t* &addData)
@@ -1365,6 +1442,12 @@ static inline void lightCave(const int x, const int y, const int z)
 
 void uncoverNether()
 {
+	if (g_lowMemory)
+	{
+		uncoverNetherOld();
+		return;
+	}
+
 	const int cap = (g_MapsizeY - g_MapminY) - 57;
 	const int to = (g_MapsizeY - g_MapminY) - 52;
 	printf("Uncovering Nether...\n");
@@ -1392,6 +1475,43 @@ void uncoverNether()
 				i = cap - 25;   // TODO: Make this configurable
 			}
 			bp = g_Terrain + ((z + (x * g_MapsizeZ) + 1) * g_MapsizeY) - 1;
+			for (int j = 0; j < i; ++j) {
+				*bp-- = AIR;
+			}
+		}
+	}
+	printProgress(10, 10);
+}
+
+void uncoverNetherOld()
+{
+	const int cap = (g_MapsizeY - g_MapminY) - 57;
+	const int to = (g_MapsizeY - g_MapminY) - 52;
+	printf("Uncovering Nether...\n");
+	for (size_t x = CHUNKSIZE_X; x < g_MapsizeX - CHUNKSIZE_X; ++x) {
+		printProgress(x - CHUNKSIZE_X, g_MapsizeX);
+		for (size_t z = CHUNKSIZE_Z; z < g_MapsizeZ - CHUNKSIZE_Z; ++z) {
+			// Remove blocks on top, otherwise there is not much to see here
+			int massive = 0;
+			uint8_t *bp = g_TerrainLow + ((z + (x * g_MapsizeZ) + 1) * g_MapsizeY) - 1;
+			int i;
+			for (i = 0; i < to; ++i) { // Go down 74 blocks from the ceiling to see if there is anything except solid
+				if (massive && (*bp == AIR || *bp == LAVA || *bp == STAT_LAVA)) {
+					if (--massive == 0) {
+						break;   // Ignore caves that are only 2 blocks high
+					}
+				}
+				if (*bp != AIR && *bp != LAVA && *bp != STAT_LAVA) {
+					massive = 3;
+				}
+				--bp;
+			}
+			// So there was some cave or anything before going down 70 blocks, everything above will get removed
+			// If not, only 45 blocks starting at the ceiling will be removed
+			if (i > cap) {
+				i = cap - 25;   // TODO: Make this configurable
+			}
+			bp = g_TerrainLow + ((z + (x * g_MapsizeZ) + 1) * g_MapsizeY) - 1;
 			for (int j = 0; j < i; ++j) {
 				*bp-- = AIR;
 			}

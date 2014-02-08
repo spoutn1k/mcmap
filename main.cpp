@@ -58,8 +58,11 @@ namespace
 #define BLOCK_AT_MAPEDGE(x,z) (((z)+1 == g_MapsizeZ-CHUNKSIZE_Z && gAtBottomLeft) || ((x)+1 == g_MapsizeX-CHUNKSIZE_X && gAtBottomRight))
 
 void optimizeTerrain2(int cropLeft, int cropRight);
+void optimizeTerrain2old(int cropLeft, int cropRight);
 void optimizeTerrain3();
+void optimizeTerrain3old();
 void undergroundMode(bool explore);
+void undergroundModeOld(bool explore);
 bool prepareNextArea(int splitX, int splitZ, int &bitmapStartX, int &bitmapStartY);
 void writeInfoFile(const char* file, int xo, int yo, int bitmapx, int bitmapy);
 static const inline int floorChunkX(const int val);
@@ -150,6 +153,8 @@ int main(int argc, char **argv)
 				// void
 			} else if (strcmp(option, "-blendall") == 0) {
 				g_BlendAll = true;
+			} else if (strcmp(option, "-lowmemory") == 0) {
+				g_lowMemory = true;
 			} else if (strcmp(option, "-noise") == 0 || strcmp(option, "-dither") == 0) {
 				if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
 					printf("Error: %s needs an integer argument, ie: %s 10\n", option, option);
@@ -616,53 +621,105 @@ int main(int argc, char **argv)
 				int bmpPosY = int(g_MapsizeY * g_OffsetY + z + x - CHUNKSIZE_Z - CHUNKSIZE_X + (splitImage ? 0 : bitmapStartY - cropTop)) + 2 - (HEIGHTAT(x, z) & 0xFF) * g_OffsetY;
 				const int max = (HEIGHTAT(x, z) & 0xFF00) >> 8;
 				for (int y = uint8_t(HEIGHTAT(x, z)); y < max; ++y) {
-					bmpPosY -= g_OffsetY;
-					uint16_t &c = BLOCKAT(x, y, z);
-					if (c == AIR) {
-						continue;
-					}
-					//float col = float(y) * .78f - 91;
-					float brightnessAdjustment = brightnessLookup[y];
-					if (g_BlendUnderground) {
-						brightnessAdjustment -= 168;
-					}
-					// we use light if...
-					if (g_Nightmode // nightmode is active, or
-					      || (g_Skylight // skylight is used and
-					          && (!BLOCK_AT_MAPEDGE(x, z))  // block is not edge of map (or if it is, has non-opaque block above)
-					         )) {
-						int l = GETLIGHTAT(x, y, z);  // find out how much light hits that block
-						if (l == 0 && y + 1 == g_MapsizeY) {
-							l = (g_Nightmode ? 3 : 15);   // quickfix: assume maximum strength at highest level
-						} else {
-							const bool up = y + 1 < g_MapsizeY;
-							if (x + 1 < g_MapsizeX && (!up || BLOCKAT(x + 1, y + 1, z) == 0)) {
-								l = MAX(l, GETLIGHTAT(x + 1, y, z));
-								if (x + 2 < g_MapsizeX) l = MAX(l, GETLIGHTAT(x + 2, y, z) - 1);
-							}
-							if (z + 1 < g_MapsizeZ && (!up || BLOCKAT(x, y + 1, z + 1) == 0)) {
-								l = MAX(l, GETLIGHTAT(x, y, z + 1));
-								if (z + 2 < g_MapsizeZ) l = MAX(l, GETLIGHTAT(x, y, z + 2) - 1);
-							}
-							if (up) l = MAX(l, GETLIGHTAT(x, y + 1, z));
-							//if (y + 2 < g_MapsizeY) l = MAX(l, GETLIGHTAT(x, y + 2, z) - 1);
+					if (g_lowMemory) //usign -lowmemory option
+					{
+						bmpPosY -= g_OffsetY;
+						uint8_t &c = BLOCKAT8(x, y, z);
+						if (c == AIR) {
+							continue;
 						}
-						if (!g_Skylight) { // Night
-							brightnessAdjustment -= (100 - l * 8);
-						} else { // Day
-							brightnessAdjustment -= (210 - l * 14);
+						//float col = float(y) * .78f - 91;
+						float brightnessAdjustment = brightnessLookup[y];
+						if (g_BlendUnderground) {
+							brightnessAdjustment -= 168;
 						}
+						// we use light if...
+						if (g_Nightmode // nightmode is active, or
+						      || (g_Skylight // skylight is used and
+							  && (!BLOCK_AT_MAPEDGE(x, z))  // block is not edge of map (or if it is, has non-opaque block above)
+							 )) {
+							int l = GETLIGHTAT(x, y, z);  // find out how much light hits that block
+							if (l == 0 && y + 1 == g_MapsizeY) {
+								l = (g_Nightmode ? 3 : 15);   // quickfix: assume maximum strength at highest level
+							} else {
+								const bool up = y + 1 < g_MapsizeY;
+								if (x + 1 < g_MapsizeX && (!up || BLOCKAT8(x + 1, y + 1, z) == 0)) {
+									l = MAX(l, GETLIGHTAT(x + 1, y, z));
+									if (x + 2 < g_MapsizeX) l = MAX(l, GETLIGHTAT(x + 2, y, z) - 1);
+								}
+								if (z + 1 < g_MapsizeZ && (!up || BLOCKAT8(x, y + 1, z + 1) == 0)) {
+									l = MAX(l, GETLIGHTAT(x, y, z + 1));
+									if (z + 2 < g_MapsizeZ) l = MAX(l, GETLIGHTAT(x, y, z + 2) - 1);
+								}
+								if (up) l = MAX(l, GETLIGHTAT(x, y + 1, z));
+								//if (y + 2 < g_MapsizeY) l = MAX(l, GETLIGHTAT(x, y + 2, z) - 1);
+							}
+							if (!g_Skylight) { // Night
+								brightnessAdjustment -= (100 - l * 8);
+							} else { // Day
+								brightnessAdjustment -= (210 - l * 14);
+							}
+						}
+						// Edge detection (this means where terrain goes 'down' and the side of the block is not visible)
+						uint8_t &b = BLOCKAT8(x - 1, y - 1, z - 1);
+						if ((y && y + 1 < g_MapsizeY)  // In bounds?
+						      && BLOCKAT8(x, y + 1, z) == AIR  // Only if block above is air
+						      && BLOCKAT8(x - 1, y + 1, z - 1) == AIR  // and block above and behind is air
+						      && (b == AIR || b == c)   // block behind (from pov) this one is same type or air
+						      && (BLOCKAT8(x - 1, y, z) == AIR || BLOCKAT8(x, y, z - 1) == AIR)) {   // block TL/TR from this one is air = edge
+							brightnessAdjustment += 13;
+						}
+						uint16_t c16 = colorsToID[c];
+						setPixel(bmpPosX, bmpPosY, c16, brightnessAdjustment, biome);
+					} else {	// -lowmemory off
+						bmpPosY -= g_OffsetY;
+						uint16_t &c = BLOCKAT(x, y, z);
+						if (c == AIR) {
+							continue;
+						}
+						//float col = float(y) * .78f - 91;
+						float brightnessAdjustment = brightnessLookup[y];
+						if (g_BlendUnderground) {
+							brightnessAdjustment -= 168;
+						}
+						// we use light if...
+						if (g_Nightmode // nightmode is active, or
+						      || (g_Skylight // skylight is used and
+							  && (!BLOCK_AT_MAPEDGE(x, z))  // block is not edge of map (or if it is, has non-opaque block above)
+							 )) {
+							int l = GETLIGHTAT(x, y, z);  // find out how much light hits that block
+							if (l == 0 && y + 1 == g_MapsizeY) {
+								l = (g_Nightmode ? 3 : 15);   // quickfix: assume maximum strength at highest level
+							} else {
+								const bool up = y + 1 < g_MapsizeY;
+								if (x + 1 < g_MapsizeX && (!up || BLOCKAT(x + 1, y + 1, z) == 0)) {
+									l = MAX(l, GETLIGHTAT(x + 1, y, z));
+									if (x + 2 < g_MapsizeX) l = MAX(l, GETLIGHTAT(x + 2, y, z) - 1);
+								}
+								if (z + 1 < g_MapsizeZ && (!up || BLOCKAT(x, y + 1, z + 1) == 0)) {
+									l = MAX(l, GETLIGHTAT(x, y, z + 1));
+									if (z + 2 < g_MapsizeZ) l = MAX(l, GETLIGHTAT(x, y, z + 2) - 1);
+								}
+								if (up) l = MAX(l, GETLIGHTAT(x, y + 1, z));
+								//if (y + 2 < g_MapsizeY) l = MAX(l, GETLIGHTAT(x, y + 2, z) - 1);
+							}
+							if (!g_Skylight) { // Night
+								brightnessAdjustment -= (100 - l * 8);
+							} else { // Day
+								brightnessAdjustment -= (210 - l * 14);
+							}
+						}
+						// Edge detection (this means where terrain goes 'down' and the side of the block is not visible)
+						uint16_t &b = BLOCKAT(x - 1, y - 1, z - 1);
+						if ((y && y + 1 < g_MapsizeY)  // In bounds?
+						      && BLOCKAT(x, y + 1, z) == AIR  // Only if block above is air
+						      && BLOCKAT(x - 1, y + 1, z - 1) == AIR  // and block above and behind is air
+						      && (b == AIR || b == c)   // block behind (from pov) this one is same type or air
+						      && (BLOCKAT(x - 1, y, z) == AIR || BLOCKAT(x, y, z - 1) == AIR)) {   // block TL/TR from this one is air = edge
+							brightnessAdjustment += 13;
+						}
+						setPixel(bmpPosX, bmpPosY, c, brightnessAdjustment, biome);
 					}
-					// Edge detection (this means where terrain goes 'down' and the side of the block is not visible)
-					uint16_t &b = BLOCKAT(x - 1, y - 1, z - 1);
-					if ((y && y + 1 < g_MapsizeY)  // In bounds?
-					      && BLOCKAT(x, y + 1, z) == AIR  // Only if block above is air
-					      && BLOCKAT(x - 1, y + 1, z - 1) == AIR  // and block above and behind is air
-					      && (b == AIR || b == c)   // block behind (from pov) this one is same type or air
-					      && (BLOCKAT(x - 1, y, z) == AIR || BLOCKAT(x, y, z - 1) == AIR)) {   // block TL/TR from this one is air = edge
-						brightnessAdjustment += 13;
-					}
-					setPixel(bmpPosX, bmpPosY, c, brightnessAdjustment, biome);
 				}
 			}
 		}
@@ -736,6 +793,12 @@ static size_t gBlocksRemoved = 0;
 #endif
 void optimizeTerrain2(int cropLeft, int cropRight)
 {
+	if (g_lowMemory)
+	{
+		optimizeTerrain2old(cropLeft, cropRight);
+		return;
+	}
+
 	printf("Optimizing terrain...\n");
 #ifdef _DEBUG
 	gBlocksRemoved = 0;
@@ -788,8 +851,68 @@ void optimizeTerrain2(int cropLeft, int cropRight)
 #endif
 }
 
+void optimizeTerrain2old(int cropLeft, int cropRight)
+{
+	printf("Optimizing terrain...\n");
+#ifdef _DEBUG
+	gBlocksRemoved = 0;
+#endif
+	const int maxX = g_MapsizeX - CHUNKSIZE_X;
+	const int maxZ = g_MapsizeZ - CHUNKSIZE_Z;
+	const int modZ = maxZ * g_MapsizeY;
+	uint8_t * const blocked = new uint8_t[modZ];
+	int offsetZ = 0, offsetY = 0, offsetGlobal = 0;
+	memset(blocked, 0, modZ);
+	for (int x = maxX - 1; x >= CHUNKSIZE_X; --x) {
+		printProgress(maxX - (x + 1), maxX);
+		offsetZ = offsetGlobal;
+		for (int z = CHUNKSIZE_Z; z < maxZ; ++z) {
+			const uint8_t *block = &BLOCKAT8(x, 0, z); // Get the lowest block at that point
+			int highest = 0, lowest = 0xFF; // remember lowest and highest block which are visible to limit the Y-for-loop later
+			for (int y = 0; y < g_MapsizeY; ++y) { // Go up
+				uint8_t &current = blocked[((y+offsetY) % g_MapsizeY) + (offsetZ % modZ)];
+				if (current) { // Block is hidden, remove
+#ifdef _DEBUG
+					if (*block != AIR) {
+						++gBlocksRemoved;
+					}
+#endif
+				} else { // block is not hidden by another block
+					if (*block != AIR && lowest == 0xFF) { // if it's not air, this is the lowest block to draw
+						lowest = y;
+					}
+					if (colors[*block][PALPHA] == 255) { // Block is not hidden, do not remove, but mark spot as blocked for next iteration
+						current = 1;
+					}
+					if (*block != AIR) highest = y; // if it's not air, it's the new highest block encountered so far
+				}
+				++block; // Go up
+			}
+			HEIGHTAT(x, z) = (((uint16_t)highest + 1) << 8) | (uint16_t)lowest; // cram them both into a 16bit int
+			blocked[(offsetY % g_MapsizeY) + (offsetZ % modZ)] = 0;
+			offsetZ += g_MapsizeY;
+		}
+		for (int y = 0; y < g_MapsizeY; ++y) {
+			blocked[y + (offsetGlobal % modZ)] = 0;
+		}
+		offsetGlobal += g_MapsizeY;
+		++offsetY;
+	}
+	delete[] blocked;
+	printProgress(10, 10);
+#ifdef _DEBUG
+	printf("Removed %lu blocks\n", (unsigned long) gBlocksRemoved);
+#endif
+}
+
 void optimizeTerrain3()
 {
+	if (g_lowMemory)
+	{
+		optimizeTerrain3old();
+		return;
+	}
+
 	// Remove invisible blocks from map (covered by other blocks from isometric pov)
 	// Do so by "raytracing" every block from front to back..
 	printf("Optimizing terrain...\n");
@@ -881,8 +1004,107 @@ void optimizeTerrain3()
 #endif
 }
 
+void optimizeTerrain3old()
+{
+	// Remove invisible blocks from map (covered by other blocks from isometric pov)
+	// Do so by "raytracing" every block from front to back..
+	printf("Optimizing terrain...\n");
+#ifdef _DEBUG
+	gBlocksRemoved = 0;
+#endif
+	printProgress(0, 10);
+	// Helper arrays to remember which block is blocked from being seen. This allows to traverse the array in a slightly more sequential way, which leads to better usage of the CPU cache
+	uint8_t *blocked = new uint8_t[g_MapsizeY*3];
+	const int max = (int)MIN(g_MapsizeX - CHUNKSIZE_X * 2, g_MapsizeZ - CHUNKSIZE_Z * 2);
+	const int maxX = int(g_MapsizeX - CHUNKSIZE_X - 1);
+	const int maxZ = int(g_MapsizeZ - CHUNKSIZE_Z - 1);
+	const size_t maxProgress = size_t(maxX + maxZ);
+	// The following needs to be done twice, once for the X-Y front plane, once for the Z-Y front plane
+	for (int x = CHUNKSIZE_X; x <= maxX; ++x) {
+		memset(blocked, 0, g_MapsizeY*3); // Nothing is blocked at first
+		int offset = 0; // The helper array had to be shifted after each run of the inner most loop. As this is expensive, just use an offset that increases instead
+		const int max2 = MIN(max, x - CHUNKSIZE_X + 1); // Block array will be traversed diagonally, determine how many blocks there are
+		for (int i = 0; i < max2; ++i) { // This traverses the block array diagonally, which would be upwards in the image
+			const int blockedOffset = g_MapsizeY * (i % 3);
+			uint8_t *block = &BLOCKAT8(x - i, 0, maxZ - i); // Get the lowest block at that point
+			int highest = 0, lowest = 0xFF;
+			for (int j = 0; j < g_MapsizeY; ++j) { // Go up
+				if (blocked[blockedOffset + (j+offset) % g_MapsizeY]) { // Block is hidden, remove
+#ifdef _DEBUG
+					if (*block != AIR) {
+						++gBlocksRemoved;
+					}
+#endif
+				} else {
+					if (*block != AIR && lowest == 0xFF) {
+						lowest = j;
+					}
+					if (colors[*block][PALPHA] == 255) { // Block is not hidden, do not remove, but mark spot as blocked for next iteration
+						blocked[blockedOffset + (j+offset) % g_MapsizeY] = 1;
+					}
+					if (*block != AIR) highest = j;
+				}
+				++block; // Go up
+			}
+			HEIGHTAT(x - i, maxZ - i) = (((uint16_t)highest + 1) << 8) | (uint16_t)lowest;
+			blocked[blockedOffset + ((offset + 1) % g_MapsizeY)] = 0; // This will be the array index responsible for the top most block in the next itaration. Set it to 0 as it can't be hidden.
+			blocked[blockedOffset + (offset % g_MapsizeY)] = 0;
+			if (i % 3 == 2) {
+				offset += 2; // Increase offset, as block at height n in current row will hide block at n-1 in next row
+			}
+		}
+		printProgress(size_t(x), maxProgress);
+	}
+	for (int z = CHUNKSIZE_Z; z < maxZ; ++z) {
+		memset(blocked, 0, g_MapsizeY*3);
+		int offset = 0;
+		const int max2 = MIN(max, z - CHUNKSIZE_Z + 1);
+		for (int i = 0; i < max2; ++i) {
+			const int blockedOffset = g_MapsizeY * (i % 3);
+			uint8_t *block = &BLOCKAT8(maxX - i, 0, z - i);
+			int highest = 0, lowest = 0xFF;
+			for (int j = 0; j < g_MapsizeY; ++j) {
+				if (blocked[blockedOffset + (j+offset) % g_MapsizeY]) {
+#ifdef _DEBUG
+					if (*block != AIR) {
+						++gBlocksRemoved;
+					}
+#endif
+				} else {
+					if (*block != AIR && lowest == 0xFF) {
+						lowest = j;
+					}
+					if (colors[*block][PALPHA] == 255) {
+						blocked[blockedOffset + (j+offset) % g_MapsizeY] = 1;
+					}
+					if (*block != AIR) highest = j;
+				}
+				++block;
+			}
+			HEIGHTAT(maxX - i, z - i) = (((uint16_t)highest + 1) << 8) | (uint16_t)lowest;
+			blocked[blockedOffset + ((offset + 1) % g_MapsizeY)] = 0;
+			blocked[blockedOffset + (offset % g_MapsizeY)] = 0;
+			if (i % 3 == 2) {
+				offset += 2;
+			}
+		}
+		printProgress(size_t(z + maxX), maxProgress);
+	}
+	delete[] blocked;
+	printProgress(10, 10);
+#ifdef _DEBUG
+	printf("Removed %lu blocks\n", (unsigned long) gBlocksRemoved);
+#endif
+}
+
 void undergroundMode(bool explore)
 {
+	if (g_lowMemory)
+	{
+		undergroundModeOld(explore);
+		return;
+	}
+
 	// This wipes out all blocks that are not caves/tunnels
 	//int cnt[256];
 	//memset(cnt, 0, sizeof(cnt));
@@ -934,6 +1156,86 @@ void undergroundMode(bool explore)
 			size_t cave = 0;
 			for (int y = g_MapsizeY - 1; y >= 0; --y) {
 				uint16_t &c = BLOCKAT(x, y, z);
+				if (c != AIR && cave > 0) { // Found a cave, leave floor
+					if (c == GRASS || c == LEAVES || c == SNOW || GETLIGHTAT(x, y, z) == 0) {
+						c = AIR; // But never count snow or leaves
+					} //else cnt[*c]++;
+					if (c != WATER && c != STAT_WATER) {
+						--cave;
+					}
+				} else if (c != AIR) { // Block is not air, count up "ground"
+					c = AIR;
+					if (c != LOG && c != LEAVES && c != SNOW && c != WOOD && c != WATER && c != STAT_WATER) {
+						++ground;
+					}
+				} else if (ground < 3) { // Block is air, if there was not enough ground above, don't treat that as a cave
+					ground = 0;
+				} else { // Thats a cave, draw next two blocks below it
+					cave = 2;
+				}
+			}
+		}
+	}
+	printProgress(10, 10);
+	//for (int i = 0; i < 256; ++i) {
+	//	if (cnt[i] == 0) continue;
+	//	printf("Block %d: %d\n", i, cnt[i]);
+	//}
+}
+
+void undergroundModeOld(bool explore)
+{
+	// This wipes out all blocks that are not caves/tunnels
+	//int cnt[256];
+	//memset(cnt, 0, sizeof(cnt));
+	printf("Exploring underground...\n");
+	if (explore) {
+		clearLightmap();
+		for (size_t x = CHUNKSIZE_X; x < g_MapsizeX - CHUNKSIZE_X; ++x) {
+			printProgress(x - CHUNKSIZE_X, g_MapsizeX);
+			for (size_t z = CHUNKSIZE_Z; z < g_MapsizeZ - CHUNKSIZE_Z; ++z) {
+				for (int y = 0; y < MIN(g_MapsizeY, 64) - 1; y++) {
+					if (BLOCKAT8(x, y, z) == TORCH) {
+						// Torch
+						BLOCKAT8(x, y, z) = AIR;
+						for (int ty = int(y) - 9; ty < int(y) + 9; ty += 2) { // The trick here is to only take into account
+							if (ty < 0) {
+								continue;   // areas around torches.
+							}
+							if (ty >= int(g_MapsizeY) - 1) {
+								break;
+							}
+							for (int tz = int(z) - 18; tz < int(z) + 18; ++tz) {
+								if (tz < CHUNKSIZE_Z) {
+									continue;
+								}
+								if (tz >= int(g_MapsizeZ) - CHUNKSIZE_Z) {
+									break;
+								}
+								for (int tx = int(x) - 18; tx < int(x) + 18; ++tx) {
+									if (tx < CHUNKSIZE_X) {
+										continue;
+									}
+									if (tx >= int(g_MapsizeX) - CHUNKSIZE_X) {
+										break;
+									}
+									SETLIGHTNORTH(tx, ty, tz) = 0xFF;
+								}
+							}
+						}
+						// /
+					}
+				}
+			}
+		}
+	}
+	for (size_t x = 0; x < g_MapsizeX; ++x) {
+		printProgress(x + g_MapsizeX * (explore ? 1 : 0), g_MapsizeX * (explore ? 2 : 1));
+		for (size_t z = 0; z < g_MapsizeZ; ++z) {
+			size_t ground = 0;
+			size_t cave = 0;
+			for (int y = g_MapsizeY - 1; y >= 0; --y) {
+				uint8_t &c = BLOCKAT8(x, y, z);
 				if (c != AIR && cave > 0) { // Found a cave, leave floor
 					if (c == GRASS || c == LEAVES || c == SNOW || GETLIGHTAT(x, y, z) == 0) {
 						c = AIR; // But never count snow or leaves
@@ -1130,6 +1432,7 @@ void printHelp(char *binary)
 	   "  -mem VAL      sets the amount of memory (in MiB) used for rendering. mcmap\n"
 	   "                will use incremental rendering or disk caching to stick to\n"
 	   "                this limit. Default is 1800.\n"
+	   "  -lowmemory    uses half less memory but there's limit to 256 blocks types\n"
 	   "  -colors NAME  loads user defined colors from file 'NAME'\n"
 	   "  -dumpcolors   creates a file which contains the default colors being used\n"
 	   "                for rendering. Can be used to modify them and then use -colors\n"

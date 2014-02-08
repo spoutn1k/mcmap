@@ -15,6 +15,7 @@ bool g_Skylight = false;
 int g_Noise = 0;
 bool g_BlendAll = false;
 bool g_Hell = false, g_ServerHell = false;
+bool g_lowMemory = false;
 
 bool g_UseBiomes = false;
 uint64_t g_BiomeMapSize = 0;
@@ -23,7 +24,7 @@ uint16_t *g_BiomeMap = NULL;
 int g_GrasscolorDepth = 0, g_FoliageDepth = 0;
 
 uint16_t *g_Terrain = NULL;
-uint8_t *g_Light = NULL;
+uint8_t *g_TerrainLow = NULL, *g_Light = NULL;
 uint16_t *g_HeightMap = NULL;
 
 int g_MarkerCount = 0;
