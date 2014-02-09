@@ -574,6 +574,12 @@ bool loadColorsFromFile(const char *file)
 	if (f == NULL) {
 		return false;
 	}
+	if (g_lowMemory)
+	{
+		memset(colorsToMap, 0, sizeof colorsToMap);
+		memset(colorsToID, 0, sizeof colorsToID);
+	}
+	int lowmemCounter = 1;
 	while (!feof(f)) {
 		char buffer[500];
 		if (fgets(buffer, 500, f) == NULL) {
@@ -588,7 +594,7 @@ bool loadColorsFromFile(const char *file)
 			continue;   // This is a comment or empty line, skip
 		}
 		int blockid = atoi(ptr);
-		int blockid3;
+		int blockid3 = 0;
 		if (blockid < 1 || blockid > 4095) {
 			printf("Skipping invalid blockid %d in colors file\n", blockid);
 			continue;
@@ -629,7 +635,20 @@ bool loadColorsFromFile(const char *file)
 		if (!valid) {
 			continue;
 		}
-		if (!suffix)
+		int blockidSET = (blockid3 << 12)+blockid;
+		if (g_lowMemory)
+		{
+			if (lowmemCounter > 255)
+			{
+				printf("Colors limit in lowmemory mode is limited to 255, %d:%d not set.\n", blockid, blockid3);
+				continue;
+			}
+			memcpy(colors[blockidSET], vals, 5);
+			colors[blockidSET][BRIGHTNESS] = GETBRIGHTNESS(colors[blockidSET]);
+			colorsToID[lowmemCounter] = blockidSET;
+			colorsToMap[blockidSET] = lowmemCounter++;
+		}
+		else if (!suffix)
 		{
 		    for (int blockid3 = 0; blockid3 < 16; blockid3++)
 		    {
@@ -639,8 +658,8 @@ bool loadColorsFromFile(const char *file)
 		}
 		else
 		{
-		    memcpy(colors[(blockid3 << 12)+blockid], vals, 5);
-		    colors[(blockid3 << 12)+blockid][BRIGHTNESS] = GETBRIGHTNESS(colors[(blockid3 << 12)+blockid]);
+		    memcpy(colors[blockidSET], vals, 5);
+		    colors[blockidSET][BRIGHTNESS] = GETBRIGHTNESS(colors[blockidSET]);
 		}
 	}
 	fclose(f);
