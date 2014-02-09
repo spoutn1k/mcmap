@@ -646,7 +646,7 @@ void setPixel(const size_t x, const size_t y, const uint16_t color, const float 
 	memcpy(c, colors[color], BYTESPERPIXEL);
 	modColor(c, sub);
 	if (g_UseBiomes && g_WorldFormat == 2) assignBiome(c, biome, color);
-	uint8_t colortype = colors[color][BLOCKTYPE];
+	uint8_t colortype = colors[color][BLOCKTYPE] % BLOCKBIOME;
 
 	if (g_BlendAll) {
 		// Then check the block type, as some types will be drawn differently
@@ -968,9 +968,9 @@ namespace
 
 		//wrim - TODO - affect only to certain blocks
 
-		uint8_t blockbase = block % 4096;
-		if (blockbase == LEAVES || blockbase == GRASS || blockbase == TALL_GRASS || blockbase == 161 || blockbase == VINES || blockbase == LILYPAD)
-		
+		//uint8_t blockbase = block % 4096;
+		//if (blockbase == LEAVES || blockbase == GRASS || blockbase == TALL_GRASS || blockbase == LEAVES2 || blockbase == VINES || blockbase == LILYPAD)
+		if (colors[block][BLOCKTYPE] / BLOCKBIOME)
 		addColor(color, biomes[biome]);
 
 		return;

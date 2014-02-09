@@ -92,6 +92,7 @@ bool loadBiomeColors(const char* path);
 #define COCOA_PLANT 127
 #define TRIPWIRE_HOOK 131
 #define TRIPWIRE 132
+#define LEAVES2 161
 
 #define SANDSTEP 201
 #define WOODSTEP 202
@@ -146,6 +147,7 @@ bool loadBiomeColors(const char* path);
 #define BLOCKFIRE 8
 #define BLOCKSTEP 9
 #define BLOCKUPSTEP 10
+#define BLOCKBIOME 128
 
 /*
 115 	SOLID 0	
