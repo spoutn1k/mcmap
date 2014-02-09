@@ -31,13 +31,43 @@
 
 // See header for description
 uint8_t colors[65536][8];
-uint8_t biomes[256][4];
+int16_t biomes[256][4];
 uint8_t colorsToMap[65536];
 uint16_t colorsToID[256] =
 {
-	0, 1, 2, 3, 4, 5, 6, 7,  //renderring blocks ID's, first is ALWAYS 0
+	//renderring blocks ID's, first is ALWAYS 0
+	0, 1, 2, 3, 4, 5, 6, 7, 
 	8, 9, 10, 11, 12, 13, 14, 15,
-	133, 162, 17, 18, 170, 31, 20
+	16, 17, 18, 19, 20, 21, 22, 23, 
+	24, 25, 26, 27, 28, 29, 30, 31, 
+	32, 33, 34, 35, 36, 37, 38, 39, 
+	40, 41, 42, 43, 44, 45, 46, 47, 
+	48, 49, 50, 51, 52, 53, 54, 55, 
+	56, 57, 58, 59, 60, 61, 62, 63, 
+	64, 65, 66, 67, 68, 69, 70, 71, 
+	72, 73, 74, 75, 76, 77, 78, 79, 
+	80, 81, 82, 83, 84, 85, 86, 87, 
+	88, 89, 90, 91, 92, 93, 94, 95, 
+	96, 97, 98, 99, 100, 101, 102, 103, 
+	104, 105, 106, 107, 108, 109, 110, 111, 
+	112, 113, 114, 115, 116, 117, 118, 119, 
+	120, 121, 122, 123, 124, 125, 126, 127, 
+	128, 129, 130, 131, 132, 133, 134, 135, 
+	136, 137, 138, 139, 140, 141, 142, 143, 
+	144, 145, 146, 147, 148, 149, 150, 151, 
+	152, 153, 154, 155, 156, 157, 158, 159, 
+	160, 161, 162, 163, 164, 165, 166, 167, 
+	168, 169, 170, 171, 172, 173, 174, 175, 
+	176, 177, 178, 179, 180, 181, 182, 183, 
+	184, 185, 186, 187, 188, 189, 190, 191, 
+	192, 193, 194, 195, 196, 197, 198, 199, 
+	200, 201, 202, 203, 204, 205, 206, 207, 
+	208, 209, 210, 211, 212, 213, 214, 215,	
+	216, 217, 218, 219, 220, 221, 222, 223, 
+	224, 225, 226, 227, 228, 229, 230, 231, 
+	232, 233, 234, 235, 236, 237, 238, 239, 
+	240, 241, 242, 243, 244, 245, 246, 247, 
+	248, 249, 250, 251, 252, 253, 254, 255
 };
 
 void SET_COLORNOISE(uint16_t col, uint16_t r, uint16_t g, uint16_t b, uint16_t a, uint16_t n)
@@ -89,14 +119,91 @@ void SET_BLOCK(uint8_t type, uint8_t block)
 
 void loadColors()
 {
-	memset(colors, 0, sizeof colors);
-	memset(colorsToMap, 0, sizeof colorsToMap);
-	for (int i = 1; i < 256; i++)
-	{
-		colorsToMap[colorsToID[i]] = i;
-	}
-	colorsToMap[0] = 0;
+	//biomes
+	if (g_UseBiomes)
+		{
+		/*
+		0	plain
+		1	desert
+		2	jungle
+		3	forest
+		4	swamp
+		5	tundra / taiga
+		*/
+		uint8_t biomesMap[256] = {
+			0, 0, 1, 0, 3, 5, 4, 0, 
+			0, 0, 5, 5, 5, 5, 0, 0, 
+			1, 1, 3, 5, 0, 2, 2, 2, 
+			0, 0, 5, 3, 3, 3, 5, 5, 
+			3, 3, 3, 1, 1, 0, 3, 0, 
+			0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0,
 
+			0, 0, 1, 0, 3, 5, 4, 0, 
+			0, 0, 5, 5, 5, 5, 0, 0, 
+			1, 1, 3, 5, 0, 2, 2, 2, 
+			0, 0, 5, 3, 3, 3, 5, 5, 
+			3, 3, 3, 1, 1, 0, 3, 0, 
+			0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0,
+		};
+		for (int i = 0; i < 256; i++)
+		{
+			switch (biomesMap[i])
+			{
+				case 0:
+					biomes[i][0] = 0;
+					biomes[i][1] = 0;
+					biomes[i][2] = 0;
+					biomes[i][3] = 255;
+					break;
+				case 1:
+					biomes[i][0] = 29;
+					biomes[i][1] = -7;
+					biomes[i][2] = 8;
+					biomes[i][3] = 255;
+					break;
+				case 2:
+					biomes[i][0] = -47;
+					biomes[i][1] = 13;
+					biomes[i][2] = -14;
+					biomes[i][3] = 255;
+					break;
+				case 3:
+					biomes[i][0] = -21;
+					biomes[i][1] = 2;
+					biomes[i][2] = -1;
+					biomes[i][3] = 255;
+					break;
+				case 4:
+					biomes[i][0] = -20;
+					biomes[i][1] = -25;
+					biomes[i][2] = 3;
+					biomes[i][3] = 255;
+					break;
+				case 5:
+					biomes[i][0] = -8;
+					biomes[i][1] = -9;
+					biomes[i][2] = 49;
+					biomes[i][3] = 255;
+					break;
+			}
+		}
+	}
+	if (g_lowMemory)
+	{
+		memset(colorsToMap, 0, sizeof colorsToMap);
+		for (int i = 1; i < 256; i++)
+		{
+			colorsToMap[colorsToID[i]] = i;
+		}
+		colorsToMap[0] = 0;
+	}
+
+	memset(colors, 0, sizeof colors);
+	
 	//uint8_t x[10] = {SNOW, TRAPDOOR, 171, 0, 0, 0, 0, 0, 0, 0};
 	//SET_BLOCK(BLOCKFLAT, x);
 

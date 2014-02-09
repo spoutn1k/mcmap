@@ -628,7 +628,7 @@ uint64_t calcImageSize(const int mapChunksX, const int mapChunksZ, const size_t 
 void setPixel(const size_t x, const size_t y, const uint8_t color, const float fsub, const uint8_t biome)	//not used but left just in case
 {
     uint16_t color16 = colorsToID[color];
-    setPixel(x, y, color, fsub, biome);
+    setPixel(x, y, color16, fsub, biome);
 }
 
 void setPixel(const size_t x, const size_t y, const uint16_t color, const float fsub, const uint8_t biome)
@@ -965,6 +965,15 @@ namespace
 	{
 		//do there what you want, this code response for changing single pixel depending on its biome
 		//note this works only for anvli format. old one still requires donkey kong biome extractor
+
+		//wrim - TODO - affect only to certain blocks
+
+		uint8_t blockbase = block % 4096;
+		if (blockbase == LEAVES || blockbase == GRASS || blockbase == TALL_GRASS || blockbase == 161 || blockbase == VINES || blockbase == LILYPAD)
+		
+		addColor(color, biomes[biome]);
+
+		return;
 	    if (block == 2 || block == LEAVES||block==TALL_GRASS)
 		switch (biome)
 		{
@@ -1018,9 +1027,9 @@ namespace
 	{
 		const float v2 = (float(add[PALPHA]) / 255.0f);
 		const float v1 = (1.0f - (v2 * .2f));
-		color[0] = clamp(uint16_t(float(color[0]) * v1 + float(add[0]) * v2));
-		color[1] = clamp(uint16_t(float(color[1]) * v1 + float(add[1]) * v2));
-		color[2] = clamp(uint16_t(float(color[2]) * v1 + float(add[2]) * v2));
+		color[0] = clamp(int16_t(float(color[0]) * v1 + float(add[0]) * v2));
+		color[1] = clamp(int16_t(float(color[1]) * v1 + float(add[1]) * v2));
+		color[2] = clamp(int16_t(float(color[2]) * v1 + float(add[2]) * v2));
 	}
 
 	inline void addColorSimple(uint8_t * const color, const int16_t * const add)

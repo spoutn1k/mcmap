@@ -2,9 +2,9 @@ mcmap3 changelog
 Latest version is available at: http://wrim.pl/mcmap/
 ------------------------------------------------------
 
-beta 3.0.2 (feb )
+beta 3.0.2 (feb 09 2014)
 added:
--support for biomes in anvil worlds (not implemented yet)
+-support for biomes in anvil worlds
 -new option - -lowmemory - lets render up to 256 blocks but saves 50% memory during renderring
 
 beta 3.0.1 (feb 04 2014)
