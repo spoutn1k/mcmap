@@ -1031,7 +1031,7 @@ static void loadBiomeChunk(const char* path, const int chunkX, const int chunkZ)
 static inline void assignBlock(const uint8_t &block, uint8_t* &targetBlock, int &x, int &y, int &z, uint8_t* &justData)
 {
 	if (block == WOOL || block == LOG || block == LEAVES || block == STEP || block == DOUBLESTEP || block == WOOD || block == WOODEN_STEP || block == WOODEN_DOUBLE_STEP 
-		|| block == 95 || block == 160 || block == 159 || block == 171 || block == 38 || block == 175 || block == SAND || block == 153 || block == 166
+		|| block == 95 || block == 160 || block == 159 || block == 171 || block == 38 || block == 175 || block == SAND || block == 153 || block == 166 || block == 167
 		|| block == 141 || block == 142 || block == 158 || block == 149 || block == 157
 		|| block == 131 || block == 132 || block == 150 || block == 147 || block == 148 || block == 68 || block == 69 || block == 70
 		|| block == 72 || block == 77 || block == 143 || block == 36) {  //three last lines contains colors for carpets
@@ -1054,6 +1054,8 @@ static inline void assignBlock(const uint8_t &block, uint8_t* &targetBlock, int 
 				*targetBlock++ = 87;
 		} else if (block == 157) {		//activator rail -> detector rail
 				*targetBlock++ = 28;
+		} else if (block == 167) {		//iron trapdoor -> wooden trapdoor
+				*targetBlock++ = 96;
 		} else if (block == LEAVES) {
 			if ((col & 0x3) != 0) { // Map to pine or birch
 				*targetBlock++ = 228 + (col & 0x3);

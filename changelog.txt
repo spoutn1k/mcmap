@@ -2,6 +2,10 @@ mcmap changelog
 Latest version is available at: http://wrim.pl/mcmap/
 ------------------------------------------------------
 
+2.4.2e (feb 20 2014) - snapshot 14w08a compatible (MC 1.7.4)
+added:
+-iron trapdoor
+
 2.4.2d (jan 31 2014) - snapshot 14w05a compatible (MC 1.7.4)
 added:
 -barrier block support (previous recognized as yellow glass pane)
