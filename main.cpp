@@ -1135,7 +1135,7 @@ void printHelp(char *binary)
 	   "  -hell         render the hell/nether dimension of the given world\n"
 	   "  -end          render the end dimension of the given world\n"
 	   "  -serverhell   force cropping of blocks at the top (use for nether servers)\n"
-	   "  -nowater  	render map with water clear\n"
+	   "  -nowater  	render map with water being clear (as if it were air)\n"
 	   "  -texture NAME extract colors from png file 'NAME'; eg. terrain.png\n"
 	   "  -biomes       apply biome colors to grass/leaves; requires that you run\n"
 	   "                Donkey Kong's biome extractor first on your world\n"
