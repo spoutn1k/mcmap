@@ -135,6 +135,8 @@ int main(int argc, char **argv)
 				g_Hell = true;
 			} else if (strcmp(option, "-end") == 0) {
 				end = true;
+			} else if (strcmp(option, "-nowater") == 0) {
+				g_NoWater = true;
 			} else if (strcmp(option, "-serverhell") == 0) {
 				g_ServerHell = true;
 			} else if (strcmp(option, "-biomes") == 0) {
@@ -1133,6 +1135,7 @@ void printHelp(char *binary)
 	   "  -hell         render the hell/nether dimension of the given world\n"
 	   "  -end          render the end dimension of the given world\n"
 	   "  -serverhell   force cropping of blocks at the top (use for nether servers)\n"
+	   "  -nowater  	render map with water clear\n"
 	   "  -texture NAME extract colors from png file 'NAME'; eg. terrain.png\n"
 	   "  -biomes       apply biome colors to grass/leaves; requires that you run\n"
 	   "                Donkey Kong's biome extractor first on your world\n"
