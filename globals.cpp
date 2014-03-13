@@ -15,6 +15,7 @@ bool g_Skylight = false;
 int g_Noise = 0;
 bool g_BlendAll = false;
 bool g_Hell = false, g_ServerHell = false;
+bool g_NoWater = false;
 
 bool g_UseBiomes = false;
 uint64_t g_BiomeMapSize = 0;
