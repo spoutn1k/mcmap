@@ -1032,6 +1032,7 @@ static inline void assignBlock(const uint8_t &block, uint8_t* &targetBlock, int 
 {
 	if (block == WOOL || block == LOG || block == LEAVES || block == STEP || block == DOUBLESTEP || block == WOOD || block == WOODEN_STEP || block == WOODEN_DOUBLE_STEP 
 		|| block == 95 || block == 160 || block == 159 || block == 171 || block == 38 || block == 175 || block == SAND || block == 153 || block == 166 || block == 167
+		|| block == WATER || block == STAT_WATER
 		|| block == 141 || block == 142 || block == 158 || block == 149 || block == 157
 		|| block == 131 || block == 132 || block == 150 || block == 147 || block == 148 || block == 68 || block == 69 || block == 70
 		|| block == 72 || block == 77 || block == 143 || block == 36) {  //three last lines contains colors for carpets
@@ -1042,7 +1043,8 @@ static inline void assignBlock(const uint8_t &block, uint8_t* &targetBlock, int 
 			col = (justData[(y + (z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y) / 2] >> ((y % 2) * 4)) & 0xF;
 		}
 		if (block == 131 || block == 132 || block == 150 || block == 147 || block == 148 || block == 68 || block == 69 || block == 70
-			|| block == 72 || block == 77 || block == 143 || block == 36 || block == 166) {		//not visible blocks replaced to air, therefore we have few ID's more
+			|| block == 72 || block == 77 || block == 143 || block == 36 || block == 166
+			|| (g_NoWater && (block == WATER || block == STAT_WATER))) {		//not visible blocks replaced to air, therefore we have few ID's more
 				*targetBlock++ = 0;
 		} else if (block == 141 || block == 142) {		//carrots and potatoes -> wheat
 				*targetBlock++ = 59;
