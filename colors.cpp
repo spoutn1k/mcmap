@@ -239,7 +239,15 @@ void loadColors()
 	SETCOLOR(174, 159, 189, 239, 255 ); //packed ice
 	SETCOLOR(175, 0, 255, 0, 254 ); //Large flower
 	SETCOLOR(206, 54, 24, 30, 255 ); //nether bricks slab
+
+	//1.8+
 	SETCOLOR(165, 61, 255, 61, 96  ); //slime block
+	SETCOLOR(19, 224, 240, 48, 255  ); //sponge
+	SETCOLOR(232, 25, 146, 132, 255  ); //prismarine
+	SETCOLOR(236, 75, 196, 152, 255  ); //sea lantern
+	SETCOLOR(140, 208, 128, 128, 255  ); //granite
+	SETCOLOR(144, 228, 228, 228, 255  ); //diorite
+	SETCOLOR(157, 160, 160, 160, 255  ); //andesite
 
 	// carpets
 	SETCOLOR(36 ,  255, 255, 255,  254   ); //White carpet

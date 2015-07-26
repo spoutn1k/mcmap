@@ -2,6 +2,16 @@ mcmap changelog
 Latest version is available at: http://wrim.pl/mcmap/
 ------------------------------------------------------
 
+2.4.3 (jul 26 2015) - Minecraft 1.8.X compatible
+added:
+-color for sponge
+-all wooden door types
+-all fences and fence gates
+-red sandstone recognized as red sand
+-inverted daylight sensor
+-prismarine and sea lantern (ID's 232 and 236)
+-granite, diorite and andesite (ID's 140, 144 and 157)
+
 2.4.2e (feb 20 2014) - snapshot 14w08a compatible (MC 1.7.4)
 added:
 -iron trapdoor

@@ -1031,9 +1031,9 @@ static void loadBiomeChunk(const char* path, const int chunkX, const int chunkZ)
 static inline void assignBlock(const uint8_t &block, uint8_t* &targetBlock, int &x, int &y, int &z, uint8_t* &justData)
 {
 	if (block == WOOL || block == LOG || block == LEAVES || block == STEP || block == DOUBLESTEP || block == WOOD || block == WOODEN_STEP || block == WOODEN_DOUBLE_STEP 
-		|| block == 95 || block == 160 || block == 159 || block == 171 || block == 38 || block == 175 || block == SAND || block == 153 || block == 166 || block == 167
-		|| (g_NoWater && (block == WATER || block == STAT_WATER))
-		|| block == 141 || block == 142 || block == 158 || block == 149 || block == 157
+		|| block == 95 || block == 160 || block == 159 || block == 171 || block == 38 || block == 175 || block == SAND || block == 153 
+		|| (g_NoWater && (block == WATER || block == STAT_WATER)) || (block >= 176 && block <= 197) || (block >= 166 && block <= 169) || block == STONE
+		|| block == 141 || block == 142 || block == 158 || block == 149 || block == 157 || block == 140 || block == 144
 		|| block == 131 || block == 132 || block == 150 || block == 147 || block == 148 || block == 68 || block == 69 || block == 70
 		|| block == 72 || block == 77 || block == 143 || block == 36) {  //three last lines contains colors for carpets
 		uint8_t col;
@@ -1043,21 +1043,29 @@ static inline void assignBlock(const uint8_t &block, uint8_t* &targetBlock, int 
 			col = (justData[(y + (z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y) / 2] >> ((y % 2) * 4)) & 0xF;
 		}
 		if (block == 131 || block == 132 || block == 150 || block == 147 || block == 148 || block == 68 || block == 69 || block == 70
-			|| block == 72 || block == 77 || block == 143 || block == 36 || block == 166
+			|| block == 72 || block == 77 || block == 143 || block == 36 || block == 166 || block == 140 || block == 144
 			|| block == WATER || block == STAT_WATER) {		//not visible blocks replaced to air, therefore we have few ID's more
 				*targetBlock++ = 0;
-		} else if (block == 141 || block == 142) {		//carrots and potatoes -> wheat
-				*targetBlock++ = 59;
-		} else if (block == 158) {		//dropper -> dispenser
-				*targetBlock++ = 23;
-		} else if (block == 149) {		//comparator -> repeater
-				*targetBlock++ = 93;
-		} else if (block == 153) {		//nether ore -> netherrack
-				*targetBlock++ = 87;
-		} else if (block == 157) {		//activator rail -> detector rail
-				*targetBlock++ = 28;
-		} else if (block == 167) {		//iron trapdoor -> wooden trapdoor
-				*targetBlock++ = 96;
+		} else if (block == STONE) {
+			switch (col)
+			{
+			case 0:
+				*targetBlock++ = 1;
+				break;
+			case 1:
+			case 2:
+				*targetBlock++ = 140;
+				break;
+			case 3:
+			case 4:
+				*targetBlock++ = 144;
+				break;
+			case 5:
+			case 6:
+				*targetBlock++ = 157;
+				break;
+			}
+
 		} else if (block == LEAVES) {
 			if ((col & 0x3) != 0) { // Map to pine or birch
 				*targetBlock++ = 228 + (col & 0x3);
@@ -1231,7 +1239,7 @@ static inline void assignBlock(const uint8_t &block, uint8_t* &targetBlock, int 
 			} else {
 				*targetBlock++ = block;
 			}
-		} else /*if (block == DOUBLESTEP)*/ {
+		} else if (block == DOUBLESTEP) {
 			if (col == 1) {
 				*targetBlock++ = SANDSTONE;
 			} else if (col == 2) {
@@ -1241,6 +1249,32 @@ static inline void assignBlock(const uint8_t &block, uint8_t* &targetBlock, int 
 			} else {
 				*targetBlock++ = block;
 			}
+		} else if (block == 141 || block == 142) {		//carrots and potatoes -> wheat
+				*targetBlock++ = 59;
+		} else if (block == 158) {		//dropper -> dispenser
+				*targetBlock++ = 23;
+		} else if (block == 149) {		//comparator -> repeater
+				*targetBlock++ = 93;
+		} else if (block == 153) {		//nether ore -> netherrack
+				*targetBlock++ = 87;
+		} else if (block == 157) {		//activator rail -> detector rail
+				*targetBlock++ = 28;
+		} else if (block == 167) {		//iron trapdoor -> wooden trapdoor
+				*targetBlock++ = 96;
+		} else if (block == 179 || block == 180 || block == 181 || block == 182) {	//red sandstone -> red sand
+				*targetBlock++ = 153;
+		} else if (block == 178) {		//daylight detector inverted -> daylight detector
+				*targetBlock++ = 151;
+		} else if (block == 168) {		//prismarine
+				*targetBlock++ = 232;
+		} else if (block == 169) {		//sea lantern
+				*targetBlock++ = 236;
+		} else if (block >= 193 && block <= 197) {	//doors 1.8+
+				*targetBlock++ = 64;
+		} else if (block >= 188 && block <= 192) {	//fences 1.8+
+				*targetBlock++ = 85;
+		} else if (block >= 183 && block <= 187) {	//fence gates 1.8+
+				*targetBlock++ = 107;
 		}
 	} else {
 		*targetBlock++ = block;

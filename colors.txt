@@ -96,3 +96,12 @@
 
 # nether
 238  206 206 201  255   5	# Birch Wood / quartz slab (sic!)
+
+# 1.8
+ 19  224 220  48  255    0	# sponge
+232   25 146 132  255    0	# prismarine
+236   75 196 152  255    0	# sea lantern
+140  208 128 128  255    0	# granite
+144  228 228 228  255    0	# diorite
+157  160 160 160  255    0	# andesite
+
