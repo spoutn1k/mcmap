@@ -1144,7 +1144,7 @@ void printHelp(char *binary)
 	   "                format by using file extensions .xml, .json or .txt (default)\n"
 	   "  -split PATH   create tiled output (128x128 to 4096x4096) in given PATH\n"
 	   "  -marker c x z place marker at x z with color c (r g b w)\n"
-	   "\n    WORLDPATH is the path of the desired alpha/beta world.\n\n"
+	   "\n    WORLDPATH is the path of the desired Minecraft world.\n\n"
 	   ////////////////////////////////////////////////////////////////////////////////
 	   "Examples:\n\n"
 #ifdef _WIN32
