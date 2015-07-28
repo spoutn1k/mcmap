@@ -625,14 +625,9 @@ uint64_t calcImageSize(const int mapChunksX, const int mapChunksZ, const size_t 
 	return uint64_t(pixelsX) * BYTESPERPIXEL * uint64_t(pixelsY);
 }
 
-void setPixel(const size_t x, const size_t y, const uint8_t color, const float fsub, const uint8_t biome)	//not used but left just in case
-{
-    uint16_t color16 = colorsToID[color];
-    setPixel(x, y, color16, fsub, biome);
-}
-
 void setPixel(const size_t x, const size_t y, const uint16_t color, const float fsub, const uint8_t biome)
 {
+
 	// Sets pixels around x,y where A is the anchor
 	// T = given color, D = darker, L = lighter
 	// A T T T
@@ -670,37 +665,7 @@ void setPixel(const size_t x, const size_t y, const uint16_t color, const float 
 		case BLOCKRAILROAD:
 			setRailroad(x, y, c);
 			return;
-		}		/*
-		if (color == SNOW || color == TRAPDOOR
-			|| color == 141 || color == 142 || color == 158 || color == 149
-			|| color == 131 || color == 132 || color == 150 || color == 147 || color == 148 || color == 68 || color == 69 || color == 70
-			|| color == 72 || color == 77 || color == 143 || color == 36) {	//three lines of carpets ID's I can't do this other way
-			setSnowBA(x, y, c);
-			return;
 		}
-		if (color == TORCH || color == REDTORCH_ON || color == REDTORCH_OFF) {
-			setTorchBA(x, y, c);
-			return;
-		}
-		if (color == FLOWERR || color == FLOWERY || color == MUSHROOMB || color == MUSHROOMR || color == MELON_STEM || color == PUMPKIN_STEM || color == SHRUB || color == COBWEB || color == LILYPAD || color == NETHER_WART
-			|| color == 175 || color == BLUE_ORCHID || color == ALLIUM || color == AZURE_BLUET || color == RED_TULIP || color == ORANGE_TULIP || color == WHITE_TULIP || color == PINK_TULIP || color == OXEYE_DAISY || color == SUNFLOWER || color == LILAC || color == PEONY ) {
-			setFlowerBA(x, y, c);
-			return;
-		}
-		if (color == FENCE || color == FENCE_GATE || color == VINES || color == IRON_BARS || color == NETHER_BRICK_FENCE
-			|| color == 139) {
-			setFence(x, y, c);
-			return;
-		}
-		if (color == REDWIRE || color == TRIPWIRE) {
-			setRedwire(x, y, c);
-			return;
-		}
-		if (color == RAILROAD || color == POW_RAILROAD || color == DET_RAILROAD) {
-			setRailroad(x, y, c);
-			return;
-		}
-		*/
 		// All the above blocks didn't need the shaded down versions of the color, so we only calc them here
 		// They are for the sides of blocks
 		memcpy(L, c, BYTESPERPIXEL);
@@ -723,25 +688,6 @@ void setPixel(const size_t x, const size_t y, const uint16_t color, const float 
 			setUpStepBA(x, y, c, L, D);
 			return;
 		}
-		/*
-		if (color == GRASS) {
-			setGrassBA(x, y, c, L, D, sub);
-			return;
-		}
-		if (color == FIRE || color == TALL_GRASS || color == COCOA_PLANT) {
-			setFire(x, y, c, L, D);
-			return;
-		}
-		if (color == STEP || color == CAKE || color == BED || color == SANDSTEP || color == WOODSTEP || color == COBBLESTEP || color == BRICKSTEP || color == STONEBRICKSTEP || color == PINESTEP || color == BIRCHSTEP || color == JUNGLESTEP
-			|| color == 151) {
-			setStepBA(x, y, c, L, D);
-			return;
-		}
-		if (color == UP_STEP || color == UP_SANDSTEP || color == UP_WOODSTEP || color == UP_COBBLESTEP || color == UP_BRICKSTEP || color == UP_STONEBRICKSTEP || color == UP_WOODSTEP2 || color == UP_PINESTEP || color == UP_BIRCHSTEP || color == UP_JUNGLESTEP) {
-			setUpStepBA(x, y, c, L, D);
-			return;
-		}
-		*/
 	} else {
 		// Then check the block type, as some types will be drawn differently
 		switch (colortype)
@@ -765,36 +711,6 @@ void setPixel(const size_t x, const size_t y, const uint16_t color, const float 
 			setRailroad(x, y, c);
 			return;
 		}
-		/*
-		if (color == SNOW || color == TRAPDOOR
-			|| color == 141 || color == 142 || color == 158 || color == 149
-			|| color == 131 || color == 132 || color == 150 || color == 147 || color == 148 || color == 68 || color == 69 || color == 70
-			|| color == 72 || color == 77 || color == 143 || color == 36) {	//three lines of carpets ID's I can't do this other way
-			setSnow(x, y, c);
-			return;
-		}
-		if (color == TORCH || color == REDTORCH_ON || color == REDTORCH_OFF) {
-			setTorch(x, y, c);
-			return;
-		}
-		if (color == FLOWERR || color == FLOWERY || color == MUSHROOMB || color == MUSHROOMR || color == MELON_STEM || color == PUMPKIN_STEM || color == SHRUB || color == COBWEB || color == LILYPAD || color == NETHER_WART
-			|| color == 175 || color == BLUE_ORCHID || color == ALLIUM || color == AZURE_BLUET || color == RED_TULIP || color == ORANGE_TULIP || color == WHITE_TULIP || color == PINK_TULIP || color == OXEYE_DAISY || color == SUNFLOWER || color == LILAC || color == PEONY ) {
-			setFlower(x, y, c);
-			return;
-		}
-		if (color == FENCE || color == FENCE_GATE || color == VINES || color == IRON_BARS || color == NETHER_BRICK_FENCE) {
-			setFence(x, y, c);
-			return;
-		}
-		if (color == REDWIRE || color == TRIPWIRE) {
-			setRedwire(x, y, c);
-			return;
-		}
-		if (color == RAILROAD || color == POW_RAILROAD || color == DET_RAILROAD) {
-			setRailroad(x, y, c);
-			return;
-		}
-		*/
 		// All the above blocks didn't need the shaded down versions of the color, so we only calc them here
 		// They are for the sides of blocks
 		memcpy(L, c, BYTESPERPIXEL);
@@ -817,25 +733,6 @@ void setPixel(const size_t x, const size_t y, const uint16_t color, const float 
 			setUpStep(x, y, c, L, D);
 			return;
 		}
-		/*
-		if (color == GRASS) {
-			setGrass(x, y, c, L, D, sub);
-			return;
-		}
-		if (color == FIRE || color == TALL_GRASS || color == COCOA_PLANT) {
-			setFire(x, y, c, L, D);
-			return;
-		}
-		if (color == STEP || color == CAKE || color == BED || color == SANDSTEP || color == WOODSTEP || color == COBBLESTEP || color == BRICKSTEP || color == STONEBRICKSTEP || color == PINESTEP || color == BIRCHSTEP || color == JUNGLESTEP
-			|| color == 151) {
-			setStep(x, y, c, L, D);
-			return;
-		}
-		if (color == UP_STEP || color == UP_SANDSTEP || color == UP_WOODSTEP || color == UP_COBBLESTEP || color == UP_BRICKSTEP || color == UP_STONEBRICKSTEP || color == UP_WOODSTEP2 || color == UP_PINESTEP || color == UP_BIRCHSTEP || color == UP_JUNGLESTEP) {
-			setUpStep(x, y, c, L, D);
-			return;
-		}
-		*/
 	}
 	// In case the user wants noise, calc the strength now, depending on the desired intensity and the block's brightness
 	int noise = 0;
@@ -966,41 +863,8 @@ namespace
 		//do there what you want, this code response for changing single pixel depending on its biome
 		//note this works only for anvli format. old one still requires donkey kong biome extractor
 
-		//wrim - TODO - affect only to certain blocks
-
-		//uint8_t blockbase = block % 4096;
-		//if (blockbase == LEAVES || blockbase == GRASS || blockbase == TALL_GRASS || blockbase == LEAVES2 || blockbase == VINES || blockbase == LILYPAD)
 		if (colors[block][BLOCKTYPE] / BLOCKBIOME)
 		addColor(color, biomes[biome]);
-
-		return;
-	    if (block == 2 || block == LEAVES||block==TALL_GRASS)
-		switch (biome)
-		{
-		case 4:
-		case 29:
-		    {
-			int16_t c[4] = {255, 250, 250, 160};
-		    //memcpy(color, c, 3);
-		    addColor(color, c);
-		    }
-		    break;
-		case 2:
-		case 1:
-		    {
-			int16_t c[4] = {255, 0, 0, 100};
-		    //memcpy(color, c, 3);
-		    addColor(color, c);
-		    }
-		    break;
-		case 35:
-		    {
-			int16_t c1[4] = {0, 255, 0, 70};
-		    //memcpy(color, c1, 3);
-		    addColor(color, c1);
-		    }
-		    break;
-		}
 	}
 
 	inline void blend(uint8_t * const destination, const uint8_t * const source)
@@ -1209,8 +1073,8 @@ namespace
 	{
 		// this will make grass look like dirt from the side
 		uint8_t L[CHANSPERPIXEL], D[CHANSPERPIXEL];
-		memcpy(L, colors[DIRT], BYTESPERPIXEL);
-		memcpy(D, colors[DIRT], BYTESPERPIXEL);
+		memcpy(L, colors[GRASSBOTTOM], BYTESPERPIXEL);
+		memcpy(D, colors[GRASSBOTTOM], BYTESPERPIXEL);
 		modColor(L, sub - 15);
 		modColor(D, sub - 25);
 		// consider noise

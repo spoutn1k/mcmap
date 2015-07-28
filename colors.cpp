@@ -67,7 +67,7 @@ uint16_t colorsToID[256] =
 	224, 225, 226, 227, 228, 229, 230, 231, 
 	232, 233, 234, 235, 236, 237, 238, 239, 
 	240, 241, 242, 243, 244, 245, 246, 247, 
-	248, 249, 250, 251, 252, 253, 254, 255
+	248, 249, 24577, 20481, 16385, 12289, 8193, 4097
 };
 
 void SET_COLORNOISE(uint16_t col, uint16_t r, uint16_t g, uint16_t b, uint16_t a, uint16_t n)
@@ -619,21 +619,19 @@ bool loadColorsFromFile(const char *file)
 					printf("Skipping invalid blockid %d:%d in colors file\n", blockid, blockid3);
 					suffix = -1;
 				}
-				printf("Second value %d:%d in colors file\n", blockid, blockid3); //wrim
 				suffix = 1;
 			}
 			++ptr;
 		}
 		if (suffix < 0) continue;
 
-		uint8_t vals[5];
+		uint8_t vals[5] = {0,0};
 		bool valid = true;
 		for (int i = 0; i < 5; ++i) {
 			while (*ptr == ' ' || *ptr == '\t') {
 				++ptr;
 			}
 			if (*ptr == '\0' || *ptr == '#' || *ptr == '\12') {
-				printf("Too few arguments for block %d, ignoring line.\n", blockid);
 				valid = false;
 				break;
 			}
@@ -642,10 +640,23 @@ bool loadColorsFromFile(const char *file)
 				++ptr;
 			}
 		}
-		if (!valid) {
+		if (!valid) { //TODO
+			if (vals[0] != 0)
+			{
+				if (g_lowMemory)
+				{
+
+				}
+				else
+				{
+
+				}
+				printf("%d:%d copied to %d:%d\n", blockid, blockid3, vals[0], vals[1] & 0x0F);
+			}
+			else printf("Too few arguments for block %d, ignoring line.\n", blockid);
 			continue;
 		}
-		int blockidSET = (blockid3 << 12)+blockid;
+		int blockidSET = (blockid3 << 12) + blockid;
 		if (g_lowMemory)
 		{
 			if (lowmemCounter > 255)
@@ -683,22 +694,19 @@ bool dumpColorsToFile(const char *file)
 		return false;
 	}
 	fprintf(f, "# For Block IDs see http://minecraftwiki.net/wiki/Data_values\n"
-				"# and http://wrim.pl/mcmap (for blocks introduced since Minecraft 1.3.1 and mcmap 2.4)\n"
 				"# Note that noise or alpha (or both) do not work for a few blocks like snow, torches, fences, steps, ...\n"
 				"# Actually, if you see any block has an alpha value of 254 you should leave it that way to prevent black artifacts.\n"
 				"# If you want to set alpha of grass to <255, use -blendall or you won't get what you expect.\n"
-				"# Noise is supposed to look normal using -noise 10\n"
-				"# Dyed wool ranges from ID 240 to 254, it's orange to black in the order described at http://www.minecraftwiki.net/wiki/Data_values#Wool\n"
-				"# half-steps of sand, wood and cobblestone are 232 to 236\n\n");
-	uint16_t j = 0;
+				"# Noise is supposed to look normal using -noise 10\n\n");
+	uint16_t head = 0;
 	for (size_t i = 1; i < 4096; ++i) {
 		uint8_t *c = colors[i];
 		if (c[PALPHA] == 0) continue; // if color doesn't exist, don't dump it
-		if (++j % 15 == 1) { //wrim - 3 cases - color only for :0, common for : and different for every :x
-			fprintf(f, "#ID	R	G	B	A	Noise\n");//wrim - block types dump
+		if (++head % 15 == 1) { 
+			fprintf(f, "#ID	R	G	B	A	Noise\n");
 		}
 		fprintf(f, "%3d\t%3d\t%3d\t%3d\t%3d\t%3d\n", int(i), int(c[PRED]), int(c[PGREEN]), int(c[PBLUE]), int(c[PALPHA]), int(c[NOISE]));
-		for (int j = 0; j < 16; j++)
+		for (int j = 1; j < 16; j++)
 		{
 			uint8_t *c2 = colors[i+(j<<12)];
 			if (c2[PALPHA] != 0 && (c[PRED] != c2[PRED] || c[PGREEN] != c2[PGREEN] || c[PBLUE] != c2[PBLUE] || c[PALPHA] != c2[PALPHA] || c[NOISE] != c2[NOISE]))

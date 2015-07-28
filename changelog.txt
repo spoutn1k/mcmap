@@ -2,6 +2,11 @@ mcmap3 changelog
 Latest version is available at: http://wrim.pl/mcmap/
 ------------------------------------------------------
 
+beta 3.0.3 (jul 28 2015)
+-better memory organization
+-improvements with custom colors
+-several minor fixes
+
 beta 3.0.2 (feb 09 2014)
 added:
 -support for biomes in anvil worlds

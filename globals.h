@@ -1,7 +1,7 @@
 #ifndef _GLOBALS_H_
 #define _GLOBALS_H_
 
-#define VERSION "beta 3.0.2 (compatible with Minecraft 1.7.4)"
+#define VERSION "beta 3.0.3"
 
 #include <stdint.h>
 #include <cstdlib>
@@ -26,7 +26,7 @@ extern int g_TotalFromChunkX, g_TotalFromChunkZ, g_TotalToChunkX, g_TotalToChunk
 // Current area of world being rendered
 extern int g_FromChunkX, g_FromChunkZ, g_ToChunkX, g_ToChunkZ;
 // size of that area in blocks (no offset)
-extern size_t g_MapsizeZ, g_MapsizeX;
+extern size_t g_MapsizeZ, g_MapsizeX, g_Terrainsize;
 extern int g_MapminY, g_MapsizeY;
 
 extern int g_OffsetY; // y pixel offset in the final image for one y step in 3d array (2 or 3)
@@ -53,8 +53,7 @@ extern int g_MarkerCount;
 extern Marker g_Markers[MAX_MARKERS];
 
 // 3D arrays holding terrain/lightmap
-extern uint16_t *g_Terrain;
-extern uint8_t *g_TerrainLow, *g_Light;
+extern uint8_t *g_Terrain, *g_Light;
 // 2D array to store min and max block height per X/Z - it's 2 bytes per index, upper for highest, lower for lowest (don't ask!)
 extern uint16_t *g_HeightMap;
 

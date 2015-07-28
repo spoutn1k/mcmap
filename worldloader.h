@@ -13,6 +13,5 @@ void clearLightmap();
 void calcBitmapOverdraw(int &left, int &right, int &top, int &bottom);
 void loadBiomeMap(const char* path);
 void uncoverNether();
-void uncoverNetherOld();
 
 #endif
