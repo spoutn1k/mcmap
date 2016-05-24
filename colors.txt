@@ -1,3 +1,4 @@
+# ID    R   G   B    A  Noise
 # various
 133	  61	 255	  61	 255 	 0	# emerald
 137	 203	 163	 136	 255	 0	# command block
@@ -13,8 +14,8 @@
 207	 240	 238	 232	 255	 0	# quartz slab
 161	  54	 135	  40	 180	 0	# leaves Acacia/Dark Oak
 162	  72	  72	  72	 255	 0	# log Acacia/Dark Oak
-163	 154	 110	  77	 255	 2	# Acacia Wood Stairs
-164	 106	 127	  98	 255	 11	# Dark Oak Wood Stairs
+163	 156	 127	  78	 255	 0	# Acacia Wood Stairs
+164	 156	 127	  78	 255	 0	# Dark Oak Wood Stairs
 170	 172	 145	  18	 255	 0	# haystack
 171	 224	 224	 224	 255	 0	# white carpet
 172	 184	 126	 99	 255	 0	# hardened clay
@@ -105,3 +106,6 @@
 144  228 228 228  255    0	# diorite
 157  160 160 160  255    0	# andesite
 
+# 1.9
+208  176 181   0  255    0	# grass path
+209  155  63 176  255    0	# purpur blocks / stair / slab

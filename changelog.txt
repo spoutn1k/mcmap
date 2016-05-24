@@ -2,6 +2,16 @@ mcmap changelog
 Latest version is available at: http://wrim.pl/mcmap/
 ------------------------------------------------------
 
+2.4.4 (may 24 2016) - Minecraft 1.9.X compatible
+added:
+1.9 blocks:
+-grass path, purpur blocks, chorus plant and fruit
+-beetroots, end bricks, frosted ice and new command blocks
+1.10 (16w20a): new blocks render as similar old blocks (magma as lava etc.)
+fixed:
+-banners rendered as flowers
+-acacia and dark oak stairs colors
+
 2.4.3 (jul 26 2015) - Minecraft 1.8.X compatible
 added:
 -color for sponge

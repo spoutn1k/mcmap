@@ -1035,6 +1035,7 @@ static inline void assignBlock(const uint8_t &block, uint8_t* &targetBlock, int 
 		|| (g_NoWater && (block == WATER || block == STAT_WATER)) || (block >= 176 && block <= 197) || (block >= 166 && block <= 169) || block == STONE
 		|| block == 141 || block == 142 || block == 158 || block == 149 || block == 157 || block == 140 || block == 144
 		|| block == 131 || block == 132 || block == 150 || block == 147 || block == 148 || block == 68 || block == 69 || block == 70
+		|| (block >= 198 && block <= 217) || block == 176 || block == 177
 		|| block == 72 || block == 77 || block == 143 || block == 36) {  //three last lines contains colors for carpets
 		uint8_t col;
 		if (g_WorldFormat == 2) {
@@ -1044,6 +1045,7 @@ static inline void assignBlock(const uint8_t &block, uint8_t* &targetBlock, int 
 		}
 		if (block == 131 || block == 132 || block == 150 || block == 147 || block == 148 || block == 68 || block == 69 || block == 70
 			|| block == 72 || block == 77 || block == 143 || block == 36 || block == 166 || block == 140 || block == 144
+			|| block == 176 || block == 177 || block == 209 || block == 217 || block == 198
 			|| block == WATER || block == STAT_WATER) {		//not visible blocks replaced to air, therefore we have few ID's more
 				*targetBlock++ = 0;
 		} else if (block == STONE) {
@@ -1249,7 +1251,7 @@ static inline void assignBlock(const uint8_t &block, uint8_t* &targetBlock, int 
 			} else {
 				*targetBlock++ = block;
 			}
-		} else if (block == 141 || block == 142) {		//carrots and potatoes -> wheat
+		} else if (block == 141 || block == 142 || block == 207) {	//carrots, potatoes and beetroots -> wheat
 				*targetBlock++ = 59;
 		} else if (block == 158) {		//dropper -> dispenser
 				*targetBlock++ = 23;
@@ -1275,6 +1277,24 @@ static inline void assignBlock(const uint8_t &block, uint8_t* &targetBlock, int 
 				*targetBlock++ = 85;
 		} else if (block >= 183 && block <= 187) {	//fence gates 1.8+
 				*targetBlock++ = 107;
+		} else if (block == 199 || block == 200) {	//chorus plant/fruit -> nether fences
+				*targetBlock++ = 113;
+		} else if (block >= 201 && block <= 205) {	//purpur blocks
+				*targetBlock++ = 209;
+		} else if (block == 206) {			//end bricks -> end stone
+				*targetBlock++ = 121;
+		} else if (block == 210 || block == 211) {	//1.9 command blocks -> old command block
+				*targetBlock++ = 137;
+		} else if (block == 212) {			//frosted ice -> regular ice
+				*targetBlock++ = 79;
+		} else if (block == 213) {			//magma -> lava
+				*targetBlock++ = STAT_LAVA;
+		} else if (block == 214) {			//nether wart block -> sould sand
+				*targetBlock++ = 88;
+		} else if (block == 215) {			//red nether brick -> nether brick
+				*targetBlock++ = 112;
+		} else if (block == 216) {			//bone block -> snow
+				*targetBlock++ = 80;
 		} else *targetBlock++ = block;
 	} else {
 		*targetBlock++ = block;

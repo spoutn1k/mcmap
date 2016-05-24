@@ -230,8 +230,8 @@ void loadColors()
 	//SETCOLOR(159, 209, 177, 160, 255 ); //white stained clay !
 	SETCOLOR(161, 54, 135, 40, 180 ); //leaves Acacia/Dark Oak
 	SETCOLOR(162, 72,  72, 72, 255 ); //log Acacia/Dark Oak
-	SETCOLORNOISE(163, 154, 110, 77, 255, 2); // Acacia Wood Stairs
-	SETCOLORNOISE(164, 106, 127, 98, 255, 11); // Dark Oak Wood Stairs
+	SETCOLOR(163, 156, 127, 78, 255); // Acacia Wood Stairs
+	SETCOLOR(164, 156, 127, 78, 255); // Dark Oak Wood Stairs
 	SETCOLOR(170, 172, 145, 18,  255 ); //haystack
 	SETCOLOR(171, 224, 224, 224, 255 ); //white carpet
 	SETCOLOR(172, 184, 126, 99, 255 ); //hardened clay
@@ -248,6 +248,8 @@ void loadColors()
 	SETCOLOR(140, 208, 128, 128, 255  ); //granite
 	SETCOLOR(144, 228, 228, 228, 255  ); //diorite
 	SETCOLOR(157, 160, 160, 160, 255  ); //andesite
+	SETCOLOR(208, 176, 181, 0, 255  ); //grass path
+	SETCOLOR(209, 155, 63, 176, 255  ); //purpur blocks
 
 	// carpets
 	SETCOLOR(36 ,  255, 255, 255,  254   ); //White carpet
