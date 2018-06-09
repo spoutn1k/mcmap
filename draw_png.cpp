@@ -623,49 +623,107 @@ uint64_t calcImageSize(const int mapChunksX, const int mapChunksZ, const size_t 
     return uint64_t(pixelsX) * BYTESPERPIXEL * uint64_t(pixelsY);
 }
 
-void setPixel(const size_t x, const size_t y, const uint8_t color, const float fsub)
+void setPixel(const size_t x, const size_t y, const uint16_t color, const float fsub)
 {
     // Sets pixels around x,y where A is the anchor
     // T = given color, D = darker, L = lighter
     // A T T T
     // D D L L
     // D D L L
-    //	  D L
+    //	 D L
     // First determine how much the color has to be lightened up or darkened
-    int sub = int(fsub * (float(colors[color][BRIGHTNESS]) / 323.0f + .21f)); // The brighter the color, the stronger the impact
+    uint8_t block = color % 256;
+    uint8_t* blockColor = getColor(color);
+
+    int sub = int(fsub * (float(blockColor[BRIGHTNESS]) / 323.0f + .21f)); // The brighter the color, the stronger the impact
     uint8_t L[CHANSPERPIXEL], D[CHANSPERPIXEL], c[CHANSPERPIXEL];
+    
+    //if (color || block || variant)
+	//printf("Color: %d: block %d - variant %d\n", color, block, variant);
+
     // Now make a local copy of the color that we can modify just for this one block
-    memcpy(c, colors[color], BYTESPERPIXEL);
+    memcpy(c, blockColor, BYTESPERPIXEL);
     modColor(c, sub);
+    memcpy(L, c, BYTESPERPIXEL);
+    memcpy(D, c, BYTESPERPIXEL);
+    modColor(L, -17);
+    modColor(D, -27);
+
     if (g_BlendAll) {
 	// Then check the block type, as some types will be drawn differently
-	if (color == SNOW || color == TRAPDOOR
-		|| color == 141 || color == 142 || color == 158 || color == 149
-		|| color == 131 || color == 132 || color == 150 || color == 147 || color == 148 || color == 68 || color == 69 || color == 70
-		|| color == 72 || color == 77 || color == 143 || color == 36) {	//three lines of carpets ID's I can't do this other way
+	switch (blockColor[BLOCK_TYPE]) {
+	    case Blocks::OTHER:
+		return;
+
+	    case Blocks::THIN:
+		setSnowBA(x, y, c);
+		return;
+
+	    case Blocks::THIN_ROD:
+		setTorchBA(x, y, c);
+		return;
+
+	    case Blocks::PLANT:
+		setFlowerBA(x, y, c);
+		return;
+
+	    case Blocks::ROD:
+		setFence(x, y, c);
+		return;
+
+	    case Blocks::WIRE:
+		setRedwire(x, y, c);
+		return;
+
+	    case Blocks::RAILROAD:
+		setRailroad(x, y, c);
+		return;
+
+	    case Blocks::SPECIAL:
+		setFire(x, y, c, L, D);
+		return;
+
+	    case Blocks::STAIR:
+		setUpStepBA(x, y, c, L, D);
+		return;
+
+	    case Blocks::HALF:
+		setStepBA(x, y, c, L, D);
+		return;
+
+	    case Blocks::GROWN:
+		setGrassBA(x, y, c, L, D, sub);
+		return;
+	}
+	/*
+	if (block == SNOW || block == TRAPDOOR
+		//|| block == 141 || block == 142 || block == 158 || block == 149
+		//|| block == 131 || block == 132 || block == 150 || block == 147 || block == 148 || block == 68 || block == 69 || block == 70
+		//|| block == 72 || block == 77 || block == 143 || block == 36) 
+	    ){	//three lines of carpets ID's I can't do this other way
 	    setSnowBA(x, y, c);
 	    return;
 	}
-	if (color == TORCH || color == REDSTONE_TORCH || color == UNLIT_REDSTONE_TORCH) {
+	if (block == TORCH || block == REDSTONE_TORCH || block == UNLIT_REDSTONE_TORCH) {
 	    setTorchBA(x, y, c);
 	    return;
 	}
-	if (color == RED_FLOWER || color == YELLOW_FLOWER || color == BROWN_MUSHROOM || color == RED_MUSHROOM || color == MELON_STEM || color == PUMPKIN_STEM || color == DEADBUSH || color == WEB || color == WATERLILY || color == NETHER_WART
-		//|| color == 175 || color == BLUE_ORCHID || color == ALLIUM || color == AZURE_BLUET || color == RED_TULIP || color == ORANGE_TULIP || color == WHITE_TULIP || color == PINK_TULIP || color == OXEYE_DAISY || color == SUNFLOWER || color == LILAC || color == PEONY 
+	if (block == RED_FLOWER || block == YELLOW_FLOWER || block == BROWN_MUSHROOM || block == RED_MUSHROOM || block == MELON_STEM || block == PUMPKIN_STEM || block == DEADBUSH || block == WEB || block == WATERLILY || block == NETHER_WART
+		//|| block == 175 || block == BLUE_ORCHID || block == ALLIUM || block == AZURE_BLUET || block == RED_TULIP || block == ORANGE_TULIP || block == WHITE_TULIP || block == PINK_TULIP || block == OXEYE_DAISY || block == SUNFLOWER || block == LILAC || block == PEONY 
 		) {
 	    setFlowerBA(x, y, c);
 	    return;
 	}
-	if (color == FENCE || color == FENCE_GATE || color == VINE || color == IRON_BARS || color == NETHER_BRICK_FENCE
-		|| color == 139) {
+	if (block == FENCE || block == FENCE_GATE || block == VINE || block == IRON_BARS || block == NETHER_BRICK_FENCE
+		|| block == 139) {
 	    setFence(x, y, c);
 	    return;
 	}
-	if (color == REDSTONE_WIRE || color == TRIPWIRE) {
+	if (block == REDSTONE_WIRE || block == TRIPWIRE) {
 	    setRedwire(x, y, c);
 	    return;
 	}
-	if (color == RAIL || color == GOLDEN_RAIL || color == DETECTOR_RAIL || color == ACTIVATOR_RAIL) {
+	if (block == RAIL || block == GOLDEN_RAIL || block == DETECTOR_RAIL || block == ACTIVATOR_RAIL) {
 	    setRailroad(x, y, c);
 	    return;
 	}
@@ -676,51 +734,97 @@ void setPixel(const size_t x, const size_t y, const uint8_t color, const float f
 	modColor(L, -17);
 	modColor(D, -27);
 	// A few more blocks with special handling... Those need the two colors we just mixed
-	if (color == GRASS) {
+	if (block == GRASS) {
 	    setGrassBA(x, y, c, L, D, sub);
 	    return;
 	}
-	if (color == FIRE || color == TALLGRASS || color == COCOA) {
+	if (block == FIRE || block == TALLGRASS || block == COCOA) {
 	    setFire(x, y, c, L, D);
 	    return;
 	}
-	//if (color == STEP || color == CAKE || color == BED || color == SANDSTEP || color == WOODSTEP || color == COBBLESTEP || color == BRICKSTEP || color == STONEBRICKSTEP || color == PINESTEP || color == BIRCHSTEP || color == JUNGLESTEP
-		//|| color == 151) {
+	//if (block == STEP || block == CAKE || block == BED || block == SANDSTEP || block == WOODSTEP || block == COBBLESTEP || block == BRICKSTEP || block == STONEBRICKSTEP || block == PINESTEP || block == BIRCHSTEP || block == JUNGLESTEP
+		//|| block == 151) {
 	    //setStepBA(x, y, c, L, D);
 	    //return;
 	//}
-	//if (color == UP_STEP || color == UP_SANDSTEP || color == UP_WOODSTEP || color == UP_COBBLESTEP || color == UP_BRICKSTEP || color == UP_STONEBRICKSTEP || color == UP_WOODSTEP2 || color == UP_PINESTEP || color == UP_BIRCHSTEP || color == UP_JUNGLESTEP) {
+	//if (block == UP_STEP || block == UP_SANDSTEP || block == UP_WOODSTEP || block == UP_COBBLESTEP || block == UP_BRICKSTEP || block == UP_STONEBRICKSTEP || block == UP_WOODSTEP2 || block == UP_PINESTEP || block == UP_BIRCHSTEP || block == UP_JUNGLESTEP) {
 	    //setUpStepBA(x, y, c, L, D);
 	    //return;
 	//}
+	*/
     } else {
 	// Then check the block type, as some types will be drawn differently
-	if (color == SNOW || color == TRAPDOOR
-		|| color == 141 || color == 142 || color == 158 || color == 149
-		|| color == 131 || color == 132 || color == 150 || color == 147 || color == 148 || color == 68 || color == 69 || color == 70
-		|| color == 72 || color == 77 || color == 143 || color == 36) {	//three lines of carpets ID's I can't do this other way
+	switch (blockColor[BLOCK_TYPE]) {
+	    case Blocks::OTHER:
+		return;
+
+	    case Blocks::THIN:
+		setSnow(x, y, c);
+		return;
+
+	    case Blocks::THIN_ROD:
+		setTorch(x, y, c);
+		return;
+
+	    case Blocks::PLANT:
+		setFlower(x, y, c);
+		return;
+
+	    case Blocks::ROD:
+		setFence(x, y, c);
+		return;
+
+	    case Blocks::WIRE:
+		setRedwire(x, y, c);
+		return;
+
+	    case Blocks::RAILROAD:
+		setRailroad(x, y, c);
+		return;
+
+	    case Blocks::SPECIAL:
+		setFire(x, y, c, L, D);
+		return;
+
+	    case Blocks::STAIR:
+		setUpStep(x, y, c, L, D);
+		return;
+
+	    case Blocks::HALF:
+		setStep(x, y, c, L, D);
+		return;
+
+	    case Blocks::GROWN:
+		setGrass(x, y, c, L, D, sub);
+		return;
+	}
+	/*
+	if (block == SNOW || block == TRAPDOOR
+		|| block == 141 || block == 142 || block == 158 || block == 149
+		|| block == 131 || block == 132 || block == 150 || block == 147 || block == 148 || block == 68 || block == 69 || block == 70
+		|| block == 72 || block == 77 || block == 143 || block == 36) {	//three lines of carpets ID's I can't do this other way
 	    setSnow(x, y, c);
 	    return;
 	}
-	if (color == TORCH || color == REDSTONE_TORCH || color == UNLIT_REDSTONE_TORCH) {
+	if (block == TORCH || block == REDSTONE_TORCH || block == UNLIT_REDSTONE_TORCH) {
 	    setTorch(x, y, c);
 	    return;
 	}
-	if (color == RED_FLOWER || color == RED_FLOWER || color == BROWN_MUSHROOM || color == RED_MUSHROOM || color == MELON_STEM || color == PUMPKIN_STEM || color == DEADBUSH || color == WEB || color == WATERLILY || color == NETHER_WART
-		//|| color == 175 || color == BLUE_ORCHID || color == ALLIUM || color == AZURE_BLUET || color == RED_TULIP || color == ORANGE_TULIP || color == WHITE_TULIP || color == PINK_TULIP || color == OXEYE_DAISY || color == SUNFLOWER || color == LILAC || color == PEONY 
+	if (block == RED_FLOWER || block == RED_FLOWER || block == BROWN_MUSHROOM || block == RED_MUSHROOM || block == MELON_STEM || block == PUMPKIN_STEM || block == DEADBUSH || block == WEB || block == WATERLILY || block == NETHER_WART
+		//|| block == 175 || block == BLUE_ORCHID || block == ALLIUM || block == AZURE_BLUET || block == RED_TULIP || block == ORANGE_TULIP || block == WHITE_TULIP || block == PINK_TULIP || block == OXEYE_DAISY || block == SUNFLOWER || block == LILAC || block == PEONY 
 		) {
 	    setFlower(x, y, c);
 	    return;
 	}
-	if (color == FENCE || color == FENCE_GATE || color == VINE || color == IRON_BARS || color == NETHER_BRICK_FENCE) {
+	if (block == FENCE || block == FENCE_GATE || block == VINE || block == IRON_BARS || block == NETHER_BRICK_FENCE) {
 	    setFence(x, y, c);
 	    return;
 	}
-	if (color == REDSTONE_WIRE || color == TRIPWIRE) {
+	if (block == REDSTONE_WIRE || block == TRIPWIRE) {
 	    setRedwire(x, y, c);
 	    return;
 	}
-	if (color == RAIL || color == GOLDEN_RAIL || color == DETECTOR_RAIL || color == ACTIVATOR_RAIL) {
+	if (block == RAIL || block == GOLDEN_RAIL || block == DETECTOR_RAIL || block == ACTIVATOR_RAIL) {
 	    setRailroad(x, y, c);
 	    return;
 	}
@@ -731,28 +835,29 @@ void setPixel(const size_t x, const size_t y, const uint8_t color, const float f
 	modColor(L, -17);
 	modColor(D, -27);
 	// A few more blocks with special handling... Those need the two colors we just mixed
-	if (color == GRASS) {
+	if (block == GRASS) {
 	    setGrass(x, y, c, L, D, sub);
 	    return;
 	}
-	if (color == FIRE || color == TALLGRASS || color == COCOA) {
+	if (block == FIRE || block == TALLGRASS || block == COCOA) {
 	    setFire(x, y, c, L, D);
 	    return;
 	}
-	//if (color == STEP || color == CAKE || color == BED || color == SANDSTEP || color == WOODSTEP || color == COBBLESTEP || color == BRICKSTEP || color == STONEBRICKSTEP || color == PINESTEP || color == BIRCHSTEP || color == JUNGLESTEP
-		//|| color == 151) {
+	//if (block == STEP || block == CAKE || block == BED || block == SANDSTEP || block == WOODSTEP || block == COBBLESTEP || block == BRICKSTEP || block == STONEBRICKSTEP || block == PINESTEP || block == BIRCHSTEP || block == JUNGLESTEP
+		//|| block == 151) {
 	    //setStep(x, y, c, L, D);
 	    //return;
 	//}
-	//if (color == UP_STEP || color == UP_SANDSTEP || color == UP_WOODSTEP || color == UP_COBBLESTEP || color == UP_BRICKSTEP || color == UP_STONEBRICKSTEP || color == UP_WOODSTEP2 || color == UP_PINESTEP || color == UP_BIRCHSTEP || color == UP_JUNGLESTEP) {
+	//if (block == UP_STEP || block == UP_SANDSTEP || block == UP_WOODSTEP || block == UP_COBBLESTEP || block == UP_BRICKSTEP || block == UP_STONEBRICKSTEP || block == UP_WOODSTEP2 || block == UP_PINESTEP || block == UP_BIRCHSTEP || block == UP_JUNGLESTEP) {
 	    //setUpStep(x, y, c, L, D);
 	    //return;
 	//}
+	*/
     }
     // In case the user wants noise, calc the strength now, depending on the desired intensity and the block's brightness
     int noise = 0;
-    if (g_Noise && colors[color][NOISE]) {
-	noise = int(float(g_Noise * colors[color][NOISE]) * (float(GETBRIGHTNESS(c) + 10) / 2650.0f));
+    if (g_Noise && colors[block][NOISE]) {
+	noise = int(float(g_Noise * colors[block][NOISE]) * (float(GETBRIGHTNESS(c) + 10) / 2650.0f));
     }
     // Ordinary blocks are all rendered the same way
     if (c[PALPHA] == 255) { // Fully opaque - faster

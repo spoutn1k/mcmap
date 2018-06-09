@@ -22,9 +22,10 @@ uint64_t g_BiomeMapSize = 0;
 uint8_t *g_Grasscolor = NULL, *g_Leafcolor = NULL, *g_TallGrasscolor = NULL;
 uint16_t *g_BiomeMap = NULL;
 int g_GrasscolorDepth = 0, g_FoliageDepth = 0;
+uint8_t g_LastDoubleFlower = 0;
 
-uint8_t *g_Terrain = NULL, *g_Light = NULL;
-uint16_t *g_HeightMap = NULL;
+uint8_t *g_Light = NULL;
+uint16_t *g_Terrain = NULL, *g_HeightMap = NULL;
 
 int g_MarkerCount = 0;
 Marker g_Markers[MAX_MARKERS];

@@ -612,7 +612,7 @@ int main(int argc, char **argv)
 		const int max = (HEIGHTAT(x, z) & 0xFF00) >> 8;
 		for (int y = uint8_t(HEIGHTAT(x, z)); y < max; ++y) {
 		    bmpPosY -= g_OffsetY;
-		    uint8_t &c = BLOCKAT(x, y, z);
+		    uint16_t &c = BLOCKAT(x, y, z);
 		    if (c == AIR) {
 			continue;
 		    }
@@ -649,7 +649,7 @@ int main(int argc, char **argv)
 			}
 		    }
 		    // Edge detection (this means where terrain goes 'down' and the side of the block is not visible)
-		    uint8_t &b = BLOCKAT(x - 1, y - 1, z - 1);
+		    uint16_t &b = BLOCKAT(x - 1, y - 1, z - 1);
 		    if ((y && y + 1 < g_MapsizeY)  // In bounds?
 			    && BLOCKAT(x, y + 1, z) == AIR  // Only if block above is air
 			    && BLOCKAT(x - 1, y + 1, z - 1) == AIR  // and block above and behind is air
@@ -690,7 +690,7 @@ int main(int argc, char **argv)
 		    const size_t bmpPosX = (g_MapsizeZ - z - CHUNKSIZE_Z) * 2 + (x - CHUNKSIZE_X) * 2 + (splitImage ? -2 : bitmapStartX) - cropLeft;
 		    size_t bmpPosY = g_MapsizeY * g_OffsetY + z + x - CHUNKSIZE_Z - CHUNKSIZE_X + (splitImage ? 0 : bitmapStartY) - cropTop;
 		    for (int y = 0; y < MIN(g_MapsizeY, 64); ++y) {
-			uint8_t &c = BLOCKAT(x, y, z);
+			uint16_t &c = BLOCKAT(x, y, z);
 			if (c != AIR) { // If block is not air (colors[c][3] != 0)
 			    blendPixel(bmpPosX, bmpPosY, c, float(y + 30) * .0048f);
 			}
@@ -745,7 +745,7 @@ void optimizeTerrain2(int cropLeft, int cropRight)
 	printProgress(maxX - (x + 1), maxX);
 	offsetZ = offsetGlobal;
 	for (int z = CHUNKSIZE_Z; z < maxZ; ++z) {
-	    const uint8_t *block = &BLOCKAT(x, 0, z); // Get the lowest block at that point
+	    const uint16_t *block = &BLOCKAT(x, 0, z); // Get the lowest block at that point
 	    int highest = 0, lowest = 0xFF; // remember lowest and highest block which are visible to limit the Y-for-loop later
 	    for (int y = 0; y < g_MapsizeY; ++y) { // Go up
 		uint8_t &current = blocked[((y+offsetY) % g_MapsizeY) + (offsetZ % modZ)];
@@ -759,7 +759,7 @@ void optimizeTerrain2(int cropLeft, int cropRight)
 		    if (*block != AIR && lowest == 0xFF) { // if it's not air, this is the lowest block to draw
 			lowest = y;
 		    }
-		    if (colors[*block][PALPHA] == 255) { // Block is not hidden, do not remove, but mark spot as blocked for next iteration
+		    if (colors[(uint8_t) *block][PALPHA] == 255) { // Block is not hidden, do not remove, but mark spot as blocked for next iteration
 			current = 1;
 		    }
 		    if (*block != AIR) highest = y; // if it's not air, it's the new highest block encountered so far
@@ -787,7 +787,7 @@ void optimizeTerrain3()
 {
     // Remove invisible blocks from map (covered by other blocks from isometric pov)
     // Do so by "raytracing" every block from front to back..
-    printf("Optimizing terrain...\n");
+    printf("Optimizing terrain... (3)\n");
 #ifdef _DEBUG
     gBlocksRemoved = 0;
 #endif
@@ -805,7 +805,7 @@ void optimizeTerrain3()
 	const int max2 = MIN(max, x - CHUNKSIZE_X + 1); // Block array will be traversed diagonally, determine how many blocks there are
 	for (int i = 0; i < max2; ++i) { // This traverses the block array diagonally, which would be upwards in the image
 	    const int blockedOffset = g_MapsizeY * (i % 3);
-	    uint8_t *block = &BLOCKAT(x - i, 0, maxZ - i); // Get the lowest block at that point
+	    uint16_t *block = &BLOCKAT(x - i, 0, maxZ - i); // Get the lowest block at that point
 	    int highest = 0, lowest = 0xFF;
 	    for (int j = 0; j < g_MapsizeY; ++j) { // Go up
 		if (blocked[blockedOffset + (j+offset) % g_MapsizeY]) { // Block is hidden, remove
@@ -818,7 +818,7 @@ void optimizeTerrain3()
 		    if (*block != AIR && lowest == 0xFF) {
 			lowest = j;
 		    }
-		    if (colors[*block][PALPHA] == 255) { // Block is not hidden, do not remove, but mark spot as blocked for next iteration
+		    if (colors[(uint8_t) *block][PALPHA] == 255) { // Block is not hidden, do not remove, but mark spot as blocked for next iteration
 			blocked[blockedOffset + (j+offset) % g_MapsizeY] = 1;
 		    }
 		    if (*block != AIR) highest = j;
@@ -840,7 +840,7 @@ void optimizeTerrain3()
 	const int max2 = MIN(max, z - CHUNKSIZE_Z + 1);
 	for (int i = 0; i < max2; ++i) {
 	    const int blockedOffset = g_MapsizeY * (i % 3);
-	    uint8_t *block = &BLOCKAT(maxX - i, 0, z - i);
+	    uint16_t *block = &BLOCKAT(maxX - i, 0, z - i);
 	    int highest = 0, lowest = 0xFF;
 	    for (int j = 0; j < g_MapsizeY; ++j) {
 		if (blocked[blockedOffset + (j+offset) % g_MapsizeY]) {
@@ -853,7 +853,7 @@ void optimizeTerrain3()
 		    if (*block != AIR && lowest == 0xFF) {
 			lowest = j;
 		    }
-		    if (colors[*block][PALPHA] == 255) {
+		    if (colors[(uint8_t) *block][PALPHA] == 255) {
 			blocked[blockedOffset + (j+offset) % g_MapsizeY] = 1;
 		    }
 		    if (*block != AIR) highest = j;
@@ -916,7 +916,6 @@ void undergroundMode(bool explore)
 				}
 			    }
 			}
-			// /
 		    }
 		}
 	    }
@@ -928,7 +927,7 @@ void undergroundMode(bool explore)
 	    size_t ground = 0;
 	    size_t cave = 0;
 	    for (int y = g_MapsizeY - 1; y >= 0; --y) {
-		uint8_t &c = BLOCKAT(x, y, z);
+		uint16_t &c = BLOCKAT(x, y, z);
 		if (c != AIR && cave > 0) { // Found a cave, leave floor
 		    if (c == GRASS || c == LEAVES || c == SNOW || GETLIGHTAT(x, y, z) == 0) {
 			c = AIR; // But never count snow or leaves

@@ -68,7 +68,7 @@ static bool loadAllRegions();
 static bool loadRegion(const char* file, const bool mustExist, int &loadedChunks);
 static bool loadTerrainRegion(const char *fromPath, int &loadedChunks);
 static bool scanWorldDirectoryRegion(const char *fromPath);
-static inline void assignBlock(const uint8_t &source, uint8_t* &dest, int &x, int &y, int &z, uint8_t* &justData);
+static inline void assignBlock(const uint8_t &source, uint16_t* &dest, int &x, int &y, int &z, uint8_t* &justData);
 static inline void lightCave(const int x, const int y, const int z);
 
 int getWorldFormat(const char *worldPath)
@@ -443,7 +443,7 @@ static bool loadChunk(const char *streamOrFile, const size_t streamLen)
 		    *bp-- = AIR;
 		}
 	    }
-	    uint8_t *targetBlock;
+	    uint16_t *targetBlock;
 	    if (g_Orientation == East) {
 		targetBlock = &BLOCKEAST(x + offsetx, 0, z + offsetz);
 	    } else if (g_Orientation == North) {
@@ -557,7 +557,8 @@ static bool loadAnvilChunk(NBT_Tag * const level, const int32_t chunkX, const in
 	// Copy data
 	for (int x = 0; x < CHUNKSIZE_X; ++x) {
 	    for (int z = 0; z < CHUNKSIZE_Z; ++z) {
-		uint8_t *targetBlock, *lightByte;
+		uint8_t *lightByte;
+		uint16_t *targetBlock;
 		if (g_Orientation == East) {
 		    targetBlock = &BLOCKEAST(x + offsetx, yoffset, z + offsetz);
 		    if (g_Skylight || g_Nightmode) lightByte = &SETLIGHTEAST(x + offsetx, yoffset, z + offsetz);
@@ -770,7 +771,7 @@ static void allocateTerrain()
     memset(g_HeightMap, 0, g_MapsizeX * g_MapsizeZ * sizeof(uint16_t));
     const size_t terrainsize = g_MapsizeZ * g_MapsizeX * g_MapsizeY;
     printf("Terrain takes up %.2fMiB", float(terrainsize / float(1024 * 1024)));
-    g_Terrain = new uint8_t[terrainsize];
+    g_Terrain = new uint16_t[terrainsize];
     memset(g_Terrain, 0, terrainsize); // Preset: Air
     if (g_Nightmode || g_Underground || g_BlendUnderground || g_Skylight) {
 	lightsize = g_MapsizeZ * g_MapsizeX * ((g_MapsizeY + (g_MapminY % 2 == 0 ? 1 : 2)) / 2);
@@ -1028,12 +1029,19 @@ static void loadBiomeChunk(const char* path, const int chunkX, const int chunkZ)
     delete[] file;
 }
 
-static inline void assignBlock(const uint8_t &block, uint8_t* &targetBlock, int &x, int &y, int &z, uint8_t* &justData)
+static inline void assignBlock(const uint8_t &block, uint16_t* &targetBlock, int &x, int &y, int &z, uint8_t* &justData)
 {
+    uint8_t col;
+    if (g_WorldFormat == 2) {
+	col = (justData[(x + (z + (y * CHUNKSIZE_Z)) * CHUNKSIZE_X) / 2] >> ((x % 2) * 4)) & 0xF;
+    } else {
+	col = (justData[(y + (z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y) / 2] >> ((y % 2) * 4)) & 0xF;
+    }
+
     if ((g_NoWater && (block == WATER || block == FLOWING_WATER))) {
 	*targetBlock++ = AIR;
     } else {
-	*targetBlock++ = block;
+	*targetBlock++ = (block+256*col);
     }
     /*if (block == WOOL || block == LOG || block == LEAVES || block == STEP || block == DOUBLESTEP || block == WOOD || block == WOODEN_STEP || block == WOODEN_DOUBLE_STEP 
 	    || block == 95 || block == 160 || block == 159 || block == 171 || block == 38 || block == 175 || block == SAND || block == 153 
@@ -1042,12 +1050,6 @@ static inline void assignBlock(const uint8_t &block, uint8_t* &targetBlock, int 
 	    || block == 131 || block == 132 || block == 150 || block == 147 || block == 148 || block == 68 || block == 69 || block == 70
 	    || (block >= 198 && block <= 217) || block == 176 || block == 177
 	    || block == 72 || block == 77 || block == 143 || block == 36) {  //three last lines contains colors for carpets
-	uint8_t col;
-	if (g_WorldFormat == 2) {
-	    col = (justData[(x + (z + (y * CHUNKSIZE_Z)) * CHUNKSIZE_X) / 2] >> ((x % 2) * 4)) & 0xF;
-	} else {
-	    col = (justData[(y + (z + (x * CHUNKSIZE_Z)) * CHUNKSIZE_Y) / 2] >> ((y % 2) * 4)) & 0xF;
-	}
 	if (block == 131 || block == 132 || block == 150 || block == 147 || block == 148 || block == 68 || block == 69 || block == 70
 		|| block == 72 || block == 77 || block == 143 || block == 36 || block == 166 || block == 140 || block == 144
 		|| block == 176 || block == 177 || block == 209 || block == 217 || block == 198
@@ -1373,7 +1375,7 @@ void uncoverNether()
 	for (size_t z = CHUNKSIZE_Z; z < g_MapsizeZ - CHUNKSIZE_Z; ++z) {
 	    // Remove blocks on top, otherwise there is not much to see here
 	    int massive = 0;
-	    uint8_t *bp = g_Terrain + ((z + (x * g_MapsizeZ) + 1) * g_MapsizeY) - 1;
+	    uint16_t *bp = g_Terrain + ((z + (x * g_MapsizeZ) + 1) * g_MapsizeY) - 1;
 	    int i;
 	    for (i = 0; i < to; ++i) { // Go down 74 blocks from the ceiling to see if there is anything except solid
 		if (massive && (*bp == AIR || *bp == LAVA || *bp == FLOWING_LAVA)) {

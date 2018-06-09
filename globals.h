@@ -48,14 +48,15 @@ extern uint64_t g_BiomeMapSize;
 extern uint8_t *g_Grasscolor, *g_Leafcolor, *g_TallGrasscolor;
 extern uint16_t *g_BiomeMap;
 extern int g_GrasscolorDepth, g_FoliageDepth;
+extern uint8_t g_LastDoubleFlower;
 
 extern int g_MarkerCount;
 extern Marker g_Markers[MAX_MARKERS];
 
 // 3D arrays holding terrain/lightmap
-extern uint8_t *g_Terrain, *g_Light;
+extern uint8_t *g_Light;
 // 2D array to store min and max block height per X/Z - it's 2 bytes per index, upper for highest, lower for lowest (don't ask!)
-extern uint16_t *g_HeightMap;
+extern uint16_t *g_Terrain, *g_HeightMap;
 
 // If output is to be split up (for google maps etc) this contains the path to output to, NULL otherwise
 extern char *g_TilePath;
