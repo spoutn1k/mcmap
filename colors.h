@@ -2,7 +2,7 @@
 #define _COLORS_
 
 #include "helper.h"
-#include "blocks.h"
+#include "block.h"
 #include <cmath>
 
 // Byte order see below. Colors aligned to word boundaries for some speedup
@@ -37,7 +37,6 @@ extern uint8_t colors[512][8];
                                         double(PRED[c]) *  double(PRED[c]) * .236 + \
                                         double(PGREEN[c]) *  double(PGREEN[c]) * .601 + \
                                         double(PBLUE[c]) *  double(PBLUE[c]) * .163)
-typedef uint16_t Block;
 
 void loadColors();
 bool loadColorsFromFile(const char *file);
@@ -45,10 +44,10 @@ bool dumpColorsToFile(const char *file);
 bool extractColors(const char *file);
 bool loadBiomeColors(const char* path);
 
-uint8_t getId(Block b);
-uint8_t getVariant(Block b);
-uint8_t setVariant(Block b);
-uint8_t* getColor(Block b);
+uint8_t getId(uint16_t b);
+uint8_t getVariant(uint16_t b);
+uint8_t setVariant(uint16_t b);
+uint8_t* getColor(uint16_t b);
 
 #define	AIR	0
 #define	STONE	1

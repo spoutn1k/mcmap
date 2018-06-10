@@ -194,11 +194,11 @@ void loadColors()
     SETCOLOR		(TRAPPED_CHEST,	125,	   91,	   38,	  255   ); //trapped chest
     //SETCOLOR		(LIGHT_WEIGHTED_PRESSURE_PLATE	,	125,	   91,	   38,	  255   ); //Not Set
     //SETCOLOR		(HEAVY_WEIGHTED_PRESSURE_PLATE,	125,	   91,	   38,	  255   ); //Not Set
-    //SETCOLOR		(UNPOWERED_COMPARATOR,	125,	   91,	   38,	  255   ); //Not Set
-    //SETCOLOR		(POWERED_COMPARATOR,	125,	   91,	   38,	  255   ); //Not Set
+    SETCOLOR		(UNPOWERED_COMPARATOR,	151,	   147,	   147,	  255   );
+    SETCOLOR		(POWERED_COMPARATOR,	161,	   147,	   147,	  255   );
     SETCOLOR		(DAYLIGHT_DETECTOR,	187,	158,	109,	255 ); //daylight sensor
     SETCOLOR		(REDSTONE_BLOCK,	227,	 38,	 12,	255 ); //redstone block
-    //SETCOLOR		(QUARTZ_ORE,	227,	 38,	 12,	255 ); //Not Set
+    SETCOLOR		(QUARTZ_ORE,	168,	54,	69,	255 ); //quartz
     SETCOLOR		(HOPPER,	110,	110,	110,	255 ); //hopper
     SETCOLOR		(QUARTZ_BLOCK,	240,	238,	232,	255 ); //quartz
     SETCOLOR		(QUARTZ_STAIRS,	240,	238,	232,	255 ); //quartz stairs
@@ -209,7 +209,7 @@ void loadColors()
     SETCOLOR		(LEAVES2,	54,	135,	40,	180 ); //leaves Acacia/Dark Oak
     SETCOLOR		(LOG2,		72,	 72,	72,	255 ); //log Acacia/Dark Oak
     SETCOLOR		(ACACIA_STAIRS,	156,	127,	78,	255); // Acacia Wood Stairs
-    SETCOLOR		(DARK_OAK_STAIRS,	156,	127,	78,	255); // Dark Oak Wood Stairs
+    SETCOLOR		(DARK_OAK_STAIRS, 67, 53, 10, 254); // Dark Oak
     SETCOLOR		(SLIME,		61,	255,	61,	96  ); //slime block
     SETCOLOR		(BARRIER,	0,	0,	0,	0); // Not Set
     SETCOLOR		(IRON_TRAPDOOR,	0,	0,	0,	0); // Not Set
@@ -226,8 +226,8 @@ void loadColors()
     SETCOLOR		(DAYLIGHT_DETECTOR_INVERTED,	187,	158,	109,	255 ); //daylight sensor
     SETCOLOR		(RED_SANDSTONE,	 225,	140,	 73,	255);
     SETCOLOR		(RED_SANDSTONE_STAIRS,	 225,	140,	 73,	255);
-    SETCOLOR		(DOUBLE_STONE_SLAB2,	200,	200,	200,	255);
-    SETCOLOR		(STONE_SLAB2,	200,	200,	200,	254); // Not fully opaque to prevent culling on this one
+    SETCOLOR		(DOUBLE_STONE_SLAB2,	225,	140,	73,	255);
+    SETCOLOR		(STONE_SLAB2,	225,	140,	73,	254); // Not fully opaque to prevent culling on this one
     SETCOLOR		(SPRUCE_FENCE_GATE,	137,	112,	65,	225);
     SETCOLOR		(BIRCH_FENCE_GATE,	137,	112,	65,	225);
     SETCOLOR		(JUNGLE_FENCE_GATE,	137,	112,	65,	225);
@@ -243,7 +243,7 @@ void loadColors()
     SETCOLOR		(JUNGLE_DOOR,	136,	109,	67,	255);
     SETCOLOR		(ACACIA_DOOR,	136,	109,	67,	255);
     SETCOLOR		(DARK_OAK_DOOR,	136,	109,	67,	255);
-    SETCOLOR		(END_ROD,	0,	0,	0,	0);
+    SETCOLOR		(END_ROD,	224,	236,	237,	255);
     SETCOLOR		(CHORUS_PLANT,	54,	24,	30,	225);
     SETCOLOR		(CHORUS_FLOWER,	54,	24,	30,	225);
     SETCOLOR		(PURPUR_BLOCK,	155,	63,	176,	255  ); //purpur blocks
@@ -321,8 +321,8 @@ void loadColors()
     SETCOLORNOISE(267, 103,77,46,255, 1); // Spruce
     SETCOLORNOISE(268, 195,179,123,255, 3); // Birch
     SETCOLORNOISE(269, 154,110,77,255, 2); // Jungle
-    SETCOLORNOISE	(270,	172,	92,	0,	255,	11); // Acacia
-    SETCOLORNOISE	(271,	57,	43,	0,	255,	11); // Dark Oak
+    SETCOLORNOISE	(270,172,92,0,255,11); // Acacia
+    SETCOLORNOISE	(271,67,53,10,255,11); // Dark Oak
 
     // Sapling Variants
     SETVAR(SAPLING, 17);
@@ -341,13 +341,14 @@ void loadColors()
     // Log Variants
     SETVAR(LOG, 25);
     SETNBVAR(LOG, 4);
-    SETCOLOR(280, 102,	81,	51,	255); // Oak
+    SETCOLOR(280, 102, 81, 51, 255); // Oak
     SETCOLOR(281, 70,50,32, 255); // Spruce trunk
     SETCOLORNOISE(282, 206,206,201, 255, 5); // Birch trunk
     SETCOLOR(283, 122,91,51, 255); // Jungle trunk
 
     // Leaves Variants
     SETVAR(LEAVES, 29);
+    SETNBVAR(LEAVES, 4);
     SETCOLORNOISE	(284,	54,	135,	40,	180,	12); // Oak leaves
     SETCOLORNOISE	(285,	44,	84,	44,	160,	20); // Spruce leaves
     SETCOLORNOISE	(286,	85,	124,	60,	170,	11); // Birch leaves
@@ -392,14 +393,14 @@ void loadColors()
     // Flower Variants
     SETVAR(RED_FLOWER, 57);
     SETCOLOR(312, 255, 255, 0, 254); // Not fully opaque to prevent culling on this one
-    SETCOLOR(313, 120, 158, 241, 254   ); //blue orchid
-    SETCOLOR(314, 200,  75, 210, 254 ); //allium
-    SETCOLOR(315, 168, 172, 172, 254 ); //azure bluet
-    SETCOLOR(316, 173,  44,  40, 254 ); //red tulip
-    SETCOLOR(317, 244, 137,  54, 254 ); //orange tulip
-    SETCOLOR(318, 255, 255, 255, 254 ); //white tulip
-    SETCOLOR(319, 237, 141, 164, 254 ); //pink tulip
-    SETCOLOR(320, 168, 172, 172, 254 ); //oxeye daisy
+    SETCOLOR(313, 120, 158, 241, 254); //blue orchid
+    SETCOLOR(314, 200,  75, 210, 254); //allium
+    SETCOLOR(315, 168, 172, 172, 254); //azure bluet
+    SETCOLOR(316, 173,  44,  40, 254); //red tulip
+    SETCOLOR(317, 244, 137,  54, 254); //orange tulip
+    SETCOLOR(318, 255, 255, 255, 254); //white tulip
+    SETCOLOR(319, 237, 141, 164, 254); //pink tulip
+    SETCOLOR(320, 168, 172, 172, 254); //oxeye daisy
 
     // Double Slab Variants
     SETVAR(DOUBLE_STONE_SLAB, 66);
@@ -458,414 +459,293 @@ void loadColors()
     SETCOLORNOISE	(361,	122,	122,	122,	255,	7); // Cracked
     SETCOLORNOISE	(362,	122,	122,	122,	255,	7); // Chiseled
 
+    // Double Wooden Slab Variants
+    SETVAR(DOUBLE_WOODEN_SLAB, 108);
+    SETNBVAR(DOUBLE_WOODEN_SLAB, 8);
+    SETCOLORNOISE(363, 156, 127, 78, 255, 11); // Oak
+    SETCOLORNOISE(364, 103, 77, 46, 255, 1); // Spruce
+    SETCOLORNOISE(365, 195, 179, 123, 255, 3); // Birch
+    SETCOLORNOISE(366, 154, 110, 77, 255, 2); // Jungle
+    SETCOLORNOISE(367, 172, 92, 0, 255, 11); // Acacia
+    SETCOLORNOISE(368, 67, 53, 10, 255, 11); // Dark Oak
+
     // Wooden Slab Variants
-    SETVAR(WOODEN_SLAB, 108);
+    SETVAR(WOODEN_SLAB, 114);
     SETNBVAR(WOODEN_SLAB, 8);
-    SETCOLORNOISE(363,	156,	127,	78,	254,	11); // Oak
-    SETCOLORNOISE(364, 103,77,46,254, 1); // Spruce
-    SETCOLORNOISE(365, 195,179,123,254, 3); // Birch
-    SETCOLORNOISE(366, 154,110,77,254, 2); // Jungle
-    SETCOLORNOISE(367,	172,	92,	0,	254,	11); // Acacia
-    SETCOLORNOISE(368,	57,	43,	0,	254,	11); // Dark Oak
+    SETCOLORNOISE(369, 156, 127, 78, 254, 11); // Oak
+    SETCOLORNOISE(370, 103, 77, 46, 254, 1); // Spruce
+    SETCOLORNOISE(371, 195, 179, 123, 254, 3); // Birch
+    SETCOLORNOISE(372, 154, 110, 77, 254, 2); // Jungle
+    SETCOLORNOISE(373, 172, 92, 0, 254, 11); // Acacia
+    SETCOLORNOISE(374, 67, 53, 10, 254, 11); // Dark Oak
 
-    SETVAR(COBBLESTONE_WALL, 114);
-    SETCOLORNOISE	(369,	   128,	  128,	  128,	  255,	  16); // cobblestone wall
-    SETCOLORNOISE	(370,	90,	108,	90,	255,	27); // Mossy cobblestone wall
+    SETVAR(COBBLESTONE_WALL, 120);
+    SETCOLORNOISE	(375,	   128,	  128,	  128,	  255,	  16); // cobblestone wall
+    SETCOLORNOISE	(376,	90,	108,	90,	255,	27); // Mossy cobblestone wall
 
-    SETVAR(QUARTZ_BLOCK, 116);
-    SETCOLOR		(371,	240,	238,	232,	255 ); // Regular
-    SETCOLOR		(372,	240,	238,	232,	255 ); // Chiseled
-    SETCOLOR		(373,	240,	238,	232,	255 ); // Pillar
+    SETVAR(QUARTZ_BLOCK, 122);
+    SETCOLOR(377, 240, 238, 232, 255); // Regular
+    SETCOLOR(378, 240, 238, 232, 255); // Chiseled
+    SETCOLOR(379, 240, 238, 232, 255); // Pillar
 
     // Stained Clay Variants
-    SETVAR(STAINED_HARDENED_CLAY, 119);
-    SETCOLOR(374,  241, 210, 192, 255   ); //White Stained Clay
-    SETCOLOR(375,  194, 116,  69, 255   ); //Orange Stained Clay
-    SETCOLOR(376,  182, 120, 140, 255   ); //Magenta Stained Clay
-    SETCOLOR(377,  141, 137, 167, 255   ); //Light Blue Stained Clay
-    SETCOLOR(378,  219, 165,  66, 255   ); //Yellow Stained Clay
-    SETCOLOR(379,  137, 149,  84, 255   ); //Lime Stained Clay
-    SETCOLOR(380,  194, 110, 110, 255   ); //Pink Stained Clay
-    SETCOLOR(381,   97,  82,  75, 255   ); //Gray Stained Clay
-    SETCOLOR(382,  168, 138, 128, 255   ); //Light Gray Stained Clay
-    SETCOLOR(383,  119, 122, 122, 255   ); //Cyan Stained Clay
-    SETCOLOR(384,  152, 102, 117, 255   ); //Purple Stained Clay
-    SETCOLOR(385,  103,  88, 120, 255   ); //Blue Stained Clay
-    SETCOLOR(386,  109,  82,  66, 255   ); //Brown Stained Clay
-    SETCOLOR(387,  105, 112,  70, 255   ); //Green Stained Clay
-    SETCOLOR(388,  176,  93,  78, 255   ); //Red Stained Clay
-    SETCOLOR(389,   67,  52,  46, 255   ); //Black Stained Clay
+    SETVAR(STAINED_HARDENED_CLAY, 125);
+    SETCOLOR(380,  241, 210, 192, 255); //White Stained Clay
+    SETCOLOR(381,  194, 116,  69, 255); //Orange Stained Clay
+    SETCOLOR(382,  182, 120, 140, 255); //Magenta Stained Clay
+    SETCOLOR(383,  141, 137, 167, 255); //Light Blue Stained Clay
+    SETCOLOR(384,  219, 165,  66, 255); //Yellow Stained Clay
+    SETCOLOR(385,  137, 149,  84, 255); //Lime Stained Clay
+    SETCOLOR(386,  194, 110, 110, 255); //Pink Stained Clay
+    SETCOLOR(387,   97,  82,  75, 255); //Gray Stained Clay
+    SETCOLOR(388,  168, 138, 128, 255); //Light Gray Stained Clay
+    SETCOLOR(389,  119, 122, 122, 255); //Cyan Stained Clay
+    SETCOLOR(390,  152, 102, 117, 255); //Purple Stained Clay
+    SETCOLOR(391,  103,  88, 120, 255); //Blue Stained Clay
+    SETCOLOR(392,  109,  82,  66, 255); //Brown Stained Clay
+    SETCOLOR(393,  105, 112,  70, 255); //Green Stained Clay
+    SETCOLOR(394,  176,  93,  78, 255); //Red Stained Clay
+    SETCOLOR(395,   67,  52,  46, 255); //Black Stained Clay
 
     // Stained Glass Panes Variants
-    SETVAR(STAINED_GLASS, 135);
-    SETCOLOR(390, 255, 255,  255,  100  ); //White Stained Glass Pane
-    SETCOLOR(391,  244, 137,  54,  40   ); //Orange Stained Glass Pane
-    SETCOLOR(392,  200,  75, 210,  40   ); //Magenta Stained Glass Pane
-    SETCOLOR(393,  120, 158, 241,  40   ); //Light Blue Stained Glass Pane
-    SETCOLOR(394,  204, 200,  28,  40   ); //Yellow Stained Glass Pane
-    SETCOLOR(395,   59, 210,  47,  40   ); //Lime Stained Glass Pane
-    SETCOLOR(396,  237, 141, 164,  40   ); //Pink Stained Glass Pane
-    SETCOLOR(397,   76,  76,  76,  40   ); //Gray Stained Glass Pane
-    SETCOLOR(398,  168, 172, 172,  40   ); //Light Gray Stained Glass Pane
-    SETCOLOR(399,   39, 116, 149,  40   ); //Cyan Stained Glass Pane
-    SETCOLOR(400,  133,  53, 195,  40   ); //Purple Stained Glass Pane
-    SETCOLOR(401,   38,  51, 160,  40   ); //Blue Stained Glass Pane
-    SETCOLOR(402,   85,  51,  27,  40   ); //Brown Stained Glass Pane
-    SETCOLOR(403,   55,  77,  24,  40   ); //Green Stained Glass Pane
-    SETCOLOR(404,  173,  44,  40,  40   ); //Red Stained Glass Pane
-    SETCOLOR(405,   32,  27,  27,  40   ); //Black Stained Glass Pane
+    SETVAR(STAINED_GLASS, 141);
+    SETCOLOR(396, 255, 255,  255,  100); //White Stained Glass Pane
+    SETCOLOR(397,  244, 137,  54,  40); //Orange Stained Glass Pane
+    SETCOLOR(398,  200,  75, 210,  40); //Magenta Stained Glass Pane
+    SETCOLOR(399,  120, 158, 241,  40); //Light Blue Stained Glass Pane
+    SETCOLOR(400,  204, 200,  28,  40); //Yellow Stained Glass Pane
+    SETCOLOR(401,   59, 210,  47,  40); //Lime Stained Glass Pane
+    SETCOLOR(402,  237, 141, 164,  40); //Pink Stained Glass Pane
+    SETCOLOR(403,   76,  76,  76,  40); //Gray Stained Glass Pane
+    SETCOLOR(404,  168, 172, 172,  40); //Light Gray Stained Glass Pane
+    SETCOLOR(405,   39, 116, 149,  40); //Cyan Stained Glass Pane
+    SETCOLOR(406,  133,  53, 195,  40); //Purple Stained Glass Pane
+    SETCOLOR(407,   38,  51, 160,  40); //Blue Stained Glass Pane
+    SETCOLOR(408,   85,  51,  27,  40); //Brown Stained Glass Pane
+    SETCOLOR(409,   55,  77,  24,  40); //Green Stained Glass Pane
+    SETCOLOR(410,  173,  44,  40,  40); //Red Stained Glass Pane
+    SETCOLOR(411,   32,  27,  27,  40); //Black Stained Glass Pane
 
-    SETVAR(LEAVES2, 151);
-    SETCOLOR	(406,	54,	135,	40,	180 ); // Acacia leaves
-    SETCOLOR	(407,	44,	84,	44,	160); // Dark Oak leaves
+    SETVAR(LEAVES2, 157);
+    SETNBVAR(LEAVES2, 2);
+    SETCOLOR(412, 54, 135, 40, 180); // Acacia leaves
+    SETCOLOR(413, 44, 84, 44, 160); // Dark Oak leaves
 
-    SETVAR(LOG2, 153);
+    SETVAR(LOG2, 159);
     SETNBVAR(LOG2, 2); // Only 2 variants
-    SETCOLOR (408, 115,	115, 115, 255); // Acacia log
-    SETCOLOR (409, 72, 72, 72, 255 ); // Dark Oak log
+    SETCOLOR (414, 115,	115, 115, 255); // Acacia log
+    SETCOLOR (415, 58, 37, 37, 255 ); // Dark Oak log
 
-    SETVAR(PRISMARINE, 155);
-    SETCOLOR		(410,	25,	146,	132,	255  ); // Regular
-    SETCOLOR		(411,	25,	146,	132,	255  ); // Bricks
-    SETCOLOR		(412,	15,	136,	122,	255  ); // Dark
+    SETVAR(PRISMARINE, 161);
+    SETCOLOR(416, 25, 146, 132, 255); // Regular
+    SETCOLOR(417, 25, 146, 132, 255); // Bricks
+    SETCOLOR(418, 15, 136, 122, 255); // Dark
     
-    SETVAR(CARPET, 158);
-    SETCOLOR(413,  255, 255, 255,  254   ); //White carpet
-    SETCOLOR(414,  244, 137,  54,  254   ); //Orange carpet
-    SETCOLOR(415,  200,  75, 210,  254   ); //Magenta carpet
-    SETCOLOR(416,  120, 158, 241,  254   ); //Light Blue carpet
-    SETCOLOR(417,  204, 200,  28,  254   ); //Yellow carpet
-    SETCOLOR(418,   59, 210,  47,  254   ); //Lime carpet
-    SETCOLOR(419,  237, 141, 164,  254   ); //Pink carpet
-    SETCOLOR(420,   76,  76,  76,  254   ); //Gray carpet
-    SETCOLOR(421,  168, 172, 172,  254   ); //Light Gray
-    SETCOLOR(422,   39, 116, 149,  254   ); //Cyan carpet
-    SETCOLOR(423,  133,  53, 195,  254   ); //Purple carpet
-    SETCOLOR(424,   38,  51, 160,  254   ); //Blue carpet
-    SETCOLOR(425,   85,  51,  27,  254   ); //Brown carpet
-    SETCOLOR(426,   55,  77,  24,  254   ); //Green carpet
-    SETCOLOR(427,  173,  44,  40,  254   ); //Red carpet
-    SETCOLOR(428,   32,  27,  27,  254   ); //Black carpet
+    SETVAR(CARPET, 164);
+    SETCOLOR(419,  255, 255, 255,  254); //White carpet
+    SETCOLOR(420,  244, 137,  54,  254); //Orange carpet
+    SETCOLOR(421,  200,  75, 210,  254); //Magenta carpet
+    SETCOLOR(422,  120, 158, 241,  254); //Light Blue carpet
+    SETCOLOR(423,  204, 200,  28,  254); //Yellow carpet
+    SETCOLOR(424,   59, 210,  47,  254); //Lime carpet
+    SETCOLOR(425,  237, 141, 164,  254); //Pink carpet
+    SETCOLOR(426,   76,  76,  76,  254); //Gray carpet
+    SETCOLOR(427,  168, 172, 172,  254); //Light Gray
+    SETCOLOR(428,   39, 116, 149,  254); //Cyan carpet
+    SETCOLOR(429,  133,  53, 195,  254); //Purple carpet
+    SETCOLOR(430,   38,  51, 160,  254); //Blue carpet
+    SETCOLOR(431,   85,  51,  27,  254); //Brown carpet
+    SETCOLOR(432,   55,  77,  24,  254); //Green carpet
+    SETCOLOR(433,  173,  44,  40,  254); //Red carpet
+    SETCOLOR(434,   32,  27,  27,  254); //Black carpet
 
-    SETVAR(DOUBLE_PLANT, 174);
-    SETCOLOR(429, 255, 255,  0, 254); // Sunflower
-    SETCOLOR(430, 200,  75, 210, 254 ); //Lilac
-    SETCOLORNOISE(431,	123,	79,	25,	254,	25); // Grass
-    SETCOLORNOISE(432,	110,	166,	68,	254,	12); // Fern
-    SETCOLOR(433,	255,	255,	0,	254); // Rose Bush
-    SETCOLOR(434, 237, 141, 164, 254 ); //Peony
+    SETVAR(DOUBLE_PLANT, 180);
+    SETCOLOR(435, 255, 255, 0, 254); // Sunflower
+    SETCOLOR(436, 200, 75, 210, 254); //Lilac
+    SETCOLORNOISE(437, 110, 166, 68, 254, 25); // Grass
+    SETCOLORNOISE(438, 110, 166, 68, 254, 12); // Fern
+    SETCOLOR(439, 255, 255, 0, 254); // Rose Bush
+    SETCOLOR(440, 237, 141, 164, 254); //Peony
     
-    SETVAR(RED_SANDSTONE, 180);
-    SETCOLOR(435, 225, 140, 73,	255); // Regular
-    SETCOLOR(436, 225, 140, 73,	255); // Chiseled
-    SETCOLOR(437, 225, 140, 73,	255); // Smooth
+    SETVAR(RED_SANDSTONE, 186);
+    SETCOLOR(441, 225, 140, 73,	255); // Regular
+    SETCOLOR(442, 225, 140, 73,	255); // Chiseled
+    SETCOLOR(443, 225, 140, 73,	255); // Smooth
 
-    SETVAR(CONCRETE, 183);
-    SETCOLOR(438, 208, 214, 215, 255); // White
-    SETCOLOR(439, 225, 99, 3, 255); // Orange
-    SETCOLOR(440, 169, 48, 159, 255); // Magenta
-    SETCOLOR(441, 36, 138, 200, 255); // Light Blue
-    SETCOLOR(442, 240, 175, 21, 255); // Yellow
-    SETCOLOR(443, 95, 170, 25, 255); // Lime
-    SETCOLOR(444, 214, 101, 143, 255); // Pink
-    SETCOLOR(445, 54, 57, 61, 255); // Gray
-    SETCOLOR(446, 125, 125, 115, 255); // Silver
-    SETCOLOR(447, 22, 120, 137, 255); // Cyan
-    SETCOLOR(448, 100, 31, 156, 255); // Purple
-    SETCOLOR(449, 45, 47, 144, 255); // Blue
-    SETCOLOR(450, 96, 59, 31, 255); // Brown
-    SETCOLOR(451, 74, 92, 37, 255); // Green
-    SETCOLOR(452, 143, 33, 33, 255); // Red
-    SETCOLOR(453, 9, 11, 16, 255); // Black
+    SETVAR(CONCRETE, 189);
+    SETCOLOR(444, 208, 214, 215, 255); // White
+    SETCOLOR(445, 225, 99, 3, 255); // Orange
+    SETCOLOR(446, 169, 48, 159, 255); // Magenta
+    SETCOLOR(447, 36, 138, 200, 255); // Light Blue
+    SETCOLOR(448, 240, 175, 21, 255); // Yellow
+    SETCOLOR(449, 95, 170, 25, 255); // Lime
+    SETCOLOR(450, 214, 101, 143, 255); // Pink
+    SETCOLOR(451, 54, 57, 61, 255); // Gray
+    SETCOLOR(452, 125, 125, 115, 255); // Silver
+    SETCOLOR(453, 22, 120, 137, 255); // Cyan
+    SETCOLOR(454, 100, 31, 156, 255); // Purple
+    SETCOLOR(455, 45, 47, 144, 255); // Blue
+    SETCOLOR(456, 96, 59, 31, 255); // Brown
+    SETCOLOR(457, 74, 92, 37, 255); // Green
+    SETCOLOR(458, 143, 33, 33, 255); // Red
+    SETCOLOR(459, 9, 11, 16, 255); // Black
     
-    SETVAR(CONCRETE_POWDER, 199);
-    SETCOLOR(454, 208, 214, 215, 255); // White
-    SETCOLOR(455, 225, 99, 3, 255); // Orange
-    SETCOLOR(456, 169, 48, 159, 255); // Magenta
-    SETCOLOR(457, 36, 138, 200, 255); // Light Blue
-    SETCOLOR(458, 240, 175, 21, 255); // Yellow
-    SETCOLOR(459, 95, 170, 25, 255); // Lime
-    SETCOLOR(460, 214, 101, 143, 255); // Pink
-    SETCOLOR(461, 54, 57, 61, 255); // Gray
-    SETCOLOR(462, 125, 125, 115, 255); // Silver
-    SETCOLOR(463, 22, 120, 137, 255); // Cyan
-    SETCOLOR(464, 100, 31, 156, 255); // Purple
-    SETCOLOR(465, 45, 47, 144, 255); // Blue
-    SETCOLOR(466, 96, 59, 31, 255); // Brown
-    SETCOLOR(467, 74, 92, 37, 255); // Green
-    SETCOLOR(468, 143, 33, 33, 255); // Red
-    SETCOLOR(469, 9, 11, 16, 255); // Black
+    SETVAR(CONCRETE_POWDER, 205);
+    SETCOLOR(460, 208, 214, 215, 255); // White
+    SETCOLOR(461, 225, 99, 3, 255); // Orange
+    SETCOLOR(462, 169, 48, 159, 255); // Magenta
+    SETCOLOR(463, 36, 138, 200, 255); // Light Blue
+    SETCOLOR(464, 240, 175, 21, 255); // Yellow
+    SETCOLOR(465, 95, 170, 25, 255); // Lime
+    SETCOLOR(466, 214, 101, 143, 255); // Pink
+    SETCOLOR(467, 54, 57, 61, 255); // Gray
+    SETCOLOR(468, 125, 125, 115, 255); // Silver
+    SETCOLOR(469, 22, 120, 137, 255); // Cyan
+    SETCOLOR(470, 100, 31, 156, 255); // Purple
+    SETCOLOR(471, 45, 47, 144, 255); // Blue
+    SETCOLOR(472, 96, 59, 31, 255); // Brown
+    SETCOLOR(473, 74, 92, 37, 255); // Green
+    SETCOLOR(474, 143, 33, 33, 255); // Red
+    SETCOLOR(475, 9, 11, 16, 255); // Black
 
     /* Block type definition */
     
-    SETBLOCKTYPE(GRASS, Blocks::GROWN);
+    SETBLOCKTYPE(GRASS, Block::GROWN);
 
-    SETBLOCKTYPE(SNOW, Blocks::THIN);
-    SETBLOCKTYPE(TRAPDOOR, Blocks::THIN);
-    SETBLOCKTYPE(IRON_TRAPDOOR, Blocks::THIN);
+    SETBLOCKTYPE(SNOW, Block::THIN);
+    SETBLOCKTYPE(TRAPDOOR, Block::THIN);
+    SETBLOCKTYPE(IRON_TRAPDOOR, Block::THIN);
 
-    SETBLOCKTYPE(CARPET, Blocks::THIN);
-    SETBLOCKTYPE(413, Blocks::THIN);
-    SETBLOCKTYPE(414, Blocks::THIN);
-    SETBLOCKTYPE(415, Blocks::THIN);
-    SETBLOCKTYPE(416, Blocks::THIN);
-    SETBLOCKTYPE(417, Blocks::THIN);
-    SETBLOCKTYPE(418, Blocks::THIN);
-    SETBLOCKTYPE(419, Blocks::THIN);
-    SETBLOCKTYPE(420, Blocks::THIN);
-    SETBLOCKTYPE(421, Blocks::THIN);
-    SETBLOCKTYPE(422, Blocks::THIN);
-    SETBLOCKTYPE(423, Blocks::THIN);
-    SETBLOCKTYPE(424, Blocks::THIN);
-    SETBLOCKTYPE(425, Blocks::THIN);
-    SETBLOCKTYPE(426, Blocks::THIN);
-    SETBLOCKTYPE(427, Blocks::THIN);
-    SETBLOCKTYPE(428, Blocks::THIN);
+    SETBLOCKTYPE(CARPET, Block::THIN);
+    SETBLOCKTYPE(419, Block::THIN);
+    SETBLOCKTYPE(420, Block::THIN);
+    SETBLOCKTYPE(421, Block::THIN);
+    SETBLOCKTYPE(422, Block::THIN);
+    SETBLOCKTYPE(423, Block::THIN);
+    SETBLOCKTYPE(424, Block::THIN);
+    SETBLOCKTYPE(425, Block::THIN);
+    SETBLOCKTYPE(426, Block::THIN);
+    SETBLOCKTYPE(427, Block::THIN);
+    SETBLOCKTYPE(428, Block::THIN);
+    SETBLOCKTYPE(429, Block::THIN);
+    SETBLOCKTYPE(430, Block::THIN);
+    SETBLOCKTYPE(431, Block::THIN);
+    SETBLOCKTYPE(432, Block::THIN);
+    SETBLOCKTYPE(433, Block::THIN);
+    SETBLOCKTYPE(434, Block::THIN);
 
-    SETBLOCKTYPE(TORCH, Blocks::THIN_ROD);
-    SETBLOCKTYPE(REDSTONE_TORCH, Blocks::THIN_ROD);
-    SETBLOCKTYPE(UNLIT_REDSTONE_TORCH, Blocks::THIN_ROD);
-    SETBLOCKTYPE(END_ROD, Blocks::THIN_ROD);
+    SETBLOCKTYPE(TORCH, Block::THIN_ROD);
+    SETBLOCKTYPE(REDSTONE_TORCH, Block::THIN_ROD);
+    SETBLOCKTYPE(UNLIT_REDSTONE_TORCH, Block::THIN_ROD);
+    SETBLOCKTYPE(END_ROD, Block::THIN_ROD);
 
-    SETBLOCKTYPE(FENCE, Blocks::ROD);
-    SETBLOCKTYPE(SPRUCE_FENCE, Blocks::ROD);
-    SETBLOCKTYPE(BIRCH_FENCE, Blocks::ROD);
-    SETBLOCKTYPE(JUNGLE_FENCE, Blocks::ROD);
-    SETBLOCKTYPE(ACACIA_FENCE, Blocks::ROD);
-    SETBLOCKTYPE(DARK_OAK_FENCE, Blocks::ROD);
-    SETBLOCKTYPE(FENCE_GATE, Blocks::ROD);
-    SETBLOCKTYPE(SPRUCE_FENCE_GATE, Blocks::ROD);
-    SETBLOCKTYPE(BIRCH_FENCE_GATE, Blocks::ROD);
-    SETBLOCKTYPE(JUNGLE_FENCE_GATE, Blocks::ROD);
-    SETBLOCKTYPE(ACACIA_FENCE_GATE, Blocks::ROD);
-    SETBLOCKTYPE(DARK_OAK_FENCE_GATE, Blocks::ROD);
-    SETBLOCKTYPE(VINE, Blocks::ROD);
-    SETBLOCKTYPE(IRON_BARS, Blocks::ROD);
-    SETBLOCKTYPE(NETHER_BRICK_FENCE, Blocks::ROD);
-    SETBLOCKTYPE(COBBLESTONE_WALL, Blocks::ROD);
-    SETBLOCKTYPE(369, Blocks::ROD);
-    SETBLOCKTYPE(370, Blocks::ROD);
-    SETBLOCKTYPE(CHORUS_PLANT, Blocks::ROD);
+    SETBLOCKTYPE(FENCE, Block::ROD);
+    SETBLOCKTYPE(SPRUCE_FENCE, Block::ROD);
+    SETBLOCKTYPE(BIRCH_FENCE, Block::ROD);
+    SETBLOCKTYPE(JUNGLE_FENCE, Block::ROD);
+    SETBLOCKTYPE(ACACIA_FENCE, Block::ROD);
+    SETBLOCKTYPE(DARK_OAK_FENCE, Block::ROD);
+    SETBLOCKTYPE(FENCE_GATE, Block::ROD);
+    SETBLOCKTYPE(SPRUCE_FENCE_GATE, Block::ROD);
+    SETBLOCKTYPE(BIRCH_FENCE_GATE, Block::ROD);
+    SETBLOCKTYPE(JUNGLE_FENCE_GATE, Block::ROD);
+    SETBLOCKTYPE(ACACIA_FENCE_GATE, Block::ROD);
+    SETBLOCKTYPE(DARK_OAK_FENCE_GATE, Block::ROD);
+    SETBLOCKTYPE(VINE, Block::ROD);
+    SETBLOCKTYPE(IRON_BARS, Block::ROD);
+    SETBLOCKTYPE(NETHER_BRICK_FENCE, Block::ROD);
+    SETBLOCKTYPE(COBBLESTONE_WALL, Block::ROD);
+    SETBLOCKTYPE(375, Block::ROD);
+    SETBLOCKTYPE(376, Block::ROD);
+    SETBLOCKTYPE(CHORUS_PLANT, Block::ROD);
+    SETBLOCKTYPE(REEDS, Block::ROD);
 
-    SETBLOCKTYPE(YELLOW_FLOWER, Blocks::PLANT);
+    SETBLOCKTYPE(YELLOW_FLOWER, Block::PLANT);
 
-    SETBLOCKTYPE(RED_FLOWER, Blocks::PLANT);
-    SETBLOCKTYPE(312, Blocks::PLANT);
-    SETBLOCKTYPE(313, Blocks::PLANT);
-    SETBLOCKTYPE(314, Blocks::PLANT);
-    SETBLOCKTYPE(315, Blocks::PLANT);
-    SETBLOCKTYPE(316, Blocks::PLANT);
-    SETBLOCKTYPE(317, Blocks::PLANT);
-    SETBLOCKTYPE(318, Blocks::PLANT);
-    SETBLOCKTYPE(319, Blocks::PLANT);
-    SETBLOCKTYPE(320, Blocks::PLANT);
+    SETBLOCKTYPE(RED_FLOWER, Block::PLANT);
+    SETBLOCKTYPE(312, Block::PLANT);
+    SETBLOCKTYPE(313, Block::PLANT);
+    SETBLOCKTYPE(314, Block::PLANT);
+    SETBLOCKTYPE(315, Block::PLANT);
+    SETBLOCKTYPE(316, Block::PLANT);
+    SETBLOCKTYPE(317, Block::PLANT);
+    SETBLOCKTYPE(318, Block::PLANT);
+    SETBLOCKTYPE(319, Block::PLANT);
+    SETBLOCKTYPE(320, Block::PLANT);
 
-    SETBLOCKTYPE(RED_MUSHROOM, Blocks::PLANT);
-    SETBLOCKTYPE(BROWN_MUSHROOM, Blocks::PLANT);
-    SETBLOCKTYPE(WEB, Blocks::PLANT);
-    SETBLOCKTYPE(DEADBUSH, Blocks::PLANT);
-    SETBLOCKTYPE(MELON_STEM, Blocks::PLANT);
-    SETBLOCKTYPE(PUMPKIN_STEM, Blocks::PLANT);
-    SETBLOCKTYPE(DEADBUSH, Blocks::PLANT);
-    SETBLOCKTYPE(WATERLILY, Blocks::PLANT);
-    SETBLOCKTYPE(NETHER_WART, Blocks::PLANT);
+    SETBLOCKTYPE(RED_MUSHROOM, Block::PLANT);
+    SETBLOCKTYPE(BROWN_MUSHROOM, Block::PLANT);
+    SETBLOCKTYPE(WEB, Block::PLANT);
+    SETBLOCKTYPE(DEADBUSH, Block::PLANT);
+    SETBLOCKTYPE(MELON_STEM, Block::PLANT);
+    SETBLOCKTYPE(PUMPKIN_STEM, Block::PLANT);
+    SETBLOCKTYPE(DEADBUSH, Block::PLANT);
+    SETBLOCKTYPE(WATERLILY, Block::PLANT);
+    SETBLOCKTYPE(NETHER_WART, Block::PLANT);
 
-    SETBLOCKTYPE(DOUBLE_PLANT, Blocks::PLANT);
-    SETBLOCKTYPE(429, Blocks::PLANT);
-    SETBLOCKTYPE(430, Blocks::PLANT);
-    SETBLOCKTYPE(431, Blocks::PLANT);
-    SETBLOCKTYPE(432, Blocks::PLANT);
-    SETBLOCKTYPE(433, Blocks::PLANT);
-    SETBLOCKTYPE(434, Blocks::PLANT);
+    SETBLOCKTYPE(DOUBLE_PLANT, Block::PLANT);
+    SETBLOCKTYPE(435, Block::PLANT);
+    SETBLOCKTYPE(436, Block::PLANT);
+    SETBLOCKTYPE(437, Block::PLANT);
+    SETBLOCKTYPE(438, Block::PLANT);
+    SETBLOCKTYPE(439, Block::PLANT);
+    SETBLOCKTYPE(440, Block::PLANT);
 
-    SETBLOCKTYPE(REDSTONE_WIRE, Blocks::WIRE);
-    SETBLOCKTYPE(TRIPWIRE, Blocks::WIRE);
+    SETBLOCKTYPE(REDSTONE_WIRE, Block::WIRE);
+    SETBLOCKTYPE(TRIPWIRE, Block::WIRE);
 
-    SETBLOCKTYPE(RAIL, Blocks::RAILROAD);
-    SETBLOCKTYPE(GOLDEN_RAIL, Blocks::RAILROAD);
-    SETBLOCKTYPE(ACTIVATOR_RAIL, Blocks::RAILROAD);
-    SETBLOCKTYPE(DETECTOR_RAIL, Blocks::RAILROAD);
+    SETBLOCKTYPE(RAIL, Block::RAILROAD);
+    SETBLOCKTYPE(GOLDEN_RAIL, Block::RAILROAD);
+    SETBLOCKTYPE(ACTIVATOR_RAIL, Block::RAILROAD);
+    SETBLOCKTYPE(DETECTOR_RAIL, Block::RAILROAD);
 
-    SETBLOCKTYPE(FIRE, Blocks::SPECIAL);
-    SETBLOCKTYPE(COCOA, Blocks::SPECIAL);
-    SETBLOCKTYPE(TALLGRASS, Blocks::SPECIAL);
-    SETBLOCKTYPE(293, Blocks::SPECIAL);
-    SETBLOCKTYPE(294, Blocks::SPECIAL);
-    SETBLOCKTYPE(295, Blocks::SPECIAL);
+    SETBLOCKTYPE(FIRE, Block::SPECIAL);
+    SETBLOCKTYPE(COCOA, Block::SPECIAL);
+    SETBLOCKTYPE(TALLGRASS, Block::SPECIAL);
+    SETBLOCKTYPE(293, Block::SPECIAL);
+    SETBLOCKTYPE(294, Block::SPECIAL);
+    SETBLOCKTYPE(295, Block::SPECIAL);
 
-    SETBLOCKTYPE(WOODEN_BUTTON, Blocks::OTHER);
-    SETBLOCKTYPE(STONE_BUTTON, Blocks::OTHER);
+    SETBLOCKTYPE(WOODEN_BUTTON, Block::OTHER);
+    SETBLOCKTYPE(STONE_BUTTON, Block::OTHER);
 
-    SETBLOCKTYPE(STONE_SLAB, Blocks::HALF);
-    SETBLOCKTYPE(329, Blocks::HALF);
-    SETBLOCKTYPE(330, Blocks::HALF);
-    SETBLOCKTYPE(331, Blocks::HALF);
-    SETBLOCKTYPE(332, Blocks::HALF);
-    SETBLOCKTYPE(333, Blocks::HALF);
-    SETBLOCKTYPE(334, Blocks::HALF);
-    SETBLOCKTYPE(335, Blocks::HALF);
-    SETBLOCKTYPE(336, Blocks::HALF);
+    SETBLOCKTYPE(CAKE, Block::HALF);
+    SETBLOCKTYPE(BED, Block::HALF);
+    SETBLOCKTYPE(STONE_SLAB, Block::HALF);
+    SETBLOCKTYPE(329, Block::HALF);
+    SETBLOCKTYPE(330, Block::HALF);
+    SETBLOCKTYPE(331, Block::HALF);
+    SETBLOCKTYPE(332, Block::HALF);
+    SETBLOCKTYPE(333, Block::HALF);
+    SETBLOCKTYPE(334, Block::HALF);
+    SETBLOCKTYPE(335, Block::HALF);
+    SETBLOCKTYPE(336, Block::HALF);
 
-    SETBLOCKTYPE(WOODEN_SLAB, Blocks::HALF);
-    SETBLOCKTYPE(363, Blocks::HALF);
-    SETBLOCKTYPE(364, Blocks::HALF);
-    SETBLOCKTYPE(365, Blocks::HALF);
-    SETBLOCKTYPE(366, Blocks::HALF);
-    SETBLOCKTYPE(367, Blocks::HALF);
-    SETBLOCKTYPE(368, Blocks::HALF);
+    SETBLOCKTYPE(WOODEN_SLAB, Block::HALF);
+    SETBLOCKTYPE(369, Block::HALF);
+    SETBLOCKTYPE(370, Block::HALF);
+    SETBLOCKTYPE(371, Block::HALF);
+    SETBLOCKTYPE(372, Block::HALF);
+    SETBLOCKTYPE(373, Block::HALF);
+    SETBLOCKTYPE(374, Block::HALF);
     
-    SETBLOCKTYPE(DAYLIGHT_DETECTOR, Blocks::HALF);
-    SETBLOCKTYPE(DAYLIGHT_DETECTOR_INVERTED, Blocks::HALF);
+    SETBLOCKTYPE(DAYLIGHT_DETECTOR, Block::HALF);
+    SETBLOCKTYPE(DAYLIGHT_DETECTOR_INVERTED, Block::HALF);
 
-    SETBLOCKTYPE(OAK_STAIRS, Blocks::STAIR);
-    SETBLOCKTYPE(SPRUCE_STAIRS, Blocks::STAIR);
-    SETBLOCKTYPE(BIRCH_STAIRS, Blocks::STAIR);
-    SETBLOCKTYPE(JUNGLE_STAIRS, Blocks::STAIR);
-    SETBLOCKTYPE(ACACIA_STAIRS, Blocks::STAIR);
-    SETBLOCKTYPE(DARK_OAK_STAIRS, Blocks::STAIR);
-    SETBLOCKTYPE(BRICK_STAIRS, Blocks::STAIR);
-    SETBLOCKTYPE(STONE_STAIRS, Blocks::STAIR);
-    SETBLOCKTYPE(STONE_BRICK_STAIRS, Blocks::STAIR);
-    SETBLOCKTYPE(NETHER_BRICK_STAIRS, Blocks::STAIR);
-    SETBLOCKTYPE(SANDSTONE_STAIRS, Blocks::STAIR);
-    SETBLOCKTYPE(QUARTZ_STAIRS, Blocks::STAIR);
-    SETBLOCKTYPE(RED_SANDSTONE_STAIRS, Blocks::STAIR);
-    SETBLOCKTYPE(PURPUR_STAIRS, Blocks::STAIR);
-    /*
-
-       SETCOLORNOISE	(PINELEAVES,	44,	84,	44,	160,	20); // Pine leaves
-       SETCOLORNOISE	(BIRCHLEAVES,	85,	124,	60,	170,	11); // Birch leaves
-       SETCOLORNOISE	(JUNGLELEAVES,	44,	135,	50,	175,	11); // Birch leaves
-       SETCOLORNOISE	(SANDSTEP, 218, 210, 158, 254, 7); // Not fully opaque to prevent culling on this one
-       SETCOLORNOISE(UP_SANDSTEP, 218, 210, 158, 254, 7); // Not fully opaque to prevent culling on this one
-       SETCOLORNOISE(WOODSTEP, 157,128,79,254, 11); // Not fully opaque to prevent culling on this one
-       SETCOLORNOISE(UP_WOODSTEP, 157,128,79,254, 11); // Not fully opaque to prevent culling on this one
-       SETCOLORNOISE(COBBLESTEP, 115,115,115,254, 26); // Not fully opaque to prevent culling on this one
-       SETCOLORNOISE(UP_COBBLESTEP, 115,115,115,254, 26); // Not fully opaque to prevent culling on this one
-
-       SETCOLORNOISE(PINESTEP, 103,77,46,254, 1);
-       SETCOLORNOISE(BIRCHSTEP, 195,179,123,254, 3);
-       SETCOLORNOISE(JUNGLESTEP, 154,110,77,254, 2);
-
-       SETCOLORNOISE(UP_WOODSTEP2, 157,128,79,254, 11);
-       SETCOLORNOISE(UP_PINESTEP, 103,77,46,255, 1);
-       SETCOLORNOISE(UP_BIRCHSTEP, 195,179,123,255, 3);
-       SETCOLORNOISE(UP_JUNGLESTEP, 154,110,77,255, 2);
-
-       SETCOLORNOISE(226, 103,77,46,255, 1);
-       SETCOLORNOISE(227, 195,179,123,255, 3);
-       SETCOLORNOISE(228, 154,110,77,255, 2);
-
-       SETCOLOR(237, 70,50,32, 255); // Pine trunk
-       SETCOLORNOISE(238, 206,206,201, 255, 5); // Birch trunk
-       SETCOLOR(239, 122,91,51, 255); // Jungle trunk
-       SETCOLOR(240, 244,137,54, 255); // Dyed wool
-       SETCOLOR(241, 200,75,210,255);
-       SETCOLOR(242, 120,158,241, 255);
-       SETCOLOR(243, 204,200,28, 255);
-       SETCOLOR(244, 59,210,47, 255);
-       SETCOLOR(245, 237,141,164, 255);
-       SETCOLOR(246, 76,76,76, 255);
-       SETCOLOR(247, 168,172,172, 255);
-       SETCOLOR(248, 39,116,149, 255);
-       SETCOLOR(249, 133,53,195, 255);
-       SETCOLOR(250, 38,51,160, 255);
-       SETCOLOR(251, 85,51,27, 255);
-       SETCOLOR(252, 55,77,24, 255);
-       SETCOLOR(253, 173,44,40, 255);
-       SETCOLOR(254, 32,27,27, 255);
-
-    //1.3.1+ various
-    SETCOLOR(133, 61, 255, 61, 255  ); //emerald
-    SETCOLOR(207, 240, 238, 232, 255 ); //quartz slab
-    //SETCOLOR(159, 209, 177, 160, 255 ); //white stained clay !
-    SETCOLOR(206, 54, 24, 30, 255 ); //nether bricks slab
-
-    //1.8+
-    SETCOLOR(140, 208, 128, 128, 255  ); //granite
-    SETCOLOR(144, 228, 228, 228, 255  ); //diorite
-    SETCOLOR(157, 160, 160, 160, 255  ); //andesite
-    SETCOLOR(209, 155, 63, 176, 255  ); //purpur blocks
-
-    // carpets
-    SETCOLOR(36 ,  255, 255, 255,  254   ); //White carpet
-    SETCOLOR(68 ,  244, 137,  54,  254   ); //Orange carpet
-    SETCOLOR(69 ,  200,  75, 210,  254   ); //Magenta carpet
-    SETCOLOR(70 ,  120, 158, 241,  254   ); //Light Blue carpet
-    SETCOLOR(72 ,  204, 200,  28,  254   ); //Yellow carpet
-    SETCOLOR(77 ,   59, 210,  47,  254   ); //Lime carpet
-    SETCOLOR(131,  237, 141, 164,  254   ); //Pink carpet
-    SETCOLOR(132,   76,  76,  76,  254   ); //Gray carpet
-    SETCOLOR(141,  168, 172, 172,  254   ); //Light Gray
-    SETCOLOR(142,   39, 116, 149,  254   ); //Cyan carpet
-    SETCOLOR(143,  133,  53, 195,  254   ); //Purple carpet
-    SETCOLOR(147,   38,  51, 160,  254   ); //Blue carpet
-    SETCOLOR(148,   85,  51,  27,  254   ); //Brown carpet
-    SETCOLOR(149,   55,  77,  24,  254   ); //Green carpet
-    SETCOLOR(150,  173,  44,  40,  254   ); //Red carpet
-    SETCOLOR(158,   32,  27,  27,  254   ); //Black carpet
-
-    // clays
-    SETCOLOR(159,  241, 210, 192, 255   ); //White Stained Clay
-    SETCOLOR(186,  194, 116,  69, 255   ); //Orange Stained Clay
-    SETCOLOR(187,  182, 120, 140, 255   ); //Magenta Stained Clay
-    SETCOLOR(188,  141, 137, 167, 255   ); //Light Blue Stained Clay
-    SETCOLOR(189,  219, 165,  66, 255   ); //Yellow Stained Clay
-    SETCOLOR(190,  137, 149,  84, 255   ); //Lime Stained Clay
-    SETCOLOR(191,  194, 110, 110, 255   ); //Pink Stained Clay
-    SETCOLOR(192,   97,  82,  75, 255   ); //Gray Stained Clay
-    SETCOLOR(193,  168, 138, 128, 255   ); //Light Gray Stained Clay
-    SETCOLOR(194,  119, 122, 122, 255   ); //Cyan Stained Clay
-    SETCOLOR(195,  152, 102, 117, 255   ); //Purple Stained Clay
-    SETCOLOR(196,  103,  88, 120, 255   ); //Blue Stained Clay
-    SETCOLOR(197,  109,  82,  66, 255   ); //Brown Stained Clay
-    SETCOLOR(198,  105, 112,  70, 255   ); //Green Stained Clay
-    SETCOLOR(199,  176,  93,  78, 255   ); //Red Stained Clay
-    SETCOLOR(200,   67,  52,  46, 255   ); //Black Stained Clay
-
-
-    // glass
-    SETCOLOR(95 , 255, 255,  255,  100  ); //White Stained Glass
-    SETCOLOR(160, 255, 255,  255,  100  ); //White Stained Glass pane
-    SETCOLOR(234,  244, 137,  54,  40   ); //Orange Stained Glass [pane]
-    SETCOLOR(225,  200,  75, 210,  40   ); //Magenta Stained Glass [pane]
-    SETCOLOR(255,  120, 158, 241,  40   ); //Light Blue Stained Glass [pane]
-    SETCOLOR(166,  204, 200,  28,  40   ); //Yellow Stained Glass [pane]
-    SETCOLOR(167,   59, 210,  47,  40   ); //Lime Stained Glass [pane]
-    SETCOLOR(168,  237, 141, 164,  40   ); //Pink Stained Glass [pane]
-    SETCOLOR(169,   76,  76,  76,  40   ); //Gray Stained Glass [pane]
-    SETCOLOR(178,  168, 172, 172,  40   ); //Light Gray Stained Glass [pane]
-    SETCOLOR(179,   39, 116, 149,  40   ); //Cyan Stained Glass [pane]
-    SETCOLOR(180,  133,  53, 195,  40   ); //Purple Stained Glass [pane]
-    SETCOLOR(181,   38,  51, 160,  40   ); //Blue Stained Glass [pane]
-    SETCOLOR(182,   85,  51,  27,  40   ); //Brown Stained Glass [pane]
-    SETCOLOR(183,   55,  77,  24,  40   ); //Green Stained Glass [pane]
-    SETCOLOR(184,  173,  44,  40,  40   ); //Red Stained Glass [pane]
-    SETCOLOR(185,   32,  27,  27,  40   ); //Black Stained Glass [pane]
-
-    // flowers
-    //	SETCOLOR(165, 120, 158, 241, 254   ); //BLUE_ORCHID 165
-    SETCOLOR(176, 200,  75, 210, 254 ); //ALLIUM 176
-    SETCOLOR(235, 168, 172, 172, 254 ); //AZURE_BLUET 235
-    // 38, 173  44  40 254, ); //RED_TULIP 38
-    SETCOLOR(217, 244, 137,  54, 254 ); //ORANGE_TULIP 217
-    SETCOLOR(218, 255, 255, 255, 254 ); //WHITE_TULIP 218
-    SETCOLOR(219, 237, 141, 164, 254 ); //PINK_TULIP 219
-    SETCOLOR(220, 168, 172, 172, 254 ); //OXEYE_DAISY 220
-    // 37, 255 255  0 254, ); //SUNFLOWER 37
-    SETCOLOR(233, 200,  75, 210, 254 ); //LILAC 233
-    SETCOLOR(177, 237, 141, 164, 254 ); //PEONY 177
-
-    // nether
-    //SETCOLORNOISE(238,  206, 206, 201,  255,   5); // Birch Wood / quartz slab (sic!)
-    */
-
-	//SETCOLOR(UP_STEP, 200,200,200,254); // Not fully opaque to prevent culling on this one // WHAT ? 208
-	//SETCOLOR(BRICKSTEP, 170,86,62,254); // What ? 
-	//SETCOLOR(UP_BRICKSTEP, 170,86,62,254); // What ? 
-	//SETCOLORNOISE(STONEBRICKSTEP, 122,122,122,254, 7);
-	//SETCOLORNOISE(UP_STONEBRICKSTEP, 122,122,122,254, 7);
-
+    SETBLOCKTYPE(OAK_STAIRS, Block::STAIR);
+    SETBLOCKTYPE(SPRUCE_STAIRS, Block::STAIR);
+    SETBLOCKTYPE(BIRCH_STAIRS, Block::STAIR);
+    SETBLOCKTYPE(JUNGLE_STAIRS, Block::STAIR);
+    SETBLOCKTYPE(ACACIA_STAIRS, Block::STAIR);
+    SETBLOCKTYPE(DARK_OAK_STAIRS, Block::STAIR);
+    SETBLOCKTYPE(BRICK_STAIRS, Block::STAIR);
+    SETBLOCKTYPE(STONE_STAIRS, Block::STAIR);
+    SETBLOCKTYPE(STONE_BRICK_STAIRS, Block::STAIR);
+    SETBLOCKTYPE(NETHER_BRICK_STAIRS, Block::STAIR);
+    SETBLOCKTYPE(SANDSTONE_STAIRS, Block::STAIR);
+    SETBLOCKTYPE(QUARTZ_STAIRS, Block::STAIR);
+    SETBLOCKTYPE(RED_SANDSTONE_STAIRS, Block::STAIR);
+    SETBLOCKTYPE(PURPUR_STAIRS, Block::STAIR);
 }
 
 
@@ -1031,7 +911,7 @@ bool loadBiomeColors(const char* path)
     return true;
 }
 
-uint8_t* getColor(Block b) {
+uint8_t* getColor(uint16_t b) {
     uint8_t var = getVariant(b);
     uint8_t* ret = colors[getId(b)];
 
@@ -1064,5 +944,5 @@ uint8_t* getColor(Block b) {
     return ret;
 }
 
-uint8_t getId(Block b) {return b % 256;}
-uint8_t getVariant(Block b) {return (b - getId(b))/256;}
+uint8_t getId(uint16_t b) {return b % 256;}
+uint8_t getVariant(uint16_t b) {return (b - getId(b))/256;}

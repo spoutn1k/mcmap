@@ -695,63 +695,6 @@ void setPixel(const size_t x, const size_t y, const uint16_t color, const float 
 		setGrassBA(x, y, c, L, D, sub);
 		return;
 	}
-	/*
-	if (block == SNOW || block == TRAPDOOR
-		//|| block == 141 || block == 142 || block == 158 || block == 149
-		//|| block == 131 || block == 132 || block == 150 || block == 147 || block == 148 || block == 68 || block == 69 || block == 70
-		//|| block == 72 || block == 77 || block == 143 || block == 36) 
-	    ){	//three lines of carpets ID's I can't do this other way
-	    setSnowBA(x, y, c);
-	    return;
-	}
-	if (block == TORCH || block == REDSTONE_TORCH || block == UNLIT_REDSTONE_TORCH) {
-	    setTorchBA(x, y, c);
-	    return;
-	}
-	if (block == RED_FLOWER || block == YELLOW_FLOWER || block == BROWN_MUSHROOM || block == RED_MUSHROOM || block == MELON_STEM || block == PUMPKIN_STEM || block == DEADBUSH || block == WEB || block == WATERLILY || block == NETHER_WART
-		//|| block == 175 || block == BLUE_ORCHID || block == ALLIUM || block == AZURE_BLUET || block == RED_TULIP || block == ORANGE_TULIP || block == WHITE_TULIP || block == PINK_TULIP || block == OXEYE_DAISY || block == SUNFLOWER || block == LILAC || block == PEONY 
-		) {
-	    setFlowerBA(x, y, c);
-	    return;
-	}
-	if (block == FENCE || block == FENCE_GATE || block == VINE || block == IRON_BARS || block == NETHER_BRICK_FENCE
-		|| block == 139) {
-	    setFence(x, y, c);
-	    return;
-	}
-	if (block == REDSTONE_WIRE || block == TRIPWIRE) {
-	    setRedwire(x, y, c);
-	    return;
-	}
-	if (block == RAIL || block == GOLDEN_RAIL || block == DETECTOR_RAIL || block == ACTIVATOR_RAIL) {
-	    setRailroad(x, y, c);
-	    return;
-	}
-	// All the above blocks didn't need the shaded down versions of the color, so we only calc them here
-	// They are for the sides of blocks
-	memcpy(L, c, BYTESPERPIXEL);
-	memcpy(D, c, BYTESPERPIXEL);
-	modColor(L, -17);
-	modColor(D, -27);
-	// A few more blocks with special handling... Those need the two colors we just mixed
-	if (block == GRASS) {
-	    setGrassBA(x, y, c, L, D, sub);
-	    return;
-	}
-	if (block == FIRE || block == TALLGRASS || block == COCOA) {
-	    setFire(x, y, c, L, D);
-	    return;
-	}
-	//if (block == STEP || block == CAKE || block == BED || block == SANDSTEP || block == WOODSTEP || block == COBBLESTEP || block == BRICKSTEP || block == STONEBRICKSTEP || block == PINESTEP || block == BIRCHSTEP || block == JUNGLESTEP
-		//|| block == 151) {
-	    //setStepBA(x, y, c, L, D);
-	    //return;
-	//}
-	//if (block == UP_STEP || block == UP_SANDSTEP || block == UP_WOODSTEP || block == UP_COBBLESTEP || block == UP_BRICKSTEP || block == UP_STONEBRICKSTEP || block == UP_WOODSTEP2 || block == UP_PINESTEP || block == UP_BIRCHSTEP || block == UP_JUNGLESTEP) {
-	    //setUpStepBA(x, y, c, L, D);
-	    //return;
-	//}
-	*/
     } else {
 	// Then check the block type, as some types will be drawn differently
 	switch (blockColor[BLOCK_TYPE]) {
@@ -798,61 +741,6 @@ void setPixel(const size_t x, const size_t y, const uint16_t color, const float 
 		setGrass(x, y, c, L, D, sub);
 		return;
 	}
-	/*
-	if (block == SNOW || block == TRAPDOOR
-		|| block == 141 || block == 142 || block == 158 || block == 149
-		|| block == 131 || block == 132 || block == 150 || block == 147 || block == 148 || block == 68 || block == 69 || block == 70
-		|| block == 72 || block == 77 || block == 143 || block == 36) {	//three lines of carpets ID's I can't do this other way
-	    setSnow(x, y, c);
-	    return;
-	}
-	if (block == TORCH || block == REDSTONE_TORCH || block == UNLIT_REDSTONE_TORCH) {
-	    setTorch(x, y, c);
-	    return;
-	}
-	if (block == RED_FLOWER || block == RED_FLOWER || block == BROWN_MUSHROOM || block == RED_MUSHROOM || block == MELON_STEM || block == PUMPKIN_STEM || block == DEADBUSH || block == WEB || block == WATERLILY || block == NETHER_WART
-		//|| block == 175 || block == BLUE_ORCHID || block == ALLIUM || block == AZURE_BLUET || block == RED_TULIP || block == ORANGE_TULIP || block == WHITE_TULIP || block == PINK_TULIP || block == OXEYE_DAISY || block == SUNFLOWER || block == LILAC || block == PEONY 
-		) {
-	    setFlower(x, y, c);
-	    return;
-	}
-	if (block == FENCE || block == FENCE_GATE || block == VINE || block == IRON_BARS || block == NETHER_BRICK_FENCE) {
-	    setFence(x, y, c);
-	    return;
-	}
-	if (block == REDSTONE_WIRE || block == TRIPWIRE) {
-	    setRedwire(x, y, c);
-	    return;
-	}
-	if (block == RAIL || block == GOLDEN_RAIL || block == DETECTOR_RAIL || block == ACTIVATOR_RAIL) {
-	    setRailroad(x, y, c);
-	    return;
-	}
-	// All the above blocks didn't need the shaded down versions of the color, so we only calc them here
-	// They are for the sides of blocks
-	memcpy(L, c, BYTESPERPIXEL);
-	memcpy(D, c, BYTESPERPIXEL);
-	modColor(L, -17);
-	modColor(D, -27);
-	// A few more blocks with special handling... Those need the two colors we just mixed
-	if (block == GRASS) {
-	    setGrass(x, y, c, L, D, sub);
-	    return;
-	}
-	if (block == FIRE || block == TALLGRASS || block == COCOA) {
-	    setFire(x, y, c, L, D);
-	    return;
-	}
-	//if (block == STEP || block == CAKE || block == BED || block == SANDSTEP || block == WOODSTEP || block == COBBLESTEP || block == BRICKSTEP || block == STONEBRICKSTEP || block == PINESTEP || block == BIRCHSTEP || block == JUNGLESTEP
-		//|| block == 151) {
-	    //setStep(x, y, c, L, D);
-	    //return;
-	//}
-	//if (block == UP_STEP || block == UP_SANDSTEP || block == UP_WOODSTEP || block == UP_COBBLESTEP || block == UP_BRICKSTEP || block == UP_STONEBRICKSTEP || block == UP_WOODSTEP2 || block == UP_PINESTEP || block == UP_BIRCHSTEP || block == UP_JUNGLESTEP) {
-	    //setUpStep(x, y, c, L, D);
-	    //return;
-	//}
-	*/
     }
     // In case the user wants noise, calc the strength now, depending on the desired intensity and the block's brightness
     int noise = 0;

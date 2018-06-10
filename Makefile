@@ -40,7 +40,7 @@ turbo: $(OBJECTS_TURBO)
 	$(CC) $(OBJECTS_TURBO) $(LDFLAGS) -march=native -mtune=native -o $(EXECUTABLE)
 
 clean:
-	rm *.o
+	rm *.o mcmap
 
 %.default.o: %.cpp
 	$(CC) $(CFLAGS) $< -o $@
