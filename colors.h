@@ -43,11 +43,6 @@ bool dumpColorsToFile(const char *file);
 bool extractColors(const char *file);
 bool loadBiomeColors(const char* path);
 
-uint8_t getId(uint16_t b);
-uint8_t getVariant(uint16_t b);
-uint8_t setVariant(uint16_t b);
-uint8_t* getColor(uint16_t b);
-
 #define	AIR	0
 #define	STONE	1
 #define	GRASS	2

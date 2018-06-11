@@ -207,7 +207,7 @@ void loadColors()
     SETCOLOR		(STAINED_HARDENED_CLAY,	 241,	210,	192,	255   ); //White Stained Clay
     SETCOLOR		(STAINED_GLASS_PANE,	255,	255,	 255,	 100  ); //White Stained Glass pane
     SETCOLOR		(LEAVES2,	54,	135,	40,	180 ); //leaves Acacia/Dark Oak
-    SETCOLOR		(LOG2,		72,	 72,	72,	255 ); //log Acacia/Dark Oak
+    SETCOLOR		(LOG2,		115,	 115,	115,	255 ); //log Acacia/Dark Oak
     SETCOLOR		(ACACIA_STAIRS,	156,	127,	78,	255); // Acacia Wood Stairs
     SETCOLOR		(DARK_OAK_STAIRS, 67, 53, 10, 254); // Dark Oak
     SETCOLOR		(SLIME,		61,	255,	61,	96  ); //slime block
@@ -259,45 +259,45 @@ void loadColors()
     SETCOLOR		(CHAIN_COMMAND_BLOCK,	203,	163,	136,	255 ); //command block
     SETCOLORNOISE	(FROSTED_ICE,	125,	173,	255,	159,	7);
     SETCOLOR		(MAGMA,		255,	90,	0,	255);
-    SETCOLOR		(NETHER_WART_BLOCK,	0,	0,	0,	0);
-    SETCOLOR		(RED_NETHER_BRICK,	0,	0,	0,	0);
-    SETCOLOR		(BONE_BLOCK,	0,	0,	0,	0);
+    SETCOLOR		(NETHER_WART_BLOCK,	117,	26,	42,	255);
+    SETCOLOR		(RED_NETHER_BRICK,	89,	26,	15,	255);
+    SETCOLOR		(BONE_BLOCK,	237,	236,	233,	255);
     SETCOLOR		(STRUCTURE_VOID,	0,	0,	0,	0);
-    SETCOLOR		(OBSERVER,	0,	0,	0,	0);
-    SETCOLOR		(WHITE_SHULKER_BOX,	0,	0,	0,	0);
-    SETCOLOR		(ORANGE_SHULKER_BOX,	0,	0,	0,	0);
-    SETCOLOR		(MAGENTA_SHULKER_BOX,	0,	0,	0,	0);
-    SETCOLOR		(LIGHT_BLUE_SHULKER_BOX,	0,	0,	0,	0);
-    SETCOLOR		(YELLOW_SHULKER_BOX,	0,	0,	0,	0);
-    SETCOLOR		(LIME_SHULKER_BOX,	0,	0,	0,	0);
-    SETCOLOR		(PINK_SHULKER_BOX,	0,	0,	0,	0);
-    SETCOLOR		(GRAY_SHULKER_BOX,	0,	0,	0,	0);
-    SETCOLOR		(SILVER_SHULKER_BOX,	0,	0,	0,	0);
-    SETCOLOR		(CYAN_SHULKER_BOX,	0,	0,	0,	0);
-    SETCOLOR		(PURPLE_SHULKER_BOX,	0,	0,	0,	0);
-    SETCOLOR		(BLUE_SHULKER_BOX,	0,	0,	0,	0);
-    SETCOLOR		(BROWN_SHULKER_BOX,	0,	0,	0,	0);
-    SETCOLOR		(GREEN_SHULKER_BOX,	0,	0,	0,	0);
-    SETCOLOR		(RED_SHULKER_BOX,	0,	0,	0,	0);
-    SETCOLOR		(BLACK_SHULKER_BOX,	0,	0,	0,	0);
-    SETCOLOR		(WHITE_GLAZED_TERRACOTTA,	0,	0,	0,	0);
-    SETCOLOR		(ORANGE_GLAZED_TERRACOTTA,	0,	0,	0,	0);
-    SETCOLOR		(MAGENTA_GLAZED_TERRACOTTA,	0,	0,	0,	0);
-    SETCOLOR		(LIGHT_BLUE_GLAZED_TERRACOTTA,	0,	0,	0,	0);
-    SETCOLOR		(YELLOW_GLAZED_TERRACOTTA,	0,	0,	0,	0);
-    SETCOLOR		(LIME_GLAZED_TERRACOTTA,	0,	0,	0,	0);
-    SETCOLOR		(PINK_GLAZED_TERRACOTTA,	0,	0,	0,	0);
-    SETCOLOR		(GRAY_GLAZED_TERRACOTTA,	0,	0,	0,	0);
-    SETCOLOR		(LIGHT_GRAY_GLAZED_TERRACOTTA,	0,	0,	0,	0);
-    SETCOLOR		(CYAN_GLAZED_TERRACOTTA,	0,	0,	0,	0);
-    SETCOLOR		(PURPLE_GLAZED_TERRACOTTA,	0,	0,	0,	0);
-    SETCOLOR		(BLUE_GLAZED_TERRACOTTA,	0,	0,	0,	0);
-    SETCOLOR		(BROWN_GLAZED_TERRACOTTA,	0,	0,	0,	0);
-    SETCOLOR		(GREEN_GLAZED_TERRACOTTA,	0,	0,	0,	0);
-    SETCOLOR		(RED_GLAZED_TERRACOTTA,	0,	0,	0,	0);
-    SETCOLOR		(BLACK_GLAZED_TERRACOTTA,	0,	0,	0,	0);
-    SETCOLOR		(CONCRETE,	0,	0,	0,	0);
-    SETCOLOR		(CONCRETE_POWDER,	0,	0,	0,	0);
+    SETCOLOR		(OBSERVER,	107,	107,	107,	255);
+    SETCOLOR		(WHITE_SHULKER_BOX, 222, 222, 222, 255);
+    SETCOLOR		(ORANGE_SHULKER_BOX, 244, 137, 54, 255);
+    SETCOLOR		(MAGENTA_SHULKER_BOX, 200,75,210,255);
+    SETCOLOR		(LIGHT_BLUE_SHULKER_BOX, 120,158,241, 255);
+    SETCOLOR		(YELLOW_SHULKER_BOX, 204,200,28, 255);
+    SETCOLOR		(LIME_SHULKER_BOX, 59, 210, 47, 255);
+    SETCOLOR		(PINK_SHULKER_BOX, 237, 141, 164, 255);
+    SETCOLOR		(GRAY_SHULKER_BOX, 76, 76, 76, 255);
+    SETCOLOR		(SILVER_SHULKER_BOX, 168, 172, 172, 255);
+    SETCOLOR		(CYAN_SHULKER_BOX, 39, 116, 149, 255);
+    SETCOLOR		(PURPLE_SHULKER_BOX, 133, 53, 195, 255);
+    SETCOLOR		(BLUE_SHULKER_BOX, 38,51,160, 255);
+    SETCOLOR		(BROWN_SHULKER_BOX, 85,51,27, 255);
+    SETCOLOR		(GREEN_SHULKER_BOX, 55,77,24, 255);
+    SETCOLOR		(RED_SHULKER_BOX, 173,44,40, 255);
+    SETCOLOR		(BLACK_SHULKER_BOX, 32,27,27, 255);
+    SETCOLOR		(WHITE_GLAZED_TERRACOTTA,  241, 210, 192, 255);
+    SETCOLOR		(ORANGE_GLAZED_TERRACOTTA,  194, 116,  69, 255);
+    SETCOLOR		(MAGENTA_GLAZED_TERRACOTTA,  182, 120, 140, 255);
+    SETCOLOR		(LIGHT_BLUE_GLAZED_TERRACOTTA,  141, 137, 167, 255);
+    SETCOLOR		(YELLOW_GLAZED_TERRACOTTA,  219, 165,  66, 255);
+    SETCOLOR		(LIME_GLAZED_TERRACOTTA,  137, 149,  84, 255);
+    SETCOLOR		(PINK_GLAZED_TERRACOTTA,  194, 110, 110, 255);
+    SETCOLOR		(GRAY_GLAZED_TERRACOTTA,   97,  82,  75, 255);
+    SETCOLOR		(LIGHT_GRAY_GLAZED_TERRACOTTA,  168, 138, 128, 255);
+    SETCOLOR		(CYAN_GLAZED_TERRACOTTA,  119, 122, 122, 255);
+    SETCOLOR		(PURPLE_GLAZED_TERRACOTTA,  152, 102, 117, 255);
+    SETCOLOR		(BLUE_GLAZED_TERRACOTTA,  103,  88, 120, 255);
+    SETCOLOR		(BROWN_GLAZED_TERRACOTTA,  109,  82,  66, 255);
+    SETCOLOR		(GREEN_GLAZED_TERRACOTTA,  105, 112,  70, 255);
+    SETCOLOR		(RED_GLAZED_TERRACOTTA,  176,  93,  78, 255);
+    SETCOLOR		(BLACK_GLAZED_TERRACOTTA,   67,  52,  46, 255);
+    SETCOLOR		(CONCRETE,		208,	214,	215,	255);
+    SETCOLOR		(CONCRETE_POWDER,		208,	214,	215,	255);
 
     // Stone Variants
     SETVAR(STONE, 1);
@@ -821,7 +821,6 @@ bool dumpColorsToFile(const char *file)
 	    fprintf(f, "#ID    R   G   B    A  Noise\n");
 	}
 	fprintf(f, "%3d  %3d %3d %3d  %3d  %3d\n", int(i), int(c[PRED]), int(c[PGREEN]), int(c[PBLUE]), int(c[PALPHA]), int(c[NOISE]));
-	fprintf(f, "%3d %3d %3d %3d %3d %3d %3d %3d\n", int(c[0]), int(c[1]), int(c[2]), int(c[3]), int(c[4]), int(c[5]), int(c[6]), int(c[7]));
     }
     fclose(f);
     return true;
@@ -910,39 +909,3 @@ bool loadBiomeColors(const char* path)
     printf("Loaded biome color maps from %s\n", path);
     return true;
 }
-
-uint8_t* getColor(uint16_t b) {
-    uint8_t var = getVariant(b);
-    uint8_t* ret = colors[getId(b)];
-
-    //printf("Block: %3d, variant: %3d [%3d, %3d, %3d, %3d, %3d, %3d, %3d, %3d]\n", b - 256*var, var, ret[0], ret[1], ret[2], ret[3], ret[4], ret[5], ret[6], ret[7]);
-
-    // For blocks that can have several states (eg logs axis, half-slabs if on top or bottom)
-    // get the max number of variants (set with SETNBVAR) and get the real variant of the block
-    // by taking the modulo of the variant and max variant
-    if (ret[VINDEX] && var && colors[255 + ret[VINDEX]][VINDEX]) {
-	var = var % colors[255 + ret[VINDEX]][VINDEX];
-	//printf("Max variants set (%d): new variant: %d\n", colors[255 + ret[VINDEX]][VINDEX], var);
-    }
-
-    // The above method works for everything but quartz pillars, so check manually
-    if (b - 256*var == QUARTZ_BLOCK && var > 2)
-	var = 2;
-
-    // Double height flowers have a fixed variant value when on top
-    // I use the g_LastDoubleFlower to get the right color
-    if (b - 256*var == DOUBLE_PLANT) {
-	if (var == 10)
-	    var = g_LastDoubleFlower;
-	else
-	    g_LastDoubleFlower = var;
-    }
-
-    if (var && ret[VINDEX])
-	ret = colors[255 + ret[VINDEX] + var];
-
-    return ret;
-}
-
-uint8_t getId(uint16_t b) {return b % 256;}
-uint8_t getVariant(uint16_t b) {return (b - getId(b))/256;}
