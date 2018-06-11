@@ -2,7 +2,6 @@
 #define _COLORS_
 
 #include "helper.h"
-#include "block.h"
 #include <cmath>
 
 // Byte order see below. Colors aligned to word boundaries for some speedup

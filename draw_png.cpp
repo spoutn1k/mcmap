@@ -151,6 +151,7 @@ bool createImage(FILE *fh, const size_t width, const size_t height, const bool s
     if (!splitUp) {
 	pngPtrCurrent = pngPtrMain;
     }
+
     return true;
 }
 
@@ -289,6 +290,8 @@ bool saveImage()
 	}
 	printProgress(10, 10);
     }
+    delete[] gImageBuffer;
+    gImageBuffer = NULL;
     return true;
 }
 
@@ -623,7 +626,7 @@ uint64_t calcImageSize(const int mapChunksX, const int mapChunksZ, const size_t 
     return uint64_t(pixelsX) * BYTESPERPIXEL * uint64_t(pixelsY);
 }
 
-void setPixel(const size_t x, const size_t y, const uint16_t color, const float fsub)
+void setPixel(const size_t x, const size_t y, const Block b, const float fsub)
 {
     // Sets pixels around x,y where A is the anchor
     // T = given color, D = darker, L = lighter
@@ -632,8 +635,7 @@ void setPixel(const size_t x, const size_t y, const uint16_t color, const float 
     // D D L L
     //	 D L
     // First determine how much the color has to be lightened up or darkened
-    uint8_t block = color % 256;
-    uint8_t* blockColor = getColor(color);
+    uint8_t* blockColor = b.getColor();
 
     int sub = int(fsub * (float(blockColor[BRIGHTNESS]) / 323.0f + .21f)); // The brighter the color, the stronger the impact
     uint8_t L[CHANSPERPIXEL], D[CHANSPERPIXEL], c[CHANSPERPIXEL];
@@ -652,100 +654,100 @@ void setPixel(const size_t x, const size_t y, const uint16_t color, const float 
     if (g_BlendAll) {
 	// Then check the block type, as some types will be drawn differently
 	switch (blockColor[BLOCK_TYPE]) {
-	    case Blocks::OTHER:
+	    case Block::OTHER:
 		return;
 
-	    case Blocks::THIN:
+	    case Block::THIN:
 		setSnowBA(x, y, c);
 		return;
 
-	    case Blocks::THIN_ROD:
+	    case Block::THIN_ROD:
 		setTorchBA(x, y, c);
 		return;
 
-	    case Blocks::PLANT:
+	    case Block::PLANT:
 		setFlowerBA(x, y, c);
 		return;
 
-	    case Blocks::ROD:
+	    case Block::ROD:
 		setFence(x, y, c);
 		return;
 
-	    case Blocks::WIRE:
+	    case Block::WIRE:
 		setRedwire(x, y, c);
 		return;
 
-	    case Blocks::RAILROAD:
+	    case Block::RAILROAD:
 		setRailroad(x, y, c);
 		return;
 
-	    case Blocks::SPECIAL:
+	    case Block::SPECIAL:
 		setFire(x, y, c, L, D);
 		return;
 
-	    case Blocks::STAIR:
+	    case Block::STAIR:
 		setUpStepBA(x, y, c, L, D);
 		return;
 
-	    case Blocks::HALF:
+	    case Block::HALF:
 		setStepBA(x, y, c, L, D);
 		return;
 
-	    case Blocks::GROWN:
+	    case Block::GROWN:
 		setGrassBA(x, y, c, L, D, sub);
 		return;
 	}
     } else {
 	// Then check the block type, as some types will be drawn differently
 	switch (blockColor[BLOCK_TYPE]) {
-	    case Blocks::OTHER:
+	    case Block::OTHER:
 		return;
 
-	    case Blocks::THIN:
+	    case Block::THIN:
 		setSnow(x, y, c);
 		return;
 
-	    case Blocks::THIN_ROD:
+	    case Block::THIN_ROD:
 		setTorch(x, y, c);
 		return;
 
-	    case Blocks::PLANT:
+	    case Block::PLANT:
 		setFlower(x, y, c);
 		return;
 
-	    case Blocks::ROD:
+	    case Block::ROD:
 		setFence(x, y, c);
 		return;
 
-	    case Blocks::WIRE:
+	    case Block::WIRE:
 		setRedwire(x, y, c);
 		return;
 
-	    case Blocks::RAILROAD:
+	    case Block::RAILROAD:
 		setRailroad(x, y, c);
 		return;
 
-	    case Blocks::SPECIAL:
+	    case Block::SPECIAL:
 		setFire(x, y, c, L, D);
 		return;
 
-	    case Blocks::STAIR:
+	    case Block::STAIR:
 		setUpStep(x, y, c, L, D);
 		return;
 
-	    case Blocks::HALF:
+	    case Block::HALF:
 		setStep(x, y, c, L, D);
 		return;
 
-	    case Blocks::GROWN:
+	    case Block::GROWN:
 		setGrass(x, y, c, L, D, sub);
 		return;
 	}
     }
     // In case the user wants noise, calc the strength now, depending on the desired intensity and the block's brightness
     int noise = 0;
-    if (g_Noise && colors[block][NOISE]) {
-	noise = int(float(g_Noise * colors[block][NOISE]) * (float(GETBRIGHTNESS(c) + 10) / 2650.0f));
+    if (g_Noise && colors[b.getId()][NOISE]) {
+	noise = int(float(g_Noise * colors[b.getId()][NOISE]) * (float(GETBRIGHTNESS(c) + 10) / 2650.0f));
     }
     // Ordinary blocks are all rendered the same way
     if (c[PALPHA] == 255) { // Fully opaque - faster
@@ -822,7 +824,7 @@ void setPixel(const size_t x, const size_t y, const uint16_t color, const float 
     // The above two branches are almost the same, maybe one could just create a function pointer and...
 }
 
-void blendPixel(const size_t x, const size_t y, const uint8_t color, const float fsub)
+void blendPixel(const size_t x, const size_t y, const Block b, const float fsub)
 {
     // This one is used for cave overlay
     // Sets pixels around x,y where A is the anchor
@@ -833,7 +835,7 @@ void blendPixel(const size_t x, const size_t y, const uint8_t color, const float
     //   D L
     uint8_t L[CHANSPERPIXEL], D[CHANSPERPIXEL], c[CHANSPERPIXEL];
     // Now make a local copy of the color that we can modify just for this one block
-    memcpy(c, colors[color], BYTESPERPIXEL);
+    memcpy(c, b.getColor(), BYTESPERPIXEL);
     c[PALPHA] = clamp(int(float(c[PALPHA]) * fsub)); // The brighter the color, the stronger the impact
     // They are for the sides of blocks
     memcpy(L, c, BYTESPERPIXEL);
@@ -842,8 +844,8 @@ void blendPixel(const size_t x, const size_t y, const uint8_t color, const float
     modColor(D, -27);
     // In case the user wants noise, calc the strength now, depending on the desired intensity and the block's brightness
     int noise = 0;
-    if (g_Noise && colors[color][NOISE]) {
-	noise = int(float(g_Noise * colors[color][NOISE]) * (float(GETBRIGHTNESS(c) + 10) / 2650.0f));
+    if (g_Noise && b.getColor()[NOISE]) {
+	noise = int(float(g_Noise * b.getColor()[NOISE]) * (float(GETBRIGHTNESS(c) + 10) / 2650.0f));
     }
     // Top row
     uint8_t *pos = &PIXEL(x, y);

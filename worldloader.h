@@ -7,6 +7,7 @@
 int getWorldFormat(const char *worldPath);
 bool scanWorldDirectory(const char *fromPath);
 bool loadTerrain(const char *fromPath, int &loadedChunks);
+void freeTerrain();
 bool loadEntireTerrain();
 uint64_t calcTerrainSize(const int chunksX, const int chunksZ);
 void clearLightmap();

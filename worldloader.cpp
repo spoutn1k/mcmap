@@ -4,6 +4,7 @@
 #include "nbt.h"
 #include "colors.h"
 #include "globals.h"
+#include "block.h"
 #include <list>
 #include <map>
 #include <cstring>
@@ -68,7 +69,7 @@ static bool loadAllRegions();
 static bool loadRegion(const char* file, const bool mustExist, int &loadedChunks);
 static bool loadTerrainRegion(const char *fromPath, int &loadedChunks);
 static bool scanWorldDirectoryRegion(const char *fromPath);
-static inline void assignBlock(const uint8_t &source, uint16_t* &dest, int &x, int &y, int &z, uint8_t* &justData);
+static inline void assignBlock(const uint8_t &source, Block* &dest, int &x, int &y, int &z, uint8_t* &justData);
 static inline void lightCave(const int x, const int y, const int z);
 
 int getWorldFormat(const char *worldPath)
@@ -91,6 +92,7 @@ int getWorldFormat(const char *worldPath)
 	} while (Dir::next(sd, path, file));
 	Dir::close(sd);
     }
+    delete[] path;
     return format;
 }
 
@@ -443,7 +445,7 @@ static bool loadChunk(const char *streamOrFile, const size_t streamLen)
 		    *bp-- = AIR;
 		}
 	    }
-	    uint16_t *targetBlock;
+	    Block *targetBlock;
 	    if (g_Orientation == East) {
 		targetBlock = &BLOCKEAST(x + offsetx, 0, z + offsetz);
 	    } else if (g_Orientation == North) {
@@ -558,7 +560,7 @@ static bool loadAnvilChunk(NBT_Tag * const level, const int32_t chunkX, const in
 	for (int x = 0; x < CHUNKSIZE_X; ++x) {
 	    for (int z = 0; z < CHUNKSIZE_Z; ++z) {
 		uint8_t *lightByte;
-		uint16_t *targetBlock;
+		Block *targetBlock;
 		if (g_Orientation == East) {
 		    targetBlock = &BLOCKEAST(x + offsetx, yoffset, z + offsetz);
 		    if (g_Skylight || g_Nightmode) lightByte = &SETLIGHTEAST(x + offsetx, yoffset, z + offsetz);
@@ -766,13 +768,14 @@ static void allocateTerrain()
     if (g_HeightMap != NULL) {
 	delete[] g_HeightMap;
     }
+
     g_HeightMap = new uint16_t[g_MapsizeX * g_MapsizeZ];
     //printf("%d -- %d\n", g_MapsizeX, g_MapsizeZ); //dimensions of terrain map (in memory)
-    memset(g_HeightMap, 0, g_MapsizeX * g_MapsizeZ * sizeof(uint16_t));
-    const size_t terrainsize = g_MapsizeZ * g_MapsizeX * g_MapsizeY;
+    //memset(g_HeightMap, 0, g_MapsizeX * g_MapsizeZ * sizeof(Block));
+    const size_t terrainsize = g_MapsizeZ * g_MapsizeX * g_MapsizeY * sizeof(Block);
     printf("Terrain takes up %.2fMiB", float(terrainsize / float(1024 * 1024)));
-    g_Terrain = new uint16_t[terrainsize];
-    memset(g_Terrain, 0, terrainsize); // Preset: Air
+    g_Terrain = new Block[terrainsize];
+    //memset(g_Terrain, 0, terrainsize); // Preset: Air
     if (g_Nightmode || g_Underground || g_BlendUnderground || g_Skylight) {
 	lightsize = g_MapsizeZ * g_MapsizeX * ((g_MapsizeY + (g_MapminY % 2 == 0 ? 1 : 2)) / 2);
 	printf(", lightmap %.2fMiB", float(lightsize / float(1024 * 1024)));
@@ -787,6 +790,18 @@ static void allocateTerrain()
 	}
     }
     printf("\n");
+}
+
+void freeTerrain() {
+    if (g_Terrain != NULL) {
+	delete[] g_Terrain;
+    }
+    if (g_Light != NULL) {
+	delete[] g_Light;
+    }
+    if (g_HeightMap != NULL) {
+	delete[] g_HeightMap;
+    }
 }
 
 void clearLightmap()
@@ -1029,7 +1044,7 @@ static void loadBiomeChunk(const char* path, const int chunkX, const int chunkZ)
     delete[] file;
 }
 
-static inline void assignBlock(const uint8_t &block, uint16_t* &targetBlock, int &x, int &y, int &z, uint8_t* &justData)
+static inline void assignBlock(const uint8_t &block, Block* &targetBlock, int &x, int &y, int &z, uint8_t* &justData)
 {
     uint8_t col;
     if (g_WorldFormat == 2) {
@@ -1039,274 +1054,10 @@ static inline void assignBlock(const uint8_t &block, uint16_t* &targetBlock, int
     }
 
     if ((g_NoWater && (block == WATER || block == FLOWING_WATER))) {
-	*targetBlock++ = AIR;
+	// (*targetBlock++).setId(AIR); // Not even needed as air by default
     } else {
-	*targetBlock++ = (block+256*col);
+	*targetBlock++ = Block(block, col);
     }
-    /*if (block == WOOL || block == LOG || block == LEAVES || block == STEP || block == DOUBLESTEP || block == WOOD || block == WOODEN_STEP || block == WOODEN_DOUBLE_STEP 
-	    || block == 95 || block == 160 || block == 159 || block == 171 || block == 38 || block == 175 || block == SAND || block == 153 
-	    || (g_NoWater && (block == WATER || block == STAT_WATER)) || (block >= 176 && block <= 197) || (block >= 166 && block <= 169) || block == STONE
-	    || block == 141 || block == 142 || block == 158 || block == 149 || block == 157 || block == 140 || block == 144
-	    || block == 131 || block == 132 || block == 150 || block == 147 || block == 148 || block == 68 || block == 69 || block == 70
-	    || (block >= 198 && block <= 217) || block == 176 || block == 177
-	    || block == 72 || block == 77 || block == 143 || block == 36) {  //three last lines contains colors for carpets
-	if (block == 131 || block == 132 || block == 150 || block == 147 || block == 148 || block == 68 || block == 69 || block == 70
-		|| block == 72 || block == 77 || block == 143 || block == 36 || block == 166 || block == 140 || block == 144
-		|| block == 176 || block == 177 || block == 209 || block == 217 || block == 198
-		|| block == WATER || block == STAT_WATER) {		//not visible blocks replaced to air, therefore we have few ID's more
-	    *targetBlock++ = 0;
-	} else if (block == STONE) {
-	    switch (col)
-	    {
-		case 0:
-		    *targetBlock++ = 1;
-		    break;
-		case 1:
-		case 2:
-		    *targetBlock++ = 140;
-		    break;
-		case 3:
-		case 4:
-		    *targetBlock++ = 144;
-		    break;
-		case 5:
-		case 6:
-		    *targetBlock++ = 157;
-		    break;
-	    }
-
-	} else if (block == LEAVES) {
-	    if ((col & 0x3) != 0) { // Map to pine or birch
-		*targetBlock++ = 228 + (col & 0x3);
-	    } else {
-		*targetBlock++ = block;
-	    }
-	} else if (block == LOG) {
-	    if (col % 4 != 0) { // Map to pine or birch
-		*targetBlock++ = 236 + (col & 0x3);
-	    } else {
-		*targetBlock++ = block;
-	    }
-	} else if (block == WOOL) {	
-	    if (col != 0) {
-		*targetBlock++ = 239 + col;
-	    } else {
-		*targetBlock++ = block;
-	    }
-	} else if (block == 171) {	//carpets
-	    switch (col)
-	    {
-		case 0:
-		    *targetBlock++ = 36;
-		    break;
-		case 1:
-		    *targetBlock++ = 68;
-		    break;
-		case 2:
-		    *targetBlock++ = 69;
-		    break;
-		case 3:
-		    *targetBlock++ = 70;
-		    break;
-		case 4:
-		    *targetBlock++ = 72;
-		    break;
-		case 5:
-		    *targetBlock++ = 77;
-		    break;
-		case 6:
-		    *targetBlock++ = 131;
-		    break;
-		case 7:
-		    *targetBlock++ = 132;
-		    break;
-		case 8:
-		    *targetBlock++ = 141;
-		    break;
-		case 9:
-		    *targetBlock++ = 142;
-		    break;
-		case 10:
-		    *targetBlock++ = 143;
-		    break;
-		case 11:
-		    *targetBlock++ = 147;
-		    break;
-		case 12:
-		    *targetBlock++ = 148;
-		    break;
-		case 13:
-		    *targetBlock++ = 149;
-		    break;
-		case 14:
-		    *targetBlock++ = 150;
-		    break;
-		case 15:
-		    *targetBlock++ = 158;
-		    break;
-	    }
-	} else if (block == 159) {
-	    if (col != 0) {
-		*targetBlock++ = 185 + col;
-	    } else {
-		*targetBlock++ = block;
-	    }
-	} else if (block == SAND) { //red sand
-	    if (col != 0) {
-		*targetBlock++ = REDSAND;
-	    } else {
-		*targetBlock++ = block;
-	    }
-	} else if (block == 95 || block == 160) { //stained glass and pane
-	    switch (col)
-	    {
-		case 0:
-		    *targetBlock++ = block;
-		    break;
-		case 1:
-		    *targetBlock++ = 234;
-		    break;
-		case 2:
-		    *targetBlock++ = 225;
-		    break;
-		case 3:
-		    *targetBlock++ = 255;
-		    break;
-		case 4:
-		case 5:
-		case 6:
-		case 7:
-		    *targetBlock++ = 162 + col;
-		    break;
-		default:
-		    *targetBlock++ = 170 + col;
-	    }
-	} else if (block == 38) {
-	    switch (col)
-	    {
-		case 0:
-		    *targetBlock++ = block;
-		    break;
-		case 1:
-		    *targetBlock++ = BLUE_ORCHID;
-		    break;
-		case 2:
-		    *targetBlock++ = ALLIUM;
-		    break;
-		case 3:
-		    *targetBlock++ = AZURE_BLUET;
-		    break;
-		case 4:
-		    *targetBlock++ = RED_TULIP;
-		    break;
-		case 5:
-		    *targetBlock++ = ORANGE_TULIP;
-		    break;
-		case 6:
-		    *targetBlock++ = WHITE_TULIP;
-		    break;
-		case 7:
-		    *targetBlock++ = PINK_TULIP;
-		    break;
-		case 8:
-		    *targetBlock++ = OXEYE_DAISY;
-	    }
-	} else if (block == 175) {
-	    switch (col)
-	    {
-		case 2:
-		case 3:
-		    *targetBlock++ = 31;
-		    break;
-		case 0:
-		    *targetBlock++ = SUNFLOWER;
-		    break;
-		case 1:
-		    *targetBlock++ = LILAC;
-		    break;
-		case 4:
-		    *targetBlock++ = 38;
-		    break;
-		case 5:
-		    *targetBlock++ = PEONY;
-	    }
-	} else if (block == STEP) {
-	    if (col == 0) {
-		*targetBlock++ = block;
-	    } else {
-		*targetBlock++ = 200 + col;
-	    }
-	} else if (block == WOODEN_STEP) {
-	    if (col != 0 && col < 4) {
-		*targetBlock++ = 213 + col;
-	    } else {
-		*targetBlock++ = block;
-	    }
-	} else if (block == WOOD || block == WOODEN_DOUBLE_STEP) {
-	    if (col != 0 && col < 4) {
-		*targetBlock++ = 225 + (col & 0x3);
-	    } else {
-		*targetBlock++ = block;
-	    }
-	} else if (block == DOUBLESTEP) {
-	    if (col == 1) {
-		*targetBlock++ = SANDSTONE;
-	    } else if (col == 2) {
-		*targetBlock++ = WOOD;
-	    } else if (col == 3) {
-		*targetBlock++ = COBBLESTONE;
-	    } else {
-		*targetBlock++ = block;
-	    }
-	} else if (block == 141 || block == 142 || block == 207) {	//carrots, potatoes and beetroots -> wheat
-	    *targetBlock++ = 59;
-	} else if (block == 158) {		//dropper -> dispenser
-	    *targetBlock++ = 23;
-	} else if (block == 149) {		//comparator -> repeater
-	    *targetBlock++ = 93;
-	} else if (block == 153) {		//nether ore -> netherrack
-	    *targetBlock++ = 87;
-	} else if (block == 157) {		//activator rail -> detector rail
-	    *targetBlock++ = 28;
-	} else if (block == 167) {		//iron trapdoor -> wooden trapdoor
-	    *targetBlock++ = 96;
-	} else if (block == 179 || block == 180 || block == 181 || block == 182) {	//red sandstone -> red sand
-	    *targetBlock++ = 153;
-	} else if (block == 178) {		//daylight detector inverted -> daylight detector
-	    *targetBlock++ = 151;
-	} else if (block == 168) {		//prismarine
-	    *targetBlock++ = 232;
-	} else if (block == 169) {		//sea lantern
-	    *targetBlock++ = 236;
-	} else if (block >= 193 && block <= 197) {	//doors 1.8+
-	    *targetBlock++ = 64;
-	} else if (block >= 188 && block <= 192) {	//fences 1.8+
-	    *targetBlock++ = 85;
-	} else if (block >= 183 && block <= 187) {	//fence gates 1.8+
-	    *targetBlock++ = 107;
-	} else if (block == 199 || block == 200) {	//chorus plant/fruit -> nether fences
-	    *targetBlock++ = 113;
-	} else if (block >= 201 && block <= 205) {	//purpur blocks
-	    *targetBlock++ = 209;
-	} else if (block == 206) {			//end bricks -> end stone
-	    *targetBlock++ = 121;
-	} else if (block == 210 || block == 211) {	//1.9 command blocks -> old command block
-	    *targetBlock++ = 137;
-	} else if (block == 212) {			//frosted ice -> regular ice
-	    *targetBlock++ = 79;
-	} else if (block == 213) {			//magma -> lava
-	    *targetBlock++ = STAT_LAVA;
-	} else if (block == 214) {			//nether wart block -> sould sand
-	    *targetBlock++ = 88;
-	} else if (block == 215) {			//red nether brick -> nether brick
-	    *targetBlock++ = 112;
-	} else if (block == 216) {			//bone block -> snow
-	    *targetBlock++ = 80;
-	} else *targetBlock++ = block;
-    } else {
-	*targetBlock++ = block;
-    }
-*/
 }
 
 static inline void lightCave(const int x, const int y, const int z)
@@ -1375,7 +1126,7 @@ void uncoverNether()
 	for (size_t z = CHUNKSIZE_Z; z < g_MapsizeZ - CHUNKSIZE_Z; ++z) {
 	    // Remove blocks on top, otherwise there is not much to see here
 	    int massive = 0;
-	    uint16_t *bp = g_Terrain + ((z + (x * g_MapsizeZ) + 1) * g_MapsizeY) - 1;
+	    Block *bp = g_Terrain + ((z + (x * g_MapsizeZ) + 1) * g_MapsizeY) - 1;
 	    int i;
 	    for (i = 0; i < to; ++i) { // Go down 74 blocks from the ceiling to see if there is anything except solid
 		if (massive && (*bp == AIR || *bp == LAVA || *bp == FLOWING_LAVA)) {
