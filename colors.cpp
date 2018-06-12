@@ -751,76 +751,134 @@ void loadColors()
 
 bool loadColorsFromFile(const char *file)
 {
+    char buffer[500], *ptr;
+    int id, variant;
     FILE *f = fopen(file, "r");
+    uint8_t vals[5];
+    bool valid;
+
     if (f == NULL) {
 	return false;
     }
     while (!feof(f)) {
-	char buffer[500];
+	variant = 0;
 	if (fgets(buffer, 500, f) == NULL) {
 	    break;
 	}
-	char *ptr = buffer;
+
+	ptr = buffer;
 	while (*ptr == ' ' || *ptr == '\t') {
 	    ++ptr;
 	}
+
 	if (*ptr == '\0' || *ptr == '#' || *ptr == '\12') {
 	    continue;   // This is a comment or empty line, skip
 	}
-	int blockid = atoi(ptr);
-	if (blockid < 1 || blockid > 255) {
-	    printf("Skipping invalid blockid %d in colors file\n", blockid);
+
+	id = atoi(ptr);
+	if (id < 0 || id > 255) {
+	    printf("Skipping invalid blockid %d in colors file\n", id);
 	    continue;
 	}
+
 	while (*ptr != ' ' && *ptr != '\t' && *ptr != '\0') {
+	    if (*ptr == ':') {
+		variant = atoi(++ptr);
+	    }
 	    ++ptr;
 	}
-	uint8_t vals[5];
-	bool valid = true;
+
+	valid = true;
+
 	for (int i = 0; i < 5; ++i) {
-	    while (*ptr == ' ' || *ptr == '\t') {
+	    while (*ptr == ' ' || *ptr == '\t')
 		++ptr;
-	    }
+
 	    if (*ptr == '\0' || *ptr == '#' || *ptr == '\12') {
-		printf("Too few arguments for block %d, ignoring line.\n", blockid);
+		printf("Too few arguments for block %d, ignoring line.\n", id);
 		valid = false;
 		break;
 	    }
+
 	    vals[i] = clamp(atoi(ptr));
 	    while (*ptr != ' ' && *ptr != '\t' && *ptr != '\0') {
 		++ptr;
 	    }
 	}
-	if (!valid) {
+
+	if (!valid)
 	    continue;
-	}
-	memcpy(colors[blockid], vals, 5);
-	colors[blockid][BRIGHTNESS] = GETBRIGHTNESS(colors[blockid]);
+
+	Block::setColor(id, variant, vals);
     }
+
     fclose(f);
     return true;
 }
 
-bool dumpColorsToFile(const char *file)
-{
+bool dumpColorsToFile(const char *file) {
+    uint8_t* color;
+    uint8_t toDump[256];
     FILE *f = fopen(file, "w");
+
     if (f == NULL) {
+	printf("Error: %s\n", strerror(errno));
 	return false;
     }
+
+    memset(toDump, 1, 256*sizeof(uint8_t));
+
+    toDump[STONE] = 7;
+    toDump[DIRT] = 3;
+    toDump[PLANKS] = 6;
+    toDump[SAPLING] = 6;
+    toDump[SAND] = 2;
+    toDump[LOG] = 4;
+    toDump[LEAVES] = 4;
+    toDump[SPONGE] = 2;
+    toDump[SANDSTONE] = 3;
+    toDump[TALLGRASS] = 3;
+    toDump[WOOL] = 16;
+    toDump[RED_FLOWER] = 9;
+    toDump[DOUBLE_STONE_SLAB] = 8;
+    toDump[STONE_SLAB] = 8;
+    toDump[STAINED_GLASS] = 16;
+    toDump[MONSTER_EGG] = 6;
+    toDump[STONEBRICK] = 4;
+    toDump[DOUBLE_WOODEN_SLAB] = 6;
+    toDump[WOODEN_SLAB] = 6;
+    toDump[COBBLESTONE_WALL] = 2;
+    toDump[QUARTZ_BLOCK] = 3;
+    toDump[STAINED_HARDENED_CLAY] = 16;
+    toDump[STAINED_GLASS_PANE] = 16;
+    toDump[LEAVES2] = 2;
+    toDump[LOG2] = 2;
+    toDump[PRISMARINE] = 3;
+    toDump[CARPET] = 16;
+    toDump[DOUBLE_PLANT] = 6;
+    toDump[RED_SANDSTONE] = 3;
+    toDump[CONCRETE] = 16;
+    toDump[CONCRETE_POWDER] = 16;
+
     fprintf(f, "# For Block IDs see http://minecraftwiki.net/wiki/Data_values\n"
 	    "# and http://wrim.pl/mcmap (for blocks introduced since Minecraft 1.3.1 and mcmap 2.4)\n"
 	    "# Note that noise or alpha (or both) do not work for a few blocks like snow, torches, fences, steps, ...\n"
 	    "# Actually, if you see any block has an alpha value of 254 you should leave it that way to prevent black artifacts.\n"
 	    "# If you want to set alpha of grass to <255, use -blendall or you won't get what you expect.\n"
 	    "# Noise is supposed to look normal using -noise 10\n"
-	    "# Dyed wool ranges from ID 240 to 254, it's orange to black in the order described at http://www.minecraftwiki.net/wiki/Data_values#Wool\n"
-	    "# half-steps of sand, wood and cobblestone are 232 to 236\n\n");
-    for (size_t i = 1; i < 255; ++i) {
-	uint8_t *c = colors[i];
-	if (i % 15 == 1) {
-	    fprintf(f, "#ID    R   G   B    A  Noise\n");
+	   );
+
+    fprintf(f, "#ID:V\tR\tG\tB\tA\tNoise\n");
+
+    for (uint8_t i = 0; i < 255; ++i) {
+	for (uint8_t j = 0; j < toDump[i]; ++j) {
+	    color = Block::getColor(i, j);
+	    if (toDump[i] == 1)
+		fprintf(f, "%3d", i);
+	    else
+		fprintf(f, "%3d:%d", i, j);
+	    fprintf(f, "\t%3d\t%3d\t%3d\t%3d\t%3d\n", int(color[PRED]), int(color[PGREEN]), int(color[PBLUE]), int(color[PALPHA]), int(color[NOISE]));
 	}
-	fprintf(f, "%3d  %3d %3d %3d  %3d  %3d\n", int(i), int(c[PRED]), int(c[PGREEN]), int(c[PBLUE]), int(c[PALPHA]), int(c[NOISE]));
     }
     fclose(f);
     return true;
