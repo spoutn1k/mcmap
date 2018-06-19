@@ -1,6 +1,12 @@
 mcmap changelog
-Latest version is available at: http://wrim.pl/mcmap/
+Latest version is available at: https:/github.com/jbman100/mcmap
 ------------------------------------------------------
+
+2.5.0 (jun 13 2018) - Minecraft 1.12.x compatible
+Modified:
+Support for all blocks.
+Cleaned up color file format, to use a more logical format for blocks (id:variant).
+Tall flowers now properly rendered as two block tall.
 
 2.4.4 (may 24 2016) - Minecraft 1.9.X compatible
 added:

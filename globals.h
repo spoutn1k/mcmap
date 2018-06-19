@@ -28,7 +28,7 @@ extern int g_TotalFromChunkX, g_TotalFromChunkZ, g_TotalToChunkX, g_TotalToChunk
 extern int g_FromChunkX, g_FromChunkZ, g_ToChunkX, g_ToChunkZ;
 // size of that area in blocks (no offset)
 extern size_t g_MapsizeZ, g_MapsizeX;
-extern int g_MapminY, g_MapsizeY;
+extern int g_MapminY, g_MapmaxY, g_MapsizeY;
 
 extern int g_OffsetY; // y pixel offset in the final image for one y step in 3d array (2 or 3)
 

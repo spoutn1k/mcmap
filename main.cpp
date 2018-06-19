@@ -158,13 +158,18 @@ int main(int argc, char **argv)
 		    return 1;
 		}
 		g_Noise = atoi(NEXTARG);
-	    } else if (strcmp(option, "-height") == 0 || strcmp(option, "-max") == 0) {
+	    } else if (strcmp(option, "-height") == 0) {
 		if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
 		    printf("Error: %s needs an integer argument, ie: %s 100\n", option, option);
 		    return 1;
 		}
 		g_MapsizeY = atoi(NEXTARG);
-		if (strcmp(option, "-max") == 0) g_MapsizeY++;
+	    } else if (strcmp(option, "-max") == 0) {
+		if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
+		    printf("Error: %s needs an integer argument, ie: %s 100\n", option, option);
+		    return 1;
+		}
+		g_MapmaxY = atoi(NEXTARG);
 	    } else if (strcmp(option, "-min") == 0) {
 		if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
 		    printf("Error: %s needs an integer argument, ie: %s 50\n", option, option);
@@ -657,6 +662,7 @@ int main(int argc, char **argv)
 			    && (BLOCKAT(x - 1, y, z) == AIR || BLOCKAT(x, y, z - 1) == AIR)) {   // block TL/TR from this one is air = edge
 			brightnessAdjustment += 13;
 		    }
+
 		    setPixel(bmpPosX, bmpPosY, c, brightnessAdjustment);
 		}
 	    }
@@ -1110,8 +1116,8 @@ void printHelp(char *binary)
 	    "\nmcmap - an isometric minecraft map rendering tool.\n"
 	    "Version " VERSION " %dbit\n\n"
 	    "Usage: %s [-from X Z -to X Z] [-night] [-cave] [-noise VAL] [...] WORLDPATH\n\n"
-	    "  -from X Z     sets the coordinate of the chunk to start rendering at\n"
-	    "  -to X Z       sets the coordinate of the chunk to end rendering at\n"
+	    "  -from X Z     sets the coordinates of the chunk to start rendering at\n"
+	    "  -to X Z       sets the coordinates of the chunk to end rendering at\n"
 	    "                Note: Currently you need both -from and -to to define\n"
 	    "                bounds, otherwise the entire world will be rendered.\n"
 	    "  -cave         renders a map of all caves that have been explored by players\n"

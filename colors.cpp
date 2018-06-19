@@ -73,7 +73,7 @@ void loadColors()
     SETCOLOR		(DISPENSER,	107,	107,	107,	255);
     SETCOLORNOISE	(SANDSTONE,	218,	210,	158,	255,	7);
     SETCOLORNOISE	(NOTEBLOCK,	100,	67,	50,	255,	10);
-    SETCOLOR		(BED,		175,	116,	116,	254); // Not fully opaque to prevent culling on this one
+    SETCOLOR		(BED,		150,	16,	16,	254); // Not fully opaque to prevent culling on this one
     SETCOLOR		(GOLDEN_RAIL,	160,	134,	72,	250);
     SETCOLOR		(DETECTOR_RAIL,	120,	114,	92,	250);
     SETCOLOR		(STICKY_PISTON,	106,	102,	95,	255);

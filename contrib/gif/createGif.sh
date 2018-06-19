@@ -31,7 +31,6 @@ do
     convert output.png -alpha on -gravity South -background transparent -extent "$maxSize" "$tmpFolder/layer_$i.png"
 done
 
-#cd $tmpFolder
 convert -delay 10 -loop 0 -layers OptimizeFrame $tmpFolder/* chunk.gif
 
-rm -r $tmpFolder
+#rm -r $tmpFolder
