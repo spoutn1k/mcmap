@@ -5,6 +5,7 @@
 #include <cstring>
 #include <cstdio>
 #include <cstdlib>
+#include <cerrno>
 
 #define SETCOLOR(col,r,g,b,a) do { \
     colors[col][PBLUE]		= b; \
