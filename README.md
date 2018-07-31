@@ -53,7 +53,7 @@ mcmap %APPDATA%\.minecraft\saves\<your save>
 __On Linux/Unix__
 
 ```
-git clone https://github.com/jbman100/mcmap
+git clone https://github.com/cvsync/mcmap
 cd mcmap
 make
 ```
