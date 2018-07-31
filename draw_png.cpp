@@ -115,7 +115,7 @@ bool createImage(FILE *fh, const size_t width, const size_t height, const bool s
 	gImageBuffer = new uint8_t[gPngSize];
 	memset(gImageBuffer, 0, (size_t)gPngSize);
     }
-    fseek64(fh, 0, SEEK_SET);
+    fseeko(fh, 0, SEEK_SET);
     // Write header
     pngPtrMain = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 

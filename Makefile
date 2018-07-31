@@ -1,8 +1,8 @@
 # if you don't want png support, remove "-DWITHPNG", "-lpng" and "draw_png.cpp" below
 CC=g++
-CFLAGS=-O3 -msse -c -Wall -fomit-frame-pointer -pedantic -DWITHPNG -I/usr/local/include
+CFLAGS=-O3 -msse -c -Wall -fomit-frame-pointer -pedantic -DWITHPNG -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -I/usr/local/include
 LDFLAGS=-O3 -msse -lz -lpng -fomit-frame-pointer -L/usr/local/lib
-DCFLAGS=-g -O0 -c -Wall -D_DEBUG -DWITHPNG -I/usr/local/include
+DCFLAGS=-g -O0 -c -Wall -D_DEBUG -DWITHPNG -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -I/usr/local/include
 DLDFLAGS=-g -O0 -lz -lpng -L/usr/local/lib
 SOURCES=main.cpp helper.cpp nbt.cpp colors.cpp worldloader.cpp filesystem.cpp globals.cpp draw_png.cpp extractcolors.cpp pngreader.cpp block.cpp
 OBJECTS=$(SOURCES:.cpp=.default.o)
@@ -12,7 +12,7 @@ OBJECTS64=$(SOURCES:.cpp=.64.o)
 EXECUTABLE=mcmap
 EXECUTABLE64=mcmap64
 
-CFLAGSX11=-O3 -c -Wall -fomit-frame-pointer -pedantic -DWITHPNG -I/usr/local/include -I/usr/X11/include
+CFLAGSX11=-O3 -c -Wall -fomit-frame-pointer -pedantic -DWITHPNG -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -I/usr/local/include -I/usr/X11/include
 LDFLAGSX11=-O3 -lz -lpng -fomit-frame-pointer -L/usr/local/lib -L/usr/X11/lib
 
 # default, zlib and libpng shared
