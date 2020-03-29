@@ -5,7 +5,7 @@ int g_FromChunkX = UNDEFINED, g_FromChunkZ = UNDEFINED, g_ToChunkX = UNDEFINED, 
 size_t g_MapsizeZ = 0, g_MapsizeX = 0;
 int g_MapminY = 0, g_MapmaxY = 256, g_MapsizeY = 256, g_OffsetY = 2;
 
-int g_WorldFormat = -1;
+int g_WorldFormat = 2;
 
 Orientation g_Orientation = East;
 bool g_Nightmode = false;
@@ -15,6 +15,7 @@ bool g_Skylight = false;
 int g_Noise = 0;
 bool g_BlendAll = false;
 bool g_Hell = false, g_ServerHell = false;
+bool g_End = false;
 bool g_NoWater = false;
 
 bool g_UseBiomes = false;
@@ -34,5 +35,3 @@ Marker g_Markers[MAX_MARKERS];
 char *g_TilePath = NULL;
 
 int8_t g_SectionMin, g_SectionMax;
-
-uint8_t g_MystCraftAge;

@@ -41,6 +41,7 @@ extern bool g_Skylight;
 extern int g_Noise;
 extern bool g_BlendAll; // If set, do not assume certain blocks (like grass) are always opaque
 extern bool g_Hell, g_ServerHell; // rendering the nether
+extern bool g_End;
 extern bool g_NoWater; // render water clear
 
 // For rendering biome colors properly, external png files are used
@@ -64,7 +65,5 @@ extern Block* g_Terrain;
 extern char *g_TilePath;
 
 extern int8_t g_SectionMin, g_SectionMax;
-
-extern uint8_t g_MystCraftAge;
 
 #endif
