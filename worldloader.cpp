@@ -16,6 +16,7 @@
 #define REGIONSIZE 32
 
 using std::string;
+namespace fs = std::filesystem;
 
 namespace
 {
@@ -56,7 +57,6 @@ namespace
 static bool loadChunk(const char *streamOrFile, const size_t len = 0);
 static bool loadAnvilChunk(NBT_Tag level, const int32_t chunkX, const int32_t chunkZ);
 static void allocateTerrain();
-static void loadBiomeChunk(const char* path, const int chunkX, const int chunkZ);
 static bool loadAllRegions();
 static bool loadRegion(const char* file, const bool mustExist, int &loadedChunks);
 static bool loadTerrainRegion(const char *fromPath, int &loadedChunks);
@@ -64,7 +64,11 @@ static bool scanWorldDirectoryRegion(const char *fromPath);
 static inline void assignBlock(const string id, Block* &dest);
 static inline void lightCave(const int x, const int y, const int z);
 
+void _loadChunksFromRegion(std::filesystem::path, int32_t regionX, int32_t regionZ, Terrain::Data& terrain);
+bool _loadChunk(uint32_t offset, FILE* regionData, Terrain::Chunk&);
+
 int getWorldFormat(const char *worldPath) {
+	worldPath++;
 	return 2; // Come on, its not 2010 anymore
 }
 
@@ -249,62 +253,22 @@ static bool scanWorldDirectoryRegion(const char *fromPath) {
 	return true;
 }
 
-bool loadEntireTerrain()
-{
-	if (g_WorldFormat != 0) return loadAllRegions();
-	if (chunks.empty()) {
-		return false;
-	}
-	allocateTerrain();
-	const size_t max = chunks.size();
-	size_t count = 0;
-	printf("Loading all chunks..\n");
-	for (chunkList::iterator it = chunks.begin(); it != chunks.end(); it++) {
-		printProgress(count++, max);
-		loadChunk((**it).filename);
-		delete *it;
-	}
-	chunks.clear();
-	printProgress(10, 10);
-	return true;
+bool loadEntireTerrain() {
+	return loadAllRegions();
 }
 
-bool loadTerrain(const char *fromPath, int &loadedChunks)
-{
+bool loadTerrain(const char *fromPath, int &loadedChunks) {
 	loadedChunks = 0;
-	if (g_WorldFormat != 0) return loadTerrainRegion(fromPath, loadedChunks);
-	if (fromPath == NULL || *fromPath == '\0') {
-		return false;
-	}
-	allocateTerrain();
-	string path(fromPath);
-	if (path.at(path.size()-1) != '/') {
-		path.append("/");
-	}
-
-	printf("Loading all chunks..\n");
-	for (int chunkZ = g_FromChunkZ; chunkZ < g_ToChunkZ; ++chunkZ) {
-		printProgress(chunkZ - g_FromChunkZ, g_ToChunkZ - g_FromChunkZ);
-		for (int chunkX = g_FromChunkX; chunkX < g_ToChunkX; ++chunkX) {
-			string thispath = path + base36((chunkX + 640000) % 64) + "/" + base36((chunkZ + 640000) % 64) + "/c." + base36(chunkX) + "." + base36(chunkZ) + ".dat";
-			if (loadChunk(thispath.c_str())) {
-				++loadedChunks;
-			}
-		}
-	}
-	// Done loading all chunks
-	printProgress(10, 10);
-	return true;
+	return loadTerrainRegion(fromPath, loadedChunks);
 }
 
-static bool loadChunk(const char *streamOrFile, const size_t streamLen)
-{
+static bool loadChunk(const char *streamOrFile, const size_t streamLen) {
 	bool ok = false;
 	//if (streamLen == 0) { // File
-		//NBT chunk(streamOrFile, ok);
+	//NBT chunk(streamOrFile, ok);
 	//} else {
 	//}
-	NBT chunk((uint8_t*)streamOrFile, streamLen, true, ok);
+	NBT chunk((uint8_t*)streamOrFile, streamLen, ok);
 	if (!ok) {
 		//printf("Error loading chunk.\n");
 		return false; // chunk does not exist
@@ -323,16 +287,15 @@ static bool loadChunk(const char *streamOrFile, const size_t streamLen)
 }
 
 static bool loadAnvilChunk(NBT_Tag level, const int32_t chunkX, const int32_t chunkZ) {
-	uint8_t *blockdata, *lightdata, *skydata;
-	int32_t len, yoffset, yoffsetsomething = (g_MapminY + SECTION_Y * 10000) % SECTION_Y;
-	int8_t yo;
-	bool ok;
-	list<NBT_Tag> sections = level["Sections"].getList();
+	uint8_t *lightdata, *skydata, *lightByte, yo;
+	int32_t yoffset, yoffsetsomething = (g_MapminY + SECTION_Y * 10000) % SECTION_Y;
+	list<NBT_Tag*> sections = level["Sections"].getList();
+	Block *targetBlock;
 
 	const int offsetz = (chunkZ - g_FromChunkZ) * CHUNKSIZE_Z;
 	const int offsetx = (chunkX - g_FromChunkX) * CHUNKSIZE_X;
-	for (list<NBT_Tag>::iterator it = sections.begin(); it != sections.end(); it++) {
-		NBT_Tag section = *it;
+	for (list<NBT_Tag*>::iterator it = sections.begin(); it != sections.end(); it++) {
+		NBT_Tag section = **it;
 		yo = section["Y"].getByte();
 
 		if (yo < g_SectionMin || yo > g_SectionMax)
@@ -344,9 +307,9 @@ static bool loadAnvilChunk(NBT_Tag level, const int32_t chunkX, const int32_t ch
 			yoffset = 0;
 
 		try {
-			blockdata = section["BlockStates"]._data;
+			lightdata = section["BlockStates"]._data;
 		} catch (const std::invalid_argument& e) {
-			continue;
+			continue; //No blocks in this section
 		}
 		try {
 			lightdata = section["BlockLight"]._data;
@@ -362,8 +325,6 @@ static bool loadAnvilChunk(NBT_Tag level, const int32_t chunkX, const int32_t ch
 		// Copy data
 		for (int x = 0; x < CHUNKSIZE_X; ++x) {
 			for (int z = 0; z < CHUNKSIZE_Z; ++z) {
-				uint8_t *lightByte;
-				Block *targetBlock;
 				if (g_Orientation == East) {
 					targetBlock = &BLOCKEAST(x + offsetx, yoffset, z + offsetz);
 					if (g_Skylight || g_Nightmode) lightByte = &SETLIGHTEAST(x + offsetx, yoffset, z + offsetz);
@@ -383,7 +344,7 @@ static bool loadAnvilChunk(NBT_Tag level, const int32_t chunkX, const int32_t ch
 					if (g_SectionMin == yo && y < yoffsetsomething) continue;
 					if (g_SectionMax == yo && y + yoffset >= g_MapsizeY) break;
 					// Block data
-					string block = getBlockId(x + (z + (y * CHUNKSIZE_Z)) * CHUNKSIZE_X, section);
+					string block = getBlockId(x + (z + (y * CHUNKSIZE_Z)) * CHUNKSIZE_X, &section);
 					assignBlock(block, targetBlock);
 					// Light
 					if (g_Underground) {
@@ -409,36 +370,19 @@ static bool loadAnvilChunk(NBT_Tag level, const int32_t chunkX, const int32_t ch
 				} // for y
 			} // for z
 		} // for x
-
-		/*
-		// Markers Anvil - TODO
-		if (g_MarkerCount != 0) for (int i = 0; i < g_MarkerCount; ++i) {
-		Marker &m = g_Markers[i];
-		if (m.chunkX == chunkX && m.chunkZ == chunkZ) {
-		memset(blockdata + ((m.offsetZ + (m.offsetX * CHUNKSIZE_Z)) * SECTION_Y), m.color, SECTION_Y - 1);
-		printf("marker-%d-%d---%d-%d---%d---\n\n",chunkX,chunkZ,m.offsetX,m.offsetZ,m.color);
-		}
-		}
-		*/
-
 	}
 	return true;
 }
 
-uint64_t calcTerrainSize(const int chunksX, const int chunksZ)
-{
+uint64_t calcTerrainSize(const int chunksX, const int chunksZ) {
 	uint64_t size = uint64_t(chunksX+2) * CHUNKSIZE_X * uint64_t(chunksZ+2) * CHUNKSIZE_Z * uint64_t(g_MapsizeY) * sizeof(Block);
 	if (g_Nightmode || g_Underground || g_Skylight || g_BlendUnderground) {
 		size += size / 2;
 	}
-	if (g_UseBiomes) {
-		size += uint64_t(chunksX+2) * CHUNKSIZE_X * uint64_t(chunksZ+2) * CHUNKSIZE_Z * sizeof(uint16_t);
-	}
 	return size;
 }
 
-void calcBitmapOverdraw(int &left, int &right, int &top, int &bottom)
-{
+void calcBitmapOverdraw(int &left, int &right, int &top, int &bottom) {
 	top = left = bottom = right = 0x0fffffff;
 	int val, x, z;
 	chunkList::iterator itC;
@@ -560,8 +504,7 @@ void calcBitmapOverdraw(int &left, int &right, int &top, int &bottom)
 	}
 }
 
-static void allocateTerrain()
-{
+static void allocateTerrain() {
 	if (g_Terrain != NULL) {
 		delete[] g_Terrain;
 	}
@@ -615,17 +558,6 @@ void clearLightmap()
 }
 
 /**
- * Round down to the nearest multiple of 8, e.g. floor8(-5) == 8
- */
-static inline int floorBiome(const int val)
-{
-	if (val < 0) {
-		return ((val - (CHUNKS_PER_BIOME_FILE - 1)) / CHUNKS_PER_BIOME_FILE) * CHUNKS_PER_BIOME_FILE;
-	}
-	return (val / CHUNKS_PER_BIOME_FILE) * CHUNKS_PER_BIOME_FILE;
-}
-
-/**
  * Round down to the nearest multiple of 32, e.g. floor32(-5) == 32
  */
 static inline int floorRegion(const int val)
@@ -634,30 +566,6 @@ static inline int floorRegion(const int val)
 		return ((val - (REGIONSIZE - 1)) / REGIONSIZE) * REGIONSIZE;
 	}
 	return (val / REGIONSIZE) * REGIONSIZE;
-}
-
-/**
- * Load all the 8x8-chunks-files containing biome information
- */
-void loadBiomeMap(const char* path)
-{
-	printf("Loading biome data...\n");
-	const uint64_t size = g_MapsizeX * g_MapsizeZ;
-	if (g_BiomeMapSize == 0 || size > g_BiomeMapSize) {
-		if (g_BiomeMap == NULL) delete[] g_BiomeMap;
-		g_BiomeMapSize = size;
-		g_BiomeMap = new uint16_t[size];
-	}
-	memset(g_BiomeMap, 0, size * sizeof(uint16_t));
-	//
-	const int tmpMin = -floorBiome(g_FromChunkX);
-	for (int x = floorBiome(g_FromChunkX); x <= floorBiome(g_ToChunkX); x += CHUNKS_PER_BIOME_FILE) {
-		printProgress(size_t(x + tmpMin), size_t(floorBiome(g_ToChunkX) + tmpMin));
-		for (int z = floorBiome(g_FromChunkZ); z <= floorBiome(g_ToChunkZ); z += CHUNKS_PER_BIOME_FILE) {
-			loadBiomeChunk(path, x, z);
-		}
-	}
-	printProgress(10, 10);
 }
 
 #define REGION_HEADER_SIZE REGIONSIZE * REGIONSIZE * 4
@@ -688,8 +596,7 @@ static bool loadAllRegions()
 /**
  * Load all the 32x32 region files withing the specified bounds
  */
-static bool loadTerrainRegion(const char *fromPath, int &loadedChunks)
-{
+static bool loadTerrainRegion(const char *fromPath, int &loadedChunks) {
 	loadedChunks = 0;
 	if (fromPath == NULL || *fromPath == '\0') {
 		return false;
@@ -699,7 +606,7 @@ static bool loadTerrainRegion(const char *fromPath, int &loadedChunks)
 	char *path = new char[maxlen];
 
 	printf("Loading all chunks..\n");
-	//
+
 	const int tmpMin = -floorRegion(g_FromChunkX);
 	for (int x = floorRegion(g_FromChunkX); x <= floorRegion(g_ToChunkX); x += REGIONSIZE) {
 		printProgress(size_t(x + tmpMin), size_t(floorRegion(g_ToChunkX) + tmpMin));
@@ -796,60 +703,11 @@ static bool loadRegion(const char* file, const bool mustExist, int &loadedChunks
 	return true;
 }
 
-static inline uint16_t ntoh16(const uint16_t val) {
-	return (uint16_t(*(uint8_t*)&val) << 8) + uint16_t(*(((uint8_t*)&val) + 1));
-}
-
-static void loadBiomeChunk(const char* path, const int chunkX, const int chunkZ) {
-#	define BIOME_ENTRIES CHUNKS_PER_BIOME_FILE * CHUNKS_PER_BIOME_FILE * CHUNKSIZE_X * CHUNKSIZE_Z
-#	define RECORDS_PER_LINE CHUNKSIZE_X * CHUNKS_PER_BIOME_FILE
-	const size_t size = strlen(path) + 50;
-	char *file = new char[size];
-	snprintf(file, size, "%s/b.%d.%d.biome", path, chunkX / CHUNKS_PER_BIOME_FILE, chunkZ / CHUNKS_PER_BIOME_FILE);
-	if (!fileExists(file)) {
-		printf("'%s' doesn't exist. Please update biome cache.\n", file);
-		delete[] file;
-		return;
-	}
-	FILE *fh = fopen(file, "rb");
-	uint16_t *data = new uint16_t[BIOME_ENTRIES];
-	const bool success = (fread(data, sizeof(uint16_t), BIOME_ENTRIES, fh) == BIOME_ENTRIES);
-	fclose(fh);
-	if (!success) {
-		printf("'%s' seems to be truncated. Try rebuilding biome cache.\n", file);
-	} else {
-		const int fromX = g_FromChunkX * CHUNKSIZE_X;
-		const int toX   = g_ToChunkX * CHUNKSIZE_X;
-		const int fromZ = g_FromChunkZ * CHUNKSIZE_Z;
-		const int toZ   = g_ToChunkZ * CHUNKSIZE_Z;
-		const int offX  = chunkX * CHUNKSIZE_X;
-		const int offZ  = chunkZ * CHUNKSIZE_Z;
-		for (int z = 0; z < CHUNKSIZE_Z * CHUNKS_PER_BIOME_FILE; ++z) {
-			if (z + offZ < fromZ || z + offZ >= toZ) continue;
-			for (int x = 0; x < CHUNKSIZE_X * CHUNKS_PER_BIOME_FILE; ++x) {
-				if (x + offX < fromX || x + offX >= toX) continue;
-				if (g_Orientation == North) {
-					BIOMENORTH(x + offX - fromX, z + offZ - fromZ) = ntoh16(data[RECORDS_PER_LINE * z + x]);
-				} else if (g_Orientation == East) {
-					BIOMEEAST(x + offX - fromX, z + offZ - fromZ) = ntoh16(data[RECORDS_PER_LINE * z + x]);
-				} else if (g_Orientation == South) {
-					BIOMESOUTH(x + offX - fromX, z + offZ - fromZ) = ntoh16(data[RECORDS_PER_LINE * z + x]);
-				} else {
-					BIOMEWEST(x + offX - fromX, z + offZ - fromZ) = ntoh16(data[RECORDS_PER_LINE * z + x]);
-				}
-			}
-		}
-	}
-	delete[] data;
-	delete[] file;
-}
-
 static inline void assignBlock(const string id, Block* &targetBlock) {
 	*targetBlock++ = Block(id);
 }
 
-static inline void lightCave(const int x, const int y, const int z)
-{
+static inline void lightCave(const int x, const int y, const int z) {
 	for (int ty = y - 9; ty < y + 9; ty+=2) { // The trick here is to only take into account
 		const int oty = ty - g_MapminY;
 		if (oty < 0) {
@@ -940,4 +798,214 @@ void uncoverNether()
 		}
 	}
 	printProgress(10, 10);
+}
+
+NBT* loadChunk(const char *savePath, int32_t x, int32_t z) {
+	if (savePath == NULL || *savePath == '\0') {
+		return NULL;
+	}
+
+	size_t maxlen = strlen(savePath) + 40;
+	char *path = new char[maxlen];
+	snprintf(path, maxlen, "%s/region/r.%d.%d.mca", savePath, int(x / REGIONSIZE), int(z / REGIONSIZE));
+	uint8_t description[COMPRESSED_BUFFER], decompressedBuffer[DECOMPRESSED_BUFFER];
+	FILE *rp = fopen(path, "rb");
+
+	if (rp == NULL) {
+		printf("Error opening region file %s\n", path);
+		return NULL;
+	}
+
+	if (fread(description, 1, 4, rp) != 4) {
+		printf("Header too short in %s\n", path);
+		fclose(rp);
+		return NULL;
+	}
+
+	uint32_t offset = (_ntohl(description) >> 8) * 4096;
+	if (0 != fseek(rp, offset, SEEK_SET)) {
+		printf("Error seeking to chunk in region file %s\n", path);
+	}
+	if (1 != fread(description, 5, 1, rp)) {
+		printf("Error reading chunk size from region file %s\n", path);
+	}
+	uint32_t len = _ntohl(description);
+	len--;
+	if (fread(description, 1, len, rp) != len) {
+		printf("Not enough input for chunk in %s\n", path);
+	}
+	fclose(rp);
+
+	z_stream zlibStream;
+	memset(&zlibStream, 0, sizeof(z_stream));
+	zlibStream.next_out = (Bytef*)decompressedBuffer;
+	zlibStream.avail_out = DECOMPRESSED_BUFFER;
+	zlibStream.avail_in = len;
+	zlibStream.next_in = (Bytef*)description;
+	inflateInit2(&zlibStream, 32 + MAX_WBITS);
+
+	int status = inflate(&zlibStream, Z_FINISH); // decompress in one step
+	inflateEnd(&zlibStream);
+
+	if (status != Z_STREAM_END) {
+		printf("Error decompressing chunk from %s\n", path);
+	}
+
+	len = zlibStream.total_out;
+
+	bool success;
+	NBT *chunk = new NBT(decompressedBuffer, len, success);
+
+	delete[] path;
+	return chunk;
+}
+
+#define CHUNK(x) (x >> 4)
+#define REGION(x) (x >> 5)
+
+/* From a set of coordinates,
+ * Return a Terrain::Data object containing all of the loaded terrain */
+void _loadTerrain(Terrain::Data& terrain, fs::path regionDir, Terrain::Coordinates& coords) {
+	// Determine the chunks to load from the coordinates: x >> 4
+	// Determine the files to read from the chunks: chunkX >> 5
+	// Load em in a Terrain::Data struct
+
+	terrain.map.minX = CHUNK(coords.minX);
+	terrain.map.minZ = CHUNK(coords.minZ);
+	terrain.map.maxX = CHUNK(coords.maxX);
+	terrain.map.maxZ = CHUNK(coords.maxZ);
+
+	terrain.chunks = new Terrain::Chunk[(terrain.map.maxX - terrain.map.minX + 1)*(terrain.map.maxZ - terrain.map.minZ + 1)];
+
+	for (int8_t rx = REGION(terrain.map.minX); rx < REGION(terrain.map.maxX) + 1; rx++) {
+		for (int8_t rz = REGION(terrain.map.minZ); rz < REGION(terrain.map.maxZ) + 1; rz++) {
+			_loadChunksFromRegion(regionDir, rx, rz, terrain);
+		}
+	}
+}
+
+uint32_t chunk_index(int32_t x, int32_t z, Terrain::Coordinates& map) {
+	return (x - map.minX) + (z - map.minZ)*(map.maxX - map.minX + 1);
+}
+
+void _loadChunksFromRegion(fs::path regionDir, int32_t regionX, int32_t regionZ, Terrain::Data& terrain) {
+	// First, we try and open the corresponding region file
+	FILE *regionData;
+	uint8_t regionHeader[REGION_HEADER_SIZE];
+
+	fs::path regionFile = regionDir /= "r." + std::to_string(regionX) + "." + std::to_string(regionZ) + ".mca";
+
+	if (!fs::exists(regionFile) || !(regionData = fopen(regionFile.c_str(), "rb"))) {
+		printf("Error opening region file %s\n", regionFile.c_str());
+		return;
+	}
+
+	// Then, we read the header (of size 4K) storing the chunks locations
+
+	if (fread(regionHeader, sizeof(uint8_t), REGION_HEADER_SIZE, regionData) != REGION_HEADER_SIZE) {
+		printf("Header too short in %s\n", regionFile.c_str());
+		fclose(regionData);
+		return;
+	}
+
+	// For all the chunks in the file
+	for (int it = 0; it < REGIONSIZE*REGIONSIZE; it++) {
+		// Bound check
+		const int chunkX = (regionX << 5) + (it & 0x1f);
+		const int chunkZ = (regionZ << 5) + (it >> 5);
+		if (chunkX < terrain.map.minX
+				|| chunkX > terrain.map.maxX
+				|| chunkZ < terrain.map.minZ
+				|| chunkZ > terrain.map.maxZ) {
+			// Chunk is not in bounds
+			continue;
+		}
+		//printf("Loading chunk %d %d in r.%d.%d.mca\n", it >> 5, it & 0x1f, regionX, regionZ);
+
+		// Get the location of the data from the header
+		const uint32_t offset = (_ntohl(regionHeader + it*4) >> 8) * 4096;
+		const uint32_t index = chunk_index(chunkX, chunkZ, terrain.map);
+
+		_loadChunk(offset, regionData, terrain.chunks[index]);
+	}
+
+	fclose(regionData);
+}
+
+bool _loadChunk(uint32_t offset, FILE* regionData, Terrain::Chunk& destination) {
+	uint8_t zData[8192];
+	uint8_t chunkBuffer[1000*1024];
+
+	if (!offset) {
+		// Chunk does not exist
+		//printf("Chunk does not exist !\n");
+		return false;
+	}
+
+	if (0 != fseek(regionData, offset, SEEK_SET)) {
+		//printf("Error seeking to chunk\n");
+		return false;
+	}
+
+	// Read the 5 bytes that give the size and type of data
+	if (5 != fread(zData, sizeof(uint8_t), 5, regionData)) {
+		//printf("Error reading chunk size from region file\n");
+		return false;
+	}
+
+	uint32_t len = _ntohl(zData);
+	//len--; // This dates from Zahl's, no idea of its purpose
+
+	if (fread(zData, sizeof(uint8_t), len, regionData) != len) {
+		//printf("Not enough input for chunk\n");
+		return false;
+	}
+
+	z_stream zlibStream;
+	memset(&zlibStream, 0, sizeof(z_stream));
+	zlibStream.next_in = (Bytef*)zData;
+	zlibStream.next_out = (Bytef*)chunkBuffer;
+	zlibStream.avail_in = len;
+	zlibStream.avail_out = 1000*1024;
+	inflateInit2(&zlibStream, 32 + MAX_WBITS);
+
+	int status = inflate(&zlibStream, Z_FINISH); // decompress in one step
+	inflateEnd(&zlibStream);
+
+	if (status != Z_STREAM_END) {
+		//printf("Error decompressing chunk\n");
+		return false;
+	}
+
+	len = zlibStream.total_out;
+
+	bool success;
+	NBT tree = NBT(chunkBuffer, len, success);
+	if (!success) {
+		// The info could not be understood as NBT
+		return false;
+	}
+
+	try {
+		destination = tree["Level"]["Sections"];
+		if (destination[0]["Y"].getByte() == -1) {
+			destination._list_content.pop_front();
+		}
+	} catch (const std::invalid_argument& e) {
+		return false;
+	}
+
+	return true;
+}
+
+Block Terrain::blockAt(Terrain::Data& terrain, int32_t x, int32_t z, int32_t y) {
+	const uint32_t index = chunk_index(CHUNK(x), CHUNK(z), terrain.map);
+	const uint8_t sectionY = y >> 4;
+	const uint64_t position = (x & 0x0f) + ((z & 0x0f) + (y & 0x0f)*16)*16;
+	try {
+		NBT_Tag section = terrain.chunks[index][sectionY];
+		return Block(getBlockId(position, &section));
+	} catch (std::exception& e) {
+		return Block("minecraft:air");
+	}
 }
