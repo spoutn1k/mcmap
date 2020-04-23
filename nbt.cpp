@@ -1,17 +1,33 @@
 #include <cstdio>
+#include <cstring>
 #include <iostream>
 #include <cstdlib>
-
-// For MSVC++, get "zlib compiled DLL" from http://www.zlib.net/ and read USAGE.txt
-// gcc from MinGW works with the static library of zlib; however, trying
-// static linking in MSVC++ gave me weird results and crashes (v2008)
-// on linux, static linking works too, of course, but shouldn't be needed
-
 #include <zlib.h>
 #include "nbt.h"
 
 #define ID_SIZE 1
 #define NAME_LENGTH_SIZE 2
+
+using std::memcpy;
+
+NBT::NBT(uint8_t * const data, const size_t len, bool &success) {
+	uint8_t *position = data + ID_SIZE + NAME_LENGTH_SIZE, *end = data + len;
+	_type = T_COMPOUND;
+
+	if (!NBT_Tag::parseData(position, end)) {
+		fprintf(stderr, "Error parsing the NBT data\n");
+		success = false;
+		return;
+	}
+
+	if (position == NULL) {
+		fprintf(stderr, "Error reading the data\n");
+		success = false;
+		return;
+	}
+
+	success = (position != NULL);
+}
 
 NBT::NBT(const char *file, bool &success) {
 	int ret;
@@ -20,12 +36,12 @@ NBT::NBT(const char *file, bool &success) {
 	_filename = NULL;
 	gzFile fh = 0;
 	success = true;
+	_name = string("");
 
 	if (file == NULL || *file == '\0' || !fileExists(file)) {
 		success = false;
 		return;
 	}
-	_filename = strdup(file);
 
 	if ((fh = gzopen(file, "rb")) == 0) {
 		fprintf(stderr, "%s\n", strerror(errno));
@@ -71,72 +87,12 @@ NBT::NBT(const char *file, bool &success) {
 	}
 }
 
-NBT::NBT(uint8_t * const file, const size_t len, const bool shared, bool &success) {
-	_filename = NULL;
-	if (shared) {
-		_blob = NULL;
-	} else {
-		_blob = new uint8_t[len];
-		memcpy(_blob, file, len);
-	}
-	_bloblen = len;
-	uint8_t *position = file + ID_SIZE + NAME_LENGTH_SIZE, *end = file + len;
-	_type = T_COMPOUND;
-
-	if (!NBT_Tag::parseData(position, end)) {
-		fprintf(stderr, "Error parsing the NBT data\n");
-		success = false;
-		return;
-	}
-
-	if (position == NULL) {
-		fprintf(stderr, "Error reading the file\n");
-		success = false;
-		return;
-	}
-	success = (position != NULL);
-}
-
 NBT::~NBT() {
-	if (_blob != NULL)
+	if (_bloblen) {
 		delete[] _blob;
-
-	if (_filename != NULL)
-		free(_filename);
+		_bloblen = 0;
+	}
 }
-
-/*
-   bool NBT::save()
-   {	// While loading nbt files while the server is running works in most
-// cases, it is strongly advised that you only save map chunks while
-// the game/server is not running.
-if (_filename == NULL) return false;
-char *tmpfile = new char[strlen(_filename) + 5];
-strcpy(tmpfile, _filename);
-strcat(tmpfile, ".bak");
-int ret = rename(_filename, tmpfile);
-if (ret != 0) {
-delete[] tmpfile;
-return false;
-}
-gzFile fh = gzopen(_filename, "w6b");
-if (fh == 0) {
-delete[] tmpfile;
-return false;
-}
-ret = gzwrite(fh, _blob, (unsigned int)_bloblen);
-gzclose(fh);
-if (ret != _bloblen) {
-rename(tmpfile, _filename);
-delete[] tmpfile;
-return false;
-}
-//remove(tmpfile);
-delete[] tmpfile;
-//fprintf(stderr, "Saved %s\n", _filename);
-return true;
-}
-*/
 
 //  _   _ ____ _____ _____           
 // | \ | | __ )_   _|_   _|_ _  __ _ 
@@ -145,11 +101,53 @@ return true;
 // |_| \_|____/ |_|___|_|\__,_|\__, |
 //				 |_____|       |___/ 
 
-NBT_Tag::NBT_Tag() : _compound_content{}, _list_content{}, _name("") {
+NBT_Tag::NBT_Tag() : _name(""), _compound_content{}, _list_content{} {
 	_data = NULL;
 	_type = T_UNKNOWN;
 	_name_length = 0;
 	_len = 0;
+}
+
+NBT_Tag::NBT_Tag(const NBT_Tag& to_copy) : NBT_Tag() { 
+	printf("Copy constructor: %s\n", to_copy._name.c_str());
+	_type = to_copy._type;
+	_name = to_copy._name;
+
+	if (_type == T_COMPOUND) {
+		for (auto it : to_copy._compound_content) {
+			_compound_content.insert_or_assign(it.first, new NBT_Tag(*it.second));
+		}
+	} else if (_type == T_LIST) {
+		for (auto it : to_copy._list_content) {
+			_list_content.push_back(new NBT_Tag(*it));
+		}
+	} else {
+		_len = to_copy._len;
+		_data = to_copy._data;
+		//_data = new uint8_t[_len];
+		//memcpy(_data, to_copy._data, _len);
+		//if (*_data != *to_copy._data)
+			//printf("Copy: %d - %d (%s)\n", *to_copy._data, *_data, _name.c_str());
+	}
+}
+
+NBT_Tag::NBT_Tag(NBT_Tag &&to_move) : NBT_Tag() { 
+	printf("Move constructor: %s\n", to_move._name.c_str());
+	_type = to_move._type;
+	_name = to_move._name;
+
+	if (_type == T_COMPOUND) {
+		for (auto it : to_move._compound_content) {
+			_compound_content.insert_or_assign(it.first, new NBT_Tag(*it.second));
+		}
+	} else if (_type == T_LIST) {
+		for (auto it : to_move._list_content) {
+			_list_content.push_back(new NBT_Tag(*it));
+		}
+	} else {
+		_len = to_move._len;
+		_data = to_move._data;
+	}
 }
 
 NBT_Tag::NBT_Tag(uint8_t* &position, const uint8_t *end) : NBT_Tag() {
@@ -168,11 +166,7 @@ NBT_Tag::NBT_Tag(uint8_t* &position, const uint8_t *end) : NBT_Tag() {
 		return;
 	}
 
-	/*_name = (char*) malloc(_name_length*sizeof(char)+1);
-	memcpy(_name, (char *)(position + ID_SIZE + NAME_LENGTH_SIZE), _name_length);
-	_name[_name_length] = '\0';*/
 	_name = string((char *)(position + ID_SIZE + NAME_LENGTH_SIZE), _name_length);
-
 	position += 3 + _name_length;
 
 	if (!parseData(position, end)) {
@@ -182,7 +176,7 @@ NBT_Tag::NBT_Tag(uint8_t* &position, const uint8_t *end) : NBT_Tag() {
 }
 
 NBT_Tag::NBT_Tag(uint8_t* &position, const uint8_t *end, TagType type) : NBT_Tag() {
-	// this contructor is used for TAG_List entries
+	// this contructor is used for TAG_List entries, because they have no name
 	_type = type;
 
 	if (!parseData(position, end)) {
@@ -191,28 +185,26 @@ NBT_Tag::NBT_Tag(uint8_t* &position, const uint8_t *end, TagType type) : NBT_Tag
 	}
 }
 
-void import(uint8_t** buffer, uint8_t* data, size_t length) {
-	*buffer = (uint8_t*) malloc(length*sizeof(uint8_t));
-	memcpy(*buffer, data, length);
-}
-
 bool NBT_Tag::parseData(uint8_t* &position, const uint8_t *end) {
 	// position should now point to start of data (for named tags, right after the name)
 	uint32_t count;
 	switch (_type) {
 		case T_COMPOUND:
 			while (*position != 0 && position < end) { // No end tag, go on...
-				NBT_Tag tmp = NBT_Tag(position, end);
+				//NBT_Tag tmp = NBT_Tag(position, end);
+				NBT_Tag* tmp = new NBT_Tag(position, end);
 				if (position == NULL) {
+					delete tmp;
 					return false;
 				}
-				_compound_content[tmp._name] = tmp;
+				_compound_content[tmp->_name] = tmp;
+				//_compound_content.insert_or_assign(tmp._name, tmp);
 			}
 			++position;
 			break;
 
 		case T_LIST:
-			if (*position < 0 || *position > 11) {
+			if (*position > 11) {
 				position = NULL;
 				return false;
 			}
@@ -222,9 +214,12 @@ bool NBT_Tag::parseData(uint8_t* &position, const uint8_t *end) {
 			else
 				type = (TagType)*position;
 			count = _ntohl(position+1);
+			// We skip the type and length
 			position += 5;
+
 			while (count-- && position < end) { // No end tag, go on...
-				NBT_Tag tmp = NBT_Tag(position, end, type);
+				//NBT_Tag tmp = NBT_Tag(position, end, type);
+				NBT_Tag* tmp = new NBT_Tag(position, end, type);
 				if (position == NULL) {
 					return false;
 				}
@@ -233,38 +228,50 @@ bool NBT_Tag::parseData(uint8_t* &position, const uint8_t *end) {
 			break;
 
 		case T_BYTE:
-			import(&_data, position, 1);
 			_len = 1;
+			_data = new uint8_t[_len];
+			memcpy(_data, position, _len);
+
 			position += 1;
 			break;
 
 		case T_SHORT:
-			import(&_data, position, 2);
 			_len = 2;
+			_data = new uint8_t[_len];
+			memcpy(_data, position, _len);
+
 			position += 2;
 			break;
 
 		case T_INT:
-			import(&_data, position, 4);
 			_len = 4;
+			_data = new uint8_t[_len];
+			memcpy(_data, position, _len);
+
 			position += 4;
 			break;
 
 		case T_LONG:
-			import(&_data, position, 8);
 			_len = 8;
+			_data = new uint8_t[_len];
+			memcpy(_data, position, _len);
+
 			position += 8;
 			break;
 
 		case T_FLOAT:
-			import(&_data, position, 4);
 			_len = 4;
+			_data = new uint8_t[_len];
+			memcpy(_data, position, _len);
+
 			position += 4;
 			break;
 
 		case T_DOUBLE:
-			import(&_data, position, 8);
 			_len = 8;
+			_data = new uint8_t[_len];
+			memcpy(_data, position, _len);
+
 			position += 8;
 			break;
 
@@ -275,7 +282,9 @@ bool NBT_Tag::parseData(uint8_t* &position, const uint8_t *end) {
 				position = NULL;
 				return false;
 			}
-			_data = position + 4;
+			_data = new uint8_t[_len];
+			memcpy(_data, position + 4, _len);
+
 			position += 4 + _len;
 			break;
 
@@ -288,9 +297,10 @@ bool NBT_Tag::parseData(uint8_t* &position, const uint8_t *end) {
 			}
 
 			// TODO Find a better fix to insert the '\0' at the end of the string
-			import(&_data, position+2, _len+1);
+			_data = new uint8_t[_len];
+			memcpy(_data, position + 2, _len);
+			//_data[_len] = '\0';
 
-			_data[_len] = '\0';
 			position += 2 + _len;
 			break;
 
@@ -305,7 +315,10 @@ bool NBT_Tag::parseData(uint8_t* &position, const uint8_t *end) {
 					position = NULL;
 					return false;
 				}
-				_data = position + header_size;
+
+				_data = new uint8_t[_len];
+				memcpy(_data, position + header_size, _len);
+
 				position += header_size + _len;
 				break;
 			}
@@ -321,7 +334,10 @@ bool NBT_Tag::parseData(uint8_t* &position, const uint8_t *end) {
 					position = NULL;
 					return false;
 				}
-				_data = position + header_size;
+
+				_data = new uint8_t[_len];
+				memcpy(_data, position + header_size, _len);
+
 				position += header_size + _len;
 				break;
 			}
@@ -337,37 +353,23 @@ bool NBT_Tag::parseData(uint8_t* &position, const uint8_t *end) {
 }
 
 NBT_Tag::~NBT_Tag() {
-	/*if (_compound_content) {
-		for (nbt_map::iterator it = _compound_content->begin(); it != _compound_content->end(); it++) {
-			delete (it->second);
+	if (_data && (_type != T_COMPOUND 
+				&& _type != T_LIST)) {
+		//delete[] _data;
+		//_data = NULL;
+	} else if (_type == T_COMPOUND) {
+		for (auto it : _compound_content) {
+			delete it.second;
 		}
-		//delete _compound_content;
-	}
-
-	if (_list_content) {
-		for (nbt_listend(); it++) {
-			delete *it;
+	} else if (_type == T_LIST) {
+		for (auto it : _list_content) {
+			delete it;
 		}
-		//delete _list_content;
 	}
 
-	if (_name_length) {
-		//free(_name);
-	}
-
-	// Freeing _data is tricky as some tags use mallocs and some tags 
-	// have links to the original blob. This makes sure all free's are
-	// done on valid, malloc'd addresses.
-	if (_len && (_type != T_COMPOUND 
-				&& _type != T_LIST 
-				&& _type != T_BYTEARRAY 
-				&& _type != T_INTARRAY 
-				&& _type != T_LONGARRAY)) {
-		//free(_data);
-	}*/
 }
 
-bool NBT_Tag::getByte(int8_t &value) {
+bool NBT_Tag::getByte(int8_t &value) const {
 	if (_type != T_BYTE) {
 		fprintf(stderr, "Accessing byte of incompatible NBT_Tag\n");
 		return 0;
@@ -376,7 +378,7 @@ bool NBT_Tag::getByte(int8_t &value) {
 	return true;
 }
 
-bool NBT_Tag::getShort(int16_t &value) {
+bool NBT_Tag::getShort(int16_t &value) const {
 	if (_type != T_SHORT) {
 		fprintf(stderr, "Accessing short of incompatible NBT_Tag\n");
 		return false;
@@ -386,7 +388,7 @@ bool NBT_Tag::getShort(int16_t &value) {
 	return true;
 }
 
-bool NBT_Tag::getInt(int32_t &value) {
+bool NBT_Tag::getInt(int32_t &value) const {
 	if (_type != T_INT) {
 		fprintf(stderr, "Accessing int of incompatible NBT_Tag\n");
 		return false;
@@ -396,7 +398,7 @@ bool NBT_Tag::getInt(int32_t &value) {
 	return true;
 }
 
-bool NBT_Tag::getLong(int64_t &value) {
+bool NBT_Tag::getLong(int64_t &value) const {
 	if (_type != T_LONG) {
 		fprintf(stderr, "Accessing long of incompatible NBT_Tag\n");
 		return false;
@@ -406,7 +408,7 @@ bool NBT_Tag::getLong(int64_t &value) {
 	return true;
 }
 
-bool NBT_Tag::getFloat(float &value) {
+bool NBT_Tag::getFloat(float &value) const {
 	if (_type != T_FLOAT) {
 		fprintf(stderr, "Accessing float of incompatible NBT_Tag\n");
 		return false;
@@ -417,7 +419,7 @@ bool NBT_Tag::getFloat(float &value) {
 	return true;
 }
 
-bool NBT_Tag::getDouble(double &value) {
+bool NBT_Tag::getDouble(double &value) const {
 	if (_type != T_DOUBLE) {
 		fprintf(stderr, "Accessing double of incompatible NBT_Tag\n");
 		return false;
@@ -428,7 +430,7 @@ bool NBT_Tag::getDouble(double &value) {
 	return true;
 }
 
-bool NBT_Tag::getByteArray(uint8_t* &data, uint32_t &len) {
+bool NBT_Tag::getByteArray(uint8_t* &data, uint32_t &len) const {
 	if (_type != T_BYTEARRAY) {
 		fprintf(stderr, "Accessing byte array of incompatible NBT_Tag\n");
 		return false;
@@ -439,17 +441,17 @@ bool NBT_Tag::getByteArray(uint8_t* &data, uint32_t &len) {
 	return true;
 }
 
-bool NBT_Tag::getString(string &value) {
+bool NBT_Tag::getString(string &value) const {
 	if (_type != T_STRING) {
-		fprintf(stderr, "Accessing string of incompatible NBT_Tag: %s\n", getName().c_str());
+		fprintf(stderr, "Accessing string of incompatible NBT_Tag\n");
 		return false;
 	}
 
-	value = string((char*) _data);
+	value = string((char*) _data, _len);
 	return true;
 }
 
-bool NBT_Tag::getList(nbt_list &value) {
+bool NBT_Tag::getList(nbt_list &value) const {
 	if (_type != T_LIST) {
 		fprintf(stderr, "Accessing list of incompatible NBT_Tag\n");
 		return false;
@@ -459,7 +461,7 @@ bool NBT_Tag::getList(nbt_list &value) {
 	return true;
 }
 
-bool NBT_Tag::getCompound(nbt_map &compound) {
+bool NBT_Tag::getCompound(nbt_map &compound) const {
 	if (_type != T_COMPOUND) {
 		fprintf(stderr, "Accessing compound map of incompatible NBT_Tag\n");
 		return false;
@@ -469,7 +471,7 @@ bool NBT_Tag::getCompound(nbt_map &compound) {
 	return true;
 }
 
-bool NBT_Tag::getIntArray(uint8_t* &data, uint32_t &len) {
+bool NBT_Tag::getIntArray(uint8_t* &data, uint32_t &len) const {
 	if (_type != T_INTARRAY) {
 		fprintf(stderr, "Accessing int array of incompatible NBT_Tag\n");
 		return false;
@@ -480,7 +482,7 @@ bool NBT_Tag::getIntArray(uint8_t* &data, uint32_t &len) {
 	return true;
 }
 
-bool NBT_Tag::getLongArray(uint8_t* &data, uint32_t &len) {
+bool NBT_Tag::getLongArray(uint8_t* &data, uint32_t &len) const {
 	if (_type != T_LONGARRAY) {
 		fprintf(stderr, "Accessing long array of incompatible NBT_Tag\n");
 		return false;
@@ -491,10 +493,134 @@ bool NBT_Tag::getLongArray(uint8_t* &data, uint32_t &len) {
 	return true;
 }
 
-string getBlockId(uint64_t position, NBT_Tag section) {
-	uint64_t size = (uint64_t) ceil(log2(section["Palette"].getList().size()));
+NBT_Tag NBT_Tag::operator[](string child_name) {
+	if (_type != T_COMPOUND || _compound_content.find(child_name) == _compound_content.end())
+		throw std::invalid_argument(child_name);
+
+	return NBT_Tag(*_compound_content[child_name]);
+}
+
+NBT_Tag NBT_Tag::operator[](uint64_t index) {
+	if (_type != T_LIST || !(index < _list_content.size()))
+		throw std::out_of_range("List index");
+
+	auto it = _list_content.cbegin();
+	for (uint64_t i = 0; i < index; i++)
+		++it;
+	return NBT_Tag(**it);
+}
+
+// Clone operator
+NBT_Tag NBT_Tag::operator=(const NBT_Tag& to_copy) {
+	printf("Copy assignment: %s\n", to_copy._name.c_str());
+	_type = to_copy._type;
+	_name = to_copy._name;
+
+	if (_type == T_COMPOUND) {
+		for (auto it : to_copy._compound_content) {
+			_compound_content.insert_or_assign(it.first, new NBT_Tag(*it.second));
+		}
+	} else if (_type == T_LIST) {
+		for (auto it : to_copy._list_content) {
+			_list_content.push_back(new NBT_Tag(*it));
+		}
+	} else {
+		_len = to_copy._len;
+		_data = new uint8_t[_len];
+		memcpy(_data, to_copy._data, _len);
+	}
+
+	return *this;
+}
+
+NBT_Tag NBT_Tag::operator=(NBT_Tag&& to_move) {
+	printf("Move assignment: %s\n", to_move._name.c_str());
+	_type = to_move._type;
+	_name = to_move._name;
+
+	if (_type == T_COMPOUND) {
+		for (auto it : to_move._compound_content) {
+			_compound_content.insert_or_assign(it.first, new NBT_Tag(*it.second));
+		}
+	} else if (_type == T_LIST) {
+		for (auto it : to_move._list_content) {
+			_list_content.push_back(new NBT_Tag(*it));
+		}
+	} else {
+		_len = to_move._len;
+		_data = to_move._data;
+	}
+
+	return *this;
+}
+
+json NBT_Tag::toJson() const {
+	json out;
+
+	switch (_type) {
+		case T_COMPOUND:
+			{
+				json holder;
+				out[getName()] = holder;
+
+				for (auto it : _compound_content) {
+					out[getName()].update(it.second->toJson());
+				}
+
+				break;
+			}
+
+		case T_BYTE:
+			out[getName()] = getByte();
+			break;
+		case T_SHORT:
+			out[getName()] = getShort();
+			break;
+		case T_INT:
+			out[getName()] = getInt();
+			break;
+		case T_LONG:
+			out[getName()] = getLong();
+			break;
+		case T_FLOAT:
+			out[getName()] = getFloat();
+			break;
+		case T_DOUBLE:
+			out[getName()] = getDouble();
+			break;
+		case T_STRING:
+			out[getName()] = getString();
+			break;
+		case T_BYTEARRAY:
+			out[getName()] = getByteArray();
+			break;
+		case T_LIST:
+			{
+				std::vector<json> array;
+				for (auto it : _list_content) {
+					array.push_back(it->toJson());
+				}
+
+				out[getName()] = array;
+				break;
+			}
+		case T_INTARRAY:
+			out[getName()] = getIntArray();
+			break;
+		case T_LONGARRAY:
+			out[getName()] = getLongArray();
+			break;
+		case T_UNKNOWN:
+			break;
+	}
+
+	return out;
+}
+
+string getBlockId(uint64_t position, NBT_Tag* section) {
+	uint64_t size = (uint64_t) ceil(log2((*section)["Palette"].getList().size()));
 	size = (4 > size ? 4 : size);
-	uint8_t* raw_data = section["BlockStates"]._data;
+	uint8_t* raw_data = (*section)["BlockStates"]._data;
 	uint64_t skip = position*size/64; // The number of longs to skip
 	int64_t remain = position*size - 64*skip; // The bits to skip in the first non-skipped long
 	int64_t overflow = remain + size - 64; // The bits in the first non-skipped long
@@ -507,5 +633,5 @@ string getBlockId(uint64_t position, NBT_Tag section) {
 		lower_data = lower_data | upper_data << (size - overflow);
 	}
 
-	return section["Palette"][lower_data]["Name"].getString();
+	return (*section)["Palette"][lower_data]["Name"].getString();
 }
