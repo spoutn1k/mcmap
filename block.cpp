@@ -24,7 +24,7 @@ uint8_t* Block::getColor() {
 	try {
 		blockColor = colors.at(id);
 	} catch(const std::out_of_range& e) {
-		printf("WARNING: Color of \"%s\" not found.\n", id.c_str());
+		fprintf(stderr, "WARNING: Color of \"%s\" not found.\n", id.c_str());
 		blockColor = {255, 255, 255, 0};
 	}
 	for (std::list<int>::iterator it = blockColor.begin(); it != blockColor.end(); ++it) {

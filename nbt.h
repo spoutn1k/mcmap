@@ -76,7 +76,6 @@ class NBT_Tag {
 	json toJson() const;
 
 	TagType getType() const {return _type;}
-	string getName() const {return _name;}
 
 	bool getByte(int8_t &value) const;
 	bool getShort(int16_t &value) const;
@@ -86,82 +85,10 @@ class NBT_Tag {
 	bool getDouble(double &value) const;
 	bool getByteArray(uint8_t* &data, uint32_t &len) const;
 	bool getString(string &value) const;
-	bool getList(nbt_list &value) const;
+	bool getList(nbt_list *&value);
 	bool getCompound(nbt_map &value) const;
 	bool getIntArray(uint8_t* &data, uint32_t &len) const;
 	bool getLongArray(uint8_t* &data, uint32_t &len) const;
-
-	nbt_list getList() const {
-		return _list_content;
-	}
-
-	int8_t getByte() const {
-		int8_t value;
-		getByte(value);
-		return value;
-	}
-	int16_t getShort() const {
-		int16_t value;
-		getShort(value);
-		return value;
-	}
-	int32_t getInt() const {
-		int32_t value;
-		getInt(value);
-		return value;
-	}
-	int64_t getLong() const {
-		int64_t value;
-		getLong(value);
-		return value;
-	}
-	float getFloat() const {
-		float value;
-		getFloat(value);
-		return value;
-	}
-	double getDouble() const {
-		double value;
-		getDouble(value);
-		return value;
-	}
-	list<uint8_t> getByteArray() const {
-		uint8_t* data;
-		uint32_t len;
-		list<uint8_t> out;
-		getByteArray(data, len);
-		for (uint32_t i = 0; i < len; i++)
-			out.push_back(data[i]);
-		return out;
-	}
-	string getString() const {
-		string value;
-		getString(value);
-		return value;
-	}
-	nbt_map getCompound() const {
-		nbt_map value;
-		getCompound(value);
-		return value;
-	}
-	list<int32_t> getIntArray() const {
-		uint8_t* data;
-		uint32_t len;
-		list<int32_t> out;
-		getIntArray(data, len);
-		for (uint32_t i = 0; i < len; i+=4)
-			out.push_back(_ntohl(&data[i]));
-		return out;
-	}
-	list<int64_t> getLongArray() const {
-		uint8_t* data;
-		uint32_t len;
-		list<int64_t> out;
-		getLongArray(data, len);
-		for (uint32_t i = 0; i < len; i+=8)
-			out.push_back(_ntohll(&data[i]));
-		return out;
-	}
 
 	// This is the original getter template, which I got rid of in favour
 	// of individual getters by tag type. 
@@ -172,8 +99,10 @@ class NBT_Tag {
 	  return (*_compound_content)[name]->getByte(value);
 	  }*/
 
-	NBT_Tag operator[](string child_name);
-	NBT_Tag operator[](uint64_t index);
+	bool contains(const string &child);
+
+	NBT_Tag* operator[](string child_name);
+	NBT_Tag* operator[](uint64_t index);
 
 	// Clone operator
 	NBT_Tag operator=(const NBT_Tag& original);
@@ -183,13 +112,11 @@ class NBT_Tag {
 class NBT : public NBT_Tag {
 	private:
 		/* \brief The name of the opened file */
-		char* _filename;
 		uint8_t* _blob;
 		uint32_t _bloblen;
 
 	public:
 		explicit NBT(uint8_t * const data, const size_t len, bool &success);
-		explicit NBT(const char *file, bool &success);
 		virtual ~NBT();
 		//bool save();
 };

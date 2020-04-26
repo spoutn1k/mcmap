@@ -23,6 +23,7 @@ namespace Terrain {
 	struct Data {
 		struct Coordinates map; // The position of the loaded chunks
 		chunkList chunks;
+		uint8_t *heightMap;
 	};
 
 	Block blockAt(Terrain::Data&, int32_t x, int32_t z, int32_t y);
@@ -41,5 +42,6 @@ void loadBiomeMap(const char* path);
 void uncoverNether();
 
 void _loadTerrain(Terrain::Data&, std::filesystem::path, Terrain::Coordinates&);
+uint16_t heightAt(Terrain::Data&, int32_t, int32_t);
 
 #endif

@@ -2,7 +2,6 @@
 #include <cstring>
 #include <iostream>
 #include <cstdlib>
-#include <zlib.h>
 #include "nbt.h"
 
 #define ID_SIZE 1
@@ -29,64 +28,6 @@ NBT::NBT(uint8_t * const data, const size_t len, bool &success) {
 	success = (position != NULL);
 }
 
-NBT::NBT(const char *file, bool &success) {
-	int ret;
-
-	_blob = NULL;
-	_filename = NULL;
-	gzFile fh = 0;
-	success = true;
-	_name = string("");
-
-	if (file == NULL || *file == '\0' || !fileExists(file)) {
-		success = false;
-		return;
-	}
-
-	if ((fh = gzopen(file, "rb")) == 0) {
-		fprintf(stderr, "%s\n", strerror(errno));
-		success = false;
-		return;
-	}
-
-	// File is open, read data
-	// I checked a few chunk files in their decompressed form,
-	// I think they can't really get any bigger than 80~90KiB, but just to be sure...
-	int length = 150000 * (CHUNKSIZE_Y / 128);
-	_blob = new uint8_t[length];
-
-	if ((ret = gzread(fh, _blob, length)) == -1) {
-		fprintf(stderr, "%s\n", strerror(errno));
-		success = false;
-		return;
-	}
-
-	_bloblen = ret;
-	gzclose(fh);
-
-	if (_blob[0] != T_COMPOUND) { // Has to start with TAG_Compound
-		fprintf(stderr, "Malformed NTB file: begins by type %d\n", _type);
-		success = false;
-		return;
-	}
-
-	// Skip type and name of the root tag
-	uint8_t *position = _blob + ID_SIZE + NAME_LENGTH_SIZE, *end = _blob + ret;
-	_type = T_COMPOUND;
-
-	if (!NBT_Tag::parseData(position, end)) {
-		fprintf(stderr, "Error parsing the NBT data\n");
-		success = false;
-		return;
-	}
-
-	if (position == NULL) {
-		fprintf(stderr, "Error reading the file\n");
-		success = false;
-		return;
-	}
-}
-
 NBT::~NBT() {
 	if (_bloblen) {
 		delete[] _blob;
@@ -109,7 +50,7 @@ NBT_Tag::NBT_Tag() : _name(""), _compound_content{}, _list_content{} {
 }
 
 NBT_Tag::NBT_Tag(const NBT_Tag& to_copy) : NBT_Tag() { 
-	printf("Copy constructor: %s\n", to_copy._name.c_str());
+	//printf("Copy constructor: %s\n", to_copy._name.c_str());
 	_type = to_copy._type;
 	_name = to_copy._name;
 
@@ -123,30 +64,11 @@ NBT_Tag::NBT_Tag(const NBT_Tag& to_copy) : NBT_Tag() {
 		}
 	} else {
 		_len = to_copy._len;
-		_data = to_copy._data;
-		//_data = new uint8_t[_len];
-		//memcpy(_data, to_copy._data, _len);
-		//if (*_data != *to_copy._data)
-			//printf("Copy: %d - %d (%s)\n", *to_copy._data, *_data, _name.c_str());
-	}
-}
-
-NBT_Tag::NBT_Tag(NBT_Tag &&to_move) : NBT_Tag() { 
-	printf("Move constructor: %s\n", to_move._name.c_str());
-	_type = to_move._type;
-	_name = to_move._name;
-
-	if (_type == T_COMPOUND) {
-		for (auto it : to_move._compound_content) {
-			_compound_content.insert_or_assign(it.first, new NBT_Tag(*it.second));
-		}
-	} else if (_type == T_LIST) {
-		for (auto it : to_move._list_content) {
-			_list_content.push_back(new NBT_Tag(*it));
-		}
-	} else {
-		_len = to_move._len;
-		_data = to_move._data;
+		//_data = to_copy._data;
+		_data = new uint8_t[_len];
+		memcpy(_data, to_copy._data, _len*sizeof(uint8_t));
+		if (*_data != *to_copy._data)
+			printf("Copy: %d - %d (%s)\n", *to_copy._data, *_data, _name.c_str());
 	}
 }
 
@@ -355,8 +277,8 @@ bool NBT_Tag::parseData(uint8_t* &position, const uint8_t *end) {
 NBT_Tag::~NBT_Tag() {
 	if (_data && (_type != T_COMPOUND 
 				&& _type != T_LIST)) {
-		//delete[] _data;
-		//_data = NULL;
+		delete[] _data;
+		_data = NULL;
 	} else if (_type == T_COMPOUND) {
 		for (auto it : _compound_content) {
 			delete it.second;
@@ -451,13 +373,13 @@ bool NBT_Tag::getString(string &value) const {
 	return true;
 }
 
-bool NBT_Tag::getList(nbt_list &value) const {
+bool NBT_Tag::getList(nbt_list *&value) {
 	if (_type != T_LIST) {
 		fprintf(stderr, "Accessing list of incompatible NBT_Tag\n");
 		return false;
 	}
 
-	value = _list_content;
+	value = &_list_content;
 	return true;
 }
 
@@ -493,26 +415,26 @@ bool NBT_Tag::getLongArray(uint8_t* &data, uint32_t &len) const {
 	return true;
 }
 
-NBT_Tag NBT_Tag::operator[](string child_name) {
+NBT_Tag* NBT_Tag::operator[](string child_name) {
 	if (_type != T_COMPOUND || _compound_content.find(child_name) == _compound_content.end())
 		throw std::invalid_argument(child_name);
 
-	return NBT_Tag(*_compound_content[child_name]);
+	return _compound_content[child_name];
 }
 
-NBT_Tag NBT_Tag::operator[](uint64_t index) {
+NBT_Tag* NBT_Tag::operator[](uint64_t index) {
 	if (_type != T_LIST || !(index < _list_content.size()))
-		throw std::out_of_range("List index");
+		throw std::out_of_range(_name + ": List index: " + std::to_string(index));
 
 	auto it = _list_content.cbegin();
 	for (uint64_t i = 0; i < index; i++)
 		++it;
-	return NBT_Tag(**it);
+	return *it;
 }
 
 // Clone operator
 NBT_Tag NBT_Tag::operator=(const NBT_Tag& to_copy) {
-	printf("Copy assignment: %s\n", to_copy._name.c_str());
+	//printf("Copy assignment: %s\n", to_copy._name.c_str());
 	_type = to_copy._type;
 	_name = to_copy._name;
 
@@ -533,27 +455,6 @@ NBT_Tag NBT_Tag::operator=(const NBT_Tag& to_copy) {
 	return *this;
 }
 
-NBT_Tag NBT_Tag::operator=(NBT_Tag&& to_move) {
-	printf("Move assignment: %s\n", to_move._name.c_str());
-	_type = to_move._type;
-	_name = to_move._name;
-
-	if (_type == T_COMPOUND) {
-		for (auto it : to_move._compound_content) {
-			_compound_content.insert_or_assign(it.first, new NBT_Tag(*it.second));
-		}
-	} else if (_type == T_LIST) {
-		for (auto it : to_move._list_content) {
-			_list_content.push_back(new NBT_Tag(*it));
-		}
-	} else {
-		_len = to_move._len;
-		_data = to_move._data;
-	}
-
-	return *this;
-}
-
 json NBT_Tag::toJson() const {
 	json out;
 
@@ -561,55 +462,66 @@ json NBT_Tag::toJson() const {
 		case T_COMPOUND:
 			{
 				json holder;
-				out[getName()] = holder;
+				out[_name] = holder;
 
 				for (auto it : _compound_content) {
-					out[getName()].update(it.second->toJson());
+					out[_name].update(it.second->toJson());
 				}
 
 				break;
 			}
 
 		case T_BYTE:
-			out[getName()] = getByte();
+			out[_name] = *_data;
 			break;
 		case T_SHORT:
-			out[getName()] = getShort();
+			out[_name] = *(int16_t*)_data;
 			break;
 		case T_INT:
-			out[getName()] = getInt();
+			out[_name] = *(int32_t*)_data;
 			break;
 		case T_LONG:
-			out[getName()] = getLong();
+			out[_name] = *(int64_t*)_data;
 			break;
 		case T_FLOAT:
-			out[getName()] = getFloat();
+			out[_name] = *(float*)_data;
 			break;
 		case T_DOUBLE:
-			out[getName()] = getDouble();
+			out[_name] = *(double*)_data;
 			break;
 		case T_STRING:
-			out[getName()] = getString();
+			out[_name] = string((char*) _data, _len);
 			break;
-		case T_BYTEARRAY:
-			out[getName()] = getByteArray();
-			break;
-		case T_LIST:
-			{
+		case T_BYTEARRAY: {
+				list<int8_t> byteArray;
+				for (uint32_t i = 0; i < _len; i++)
+					out.push_back(*(_data+i));
+				out[_name] = byteArray;
+				break;
+			}
+		case T_LIST: {
 				std::vector<json> array;
 				for (auto it : _list_content) {
 					array.push_back(it->toJson());
 				}
 
-				out[getName()] = array;
+				out[_name] = array;
 				break;
 			}
-		case T_INTARRAY:
-			out[getName()] = getIntArray();
-			break;
-		case T_LONGARRAY:
-			out[getName()] = getLongArray();
-			break;
+		case T_INTARRAY: {
+				list<int32_t> intArray;
+				for (uint32_t i = 0; i < _len; i+=4)
+					out.push_back(*((int32_t*)_data)+i);
+				out[_name] = intArray;
+				break;
+			}
+		case T_LONGARRAY: {
+				list<int64_t> longArray;
+				for (uint32_t i = 0; i < _len; i+=4)
+					out.push_back(*((int64_t*)_data)+i);
+				out[_name] = longArray;
+				break;
+			}
 		case T_UNKNOWN:
 			break;
 	}
@@ -617,10 +529,18 @@ json NBT_Tag::toJson() const {
 	return out;
 }
 
+bool NBT_Tag::contains(const string &child) {
+	if (_type == T_COMPOUND && _compound_content.find(child) != _compound_content.end())
+		return true;
+	return false;
+}
+
 string getBlockId(uint64_t position, NBT_Tag* section) {
-	uint64_t size = (uint64_t) ceil(log2((*section)["Palette"].getList().size()));
+	nbt_list* palette;
+	(*section)["Palette"]->getList(palette);
+	uint64_t size = (uint64_t) ceil(log2(palette->size()));
 	size = (4 > size ? 4 : size);
-	uint8_t* raw_data = (*section)["BlockStates"]._data;
+	uint8_t* raw_data = (*section)["BlockStates"]->_data;
 	uint64_t skip = position*size/64; // The number of longs to skip
 	int64_t remain = position*size - 64*skip; // The bits to skip in the first non-skipped long
 	int64_t overflow = remain + size - 64; // The bits in the first non-skipped long
@@ -633,5 +553,7 @@ string getBlockId(uint64_t position, NBT_Tag* section) {
 		lower_data = lower_data | upper_data << (size - overflow);
 	}
 
-	return (*section)["Palette"][lower_data]["Name"].getString();
+	string blockId;
+	(*(*(*section)["Palette"])[lower_data])["Name"]->getString(blockId);
+	return blockId;
 }

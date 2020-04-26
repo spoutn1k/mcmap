@@ -91,8 +91,7 @@ namespace
 	void setUpStepBA(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark);
 }
 
-void createImageBuffer(const size_t width, const size_t height, const bool splitUp)
-{
+void createImageBuffer(const size_t width, const size_t height, const bool splitUp) {
 	gPngLocalWidth = gPngWidth = (int)width;
 	gPngLocalHeight = gPngHeight = (int)height;
 	gPngLocalLineWidthChans = gPngLineWidthChans = gPngWidth * CHANSPERPIXEL;
@@ -104,8 +103,7 @@ void createImageBuffer(const size_t width, const size_t height, const bool split
 	}
 }
 
-bool createImage(FILE *fh, const size_t width, const size_t height, const bool splitUp)
-{
+bool createImage(FILE *fh, const size_t width, const size_t height, const bool splitUp) {
 	gPngLocalWidth = gPngWidth = (int)width;
 	gPngLocalHeight = gPngHeight = (int)height;
 	gPngLocalLineWidthChans = gPngLineWidthChans = gPngWidth * 4;
@@ -155,8 +153,7 @@ bool createImage(FILE *fh, const size_t width, const size_t height, const bool s
 	return true;
 }
 
-bool saveImage()
-{
+bool saveImage() {
 	if (g_TilePath == NULL) {
 		// Normal single-file output
 		if (setjmp(png_jmpbuf(pngPtrMain))) { // libpng will issue a longjmp on error, so code flow will end up
@@ -168,15 +165,14 @@ bool saveImage()
 		printf("Writing to file...\n");
 		for (int y = 0; y < gPngHeight; ++y) {
 			if (y % 25 == 0) {
-				printProgress(size_t(y), size_t(gPngHeight));
+				//printProgress(size_t(y), size_t(gPngHeight));
 			}
 			png_write_row(pngPtrMain, (png_bytep)srcLine);
 			srcLine += gPngLineWidthChans;
 		}
-		printProgress(10, 10);
+		//printProgress(10, 10);
 		png_write_end(pngPtrMain, NULL);
 		png_destroy_write_struct(&pngPtrMain, &pngInfoPtrMain);
-		//
 	} else {
 		// Tiled output, suitable for google maps
 		printf("Writing to files...\n");
@@ -298,8 +294,7 @@ bool saveImage()
 /**
  * @return 0 = OK, -1 = Error, 1 = Zero/Negative size
  */
-int loadImagePart(const int startx, const int starty, const int width, const int height)
-{
+int loadImagePart(const int startx, const int starty, const int width, const int height) {
 	// These are set to NULL in saveImahePartPng to make sure the two functions are called in turn
 	if (pngPtrCurrent != NULL || gPngPartialFileHandle != NULL) {
 		printf("Something wrong with disk caching.\n");
@@ -360,8 +355,7 @@ int loadImagePart(const int startx, const int starty, const int width, const int
 	return 0;
 }
 
-bool saveImagePart()
-{
+bool saveImagePart() {
 	if (gPngPartialFileHandle == NULL || pngPtrCurrent != NULL) {
 		printf("saveImagePart() called in bad state.\n");
 		return false;
@@ -394,7 +388,7 @@ bool saveImagePart()
 			PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
 
 	png_write_info(pngPtrCurrent, info_ptr);
-	//
+
 	uint8_t *line = gImageBuffer;
 	for (int y = 0; y < gPngLocalHeight; ++y) {
 		png_write_row(pngPtrCurrent, (png_bytep)line);
@@ -408,8 +402,7 @@ bool saveImagePart()
 	return true;
 }
 
-bool discardImagePart()
-{
+bool discardImagePart() {
 	if (gPngPartialFileHandle == NULL || pngPtrCurrent != NULL) {
 		printf("discardImagePart() called in bad state.\n");
 		return false;
@@ -618,21 +611,27 @@ bool composeFinalImage() {
 	return true;
 }
 
-uint64_t calcImageSize(const int mapChunksX, const int mapChunksZ, const size_t mapHeight, int &pixelsX, int &pixelsY, const bool tight)
-{
+uint64_t calcImageSize(const int mapChunksX, const int mapChunksZ, const size_t mapHeight, int &pixelsX, int &pixelsY, const bool tight) {
 	pixelsX = (mapChunksX * CHUNKSIZE_X + mapChunksZ * CHUNKSIZE_Z) * 2 + (tight ? 3 : 10);
 	pixelsY = (mapChunksX * CHUNKSIZE_X + mapChunksZ * CHUNKSIZE_Z + int(mapHeight) * g_OffsetY) + (tight ? 3 : 10);
 	return uint64_t(pixelsX) * BYTESPERPIXEL * uint64_t(pixelsY);
 }
 
-void setPixel(const size_t x, const size_t y, Block b, const float fsub)
-{
+void setPixel(const size_t x, const size_t y, Block& b, const float fsub) {
 	// Sets pixels around x,y where A is the anchor
 	// T = given color, D = darker, L = lighter
 	// A T T T
 	// D D L L
 	// D D L L
 	//	 D L
+
+	if (x < 0 || x > size_t(gPngWidth - 1))
+		throw std::range_error("Invalid x: " + std::to_string(x) + "/" + std::to_string(gPngWidth));
+
+	if (y < 0 || y > size_t(gPngHeight -1)) {
+		throw std::range_error("Invalid y: " + std::to_string(y) + "/" + std::to_string(gPngHeight));
+	}
+
 	// First determine how much the color has to be lightened up or darkened
 	uint8_t* blockColor = b.getColor();
 
@@ -823,8 +822,7 @@ void setPixel(const size_t x, const size_t y, Block b, const float fsub)
 	// The above two branches are almost the same, maybe one could just create a function pointer and...
 }
 
-void blendPixel(const size_t x, const size_t y, Block b, const float fsub)
-{
+void blendPixel(const size_t x, const size_t y, Block b, const float fsub) {
 	// This one is used for cave overlay
 	// Sets pixels around x,y where A is the anchor
 	// T = given color, D = darker, L = lighter
@@ -864,11 +862,9 @@ void blendPixel(const size_t x, const size_t y, Block b, const float fsub)
 	}
 }
 
-namespace
-{
+namespace {
 
-	inline void blend(uint8_t * const destination, const uint8_t * const source)
-	{
+	inline void blend(uint8_t * const destination, const uint8_t * const source) {
 		if (destination[PALPHA] == 0 || source[PALPHA] == 255) {
 			memcpy(destination, source, BYTESPERPIXEL);
 			return;
@@ -880,15 +876,13 @@ namespace
 		destination[PALPHA] += (size_t(source[PALPHA]) * size_t(255 - destination[PALPHA])) / 255;
 	}
 
-	inline void modColor(uint8_t * const color, const int mod)
-	{
+	inline void modColor(uint8_t * const color, const int mod) {
 		color[0] = clamp(color[0] + mod);
 		color[1] = clamp(color[1] + mod);
 		color[2] = clamp(color[2] + mod);
 	}
 
-	inline void addColor(uint8_t * const color, const uint8_t * const add)
-	{
+	inline void addColor(uint8_t * const color, const uint8_t * const add) {
 		const float v2 = (float(add[PALPHA]) / 255.0f);
 		const float v1 = (1.0f - (v2 * .2f));
 		color[0] = clamp(uint16_t(float(color[0]) * v1 + float(add[0]) * v2));
@@ -896,8 +890,7 @@ namespace
 		color[2] = clamp(uint16_t(float(color[2]) * v1 + float(add[2]) * v2));
 	}
 
-	void setSnow(const size_t x, const size_t y, const uint8_t * const color)
-	{
+	void setSnow(const size_t x, const size_t y, const uint8_t * const color) {
 		// Top row (second row)
 		uint8_t *pos = &PIXEL(x, y+1);
 		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
@@ -905,8 +898,7 @@ namespace
 		}
 	}
 
-	void setTorch(const size_t x, const size_t y, const uint8_t * const color)
-	{
+	void setTorch(const size_t x, const size_t y, const uint8_t * const color) {
 		// Maybe the orientation should be considered when drawing, but it probably isn't worth the efford
 		uint8_t *pos = &PIXEL(x+2, y+1);
 		memcpy(pos, color, BYTESPERPIXEL);
@@ -914,8 +906,7 @@ namespace
 		memcpy(pos, color, BYTESPERPIXEL);
 	}
 
-	void setFlower(const size_t x, const size_t y, const uint8_t * const color)
-	{
+	void setFlower(const size_t x, const size_t y, const uint8_t * const color) {
 		uint8_t *pos = &PIXEL(x, y+1);
 		memcpy(pos+(CHANSPERPIXEL), color, BYTESPERPIXEL);
 		memcpy(pos+(CHANSPERPIXEL*3), color, BYTESPERPIXEL);
@@ -925,8 +916,7 @@ namespace
 		memcpy(pos, color, BYTESPERPIXEL);
 	}
 
-	void setFire(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark)
-	{
+	void setFire(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark) {
 		// This basically just leaves out a few pixels
 		// Top row
 		uint8_t *pos = &PIXEL(x, y);
@@ -944,8 +934,7 @@ namespace
 		blend(pos+(CHANSPERPIXEL*2), light);
 	}
 
-	void setGrass(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark, const int sub)
-	{
+	void setGrass(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark, const int sub) {
 		// this will make grass look like dirt from the side
 		uint8_t L[CHANSPERPIXEL], D[CHANSPERPIXEL];
 		memcpy(L, Block::getColor("minecraft:dirt"), BYTESPERPIXEL);
@@ -985,8 +974,7 @@ namespace
 		memcpy(pos+CHANSPERPIXEL*3, L, BYTESPERPIXEL);
 	}
 
-	void setFence(const size_t x, const size_t y, const uint8_t * const color)
-	{
+	void setFence(const size_t x, const size_t y, const uint8_t * const color) {
 		// First row
 		uint8_t *pos = &PIXEL(x, y);
 		blend(pos+CHANSPERPIXEL, color);
@@ -1000,8 +988,7 @@ namespace
 		blend(pos+CHANSPERPIXEL*2, color);
 	}
 
-	void setStep(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark)
-	{
+	void setStep(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark) {
 		uint8_t *pos = &PIXEL(x, y+1);
 		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
 			memcpy(pos, color, BYTESPERPIXEL);
@@ -1012,8 +999,7 @@ namespace
 		}
 	}
 
-	void setUpStep(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark)
-	{
+	void setUpStep(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark) {
 		uint8_t *pos = &PIXEL(x, y);
 		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
 			memcpy(pos, color, BYTESPERPIXEL);
@@ -1024,8 +1010,7 @@ namespace
 		}
 	}
 
-	void setRedwire(const size_t x, const size_t y, const uint8_t * const color)
-	{
+	void setRedwire(const size_t x, const size_t y, const uint8_t * const color) {
 		uint8_t *pos = &PIXEL(x+1, y+2);
 		blend(pos, color);
 		blend(pos+CHANSPERPIXEL, color);
@@ -1033,8 +1018,7 @@ namespace
 
 	// The g_BlendAll versions of the block set functions
 	//
-	void setSnowBA(const size_t x, const size_t y, const uint8_t * const color)
-	{
+	void setSnowBA(const size_t x, const size_t y, const uint8_t * const color) {
 		// Top row (second row)
 		uint8_t *pos = &PIXEL(x, y+1);
 		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
@@ -1042,8 +1026,7 @@ namespace
 		}
 	}
 
-	void setTorchBA(const size_t x, const size_t y, const uint8_t * const color)
-	{
+	void setTorchBA(const size_t x, const size_t y, const uint8_t * const color) {
 		// Maybe the orientation should be considered when drawing, but it probably isn't worth the effort
 		uint8_t *pos = &PIXEL(x+2, y+1);
 		blend(pos, color);
@@ -1051,8 +1034,7 @@ namespace
 		blend(pos, color);
 	}
 
-	void setFlowerBA(const size_t x, const size_t y, const uint8_t * const color)
-	{
+	void setFlowerBA(const size_t x, const size_t y, const uint8_t * const color) {
 		uint8_t *pos = &PIXEL(x, y+1);
 		blend(pos+CHANSPERPIXEL, color);
 		blend(pos+CHANSPERPIXEL*3, color);
@@ -1062,8 +1044,7 @@ namespace
 		blend(pos, color);
 	}
 
-	void setGrassBA(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark, const int sub)
-	{
+	void setGrassBA(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark, const int sub) {
 		// this will make grass look like dirt from the side
 		uint8_t L[CHANSPERPIXEL], D[CHANSPERPIXEL];
 		memcpy(L, Block::getColor("minecraft:dirt"), BYTESPERPIXEL);
@@ -1103,8 +1084,7 @@ namespace
 		blend(pos+CHANSPERPIXEL*3, L);
 	}
 
-	void setStepBA(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark)
-	{
+	void setStepBA(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark) {
 		uint8_t *pos = &PIXEL(x, y+1);
 		for (size_t i = 0; i < 3; ++i, pos += CHANSPERPIXEL) {
 			blend(pos, color);
@@ -1115,8 +1095,7 @@ namespace
 		}
 	}
 
-	void setUpStepBA(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark)
-	{
+	void setUpStepBA(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark) {
 		uint8_t *pos = &PIXEL(x, y);
 		for (size_t i = 0; i < 3; ++i, pos += CHANSPERPIXEL) {
 			blend(pos, color);

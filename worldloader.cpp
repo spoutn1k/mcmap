@@ -1,6 +1,5 @@
 #include "worldloader.h"
 #include "helper.h"
-#include "filesystem.h"
 #include "nbt.h"
 #include "colors.h"
 #include "globals.h"
@@ -8,9 +7,11 @@
 #include <list>
 #include <map>
 #include <cstring>
+#include "filesystem.h"
 #include <string>
 #include <cstdio>
 #include <zlib.h>
+#include <cerrno>
 
 #define CHUNKS_PER_BIOME_FILE 32
 #define REGIONSIZE 32
@@ -65,7 +66,7 @@ static inline void assignBlock(const string id, Block* &dest);
 static inline void lightCave(const int x, const int y, const int z);
 
 void _loadChunksFromRegion(std::filesystem::path, int32_t regionX, int32_t regionZ, Terrain::Data& terrain);
-bool _loadChunk(uint32_t offset, FILE* regionData, Terrain::Chunk&);
+bool _loadChunk(uint32_t offset, FILE* regionData, Terrain::Chunk&, uint8_t&);
 
 int getWorldFormat(const char *worldPath) {
 	worldPath++;
@@ -274,9 +275,12 @@ static bool loadChunk(const char *streamOrFile, const size_t streamLen) {
 		return false; // chunk does not exist
 	}
 
-	NBT_Tag level = chunk["Level"];
+	NBT_Tag level = *chunk["Level"];
 
-	int32_t chunkX = level["xPos"].getInt(), chunkZ = level["zPos"].getInt();
+	int32_t chunkX, chunkZ;
+
+	level["xPos"]->getInt(chunkX);
+	level["zPos"]->getInt(chunkZ);
 
 	// Check if chunk is in desired bounds (not a chunk where the filename tells a different position)
 	if (chunkX < g_FromChunkX || chunkX >= g_ToChunkX || chunkZ < g_FromChunkZ || chunkZ >= g_ToChunkZ) {
@@ -287,16 +291,18 @@ static bool loadChunk(const char *streamOrFile, const size_t streamLen) {
 }
 
 static bool loadAnvilChunk(NBT_Tag level, const int32_t chunkX, const int32_t chunkZ) {
-	uint8_t *lightdata, *skydata, *lightByte, yo;
+	uint8_t *lightdata, *skydata, *lightByte;
+   int8_t yo;
 	int32_t yoffset, yoffsetsomething = (g_MapminY + SECTION_Y * 10000) % SECTION_Y;
-	list<NBT_Tag*> sections = level["Sections"].getList();
+	list<NBT_Tag*>* sections;
+	level["Sections"]->getList(sections);
 	Block *targetBlock;
 
 	const int offsetz = (chunkZ - g_FromChunkZ) * CHUNKSIZE_Z;
 	const int offsetx = (chunkX - g_FromChunkX) * CHUNKSIZE_X;
-	for (list<NBT_Tag*>::iterator it = sections.begin(); it != sections.end(); it++) {
+	for (list<NBT_Tag*>::iterator it = sections->begin(); it != sections->end(); it++) {
 		NBT_Tag section = **it;
-		yo = section["Y"].getByte();
+		section["Y"]->getByte(yo);
 
 		if (yo < g_SectionMin || yo > g_SectionMax)
 			continue;
@@ -307,17 +313,17 @@ static bool loadAnvilChunk(NBT_Tag level, const int32_t chunkX, const int32_t ch
 			yoffset = 0;
 
 		try {
-			lightdata = section["BlockStates"]._data;
+			lightdata = section["BlockStates"]->_data;
 		} catch (const std::invalid_argument& e) {
 			continue; //No blocks in this section
 		}
 		try {
-			lightdata = section["BlockLight"]._data;
+			lightdata = section["BlockLight"]->_data;
 		} catch (const std::invalid_argument& e) {
 			lightdata = NULL;
 		}
 		try {
-			skydata = section["SkyLight"]._data;
+			skydata = section["SkyLight"]->_data;
 		} catch (const std::invalid_argument& e) {
 			skydata = NULL;
 		}
@@ -875,7 +881,9 @@ void _loadTerrain(Terrain::Data& terrain, fs::path regionDir, Terrain::Coordinat
 	terrain.map.maxX = CHUNK(coords.maxX);
 	terrain.map.maxZ = CHUNK(coords.maxZ);
 
-	terrain.chunks = new Terrain::Chunk[(terrain.map.maxX - terrain.map.minX + 1)*(terrain.map.maxZ - terrain.map.minZ + 1)];
+	uint64_t nChunks = (terrain.map.maxX - terrain.map.minX + 1)*(terrain.map.maxZ - terrain.map.minZ + 1);
+	terrain.chunks = new Terrain::Chunk[nChunks];
+	terrain.heightMap = new uint8_t[nChunks];
 
 	for (int8_t rx = REGION(terrain.map.minX); rx < REGION(terrain.map.maxX) + 1; rx++) {
 		for (int8_t rz = REGION(terrain.map.minZ); rz < REGION(terrain.map.maxZ) + 1; rz++) {
@@ -920,20 +928,22 @@ void _loadChunksFromRegion(fs::path regionDir, int32_t regionX, int32_t regionZ,
 			// Chunk is not in bounds
 			continue;
 		}
-		//printf("Loading chunk %d %d in r.%d.%d.mca\n", it >> 5, it & 0x1f, regionX, regionZ);
+
+		//printf("Loading chunk %d %d in r.%d.%d.mca\n", it & 0x1f, it >> 5, regionX, regionZ);
+		//printf("Offset: %d\n", _ntohl(regionHeader + it*4) >> 8);
 
 		// Get the location of the data from the header
 		const uint32_t offset = (_ntohl(regionHeader + it*4) >> 8) * 4096;
 		const uint32_t index = chunk_index(chunkX, chunkZ, terrain.map);
 
-		_loadChunk(offset, regionData, terrain.chunks[index]);
+		_loadChunk(offset, regionData, terrain.chunks[index], terrain.heightMap[index]);
 	}
 
 	fclose(regionData);
 }
 
-bool _loadChunk(uint32_t offset, FILE* regionData, Terrain::Chunk& destination) {
-	uint8_t zData[8192];
+bool _loadChunk(uint32_t offset, FILE* regionData, Terrain::Chunk& destination, uint8_t& heightMap) {
+	uint8_t zData[5*4096];
 	uint8_t chunkBuffer[1000*1024];
 
 	if (!offset) {
@@ -973,7 +983,7 @@ bool _loadChunk(uint32_t offset, FILE* regionData, Terrain::Chunk& destination) 
 	inflateEnd(&zlibStream);
 
 	if (status != Z_STREAM_END) {
-		//printf("Error decompressing chunk\n");
+		printf("Error decompressing chunk: %s\n", zError(status));
 		return false;
 	}
 
@@ -982,15 +992,30 @@ bool _loadChunk(uint32_t offset, FILE* regionData, Terrain::Chunk& destination) 
 	bool success;
 	NBT tree = NBT(chunkBuffer, len, success);
 	if (!success) {
-		// The info could not be understood as NBT
+		printf("The info could not be understood as NBT\n");
 		return false;
 	}
 
+	// Strip the chunk of pointless sections
 	try {
-		destination = tree["Level"]["Sections"];
-		if (destination[0]["Y"].getByte() == -1) {
-			destination._list_content.pop_front();
+		destination = *(*(tree["Level"]))["Sections"];
+		int8_t byte;
+		list<NBT_Tag*>* sections;
+		destination.getList(sections);
+		(*sections->front())["Y"]->getByte(byte);
+
+		// Some chunks have a -1 section, we'll pop that real quick
+		if (!sections->front()->contains("Palette")) {
+			sections->pop_front();
 		}
+
+		// Pop all the empty top sections
+		while (!sections->back()->contains("Palette")) {
+			sections->pop_back();
+		}
+
+		heightMap = (sections->size()) << 4;
+
 	} catch (const std::invalid_argument& e) {
 		return false;
 	}
@@ -1003,9 +1028,15 @@ Block Terrain::blockAt(Terrain::Data& terrain, int32_t x, int32_t z, int32_t y) 
 	const uint8_t sectionY = y >> 4;
 	const uint64_t position = (x & 0x0f) + ((z & 0x0f) + (y & 0x0f)*16)*16;
 	try {
-		NBT_Tag section = terrain.chunks[index][sectionY];
-		return Block(getBlockId(position, &section));
+		NBT_Tag* section = (terrain.chunks[index])[sectionY];
+		return Block(getBlockId(position, section));
 	} catch (std::exception& e) {
+		printf("Got air because: %s\n", e.what());
 		return Block("minecraft:air");
 	}
+}
+
+uint16_t heightAt(Terrain::Data& terrain, int32_t x, int32_t z) {
+	const uint64_t index = (CHUNK(x) - terrain.map.minX) + (CHUNK(z) - terrain.map.minZ)*(terrain.map.maxX - terrain.map.minX + 1);
+	return 16*(terrain.heightMap[index] >> 4);
 }

@@ -1,12 +1,16 @@
 #include "helper.h"
 #include "draw_png.h"
 #include "colors.h"
+#include "nbt.h"
 #include "worldloader.h"
 #include "globals.h"
 #include <string>
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
+#include <cmath>
+#include <filesystem>
+#include <bitset>
 #ifdef _DEBUG
 #include <cassert>
 #endif
@@ -39,6 +43,8 @@ struct cli_options {
 	uint64_t memlimit = 2000 * uint64_t(1024 * 1024);
 	bool memlimitSet = false;
 };
+
+void render(struct cli_options&, struct image_options&, Terrain::Coordinates&);
 
 struct image_options {
 	bool splitImage = false;
@@ -73,6 +79,7 @@ void calcSplits(struct cli_options& opts, struct image_options& img_opts) {
 				printf("Choosing disk caching strategy...\n");
 			}
 			// ...or even use disk caching
+			printf("Splitting image\n");
 			img_opts.splitImage = true;
 		}
 		// Split up map more and more, until the mem requirements are satisfied
@@ -180,10 +187,6 @@ void renderParts(struct cli_options& opts, struct image_options& img_opts) {
 		for (size_t x = CHUNKSIZE_X; x < g_MapsizeX - CHUNKSIZE_X; ++x) {
 			printProgress(x - CHUNKSIZE_X, g_MapsizeX);
 			for (size_t z = CHUNKSIZE_Z; z < g_MapsizeZ - CHUNKSIZE_Z; ++z) {
-				// Biome colors
-				if (g_BiomeMap != NULL) {
-					uint16_t &offset = BIOMEAT(x,z);
-				}
 				const int bmpPosX = int((g_MapsizeZ - z - CHUNKSIZE_Z) * 2 + (x - CHUNKSIZE_X) * 2 + (img_opts.splitImage ? -2 : bitmapStartX - img_opts.cropLeft));
 				int bmpPosY = int(g_MapsizeY * g_OffsetY + z + x - CHUNKSIZE_Z - CHUNKSIZE_X + (img_opts.splitImage ? 0 : bitmapStartY - img_opts.cropTop)) + 2 - (HEIGHTAT(x, z) & 0xFF) * g_OffsetY;
 				const int max = (HEIGHTAT(x, z) & 0xFF00) >> 8;
@@ -292,46 +295,46 @@ void renderParts(struct cli_options& opts, struct image_options& img_opts) {
 	delete[] brightnessLookup;
 }
 
-#ifdef _DEBUG
-static size_t gBlocksRemoved = 0;
-#endif
 void optimizeTerrain2(int cropLeft, int cropRight) {
+	/* Routine parsing the world and populating
+	 * g_heightmap with min|max vals on 16bits */
+	cropLeft++;
+	cropRight++;
 	printf("Optimizing terrain...\n");
-#ifdef _DEBUG
-	gBlocksRemoved = 0;
-#endif
+	int offsetZ = 0, offsetY = 0, offsetGlobal = 0;
 	const int maxX = g_MapsizeX - CHUNKSIZE_X;
 	const int maxZ = g_MapsizeZ - CHUNKSIZE_Z;
 	const int modZ = maxZ * g_MapsizeY;
 	uint8_t * const blocked = new uint8_t[modZ];
-	int offsetZ = 0, offsetY = 0, offsetGlobal = 0;
 	memset(blocked, 0, modZ);
 	for (int x = maxX - 1; x >= CHUNKSIZE_X; --x) {
 		printProgress(maxX - (x + 1), maxX);
 		offsetZ = offsetGlobal;
 		for (int z = CHUNKSIZE_Z; z < maxZ; ++z) {
-			Block *block = &BLOCKAT(x, 0, z); // Get the lowest block at that point
-			int highest = 0, lowest = 0xFF; // remember lowest and highest block which are visible to limit the Y-for-loop later
+			// Get the lowest block at that point
+			Block *block = &BLOCKAT(x, 0, z);
+			// remember lowest and highest block which are visible to limit the Y-for-loop later
+			int highest = 0, lowest = 0xFF;
 			for (int y = 0; y < g_MapsizeY; ++y) { // Go up
 				uint8_t &current = blocked[((y+offsetY) % g_MapsizeY) + (offsetZ % modZ)];
-				if (current) { // Block is hidden, remove
-#ifdef _DEBUG
-					if (*block != "minecraft:air") {
-						++gBlocksRemoved;
-					}
-#endif
+				if (current) { // Block is hidden, remove // JB: ??? This does not remove shit
 				} else { // block is not hidden by another block
-					if (*block != "minecraft:air" && lowest == 0xFF) { // if it's not air, this is the lowest block to draw
+					// if it's not air, this is the lowest block to draw
+					if (*block != "minecraft:air" && lowest == 0xFF) {
 						lowest = y;
 					}
-					if (block->getColor()[PALPHA] == 255) { // Block is not hidden, do not remove, but mark spot as blocked for next iteration
+					// Block is not hidden, do not remove, but mark spot as blocked for next iteration
+					if (block->getColor()[PALPHA] == 255) {
 						current = 1;
 					}
-					if (*block != "minecraft:air") highest = y; // if it's not air, it's the new highest block encountered so far
+					// if it's not air, it's the new highest block encountered so far
+					if (*block != "minecraft:air") highest = y;
 				}
 				++block; // Go up
 			}
-			HEIGHTAT(x, z) = (((uint16_t)highest + 1) << 8) | (uint16_t)lowest; // cram them both into a 16bit int
+
+			// cram them both into a 16bit int
+			HEIGHTAT(x, z) = (((uint16_t)highest + 1) << 8) | (uint16_t)lowest;
 			blocked[(offsetY % g_MapsizeY) + (offsetZ % modZ)] = 0;
 			offsetZ += g_MapsizeY;
 		}
@@ -343,18 +346,12 @@ void optimizeTerrain2(int cropLeft, int cropRight) {
 	}
 	delete[] blocked;
 	printProgress(10, 10);
-#ifdef _DEBUG
-	printf("Removed %lu blocks\n", (unsigned long) gBlocksRemoved);
-#endif
 }
 
 void optimizeTerrain3() {
 	// Remove invisible blocks from map (covered by other blocks from isometric pov)
 	// Do so by "raytracing" every block from front to back..
 	printf("Optimizing terrain... (3)\n");
-#ifdef _DEBUG
-	gBlocksRemoved = 0;
-#endif
 	printProgress(0, 10);
 	// Helper arrays to remember which block is blocked from being seen. This allows to traverse the array in a slightly more sequential way, which leads to better usage of the CPU cache
 	uint8_t *blocked = new uint8_t[g_MapsizeY*3];
@@ -373,11 +370,6 @@ void optimizeTerrain3() {
 			int highest = 0, lowest = 0xFF;
 			for (int j = 0; j < g_MapsizeY; ++j) { // Go up
 				if (blocked[blockedOffset + (j+offset) % g_MapsizeY]) { // Block is hidden, remove
-#ifdef _DEBUG
-					if (*block != "minecraft:air") {
-						++gBlocksRemoved;
-					}
-#endif
 				} else {
 					if (*block != "minecraft:air" && lowest == 0xFF) {
 						lowest = j;
@@ -408,11 +400,6 @@ void optimizeTerrain3() {
 			int highest = 0, lowest = 0xFF;
 			for (int j = 0; j < g_MapsizeY; ++j) {
 				if (blocked[blockedOffset + (j+offset) % g_MapsizeY]) {
-#ifdef _DEBUG
-					if (*block != "minecraft:air") {
-						++gBlocksRemoved;
-					}
-#endif
 				} else {
 					if (*block != "minecraft:air" && lowest == 0xFF) {
 						lowest = j;
@@ -435,9 +422,6 @@ void optimizeTerrain3() {
 	}
 	delete[] blocked;
 	printProgress(10, 10);
-#ifdef _DEBUG
-	printf("Removed %lu blocks\n", (unsigned long) gBlocksRemoved);
-#endif
 }
 
 void undergroundMode(bool explore) {
@@ -820,11 +804,9 @@ int main(int argc, char **argv) {
 
 	if (g_Hell || g_ServerHell || g_End) g_UseBiomes = false;
 
-	// Figure out whether this is the old save format or McRegion or Anvil
-
 	loadColors();
 
-	g_SectionMin = g_MapminY >> SECTION_Y_SHIFT;
+	/*g_SectionMin = g_MapminY >> SECTION_Y_SHIFT;
 	g_SectionMax = (g_MapsizeY - 1) >> SECTION_Y_SHIFT;
 	g_MapsizeY -= g_MapminY;
 	printf("MinY: %d ... MaxY: %d ... MinSecY: %d ... MaxSecY: %d\n", g_MapminY, g_MapsizeY, g_SectionMin, g_SectionMax);
@@ -833,7 +815,7 @@ int main(int argc, char **argv) {
 	g_TotalFromChunkX = g_FromChunkX;
 	g_TotalFromChunkZ = g_FromChunkZ;
 	g_TotalToChunkX = g_ToChunkX;
-	g_TotalToChunkZ = g_ToChunkZ;
+	g_TotalToChunkZ = g_ToChunkZ;*/
 
 	if (sizeof(size_t) < 8 && opts.memlimit > 1800 * uint64_t(1024 * 1024)) {
 		opts.memlimit = 1800 * uint64_t(1024 * 1024);
@@ -869,34 +851,44 @@ int main(int argc, char **argv) {
 			printf("Error allocating bitmap. Check if you have enough free disk space.\n");
 			return 1;
 		}
-	} else {
-		// This would mean tiled output
-		mkdir(g_TilePath, 0755);
-		if (!dirExists(g_TilePath)) {
-			printf("Error: '%s' does not exist.\n", g_TilePath);
-			return 1;
-		}
-		createImageBuffer(img_opts.bitmapX, img_opts.bitmapY, img_opts.splitImage);
 	}
 
-	renderParts(opts, img_opts);
-
-	// Drawing complete, now either just save the image or compose it if disk caching was used
-	// Saving
-	if (!img_opts.splitImage) {
-		saveImage();
-	} else {
-		if (!composeFinalImage()) {
-			printf("Aborted.\n");
-			return 1;
-		}
-	}
+	Terrain::Coordinates coords;
+	render(opts, img_opts, coords);
+	saveImage();
 
 	if (fileHandle)
 		fclose(fileHandle);
 
-	freeTerrain();
-
 	printf("Job complete.\n");
 	return 0;
+}
+
+void render(struct cli_options& opts, struct image_options& img_opts, Terrain::Coordinates& coords) {
+	Terrain::Data terrain;
+
+	coords.minX = g_FromChunkX*CHUNKSIZE_X;
+	coords.minZ = g_FromChunkZ*CHUNKSIZE_Z;
+	coords.maxX = g_ToChunkX*CHUNKSIZE_X - 1;
+	coords.maxZ = g_ToChunkZ*CHUNKSIZE_Z - 1;
+
+	std::filesystem::path saveFile(opts.filename);
+	saveFile /= "region";
+
+	_loadTerrain(terrain, saveFile, coords);
+
+	const float split = 1 - ((float)coords.maxX - coords.minX)/(coords.maxZ - coords.minZ + coords.maxX - coords.minX);
+	for (int32_t x = coords.minX; x < coords.maxX + 1; x++) {
+		for (int32_t z = coords.minZ; z < coords.maxZ + 1; z++) {
+			const size_t bmpPosX = img_opts.bitmapX*split + (x - coords.minX - z + coords.minZ)*2;
+			const uint16_t maxHeight = heightAt(terrain, x, z);
+			for (int32_t y = 0; y < maxHeight; y++) {
+				const size_t bmpPosY = img_opts.bitmapY - 4 - (coords.maxX + coords.maxZ - coords.minX - coords.minZ) - y*g_OffsetY + (x - coords.minX) + (z - coords.minZ);
+				Block block = Terrain::blockAt(terrain, x, z, y);
+				setPixel(bmpPosX, bmpPosY, block, 0);
+			}
+		}
+	}
+
+	return;
 }

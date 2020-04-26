@@ -9,30 +9,26 @@
 using std::string;
 using std::list;
 
-		/*! \enum Blocktypes
-		 * \brief Different types of block shapes
-		 * Tagging a color with these (using SETBLOCKTYPE) will result in it being drawn differently on the final image.
-		 */
-		enum BlockTypes {
-			FULL = 0,
-			THIN, // Carpet, trapdoor
-			HALF, // Slab
-			STAIR,
-			THIN_ROD, // Torch/end rod
-			ROD, // Fence-like
-			WIRE, // Redstone dust, tripwire
-			PLANT, // Flower
-			RAILROAD,
-			GROWN, // Grass. GRASS is set using a #define, so I had to improvise not to conflict
-			SPECIAL, // Two color blocks (eg Fire and Cocoa)
-			OTHER // For now not rendered, like buttons and levers
-		};
-
-/*! \class Block
- *
- * Stores information and operations relative to blocks. Object footprint of two bytes, as no padding is required to fit the two uint8_t.
- * From now on, I will refer in the comments to the block of id 'i' and variant 'v' by writing i:v.
+/*! \enum Blocktypes
+ * \brief Different types of block shapes
+ * Tagging a color with these (using SETBLOCKTYPE) will result in it being drawn differently on the final image.
  */
+enum BlockTypes {
+	FULL = 0,
+	THIN, // Carpet, trapdoor
+	HALF, // Slab
+	STAIR,
+	THIN_ROD, // Torch/end rod
+	ROD, // Fence-like
+	WIRE, // Redstone dust, tripwire
+	PLANT, // Flower
+	RAILROAD,
+	GROWN, // Grass. GRASS is set using a #define, so I had to improvise not to conflict
+	SPECIAL, // Two color blocks (eg Fire and Cocoa)
+	OTHER // For now not rendered, like buttons and levers
+};
+
+/*! \class Block */
 class Block {
 	private:
 		/// The block's id
