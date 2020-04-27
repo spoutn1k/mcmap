@@ -102,6 +102,15 @@ void calcSplits(struct cli_options& opts, struct image_options& img_opts) {
 	}
 }
 
+void _calcSplits(Terrain::Coordinates& map, struct cli_options& opts, struct image_options& img_opts) {
+	// Mem check
+	uint64_t bitmapBytes = _calcImageSize(map, img_opts);
+
+	if (opts.memlimit < bitmapBytes) {
+		printf("Memory lack\n");
+	}
+}
+
 void renderParts(struct cli_options& opts, struct image_options& img_opts) {
 	// Precompute brightness adjustment factor
 	float *brightnessLookup = new float[g_MapsizeY];
@@ -817,6 +826,13 @@ int main(int argc, char **argv) {
 	g_TotalToChunkX = g_ToChunkX;
 	g_TotalToChunkZ = g_ToChunkZ;*/
 
+	Terrain::Coordinates coords;
+
+	coords.minX = g_FromChunkX;
+	coords.minZ = g_FromChunkZ;
+	coords.maxX = g_ToChunkX - 1;
+	coords.maxZ = g_ToChunkZ - 1;
+
 	if (sizeof(size_t) < 8 && opts.memlimit > 1800 * uint64_t(1024 * 1024)) {
 		opts.memlimit = 1800 * uint64_t(1024 * 1024);
 	}
@@ -827,7 +843,7 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	calcSplits(opts, img_opts);
+	_calcSplits(coords, opts, img_opts);
 
 	// Always same random seed, as this is only used for block noise, which should give the same result for the same input every time
 	srand(1337);
@@ -853,7 +869,6 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	Terrain::Coordinates coords;
 	render(opts, img_opts, coords);
 	saveImage();
 
@@ -866,11 +881,6 @@ int main(int argc, char **argv) {
 
 void render(struct cli_options& opts, struct image_options& img_opts, Terrain::Coordinates& coords) {
 	Terrain::Data terrain;
-
-	coords.minX = g_FromChunkX*CHUNKSIZE_X;
-	coords.minZ = g_FromChunkZ*CHUNKSIZE_Z;
-	coords.maxX = g_ToChunkX*CHUNKSIZE_X - 1;
-	coords.maxZ = g_ToChunkZ*CHUNKSIZE_Z - 1;
 
 	std::filesystem::path saveFile(opts.filename);
 	saveFile /= "region";

@@ -1029,9 +1029,11 @@ Block Terrain::blockAt(Terrain::Data& terrain, int32_t x, int32_t z, int32_t y) 
 	const uint64_t position = (x & 0x0f) + ((z & 0x0f) + (y & 0x0f)*16)*16;
 	try {
 		NBT_Tag* section = (terrain.chunks[index])[sectionY];
-		return Block(getBlockId(position, section));
+		if (section->contains("Palette"))
+			return Block(getBlockId(position, section));
+		return Block("minecraft:air");
 	} catch (std::exception& e) {
-		printf("Got air because: %s\n", e.what());
+		printf("Got air because: %s (%d.%d.%d)\n", e.what(), x >> 4, z >> 4, y);
 		return Block("minecraft:air");
 	}
 }
