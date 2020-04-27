@@ -1,6 +1,7 @@
 #include "helper.h"
 #include "draw_png.h"
 #include "colors.h"
+#include "options.h"
 #include "nbt.h"
 #include "worldloader.h"
 #include "globals.h"
@@ -36,23 +37,7 @@ bool prepareNextArea(int splitX, int splitZ, int &bitmapStartX, int &bitmapStart
 static inline int floorChunkX(const int val);
 static inline int floorChunkZ(const int val);
 void printHelp(char *binary);
-
-struct cli_options {
-	char *filename = NULL, *outfile = NULL, *colorfile = NULL, *texturefile = NULL, *biomepath = NULL;
-	bool dumpColors = false, infoOnly = false, wholeworld = false;
-	uint64_t memlimit = 2000 * uint64_t(1024 * 1024);
-	bool memlimitSet = false;
-};
-
 void render(struct cli_options&, struct image_options&, Terrain::Coordinates&);
-
-struct image_options {
-	bool splitImage = false;
-	int numSplitsX = 0;
-	int numSplitsZ = 0;
-	int bitmapX = 0, bitmapY = 0;
-	int cropLeft = 0, cropRight = 0, cropTop = 0, cropBottom = 0;
-};
 
 void calcSplits(struct cli_options& opts, struct image_options& img_opts) {
 	// Mem check
@@ -644,15 +629,15 @@ bool parseArgs(int argc, char** argv, struct cli_options& opts) {
 				printf("Error: %s needs two integer arguments, ie: %s -10 5\n", option, option);
 				return false;
 			}
-			g_FromChunkX = atoi(NEXTARG);
-			g_FromChunkZ = atoi(NEXTARG);
+			opts.fromX = atoi(NEXTARG);
+			opts.fromZ = atoi(NEXTARG);
 		} else if (strcmp(option, "-to") == 0) {
 			if (!MOREARGS(2) || !isNumeric(POLLARG(1)) || !isNumeric(POLLARG(2))) {
 				printf("Error: %s needs two integer arguments, ie: %s -5 20\n", option, option);
 				return false;
 			}
-			g_ToChunkX = atoi(NEXTARG) + 1;
-			g_ToChunkZ = atoi(NEXTARG) + 1;
+			opts.toX = atoi(NEXTARG) + 1;
+			opts.toZ = atoi(NEXTARG) + 1;
 		} else if (strcmp(option, "-night") == 0) {
 			g_Nightmode = true;
 		} else if (strcmp(option, "-caves") == 0) {
@@ -697,13 +682,13 @@ bool parseArgs(int argc, char** argv, struct cli_options& opts) {
 				printf("Error: %s needs an integer argument, ie: %s 100\n", option, option);
 				return false;
 			}
-			g_MapmaxY = atoi(NEXTARG);
+			opts.mapMaxY = atoi(NEXTARG);
 		} else if (strcmp(option, "-min") == 0) {
 			if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
 				printf("Error: %s needs an integer argument, ie: %s 50\n", option, option);
 				return false;
 			}
-			g_MapminY = atoi(NEXTARG);
+			opts.mapMinY = atoi(NEXTARG);
 		} else if (strcmp(option, "-mem") == 0) {
 			if (!MOREARGS(1) || !isNumeric(POLLARG(1)) || atoi(POLLARG(1)) <= 0) {
 				printf("Error: %s needs a positive integer argument, ie: %s 1000\n", option, option);
@@ -828,10 +813,10 @@ int main(int argc, char **argv) {
 
 	Terrain::Coordinates coords;
 
-	coords.minX = g_FromChunkX;
-	coords.minZ = g_FromChunkZ;
-	coords.maxX = g_ToChunkX - 1;
-	coords.maxZ = g_ToChunkZ - 1;
+	coords.minX = opts.fromX;
+	coords.minZ = opts.fromZ;
+	coords.maxX = opts.toX - 1;
+	coords.maxZ = opts.toZ - 1;
 
 	if (sizeof(size_t) < 8 && opts.memlimit > 1800 * uint64_t(1024 * 1024)) {
 		opts.memlimit = 1800 * uint64_t(1024 * 1024);
@@ -891,8 +876,8 @@ void render(struct cli_options& opts, struct image_options& img_opts, Terrain::C
 	for (int32_t x = coords.minX; x < coords.maxX + 1; x++) {
 		for (int32_t z = coords.minZ; z < coords.maxZ + 1; z++) {
 			const size_t bmpPosX = img_opts.bitmapX*split + (x - coords.minX - z + coords.minZ)*2;
-			const uint16_t maxHeight = heightAt(terrain, x, z);
-			for (int32_t y = 0; y < maxHeight; y++) {
+			const int maxHeight = heightAt(terrain, x, z);
+			for (int32_t y = std::max(0, opts.mapMinY); y < std::min(maxHeight, opts.mapMaxY + 1); y++) {
 				const size_t bmpPosY = img_opts.bitmapY - 4 - (coords.maxX + coords.maxZ - coords.minX - coords.minZ) - y*g_OffsetY + (x - coords.minX) + (z - coords.minZ);
 				Block block = Terrain::blockAt(terrain, x, z, y);
 				setPixel(bmpPosX, bmpPosY, block, 0);
