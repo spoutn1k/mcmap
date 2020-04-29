@@ -27,15 +27,15 @@ namespace {
 // Macros to make code more readable
 #define BLOCK_AT_MAPEDGE(x,z) (((z)+1 == g_MapsizeZ-CHUNKSIZE_Z && gAtBottomLeft) || ((x)+1 == g_MapsizeX-CHUNKSIZE_X && gAtBottomRight))
 
-void optimizeTerrain2(int cropLeft, int cropRight);
-void optimizeTerrain3();
+//void optimizeTerrain2(int cropLeft, int cropRight);
+//void optimizeTerrain3();
 void calcSplits(struct cli_options&, struct image_options&);
-void renderParts(struct cli_options&, struct image_options&);
+//void renderParts(struct cli_options&, struct image_options&);
 bool parseArgs(int, char**, struct cli_options& opts);
-void undergroundMode(bool explore);
-bool prepareNextArea(int splitX, int splitZ, int &bitmapStartX, int &bitmapStartY);
-static inline int floorChunkX(const int val);
-static inline int floorChunkZ(const int val);
+//void undergroundMode(bool explore);
+//bool prepareNextArea(int splitX, int splitZ, int &bitmapStartX, int &bitmapStartY);
+//static inline int floorChunkX(const int val);
+//static inline int floorChunkZ(const int val);
 void printHelp(char *binary);
 void render(struct cli_options&, struct image_options&, Terrain::Coordinates&);
 
@@ -96,6 +96,7 @@ void _calcSplits(Terrain::Coordinates& map, struct cli_options& opts, struct ima
 	}
 }
 
+/*
 void renderParts(struct cli_options& opts, struct image_options& img_opts) {
 	// Precompute brightness adjustment factor
 	float *brightnessLookup = new float[g_MapsizeY];
@@ -287,11 +288,11 @@ void renderParts(struct cli_options& opts, struct image_options& img_opts) {
 	}
 
 	delete[] brightnessLookup;
-}
+}*/
 
-void optimizeTerrain2(int cropLeft, int cropRight) {
-	/* Routine parsing the world and populating
-	 * g_heightmap with min|max vals on 16bits */
+/*void optimizeTerrain2(int cropLeft, int cropRight) {
+	// Routine parsing the world and populating
+	// g_heightmap with min|max vals on 16bits
 	cropLeft++;
 	cropRight++;
 	printf("Optimizing terrain...\n");
@@ -561,7 +562,7 @@ bool prepareNextArea(int splitX, int splitZ, int &bitmapStartX, int &bitmapStart
 	}
 
 	return false; // not done yet, return false
-}
+}*/
 
 /**
  * Round down to the nearest multiple of 16
@@ -788,6 +789,7 @@ bool parseArgs(int argc, char** argv, struct cli_options& opts) {
 int main(int argc, char **argv) {
 	struct cli_options opts;
 	struct image_options img_opts;
+	colorMap colors;
 
 	printf("mcmap " VERSION " %dbit\n", 8*(int)sizeof(size_t));
 
@@ -798,7 +800,10 @@ int main(int argc, char **argv) {
 
 	if (g_Hell || g_ServerHell || g_End) g_UseBiomes = false;
 
-	loadColors();
+	if (!loadColors(colors)) {
+		fprintf(stderr, "Could not load colors.\n");
+		return 1;
+	}
 
 	/*g_SectionMin = g_MapminY >> SECTION_Y_SHIFT;
 	g_SectionMax = (g_MapsizeY - 1) >> SECTION_Y_SHIFT;

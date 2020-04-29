@@ -1,17 +1,19 @@
 #include "colors.h"
-#include "extractcolors.h"
-#include "pngreader.h"
-#include "globals.h"
-#include <cstring>
-#include <cstdio>
-#include <cstdlib>
-#include <iostream>
+#include "block.h"
 
-// See header for description
-map<string, list<int>> colors;
+bool loadColors(colorMap& colors) {
+	std::filesystem::path colorFile = "./colors.json";
 
-void loadColors() {
-    FILE *f = fopen("colors.json", "r");
+	if (!std::filesystem::exists(colorFile)) {
+		fprintf(stderr, "Color file not found !\n");
+		return false;
+	}
+
+	FILE *f = fopen(colorFile.c_str(), "r");
 	json data = json::parse(f);
+	fclose(f);
 	colors = data.get<map<string, list<int>>>();
+	Block::setColors(colors);
+
+	return true;
 }

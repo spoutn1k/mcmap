@@ -35,6 +35,8 @@ class Block {
 		string id;
 		uint8_t _color[8];
 
+		static colorMap colors;
+
 	public:
 		/*! \brief Default constructor
 		 * Will return an air block (AIR:0)
@@ -50,6 +52,8 @@ class Block {
 		string getId() const;
 
 		void setId(const string id);
+
+		static void setColors(colorMap colors);
 
 		/*! \brief Get the block's color array
 		 * \return A pointer to the corresponding line in colors[] (of size 8)

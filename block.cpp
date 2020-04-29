@@ -1,6 +1,12 @@
 #include "block.h"
 #include "globals.h"
 
+colorMap Block::colors = {};
+
+void Block::setColors(colorMap colors) {
+	Block::colors = colors;
+}
+
 Block::Block() {
     this->id = "minecraft:air";
 }

@@ -6,7 +6,7 @@
 #include <map>
 #include <list>
 #include <string>
-#include <cmath>
+#include <filesystem>
 
 // Byte order see below. Colors aligned to word boundaries for some speedup
 // Brightness is precalculated to speed up calculations later
@@ -24,7 +24,7 @@ using std::list;
 using std::string;
 using nlohmann::json;
 
-extern map<string, list<int>> colors;
+typedef map<string, list<int>> colorMap;
 
 #define PRED 0
 #define PGREEN 1
@@ -45,7 +45,7 @@ extern map<string, list<int>> colors;
                                         double(PGREEN[c]) *  double(PGREEN[c]) * .601 + \
                                         double(PBLUE[c]) *  double(PBLUE[c]) * .163)
 
-void loadColors();
+bool loadColors(colorMap&);
 /*bool loadColorsFromFile(const char *file);
 bool dumpColorsToFile(const char *file);
 bool extractColors(const char *file);
