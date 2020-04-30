@@ -6,7 +6,6 @@
 #include "helper.h"
 #include "colors.h"
 #include "globals.h"
-#include "options.h"
 #include <cstring>
 #include <cstdio>
 #include <cstdlib>
@@ -612,16 +611,16 @@ bool composeFinalImage() {
 	return true;
 }
 
-uint64_t calcImageSize(const int mapChunksX, const int mapChunksZ, const size_t mapHeight, int &pixelsX, int &pixelsY, const bool tight) {
+/*uint64_t calcImageSize(const int mapChunksX, const int mapChunksZ, const size_t mapHeight, int &pixelsX, int &pixelsY, const bool tight) {
 	pixelsX = (mapChunksX * CHUNKSIZE_X + mapChunksZ * CHUNKSIZE_Z) * 2 + (tight ? 3 : 10);
 	pixelsY = (mapChunksX * CHUNKSIZE_X + mapChunksZ * CHUNKSIZE_Z + int(mapHeight) * g_OffsetY) + (tight ? 3 : 10);
 	printf("%d, %d, size: %ld\n", pixelsX, pixelsY, uint64_t(pixelsX) * BYTESPERPIXEL * uint64_t(pixelsY));
 	return uint64_t(pixelsX) * BYTESPERPIXEL * uint64_t(pixelsY);
-}
+}*/
 
-uint64_t _calcImageSize(const Terrain::Coordinates& map, struct image_options& img_opts) {
+uint64_t _calcImageSize(const Terrain::Coordinates& map, Settings::ImageOptions& img_opts) {
 	img_opts.bitmapX = (map.maxX - map.minX + map.maxZ - map.minZ)*2 + 10;
-	img_opts.bitmapY = (map.maxX - map.minX + map.maxZ - map.minZ + 80 * g_OffsetY) + 10;
+	img_opts.bitmapY = (map.maxX - map.minX + map.maxZ - map.minZ + 80 * img_opts.heightOffset) + 10;
 	return uint64_t(img_opts.bitmapX) * uint64_t(img_opts.bitmapY) * BYTESPERPIXEL;
 }
 

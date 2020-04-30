@@ -9,6 +9,7 @@
 #include "helper.h"
 #include "worldloader.h"
 #include "block.h"
+#include "settings.h"
 
 void createImageBuffer(const size_t width, const size_t height, const bool splitUp);
 bool createImage(FILE *fh, const size_t width, const size_t height, const bool splitUp);
@@ -20,6 +21,6 @@ bool saveImagePart();
 bool discardImagePart();
 bool composeFinalImage();
 uint64_t calcImageSize(const int mapChunksX, const int mapChunksZ, const size_t mapHeight, int &pixelsX, int &pixelsY, const bool tight = false);
-uint64_t _calcImageSize(const Terrain::Coordinates& map, struct image_options& img_opts);
+uint64_t _calcImageSize(const Terrain::Coordinates& map, Settings::ImageOptions& img_opts);
 
 #endif

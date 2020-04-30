@@ -1,7 +1,7 @@
 #include "helper.h"
 #include "draw_png.h"
 #include "colors.h"
-#include "options.h"
+#include "settings.h"
 #include "nbt.h"
 #include "worldloader.h"
 #include "globals.h"
@@ -29,16 +29,18 @@ namespace {
 
 //void optimizeTerrain2(int cropLeft, int cropRight);
 //void optimizeTerrain3();
-void calcSplits(struct cli_options&, struct image_options&);
 //void renderParts(struct cli_options&, struct image_options&);
-bool parseArgs(int, char**, struct cli_options& opts);
 //void undergroundMode(bool explore);
 //bool prepareNextArea(int splitX, int splitZ, int &bitmapStartX, int &bitmapStartY);
 //static inline int floorChunkX(const int val);
 //static inline int floorChunkZ(const int val);
-void printHelp(char *binary);
-void render(struct cli_options&, struct image_options&, Terrain::Coordinates&);
 
+void calcSplits(struct cli_options&, struct image_options&);
+bool parseArgs(int, char**, struct cli_options& opts);
+void printHelp(char *binary);
+void render(Settings::WorldOptions&, Settings::ImageOptions&, Terrain::Coordinates&);
+
+/*
 void calcSplits(struct cli_options& opts, struct image_options& img_opts) {
 	// Mem check
 	uint64_t bitmapBytes = calcImageSize(g_ToChunkX - g_FromChunkX, g_ToChunkZ - g_FromChunkZ, g_MapsizeY, img_opts.bitmapX, img_opts.bitmapY, false);
@@ -85,14 +87,14 @@ void calcSplits(struct cli_options& opts, struct image_options& img_opts) {
 			}
 		}
 	}
-}
+}*/
 
-void _calcSplits(Terrain::Coordinates& map, struct cli_options& opts, struct image_options& img_opts) {
+void _calcSplits(Terrain::Coordinates& map, Settings::WorldOptions& opts, Settings::ImageOptions& img_opts) {
 	// Mem check
 	uint64_t bitmapBytes = _calcImageSize(map, img_opts);
 
 	if (opts.memlimit < bitmapBytes) {
-		printf("Memory lack\n");
+		fprintf(stderr, "Cannot allocate memory for image: not enough memory\n");
 	}
 }
 
@@ -618,7 +620,7 @@ void printHelp(char *binary) {
 			, 8*(int)sizeof(size_t), binary, binary, binary);
 }
 
-bool parseArgs(int argc, char** argv, struct cli_options& opts) {
+bool parseArgs(int argc, char** argv, Settings::WorldOptions& opts) {
 #define MOREARGS(x) (argpos + (x) < argc)
 #define NEXTARG argv[++argpos]
 #define POLLARG(x) argv[argpos + (x)]
@@ -657,13 +659,6 @@ bool parseArgs(int argc, char** argv, struct cli_options& opts) {
 			g_ServerHell = true;
 		} else if (strcmp(option, "-biomes") == 0) {
 			g_UseBiomes = true;
-		} else if (strcmp(option, "-biomecolors") == 0) {
-			if (!MOREARGS(1)) {
-				printf("Error: %s needs path to grasscolor.png and foliagecolor.png, ie: %s ./subdir\n", option, option);
-				return false;
-			}
-			g_UseBiomes = true;
-			opts.biomepath = NEXTARG;
 		} else if (strcmp(option, "-blendall") == 0) {
 			g_BlendAll = true;
 		} else if (strcmp(option, "-noise") == 0 || strcmp(option, "-dither") == 0) {
@@ -672,12 +667,6 @@ bool parseArgs(int argc, char** argv, struct cli_options& opts) {
 				return false;
 			}
 			g_Noise = atoi(NEXTARG);
-		} else if (strcmp(option, "-height") == 0) {
-			if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
-				printf("Error: %s needs an integer argument, ie: %s 100\n", option, option);
-				return false;
-			}
-			g_MapsizeY = atoi(NEXTARG);
 		} else if (strcmp(option, "-max") == 0) {
 			if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
 				printf("Error: %s needs an integer argument, ie: %s 100\n", option, option);
@@ -702,29 +691,23 @@ bool parseArgs(int argc, char** argv, struct cli_options& opts) {
 				printf("Error: %s needs one argument, ie: %s myworld.bmp\n", option, option);
 				return false;
 			}
-			opts.outfile = NEXTARG;
+			opts.outFile = NEXTARG;
 		} else if (strcmp(option, "-colors") == 0) {
 			if (!MOREARGS(1)) {
 				printf("Error: %s needs one argument, ie: %s colors.txt\n", option, option);
 				return false;
 			}
 			opts.colorfile = NEXTARG;
-		} else if (strcmp(option, "-texture") == 0) {
-			if (!MOREARGS(1)) {
-				printf("Error: %s needs one argument, ie: %s terrain.png\n", option, option);
-				return false;
-			}
-			opts.texturefile = NEXTARG;
 		} else if (strcmp(option, "-north") == 0) {
-			g_Orientation = North;
+			g_Orientation = NORTH;
 		} else if (strcmp(option, "-south") == 0) {
-			g_Orientation = South;
+			g_Orientation = SOUTH;
 		} else if (strcmp(option, "-east") == 0) {
-			g_Orientation = East;
+			g_Orientation = EAST;
 		} else if (strcmp(option, "-west") == 0) {
-			g_Orientation = West;
+			g_Orientation = WEST;
 		} else if (strcmp(option, "-3") == 0) {
-			g_OffsetY = 3;
+			opts.offsetY = 3;
 		} else if (strcmp(option, "-split") == 0) {
 			if (!MOREARGS(1)) {
 				printf("Error: %s needs a path argument, ie: %s tiles/\n", option, option);
@@ -734,51 +717,48 @@ bool parseArgs(int argc, char** argv, struct cli_options& opts) {
 		} else if (strcmp(option, "-help") == 0 || strcmp(option, "-h") == 0) {
 			return false;
 		} else {
-			opts.filename = (char *) option;
+			opts.saveName = (char *) option;
 		}
 	}
 
-	opts.wholeworld = (g_FromChunkX == UNDEFINED || g_ToChunkX == UNDEFINED);
+	opts.wholeworld = (opts.fromX == UNDEFINED || opts.toX == UNDEFINED);
 
-	if (opts.filename == NULL) {
+	if (opts.saveName == NULL) {
 		printf("Error: No world given. Please add the path to your world to the command line.\n");
 		return false;
 	}
 
-	if (!isAlphaWorld(opts.filename)) {
-		printf("Error: Given path does not contain a Minecraft world.\n");
-		return false;
-	}
-
 	if (g_Hell) {
-		char *tmp = new char[strlen(opts.filename) + 20];
-		strcpy(tmp, opts.filename);
+		char *tmp = new char[strlen(opts.saveName) + 20];
+		strcpy(tmp, opts.saveName);
 		strcat(tmp, "/DIM-1");
 		if (!dirExists(tmp)) {
 			printf("Error: This world does not have a hell world yet. Build a portal first!\n");
 			return false;
 		}
-		opts.filename = tmp;
+		opts.saveName = tmp;
 	} else if (g_End) {
-		char *tmp = new char[strlen(opts.filename) + 20];
-		strcpy(tmp, opts.filename);
+		char *tmp = new char[strlen(opts.saveName) + 20];
+		strcpy(tmp, opts.saveName);
 		strcat(tmp, "/DIM1");
 		if (!dirExists(tmp)) {
 			printf("Error: This world does not have an end-world yet. Find an ender portal first!\n");
 			return false;
 		}
-		opts.filename = tmp;
+		opts.saveName = tmp;
 	}
 
-	if (opts.wholeworld && !scanWorldDirectory(opts.filename)) {
+	/*if (opts.wholeworld && !scanWorldDirectory(opts.filename)) {
 		printf("Error accessing terrain at '%s'\n", opts.filename);
 		return false;
-	}
-	if (g_ToChunkX <= g_FromChunkX || g_ToChunkZ <= g_FromChunkZ) {
+	}*/
+
+	if (opts.toX <= opts.fromX || opts.toZ <= opts.fromZ) {
 		printf("Nothing to render: -from X Z has to be <= -to X Z\n");
 		return false;
 	}
-	if (g_MapsizeY - g_MapminY < 1) {
+
+	if (opts.mapMaxY - opts.mapMinY < 1) {
 		printf("Nothing to render: -min Y has to be < -max/-height Y\n");
 		return false;
 	}
@@ -787,8 +767,8 @@ bool parseArgs(int argc, char** argv, struct cli_options& opts) {
 }
 
 int main(int argc, char **argv) {
-	struct cli_options opts;
-	struct image_options img_opts;
+    Settings::WorldOptions opts;
+    Settings::ImageOptions img_opts;
 	colorMap colors;
 
 	printf("mcmap " VERSION " %dbit\n", 8*(int)sizeof(size_t));
@@ -798,7 +778,7 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	if (g_Hell || g_ServerHell || g_End) g_UseBiomes = false;
+	//if (g_Hell || g_ServerHell || g_End) g_UseBiomes = false;
 
 	if (!loadColors(colors)) {
 		fprintf(stderr, "Could not load colors.\n");
@@ -838,17 +818,17 @@ int main(int argc, char **argv) {
 	// Always same random seed, as this is only used for block noise, which should give the same result for the same input every time
 	srand(1337);
 
-	if (opts.outfile == NULL) {
-		opts.outfile = (char *) "output.png";
+	if (opts.outFile == NULL) {
+		opts.outFile = (char *) "output.png";
 	}
 
 	// open output file only if not doing the tiled output
 	FILE *fileHandle = NULL;
 	if (g_TilePath == NULL) {
-		fileHandle = fopen(opts.outfile, (img_opts.splitImage ? "w+b" : "wb"));
+		fileHandle = fopen(opts.outFile, (img_opts.splitImage ? "w+b" : "wb"));
 
 		if (fileHandle == NULL) {
-			printf("Error opening '%s' for writing.\n", opts.outfile);
+			printf("Error opening '%s' for writing.\n", opts.outFile);
 			return 1;
 		}
 
@@ -869,10 +849,10 @@ int main(int argc, char **argv) {
 	return 0;
 }
 
-void render(struct cli_options& opts, struct image_options& img_opts, Terrain::Coordinates& coords) {
+void render(Settings::WorldOptions& opts, Settings::ImageOptions& img_opts, Terrain::Coordinates& coords) {
 	Terrain::Data terrain;
 
-	std::filesystem::path saveFile(opts.filename);
+	std::filesystem::path saveFile(opts.saveName);
 	saveFile /= "region";
 
 	_loadTerrain(terrain, saveFile, coords);
@@ -883,7 +863,7 @@ void render(struct cli_options& opts, struct image_options& img_opts, Terrain::C
 			const size_t bmpPosX = img_opts.bitmapX*split + (x - coords.minX - z + coords.minZ)*2;
 			const int maxHeight = heightAt(terrain, x, z);
 			for (int32_t y = std::max(0, opts.mapMinY); y < std::min(maxHeight, opts.mapMaxY + 1); y++) {
-				const size_t bmpPosY = img_opts.bitmapY - 4 - (coords.maxX + coords.maxZ - coords.minX - coords.minZ) - y*g_OffsetY + (x - coords.minX) + (z - coords.minZ);
+				const size_t bmpPosY = img_opts.bitmapY - 4 - (coords.maxX + coords.maxZ - coords.minX - coords.minZ) - y*opts.offsetY + (x - coords.minX) + (z - coords.minZ);
 				Block block = Terrain::blockAt(terrain, x, z, y);
 				setPixel(bmpPosX, bmpPosY, block, 0);
 			}

@@ -1,13 +1,11 @@
 #include "globals.h"
 
 int g_TotalFromChunkX, g_TotalFromChunkZ, g_TotalToChunkX, g_TotalToChunkZ;
-int g_FromChunkX = UNDEFINED, g_FromChunkZ = UNDEFINED, g_ToChunkX = UNDEFINED, g_ToChunkZ = UNDEFINED;
 size_t g_MapsizeZ = 0, g_MapsizeX = 0;
-int g_MapminY = 0, g_MapmaxY = 256, g_MapsizeY = 256, g_OffsetY = 2;
 
 int g_WorldFormat = 2;
 
-Orientation g_Orientation = East;
+Orientation g_Orientation = EAST;
 bool g_Nightmode = false;
 bool g_Underground = false;
 bool g_BlendUnderground = false;
@@ -28,9 +26,6 @@ uint8_t g_LastDoubleFlower = 0;
 uint8_t *g_Light = NULL;
 uint16_t *g_HeightMap = NULL;
 Block *g_Terrain = NULL;
-
-int g_MarkerCount = 0;
-Marker g_Markers[MAX_MARKERS];
 
 char *g_TilePath = NULL;
 

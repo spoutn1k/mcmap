@@ -55,25 +55,25 @@ namespace
 	pointList points; // all existing chunk X|Z found in region files
 }
 
-static bool loadChunk(const char *streamOrFile, const size_t len = 0);
-static bool loadAnvilChunk(NBT_Tag level, const int32_t chunkX, const int32_t chunkZ);
-static void allocateTerrain();
-static bool loadAllRegions();
-static bool loadRegion(const char* file, const bool mustExist, int &loadedChunks);
-static bool loadTerrainRegion(const char *fromPath, int &loadedChunks);
-static bool scanWorldDirectoryRegion(const char *fromPath);
-static inline void assignBlock(const string id, Block* &dest);
-static inline void lightCave(const int x, const int y, const int z);
+//static bool loadChunk(const char *streamOrFile, const size_t len = 0);
+//static bool loadAnvilChunk(NBT_Tag level, const int32_t chunkX, const int32_t chunkZ);
+//static void allocateTerrain();
+//static bool loadAllRegions();
+//static bool loadRegion(const char* file, const bool mustExist, int &loadedChunks);
+//static bool loadTerrainRegion(const char *fromPath, int &loadedChunks);
+//static bool scanWorldDirectoryRegion(const char *fromPath);
+//static inline void assignBlock(const string id, Block* &dest);
+//static inline void lightCave(const int x, const int y, const int z);
 
 void _loadChunksFromRegion(std::filesystem::path, int32_t regionX, int32_t regionZ, Terrain::Data& terrain);
 bool _loadChunk(uint32_t offset, FILE* regionData, Terrain::Chunk&, uint8_t&);
 
-int getWorldFormat(const char *worldPath) {
+/*int getWorldFormat(const char *worldPath) {
 	worldPath++;
 	return 2; // Come on, its not 2010 anymore
-}
+}*/
 
-bool scanWorldDirectory(const char *fromPath) {
+/*bool scanWorldDirectory(const char *fromPath) {
 	if (g_WorldFormat != 0) return scanWorldDirectoryRegion(fromPath);
 	charList subdirs;
 	myFile file;
@@ -157,9 +157,9 @@ bool scanWorldDirectory(const char *fromPath) {
 	}
 	printf("Min: (%d|%d) Max: (%d|%d)\n", g_FromChunkX, g_FromChunkZ, g_ToChunkX, g_ToChunkZ);
 	return true;
-}
+}*/
 
-static bool scanWorldDirectoryRegion(const char *fromPath) {
+/*static bool scanWorldDirectoryRegion(const char *fromPath) {
 	// OK go
 	for (chunkList::iterator it = chunks.begin(); it != chunks.end(); it++) {
 		delete *it;
@@ -252,9 +252,9 @@ static bool scanWorldDirectoryRegion(const char *fromPath) {
 
 	printf("Min: (%d|%d) Max: (%d|%d)\n", g_FromChunkX, g_FromChunkZ, g_ToChunkX, g_ToChunkZ);
 	return true;
-}
+}*/
 
-bool loadEntireTerrain() {
+/*bool loadEntireTerrain() {
 	return loadAllRegions();
 }
 
@@ -288,9 +288,9 @@ static bool loadChunk(const char *streamOrFile, const size_t streamLen) {
 		return false; // Nope, its not...
 	}
 	return loadAnvilChunk(level, chunkX, chunkZ);
-}
+}*/
 
-static bool loadAnvilChunk(NBT_Tag level, const int32_t chunkX, const int32_t chunkZ) {
+/*static bool loadAnvilChunk(NBT_Tag level, const int32_t chunkX, const int32_t chunkZ) {
 	uint8_t *lightdata, *skydata, *lightByte;
    int8_t yo;
 	int32_t yoffset, yoffsetsomething = (g_MapminY + SECTION_Y * 10000) % SECTION_Y;
@@ -331,13 +331,13 @@ static bool loadAnvilChunk(NBT_Tag level, const int32_t chunkX, const int32_t ch
 		// Copy data
 		for (int x = 0; x < CHUNKSIZE_X; ++x) {
 			for (int z = 0; z < CHUNKSIZE_Z; ++z) {
-				if (g_Orientation == East) {
+				if (g_Orientation == EAST) {
 					targetBlock = &BLOCKEAST(x + offsetx, yoffset, z + offsetz);
 					if (g_Skylight || g_Nightmode) lightByte = &SETLIGHTEAST(x + offsetx, yoffset, z + offsetz);
-				} else if (g_Orientation == North) {
+				} else if (g_Orientation == NORTH) {
 					targetBlock = &BLOCKNORTH(x + offsetx, yoffset, z + offsetz);
 					if (g_Skylight || g_Nightmode) lightByte = &SETLIGHTNORTH(x + offsetx, yoffset, z + offsetz);
-				} else if (g_Orientation == South) {
+				} else if (g_Orientation == SOUTH) {
 					targetBlock = &BLOCKSOUTH(x + offsetx, yoffset, z + offsetz);
 					if (g_Skylight || g_Nightmode) lightByte = &SETLIGHTSOUTH(x + offsetx, yoffset, z + offsetz);
 				} else {
@@ -378,17 +378,17 @@ static bool loadAnvilChunk(NBT_Tag level, const int32_t chunkX, const int32_t ch
 		} // for x
 	}
 	return true;
-}
+}*/
 
-uint64_t calcTerrainSize(const int chunksX, const int chunksZ) {
+/*uint64_t calcTerrainSize(const int chunksX, const int chunksZ) {
 	uint64_t size = uint64_t(chunksX+2) * CHUNKSIZE_X * uint64_t(chunksZ+2) * CHUNKSIZE_Z * uint64_t(g_MapsizeY) * sizeof(Block);
 	if (g_Nightmode || g_Underground || g_Skylight || g_BlendUnderground) {
 		size += size / 2;
 	}
 	return size;
-}
+}*/
 
-void calcBitmapOverdraw(int &left, int &right, int &top, int &bottom) {
+/*void calcBitmapOverdraw(int &left, int &right, int &top, int &bottom) {
 	top = left = bottom = right = 0x0fffffff;
 	int val, x, z;
 	chunkList::iterator itC;
@@ -408,7 +408,7 @@ void calcBitmapOverdraw(int &left, int &right, int &top, int &bottom) {
 			x = (**itC).x;
 			z = (**itC).z;
 		}
-		if (g_Orientation == North) {
+		if (g_Orientation == NORTH) {
 			// Right
 			val = (((g_ToChunkX - 1) - x) * CHUNKSIZE_X * 2)
 				+ ((z - g_FromChunkZ) * CHUNKSIZE_Z * 2);
@@ -431,7 +431,7 @@ void calcBitmapOverdraw(int &left, int &right, int &top, int &bottom) {
 			if (val < bottom) {
 				bottom = val;
 			}
-		} else if (g_Orientation == South) {
+		} else if (g_Orientation == SOUTH) {
 			// Right
 			val = (((g_ToChunkZ - 1) - z) * CHUNKSIZE_Z * 2)
 				+ ((x - g_FromChunkX) * CHUNKSIZE_X * 2);
@@ -454,7 +454,7 @@ void calcBitmapOverdraw(int &left, int &right, int &top, int &bottom) {
 			if (val < bottom) {
 				bottom = val;
 			}
-		} else if (g_Orientation == East) {
+		} else if (g_Orientation == EAST) {
 			// Right
 			val = ((g_ToChunkZ - 1) - z) * CHUNKSIZE_Z * 2 + ((g_ToChunkX - 1) - x) * CHUNKSIZE_X * 2;
 			if (val < right) {
@@ -508,9 +508,9 @@ void calcBitmapOverdraw(int &left, int &right, int &top, int &bottom) {
 			itC++;
 		}
 	}
-}
+}*/
 
-static void allocateTerrain() {
+/*static void allocateTerrain() {
 	if (g_Terrain != NULL) {
 		delete[] g_Terrain;
 	}
@@ -542,9 +542,9 @@ static void allocateTerrain() {
 		}
 	}
 	printf("\n");
-}
+}*/
 
-void freeTerrain() {
+/*void freeTerrain() {
 	if (g_Terrain != NULL) {
 		delete[] g_Terrain;
 	}
@@ -554,7 +554,7 @@ void freeTerrain() {
 	if (g_HeightMap != NULL) {
 		delete[] g_HeightMap;
 	}
-}
+}*/
 
 void clearLightmap()
 {
@@ -580,7 +580,7 @@ static inline int floorRegion(const int val)
 /**
  * Load all the 32x32-region-files containing chunks information
  */
-static bool loadAllRegions()
+/*static bool loadAllRegions()
 {
 	if (chunks.empty()) {
 		return false;
@@ -597,12 +597,12 @@ static bool loadAllRegions()
 	}
 	printProgress(10, 10);
 	return true;
-}
+}*/
 
 /**
  * Load all the 32x32 region files withing the specified bounds
  */
-static bool loadTerrainRegion(const char *fromPath, int &loadedChunks) {
+/*static bool loadTerrainRegion(const char *fromPath, int &loadedChunks) {
 	loadedChunks = 0;
 	if (fromPath == NULL || *fromPath == '\0') {
 		return false;
@@ -631,9 +631,9 @@ static bool loadTerrainRegion(const char *fromPath, int &loadedChunks) {
 	}
 	delete[] path;
 	return true;
-}
+}*/
 
-static bool loadRegion(const char* file, const bool mustExist, int &loadedChunks) {
+/*static bool loadRegion(const char* file, const bool mustExist, int &loadedChunks) {
 	uint8_t buffer[COMPRESSED_BUFFER], decompressedBuffer[DECOMPRESSED_BUFFER];
 	FILE *rp = fopen(file, "rb");
 	if (rp == NULL) {
@@ -730,7 +730,7 @@ static inline void lightCave(const int x, const int y, const int z) {
 				if (tx < CHUNKSIZE_X) {
 					continue;
 				}
-				if (g_Orientation == East) {
+				if (g_Orientation == EAST) {
 					if (tx >= int(g_MapsizeZ)-CHUNKSIZE_Z) {
 						break;
 					}
@@ -738,7 +738,7 @@ static inline void lightCave(const int x, const int y, const int z) {
 						break;
 					}
 					SETLIGHTEAST(tx, oty, tz) = 0xFF;
-				} else if (g_Orientation == North) {
+				} else if (g_Orientation == NORTH) {
 					if (tx >= int(g_MapsizeX)-CHUNKSIZE_X) {
 						break;
 					}
@@ -746,7 +746,7 @@ static inline void lightCave(const int x, const int y, const int z) {
 						break;
 					}
 					SETLIGHTNORTH(tx, oty, tz) = 0xFF;
-				} else if (g_Orientation == South) {
+				} else if (g_Orientation == SOUTH) {
 					if (tx >= int(g_MapsizeX)-CHUNKSIZE_X) {
 						break;
 					}
@@ -766,10 +766,9 @@ static inline void lightCave(const int x, const int y, const int z) {
 			}
 		}
 	}
-}
+}*/
 
-void uncoverNether()
-{
+/*void uncoverNether() {
 	const int cap = (g_MapsizeY - g_MapminY) - 57;
 	const int to = (g_MapsizeY - g_MapminY) - 52;
 	printf("Uncovering Nether...\n");
@@ -804,7 +803,7 @@ void uncoverNether()
 		}
 	}
 	printProgress(10, 10);
-}
+}*/
 
 NBT* loadChunk(const char *savePath, int32_t x, int32_t z) {
 	if (savePath == NULL || *savePath == '\0') {
@@ -1005,12 +1004,12 @@ bool _loadChunk(uint32_t offset, FILE* regionData, Terrain::Chunk& destination, 
 		(*sections->front())["Y"]->getByte(byte);
 
 		// Some chunks have a -1 section, we'll pop that real quick
-		if (!sections->front()->contains("Palette")) {
+		if (!sections->empty() && !sections->front()->contains("Palette")) {
 			sections->pop_front();
 		}
 
 		// Pop all the empty top sections
-		while (!sections->back()->contains("Palette")) {
+		while (!sections->empty() && !sections->back()->contains("Palette")) {
 			sections->pop_back();
 		}
 
