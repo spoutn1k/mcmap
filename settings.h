@@ -2,19 +2,16 @@
 #define OPTIONS_H_
 
 #include <cstdint>
+#include <filesystem>
 #include "worldloader.h"
 #define UNDEFINED 0x7FFFFFFF
 
 namespace Settings {
 
 struct WorldOptions {
-    char *saveName, *outFile, *colorfile;
-    // char *texturefile = nullptr;
-    // char *biomepath = nullptr;
+    std::filesystem::path saveName, outFile, colorfile;
 
     bool wholeworld;
-    // bool dumpColors = false;
-    // bool infoOnly = false;
 
     // Map boundaries
     int fromX, fromZ, toX, toZ;
@@ -29,9 +26,9 @@ struct WorldOptions {
     bool memlimitSet;
 
     WorldOptions() {
-        saveName = nullptr;
-        outFile = nullptr;
-        colorfile = nullptr;
+        saveName = "";
+        outFile = "";
+        colorfile = "";
 
         wholeworld = false;
 

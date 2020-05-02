@@ -1,5 +1,6 @@
 *.o
-output.png
+*.png
+!sample.png
 mcmap
 .gdb_history
 .ycm_extra_conf.py

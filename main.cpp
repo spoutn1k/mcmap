@@ -1,8 +1,6 @@
-#include <sys/stat.h>
-#include <filesystem>
+#include <utility>
 #include <string>
-#include <cstdio>
-#include <cstdlib>
+#include <algorithm>
 #include "./draw_png.h"
 #include "./settings.h"
 #include "./worldloader.h"
@@ -10,15 +8,14 @@
 
 using std::string;
 
-bool parseArgs(int, char**, struct cli_options& opts);
 void printHelp(char *binary);
-void render(Settings::WorldOptions&,
-        Settings::ImageOptions&,
-        Terrain::Coordinates&);
+void render(const Settings::WorldOptions&,
+        const Settings::ImageOptions&,
+        const Terrain::Coordinates&);
 
-void _calcSplits(Terrain::Coordinates& map,
-        Settings::WorldOptions& opts,
-        Settings::ImageOptions& img_opts) {
+void _calcSplits(const Terrain::Coordinates& map,
+        const Settings::WorldOptions& opts,
+        Settings::ImageOptions* img_opts) {
     // Mem check
     uint64_t bitmapBytes = _calcImageSize(map, img_opts);
     if (opts.memlimit < bitmapBytes) {
@@ -27,7 +24,7 @@ void _calcSplits(Terrain::Coordinates& map,
 }
 
 void printHelp(char *binary) {
-    printf( "\nmcmap - an isometric minecraft map rendering tool.\n"
+    printf("\nmcmap - an isometric minecraft map rendering tool.\n"
             "Version " VERSION " %dbit\n\n"
             "Usage: %s <options> WORLDPATH\n\n"
             "  -from X Z     coordinates of the block to start rendering at\n"
@@ -44,7 +41,7 @@ void printHelp(char *binary) {
             , 8*static_cast<int>(sizeof(size_t)), binary, binary, binary);
 }
 
-bool parseArgs(int argc, char** argv, Settings::WorldOptions& opts) {
+bool parseArgs(int argc, char** argv, Settings::WorldOptions* opts) {
 #define MOREARGS(x) (argpos + (x) < argc)
 #define NEXTARG argv[++argpos]
 #define POLLARG(x) argv[argpos + (x)]
@@ -52,80 +49,71 @@ bool parseArgs(int argc, char** argv, Settings::WorldOptions& opts) {
     while (MOREARGS(1)) {
         const char *option = NEXTARG;
         if (strcmp(option, "-from") == 0) {
-            if (!MOREARGS(2) || !isNumeric(POLLARG(1)) || !isNumeric(POLLARG(2))) {
-                printf("Error: %s needs two integer arguments, ie: %s -10 5\n", option, option);
+            if (!MOREARGS(2)
+                    || !isNumeric(POLLARG(1))
+                    || !isNumeric(POLLARG(2))) {
+                printf("Error: %s needs two integer arguments\n", option);
                 return false;
             }
-            opts.fromX = atoi(NEXTARG);
-            opts.fromZ = atoi(NEXTARG);
+            opts->fromX = atoi(NEXTARG);
+            opts->fromZ = atoi(NEXTARG);
         } else if (strcmp(option, "-to") == 0) {
-            if (!MOREARGS(2) || !isNumeric(POLLARG(1)) || !isNumeric(POLLARG(2))) {
-                printf("Error: %s needs two integer arguments, ie: %s -5 20\n", option, option);
+            if (!MOREARGS(2)
+                    || !isNumeric(POLLARG(1))
+                    || !isNumeric(POLLARG(2))) {
+                printf("Error: %s needs two integer arguments\n", option);
                 return false;
             }
-            opts.toX = atoi(NEXTARG) + 1;
-            opts.toZ = atoi(NEXTARG) + 1;
+            opts->toX = atoi(NEXTARG) + 1;
+            opts->toZ = atoi(NEXTARG) + 1;
         } else if (strcmp(option, "-max") == 0) {
             if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
-                printf("Error: %s needs an integer argument, ie: %s 100\n", option, option);
+                printf("Error: %s needs an integer argument\n", option);
                 return false;
             }
-            opts.mapMaxY = atoi(NEXTARG);
+            opts->mapMaxY = atoi(NEXTARG);
         } else if (strcmp(option, "-min") == 0) {
             if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
-                printf("Error: %s needs an integer argument, ie: %s 50\n", option, option);
+                printf("Error: %s needs an integer argument\n", option);
                 return false;
             }
-            opts.mapMinY = atoi(NEXTARG);
-        } else if (strcmp(option, "-mem") == 0) {
-            if (!MOREARGS(1) || !isNumeric(POLLARG(1)) || atoi(POLLARG(1)) <= 0) {
-                printf("Error: %s needs a positive integer argument, ie: %s 1000\n", option, option);
-                return false;
-            }
-            opts.memlimitSet = true;
-            opts.memlimit = size_t (atoi(NEXTARG)) * size_t (1024 * 1024);
+            opts->mapMinY = atoi(NEXTARG);
         } else if (strcmp(option, "-file") == 0) {
             if (!MOREARGS(1)) {
-                printf("Error: %s needs one argument, ie: %s myworld.bmp\n", option, option);
+                printf("Error: %s needs one argument\n", option);
                 return false;
             }
-            opts.outFile = NEXTARG;
-        } else if (strcmp(option, "-colors") == 0) {
-            if (!MOREARGS(1)) {
-                printf("Error: %s needs one argument, ie: %s colors.txt\n", option, option);
-                return false;
-            }
-            opts.colorfile = NEXTARG;
+            opts->outFile = NEXTARG;
         } else if (strcmp(option, "-nw") == 0) {
-            opts.orientation = Terrain::NW;
+            opts->orientation = Terrain::NW;
         } else if (strcmp(option, "-sw") == 0) {
-            opts.orientation = Terrain::SW;
+            opts->orientation = Terrain::SW;
         } else if (strcmp(option, "-ne") == 0) {
-            opts.orientation = Terrain::NE;
+            opts->orientation = Terrain::NE;
         } else if (strcmp(option, "-se") == 0) {
-            opts.orientation = Terrain::SE;
+            opts->orientation = Terrain::SE;
         } else if (strcmp(option, "-3") == 0) {
-            opts.offsetY = 3;
+            opts->offsetY = 3;
         } else if (strcmp(option, "-help") == 0 || strcmp(option, "-h") == 0) {
             return false;
         } else {
-            opts.saveName = (char *) option;
+            opts->saveName = std::filesystem::path(option);
         }
     }
 
-    opts.wholeworld = (opts.fromX == UNDEFINED || opts.toX == UNDEFINED);
+    opts->wholeworld = (opts->fromX == UNDEFINED || opts->toX == UNDEFINED);
 
-    if (opts.saveName == NULL) {
-        printf("Error: No world given. Please add the path to your world to the command line.\n");
+    if (opts->saveName.empty() || !std::filesystem::exists(opts->saveName)) {
+        printf("Error: No world given.\n");
         return false;
     }
 
-    if (opts.toX <= opts.fromX || opts.toZ <= opts.fromZ) {
+    if (opts->toX <= opts->fromX || opts->toZ <= opts->fromZ) {
         printf("Nothing to render: -from X Z has to be <= -to X Z\n");
         return false;
     }
 
-    if (opts.mapMaxY - opts.mapMinY < 1) {
+    if (opts->mapMaxY - opts->mapMinY < 1) {
         printf("Nothing to render: -min Y has to be < -max/-height Y\n");
         return false;
     }
@@ -140,7 +128,7 @@ int main(int argc, char **argv) {
 
     printf("mcmap " VERSION " %dbit\n", 8*static_cast<int>(sizeof(size_t)));
 
-    if (argc < 2 || !parseArgs(argc, argv, opts)) {
+    if (argc < 2 || !parseArgs(argc, argv, &opts)) {
         printHelp(argv[0]);
         return 1;
     }
@@ -161,27 +149,32 @@ int main(int argc, char **argv) {
         opts.memlimit = 1800 * uint64_t(1024 * 1024);
     }
 
-    _calcSplits(coords, opts, img_opts);
+    _calcSplits(coords, opts, &img_opts);
 
-    // Always same random seed, as this is only used for block noise, which should give the same result for the same input every time
+    // Always same random seed, as this is only used for block noise,
+    // which should give the same result for the same input every time
     srand(1337);
 
-    if (opts.outFile == NULL) {
-        opts.outFile = (char *) "output.png";
+    if (opts.outFile.empty()) {
+        opts.outFile = "output.png";
     }
 
     // open output file only if not doing the tiled output
     FILE *fileHandle = NULL;
-    fileHandle = fopen(opts.outFile, (img_opts.splitImage ? "w+b" : "wb"));
+    fileHandle = fopen(opts.outFile.c_str(), "wb");
 
     if (fileHandle == NULL) {
-        printf("Error opening '%s' for writing.\n", opts.outFile);
+        fprintf(stderr,
+                "Error opening '%s' for writing.\n",
+                opts.outFile.c_str());
         return 1;
     }
 
-    // This writes out the bitmap header and pre-allocates space if disk caching is used
-    if (!createImage(fileHandle, img_opts.width, img_opts.height, img_opts.splitImage)) {
-        printf("Error allocating bitmap. Check if you have enough free disk space.\n");
+    if (!createImage(fileHandle,
+                img_opts.width,
+                img_opts.height,
+                img_opts.splitImage)) {
+        fprintf(stderr, "Error allocating bitmap.\n");
         return 1;
     }
 
@@ -200,7 +193,8 @@ struct IsometricCanvas {
     uint8_t minY, maxY;
     Terrain::Orientation orientation;
 
-    IsometricCanvas(Terrain::Coordinates& coords, Settings::WorldOptions& options) {
+    IsometricCanvas(const Terrain::Coordinates& coords,
+            const Settings::WorldOptions& options) {
         orientation = options.orientation;
 
         sizeX = coords.maxX - coords.minX;
@@ -214,7 +208,9 @@ struct IsometricCanvas {
     }
 };
 
-void render(Settings::WorldOptions& opts, Settings::ImageOptions& image, Terrain::Coordinates& coords) {
+void render(const Settings::WorldOptions& opts,
+        const Settings::ImageOptions& image,
+        const Terrain::Coordinates& coords) {
     Terrain::Data terrain(coords);
     Terrain::OrientedMap world(coords, opts.orientation);
     IsometricCanvas canvas(coords, opts);
@@ -233,7 +229,7 @@ void render(Settings::WorldOptions& opts, Settings::ImageOptions& image, Terrain
      *
      * The virtual map "canvas" is the link between the two other sets of
      * coordinates. Drawing the map MUST follow a special order to avoid
-     * overwriting pixels when drawing: the order is as follows:
+     * overwriting pixels when drawing: the horizontal order is as follows:
      *
      *   0
      *  3 1
@@ -248,20 +244,24 @@ void render(Settings::WorldOptions& opts, Settings::ImageOptions& image, Terrain
             const size_t bmpPosX = 2*canvas.sizeZ + (x - z)*2;
 
             // in some orientations, the axis are inverted in the world
-            if (world.orientation == Terrain::NE || world.orientation == Terrain::SW)
+            if (world.orientation == Terrain::NE
+                    || world.orientation == Terrain::SW)
                 std::swap(x, z);
 
             const int64_t worldX = world.coords.minX + x*world.vectorX;
             const int64_t worldZ = world.coords.minZ + z*world.vectorZ;
 
             // swap them back to avoid loop confusion
-            if (world.orientation == Terrain::NE || world.orientation == Terrain::SW)
+            if (world.orientation == Terrain::NE
+                    || world.orientation == Terrain::SW)
                 std::swap(x, z);
 
             const uint8_t maxHeight = heightAt(terrain, worldX, worldZ);
 
-            for (uint8_t y = canvas.minY; y < std::min(maxHeight, canvas.maxY); y++) {
-                const size_t bmpPosY = image.height - 4 - canvas.sizeX - canvas.sizeZ - y*opts.offsetY + x + z;
+            for (uint8_t y = canvas.minY;
+                    y < std::min(maxHeight, canvas.maxY); y++) {
+                const size_t bmpPosY = image.height - 4 + x + z
+                    - canvas.sizeX - canvas.sizeZ - y*opts.offsetY;
                 Block block = Terrain::blockAt(terrain, worldX, worldZ, y);
                 setPixel(bmpPosX, bmpPosY, block, 0);
             }
