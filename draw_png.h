@@ -12,6 +12,18 @@
 #include "./helper.h"
 #include "./worldloader.h"
 
+void createImageBuffer(const size_t width, const size_t height, const bool splitUp);
+bool createImage(FILE *fh, const size_t width, const size_t height, const bool splitUp);
+bool saveImage();
+int loadImagePart(const int startx, const int starty, const int width, const int height);
+void setPixel(const size_t x, const size_t y, Block& color, const float fsub);
+void blendPixel(const size_t x, const size_t y, const Block color, const float fsub);
+bool saveImagePart();
+bool discardImagePart();
+bool composeFinalImage();
+
+namespace PNG {
+
 struct IsometricCanvas {
     size_t sizeX, sizeZ;
     uint8_t minY, maxY;
@@ -31,19 +43,6 @@ struct IsometricCanvas {
         maxY = options.mapMaxY;
     }
 };
-
-void createImageBuffer(const size_t width, const size_t height, const bool splitUp);
-bool createImage(FILE *fh, const size_t width, const size_t height, const bool splitUp);
-bool saveImage();
-int loadImagePart(const int startx, const int starty, const int width, const int height);
-void setPixel(const size_t x, const size_t y, Block& color, const float fsub);
-void blendPixel(const size_t x, const size_t y, const Block color, const float fsub);
-bool saveImagePart();
-bool discardImagePart();
-bool composeFinalImage();
-uint64_t _calcImageSize(const Terrain::Coordinates& map, Settings::ImageOptions* img_opts);
-
-namespace PNG {
 
 struct Image {
     // Final png width and height
@@ -87,4 +86,4 @@ struct Image {
 
 }  // namespace PNG
 
-#endif
+#endif  // DRAW_PNG_H_

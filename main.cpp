@@ -10,21 +10,9 @@
 using std::string;
 
 void printHelp(char *binary);
-void render(const Terrain::Data& terrain,
-        const PNG::Image& image,
-        const IsometricCanvas& canvas,
+void render(const PNG::Image& image,
+        const PNG::IsometricCanvas& canvas,
         const Terrain::OrientedMap& world);
-
-
-void _calcSplits(const Terrain::Coordinates& map,
-        const Settings::WorldOptions& opts,
-        Settings::ImageOptions* img_opts) {
-    // Mem check
-    uint64_t bitmapBytes = _calcImageSize(map, img_opts);
-    if (opts.memlimit < bitmapBytes) {
-        fprintf(stderr, "Not enough memory for image\n");
-    }
-}
 
 void printHelp(char *binary) {
     printf("\nmcmap - an isometric minecraft map rendering tool.\n"
@@ -154,28 +142,25 @@ int main(int argc, char **argv) {
     coords.maxX = opts.toX;
     coords.maxZ = opts.toZ;
 
-    IsometricCanvas canvas(coords, opts);
+    PNG::IsometricCanvas canvas(coords, opts);
     PNG::Image image(opts.outFile, canvas);
 
     std::filesystem::path saveFile(opts.saveName);
     saveFile /= "region";
 
     // The minecraft terrain to render
-    Terrain::Data terrain(coords);
-    _loadTerrain(terrain, saveFile);
-
     Terrain::OrientedMap world(coords, opts.orientation);
+    _loadTerrain(world.terrain, saveFile);
 
-    render(terrain, image, canvas, world);
+    render(image, canvas, world);
     saveImage();
 
     printf("Job complete.\n");
     return 0;
 }
 
-void render(const Terrain::Data& terrain,
-        const PNG::Image& image,
-        const IsometricCanvas& canvas,
+void render(const PNG::Image& image,
+        const PNG::IsometricCanvas& canvas,
         const Terrain::OrientedMap& world) {
     /* There are 3 sets of coordinates here:
      * - x, y, z: the coordinates of the dot on the virtual isometric map
@@ -206,22 +191,22 @@ void render(const Terrain::Data& terrain,
                     || world.orientation == Terrain::SW)
                 std::swap(x, z);
 
-            const int64_t worldX = world.coords.minX + x*world.vectorX;
-            const int64_t worldZ = world.coords.minZ + z*world.vectorZ;
+            const int64_t worldX = world.bounds.minX + x*world.vectorX;
+            const int64_t worldZ = world.bounds.minZ + z*world.vectorZ;
 
             // swap them back to avoid loop confusion
             if (world.orientation == Terrain::NE
                     || world.orientation == Terrain::SW)
                 std::swap(x, z);
 
-            const uint8_t maxHeight = heightAt(terrain, worldX, worldZ);
+            const uint8_t maxHeight = heightAt(world.terrain, worldX, worldZ);
 
             for (uint8_t y = canvas.minY;
                     y < std::min(maxHeight, canvas.maxY); y++) {
                 const size_t bmpPosY = image.height - 2 + x + z
                     - canvas.sizeX - canvas.sizeZ - y*image.heightOffset
                     - image.padding;
-                Block block = Terrain::blockAt(terrain, worldX, worldZ, y);
+                Block block = Terrain::blockAt(world.terrain, worldX, worldZ, y);
                 setPixel(bmpPosX, bmpPosY, block, 0);
             }
         }

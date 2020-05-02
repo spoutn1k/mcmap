@@ -32,46 +32,12 @@ struct Coordinates {
     }
 };
 
-struct OrientedMap {
-    struct Terrain::Coordinates coords;
-    int8_t vectorX, vectorZ;
-    Terrain::Orientation orientation;
-
-    OrientedMap(const Terrain::Coordinates& map,
-            const Terrain::Orientation direction) {
-        coords = map;
-        vectorX = vectorZ = 1;
-        orientation = direction;
-        reshape(orientation);
-    }
-
-    void reshape(const Terrain::Orientation orientation) {
-        switch (orientation) {
-            case NW:
-                // This is the default. No changes
-                break;
-            case NE:
-                std::swap(coords.maxZ, coords.minZ);
-                vectorZ = -1;
-                break;
-            case SW:
-                std::swap(coords.maxX, coords.minX);
-                vectorX = -1;
-                break;
-            case SE:
-                std::swap(coords.maxX, coords.minX);
-                std::swap(coords.maxZ, coords.minZ);
-                vectorX = vectorZ = -1;
-                break;
-        }
-    }
-};
-
 struct Data {
-    // The coordinates of the loaded chunks
+    // The coordinates of the loaded chunks. This coordinates maps
+    // the CHUNKS loaded, not the blocks
     struct Coordinates map;
 
-    // The list of chunks
+    // The internal list of chunks, of size chunkLen
     ChunkList chunks;
     size_t chunkLen;
 
@@ -80,6 +46,7 @@ struct Data {
     // the latter the lowest section number
     uint8_t *heightMap;
 
+    // Default constructor
     explicit Data(const Terrain::Coordinates& coords) {
         map.minX = CHUNK(coords.minX);
         map.minZ = CHUNK(coords.minZ);
@@ -98,6 +65,42 @@ struct Data {
 
     string blockAt(int32_t, int32_t, int32_t) const;
     uint8_t heightAt(int32_t, int32_t) const;
+};
+
+struct OrientedMap {
+    struct Terrain::Coordinates bounds;
+    struct Terrain::Data terrain;
+    int8_t vectorX, vectorZ;
+    Terrain::Orientation orientation;
+
+    OrientedMap(const Terrain::Coordinates& map,
+            const Terrain::Orientation direction) : terrain(map) {
+        bounds = map;
+        vectorX = vectorZ = 1;
+        orientation = direction;
+        reshape(orientation);
+    }
+
+    void reshape(const Terrain::Orientation orientation) {
+        switch (orientation) {
+            case NW:
+                // This is the default. No changes
+                break;
+            case NE:
+                std::swap(bounds.maxZ, bounds.minZ);
+                vectorZ = -1;
+                break;
+            case SW:
+                std::swap(bounds.maxX, bounds.minX);
+                vectorX = -1;
+                break;
+            case SE:
+                std::swap(bounds.maxX, bounds.minX);
+                std::swap(bounds.maxZ, bounds.minZ);
+                vectorX = vectorZ = -1;
+                break;
+        }
+    }
 };
 
 Block blockAt(const Terrain::Data&, int32_t, int32_t, int32_t);

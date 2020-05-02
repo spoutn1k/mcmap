@@ -46,29 +46,6 @@ struct WorldOptions {
     }
 };
 
-struct ImageOptions {
-    // Final png width and height
-    int width, height;
-
-    // Pixel offset for block rendering
-    int heightOffset;
-
-    // Legacy
-    bool splitImage;
-    int numSplitsX, numSplitsZ;
-    int cropLeft, cropRight, cropTop, cropBottom;
-
-    ImageOptions() {
-        height = width = 0;
-
-        heightOffset = 3;
-
-        splitImage = false;
-        numSplitsX = numSplitsZ = 0;
-        cropLeft = cropRight = cropTop = cropBottom = 0;
-    }
-};
-
 }  // namespace Settings
 
 #endif  // OPTIONS_H_

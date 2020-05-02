@@ -611,19 +611,6 @@ bool composeFinalImage() {
 	return true;
 }
 
-/*uint64_t calcImageSize(const int mapChunksX, const int mapChunksZ, const size_t mapHeight, int &pixelsX, int &pixelsY, const bool tight) {
-	pixelsX = (mapChunksX * CHUNKSIZE_X + mapChunksZ * CHUNKSIZE_Z) * 2 + (tight ? 3 : 10);
-	pixelsY = (mapChunksX * CHUNKSIZE_X + mapChunksZ * CHUNKSIZE_Z + int(mapHeight) * g_OffsetY) + (tight ? 3 : 10);
-	printf("%d, %d, size: %ld\n", pixelsX, pixelsY, uint64_t(pixelsX) * BYTESPERPIXEL * uint64_t(pixelsY));
-	return uint64_t(pixelsX) * BYTESPERPIXEL * uint64_t(pixelsY);
-}*/
-
-uint64_t _calcImageSize(const Terrain::Coordinates& map, Settings::ImageOptions* img_opts) {
-	img_opts->width = (map.maxX - map.minX + map.maxZ - map.minZ)*2 + 10;
-	img_opts->height = (map.maxX - map.minX + map.maxZ - map.minZ + 256 * img_opts->heightOffset) + 10;
-	return uint64_t(img_opts->width) * uint64_t(img_opts->height) * BYTESPERPIXEL;
-}
-
 void setPixel(const size_t x, const size_t y, Block& b, const float fsub) {
 	// Sets pixels around x,y where A is the anchor
 	// T = given color, D = darker, L = lighter
