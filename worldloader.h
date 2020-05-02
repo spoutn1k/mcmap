@@ -96,15 +96,15 @@ struct Data {
         free(heightMap);
     }
 
-    string blockAt(int32_t, int32_t, int32_t);
-    uint8_t heightAt(int32_t, int32_t);
+    string blockAt(int32_t, int32_t, int32_t) const;
+    uint8_t heightAt(int32_t, int32_t) const;
 };
 
-Block blockAt(Terrain::Data&, int32_t, int32_t, int32_t);
+Block blockAt(const Terrain::Data&, int32_t, int32_t, int32_t);
 
 }  // namespace Terrain
 
 void _loadTerrain(Terrain::Data&, std::filesystem::path);
-uint16_t heightAt(Terrain::Data&, int32_t, int32_t);
+uint16_t heightAt(const Terrain::Data&, int32_t, int32_t);
 
 #endif  // WORLDLOADER_H_

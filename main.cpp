@@ -5,13 +5,16 @@
 #include "./settings.h"
 #include "./worldloader.h"
 #include "./globals.h"
+#include "./helper.h"
 
 using std::string;
 
 void printHelp(char *binary);
-void render(const Settings::WorldOptions&,
-        const Settings::ImageOptions&,
-        const Terrain::Coordinates&);
+void render(const Terrain::Data& terrain,
+        const PNG::Image& image,
+        const IsometricCanvas& canvas,
+        const Terrain::OrientedMap& world);
+
 
 void _calcSplits(const Terrain::Coordinates& map,
         const Settings::WorldOptions& opts,
@@ -123,10 +126,13 @@ bool parseArgs(int argc, char** argv, Settings::WorldOptions* opts) {
 
 int main(int argc, char **argv) {
     Settings::WorldOptions opts;
-    Settings::ImageOptions img_opts;
     colorMap colors;
 
     printf("mcmap " VERSION " %dbit\n", 8*static_cast<int>(sizeof(size_t)));
+
+    // Always same random seed, as this is only used for block noise,
+    // which should give the same result for the same input every time
+    srand(1337);
 
     if (argc < 2 || !parseArgs(argc, argv, &opts)) {
         printHelp(argv[0]);
@@ -138,88 +144,39 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    if (opts.outFile.empty())
+        opts.outFile = "output.png";
+
     Terrain::Coordinates coords;
 
     coords.minX = opts.fromX;
     coords.minZ = opts.fromZ;
-    coords.maxX = opts.toX - 1;
-    coords.maxZ = opts.toZ - 1;
+    coords.maxX = opts.toX;
+    coords.maxZ = opts.toZ;
 
-    if (sizeof(size_t) < 8 && opts.memlimit > 1800 * uint64_t(1024 * 1024)) {
-        opts.memlimit = 1800 * uint64_t(1024 * 1024);
-    }
+    IsometricCanvas canvas(coords, opts);
+    PNG::Image image(opts.outFile, canvas);
 
-    _calcSplits(coords, opts, &img_opts);
+    std::filesystem::path saveFile(opts.saveName);
+    saveFile /= "region";
 
-    // Always same random seed, as this is only used for block noise,
-    // which should give the same result for the same input every time
-    srand(1337);
+    // The minecraft terrain to render
+    Terrain::Data terrain(coords);
+    _loadTerrain(terrain, saveFile);
 
-    if (opts.outFile.empty()) {
-        opts.outFile = "output.png";
-    }
+    Terrain::OrientedMap world(coords, opts.orientation);
 
-    // open output file only if not doing the tiled output
-    FILE *fileHandle = NULL;
-    fileHandle = fopen(opts.outFile.c_str(), "wb");
-
-    if (fileHandle == NULL) {
-        fprintf(stderr,
-                "Error opening '%s' for writing.\n",
-                opts.outFile.c_str());
-        return 1;
-    }
-
-    if (!createImage(fileHandle,
-                img_opts.width,
-                img_opts.height,
-                img_opts.splitImage)) {
-        fprintf(stderr, "Error allocating bitmap.\n");
-        return 1;
-    }
-
-    render(opts, img_opts, coords);
+    render(terrain, image, canvas, world);
     saveImage();
-
-    if (fileHandle)
-        fclose(fileHandle);
 
     printf("Job complete.\n");
     return 0;
 }
 
-struct IsometricCanvas {
-    size_t sizeX, sizeZ;
-    uint8_t minY, maxY;
-    Terrain::Orientation orientation;
-
-    IsometricCanvas(const Terrain::Coordinates& coords,
-            const Settings::WorldOptions& options) {
-        orientation = options.orientation;
-
-        sizeX = coords.maxX - coords.minX;
-        sizeZ = coords.maxZ - coords.minZ;
-
-        if (orientation == Terrain::NE || orientation == Terrain::SW)
-            std::swap(sizeX, sizeZ);
-
-        minY = options.mapMinY;
-        maxY = options.mapMaxY;
-    }
-};
-
-void render(const Settings::WorldOptions& opts,
-        const Settings::ImageOptions& image,
-        const Terrain::Coordinates& coords) {
-    Terrain::Data terrain(coords);
-    Terrain::OrientedMap world(coords, opts.orientation);
-    IsometricCanvas canvas(coords, opts);
-
-    std::filesystem::path saveFile(opts.saveName);
-    saveFile /= "region";
-
-    _loadTerrain(terrain, saveFile);
-
+void render(const Terrain::Data& terrain,
+        const PNG::Image& image,
+        const IsometricCanvas& canvas,
+        const Terrain::OrientedMap& world) {
     /* There are 3 sets of coordinates here:
      * - x, y, z: the coordinates of the dot on the virtual isometric map
      *   to be drawn, here named canvas;
@@ -239,9 +196,10 @@ void render(const Settings::WorldOptions& opts,
      * and the position on the image are then calculated from the canvas
      * coordinates. */
 
-    for (size_t x = 0; x < canvas.sizeX + 1; x++) {
-        for (size_t z = 0; z < canvas.sizeZ + 1; z++) {
-            const size_t bmpPosX = 2*canvas.sizeZ + (x - z)*2;
+    for (size_t x = 0; x < canvas.sizeX; x++) {
+        for (size_t z = 0; z < canvas.sizeZ; z++) {
+            const size_t bmpPosX = 2*(canvas.sizeZ - 1) + (x - z)*2
+                + image.padding;
 
             // in some orientations, the axis are inverted in the world
             if (world.orientation == Terrain::NE
@@ -260,8 +218,9 @@ void render(const Settings::WorldOptions& opts,
 
             for (uint8_t y = canvas.minY;
                     y < std::min(maxHeight, canvas.maxY); y++) {
-                const size_t bmpPosY = image.height - 4 + x + z
-                    - canvas.sizeX - canvas.sizeZ - y*opts.offsetY;
+                const size_t bmpPosY = image.height - 2 + x + z
+                    - canvas.sizeX - canvas.sizeZ - y*image.heightOffset
+                    - image.padding;
                 Block block = Terrain::blockAt(terrain, worldX, worldZ, y);
                 setPixel(bmpPosX, bmpPosY, block, 0);
             }

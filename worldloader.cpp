@@ -77,7 +77,7 @@ void _loadTerrain(Terrain::Data& terrain, fs::path regionDir) {
 	}
 }
 
-uint32_t chunk_index(int32_t x, int32_t z, Terrain::Coordinates& map) {
+uint32_t chunk_index(int32_t x, int32_t z, const Terrain::Coordinates& map) {
 	return (x - map.minX) + (z - map.minZ)*(map.maxX - map.minX + 1);
 }
 
@@ -206,7 +206,7 @@ bool _loadChunk(uint32_t offset, FILE* regionData, Terrain::Chunk& destination, 
 	return true;
 }
 
-Block Terrain::blockAt(Terrain::Data& terrain, int32_t x, int32_t z, int32_t y) {
+Block Terrain::blockAt(const Terrain::Data& terrain, int32_t x, int32_t z, int32_t y) {
 	const uint32_t index = chunk_index(CHUNK(x), CHUNK(z), terrain.map);
 	const uint8_t sectionY = y >> 4;
 	const uint64_t position = (x & 0x0f) + ((z & 0x0f) + (y & 0x0f)*16)*16;
@@ -221,7 +221,7 @@ Block Terrain::blockAt(Terrain::Data& terrain, int32_t x, int32_t z, int32_t y) 
 	}
 }
 
-uint16_t heightAt(Terrain::Data& terrain, int32_t x, int32_t z) {
+uint16_t heightAt(const Terrain::Data& terrain, int32_t x, int32_t z) {
 	const uint64_t index = (CHUNK(x) - terrain.map.minX) + (CHUNK(z) - terrain.map.minZ)*(terrain.map.maxX - terrain.map.minX + 1);
 	return 16*(terrain.heightMap[index] >> 4);
 }
