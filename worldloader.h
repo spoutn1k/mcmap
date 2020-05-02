@@ -1,47 +1,110 @@
-#ifndef _WORLDLOADER_H_
-#define _WORLDLOADER_H_
+#ifndef WORLDLOADER_H_
+#define WORLDLOADER_H_
 
-#include "nbt.h"
-#include "block.h"
-#include <cstdlib>
-#include <filesystem>
-#include <string>
-#include <vector>
 #include <stdint.h>
+#include <zlib.h>
+#include <filesystem>
+#include <cstdlib>
+#include <string>
+#include <utility>
+#include "./nbt.h"
+#include "./block.h"
+#include "./helper.h"
 
 namespace Terrain {
-	typedef NBT_Tag Chunk;
-	typedef Chunk* chunkList;
 
-	struct Coordinates {
-		int32_t minX;
-		int32_t minZ;
-		int32_t maxX;
-		int32_t maxZ;
-	};
+typedef NBT_Tag Chunk;
+typedef Chunk* ChunkList;
 
-	struct Data {
-		struct Coordinates map; // The position of the loaded chunks
-		chunkList chunks;
-		uint8_t *heightMap;
-	};
+enum Orientation {
+    NW,
+    SW,
+    NE,
+    SE,
+};
 
-	Block blockAt(Terrain::Data&, int32_t x, int32_t z, int32_t y);
-}
+    // A simple coordinates structure
+struct Coordinates {
+    int32_t minX, maxX, minZ, maxZ;
 
-int getWorldFormat(const char *worldPath);
-bool scanWorldDirectory(const char *fromPath);
-bool loadTerrain(const char *fromPath, int &loadedChunks);
-NBT* loadChunk(const char *fromPath, int x, int z);
-void freeTerrain();
-bool loadEntireTerrain();
-uint64_t calcTerrainSize(const int chunksX, const int chunksZ);
-void clearLightmap();
-void calcBitmapOverdraw(int &left, int &right, int &top, int &bottom);
-void loadBiomeMap(const char* path);
-void uncoverNether();
+    Coordinates() {
+        minX = maxX = minZ = maxZ = 0;
+    }
+};
 
-void _loadTerrain(Terrain::Data&, std::filesystem::path, Terrain::Coordinates&);
+struct OrientedMap {
+    struct Terrain::Coordinates map;
+    int8_t vectorX, vectorZ;
+    uint8_t direction;
+
+    OrientedMap(const Terrain::Coordinates& coords,
+            const Terrain::Orientation orientation) {
+        map = coords;
+        vectorX = vectorZ = 1;
+        direction = orientation;
+        reshape(orientation);
+    }
+
+    void reshape(const Terrain::Orientation orientation) {
+        switch (orientation) {
+            case NW:
+                // This is the default. No changes
+                break;
+            case NE:
+                std::swap(map.maxZ, map.minZ);
+                vectorZ = -1;
+                break;
+            case SW:
+                std::swap(map.maxX, map.minX);
+                vectorX = -1;
+                break;
+            case SE:
+                std::swap(map.maxX, map.minX);
+                std::swap(map.maxZ, map.minZ);
+                vectorX = vectorZ = -1;
+                break;
+        }
+    }
+};
+
+struct Data {
+    // The coordinates of the loaded chunks
+    struct Coordinates map;
+
+    // The list of chunks
+    ChunkList chunks;
+    size_t chunkLen;
+
+    // An array of bytes, one for each chunk
+    // the first 4 bits are the highest section number,
+    // the latter the lowest section number
+    uint8_t *heightMap;
+
+    explicit Data(const Terrain::Coordinates& coords) {
+        map.minX = CHUNK(coords.minX);
+        map.minZ = CHUNK(coords.minZ);
+        map.maxX = CHUNK(coords.maxX);
+        map.maxZ = CHUNK(coords.maxZ);
+
+        chunkLen = (map.maxX - map.minX + 1)*(map.maxZ - map.minZ + 1);
+
+        chunks = new Terrain::Chunk[chunkLen];
+        heightMap = new uint8_t[chunkLen];
+    }
+
+    ~Data() {
+        free(heightMap);
+    }
+
+    string blockAt(int32_t, int32_t, int32_t);
+    uint8_t heightAt(int32_t, int32_t);
+};
+
+Block blockAt(Terrain::Data&, int32_t, int32_t, int32_t);
+
+}  // namespace Terrain
+
+void _loadTerrain(Terrain::Data&, std::filesystem::path);
 uint16_t heightAt(Terrain::Data&, int32_t, int32_t);
 
-#endif
+#endif  // WORLDLOADER_H_

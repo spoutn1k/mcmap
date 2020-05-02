@@ -19,75 +19,10 @@
 
 using std::string;
 
-namespace {
-	// For bright edge
-	bool gAtBottomLeft = true, gAtBottomRight = true;
-}
-
-// Macros to make code more readable
-#define BLOCK_AT_MAPEDGE(x,z) (((z)+1 == g_MapsizeZ-CHUNKSIZE_Z && gAtBottomLeft) || ((x)+1 == g_MapsizeX-CHUNKSIZE_X && gAtBottomRight))
-
-//void optimizeTerrain2(int cropLeft, int cropRight);
-//void optimizeTerrain3();
-//void renderParts(struct cli_options&, struct image_options&);
-//void undergroundMode(bool explore);
-//bool prepareNextArea(int splitX, int splitZ, int &bitmapStartX, int &bitmapStartY);
-//static inline int floorChunkX(const int val);
-//static inline int floorChunkZ(const int val);
-
 void calcSplits(struct cli_options&, struct image_options&);
 bool parseArgs(int, char**, struct cli_options& opts);
 void printHelp(char *binary);
 void render(Settings::WorldOptions&, Settings::ImageOptions&, Terrain::Coordinates&);
-
-/*
-void calcSplits(struct cli_options& opts, struct image_options& img_opts) {
-	// Mem check
-	uint64_t bitmapBytes = calcImageSize(g_ToChunkX - g_FromChunkX, g_ToChunkZ - g_FromChunkZ, g_MapsizeY, img_opts.bitmapX, img_opts.bitmapY, false);
-	// Cropping
-	if (opts.wholeworld) {
-		calcBitmapOverdraw(img_opts.cropLeft, img_opts.cropRight, img_opts.cropTop, img_opts.cropBottom);
-		img_opts.bitmapX -= (img_opts.cropLeft + img_opts.cropRight);
-		img_opts.bitmapY -= (img_opts.cropTop + img_opts.cropBottom);
-		bitmapBytes = uint64_t(img_opts.bitmapX) * BYTESPERPIXEL * uint64_t(img_opts.bitmapY);
-	}
-
-	if (opts.memlimit && opts.memlimit < bitmapBytes + calcTerrainSize(g_ToChunkX - g_FromChunkX, g_ToChunkZ - g_FromChunkZ)) {
-		// If we'd need more mem than allowed, we have to render groups of chunks...
-		if (opts.memlimit < bitmapBytes + 220 * uint64_t(1024 * 1024)) {
-			// Warn about using incremental rendering if user didn't set limit manually
-			if (!opts.memlimitSet && sizeof(size_t) > 4) {
-				printf(" ***** PLEASE NOTE *****\n"
-						"mcmap is using disk cached rendering as it has a default memory limit\n"
-						"of %d MiB. If you want to use more memory to render (=faster) use\n"
-						"the -mem switch followed by the amount of memory in MiB to use.\n"
-						"Start mcmap without any arguments to get more help.\n", int(opts.memlimit / (1024 * 1024)));
-			} else {
-				printf("Choosing disk caching strategy...\n");
-			}
-			// ...or even use disk caching
-			printf("Splitting image\n");
-			img_opts.splitImage = true;
-		}
-		// Split up map more and more, until the mem requirements are satisfied
-		for (img_opts.numSplitsX = 1, img_opts.numSplitsZ = 2;;) {
-			int subAreaX = ((g_TotalToChunkX - g_TotalFromChunkX) + (img_opts.numSplitsX - 1)) / img_opts.numSplitsX;
-			int subAreaZ = ((g_TotalToChunkZ - g_TotalFromChunkZ) + (img_opts.numSplitsZ - 1)) / img_opts.numSplitsZ;
-			int subBitmapX, subBitmapY;
-			if (img_opts.splitImage && calcImageSize(subAreaX, subAreaZ, g_MapsizeY, subBitmapX, subBitmapY, true) + calcTerrainSize(subAreaX, subAreaZ) <= opts.memlimit) {
-				break; // Found a suitable partitioning
-			} else if (!img_opts.splitImage && bitmapBytes + calcTerrainSize(subAreaX, subAreaZ) <= opts.memlimit) {
-				break; // Found a suitable partitioning
-			}
-			//
-			if (img_opts.numSplitsZ > img_opts.numSplitsX) {
-				++img_opts.numSplitsX;
-			} else {
-				++img_opts.numSplitsZ;
-			}
-		}
-	}
-}*/
 
 void _calcSplits(Terrain::Coordinates& map, Settings::WorldOptions& opts, Settings::ImageOptions& img_opts) {
 	// Mem check
@@ -198,33 +133,6 @@ void renderParts(struct cli_options& opts, struct image_options& img_opts) {
 					if (g_BlendUnderground) {
 						brightnessAdjustment -= 168;
 					}
-					// we use light if...
-					if (g_Nightmode // nightmode is active, or
-							|| (g_Skylight // skylight is used and
-								&& (!BLOCK_AT_MAPEDGE(x, z))  // block is not edge of map (or if it is, has non-opaque block above)
-							   )) {
-						int l = GETLIGHTAT(x, y, z);  // find out how much light hits that block
-						if (l == 0 && y + 1 == g_MapsizeY) {
-							l = (g_Nightmode ? 3 : 15);   // quickfix: assume maximum strength at highest level
-						} else {
-							const bool up = y + 1 < g_MapsizeY;
-							if (x + 1 < g_MapsizeX && (!up || BLOCKAT(x + 1, y + 1, z) == 0)) {
-								l = MAX(l, GETLIGHTAT(x + 1, y, z));
-								if (x + 2 < g_MapsizeX) l = MAX(l, GETLIGHTAT(x + 2, y, z) - 1);
-							}
-							if (z + 1 < g_MapsizeZ && (!up || BLOCKAT(x, y + 1, z + 1) == 0)) {
-								l = MAX(l, GETLIGHTAT(x, y, z + 1));
-								if (z + 2 < g_MapsizeZ) l = MAX(l, GETLIGHTAT(x, y, z + 2) - 1);
-							}
-							if (up) l = MAX(l, GETLIGHTAT(x, y + 1, z));
-							//if (y + 2 < g_MapsizeY) l = MAX(l, GETLIGHTAT(x, y + 2, z) - 1);
-						}
-						if (!g_Skylight) { // Night
-							brightnessAdjustment -= (100 - l * 8);
-						} else { // Day
-							brightnessAdjustment -= (210 - l * 14);
-						}
-					}
 					// Edge detection (this means where terrain goes 'down' and the side of the block is not visible)
 					Block &b = BLOCKAT(x - 1, y - 1, z - 1);
 					if ((y && y + 1 < g_MapsizeY)  // In bounds?
@@ -241,43 +149,6 @@ void renderParts(struct cli_options& opts, struct image_options& img_opts) {
 		}
 		printProgress(10, 10);
 		// Bitmap creation complete
-		// unless using....
-		// Underground overlay mode
-		if (g_BlendUnderground && !g_Underground) {
-			// Load map data again, since block culling removed most of the blocks
-			if (img_opts.numSplitsX == 0 && opts.wholeworld && !loadEntireTerrain()) {
-				printf("Error loading terrain from '%s'\n", opts.filename);
-				return;
-			} else if (img_opts.numSplitsX != 0 || !opts.wholeworld) {
-				int i;
-				if (!loadTerrain(opts.filename, i)) {
-					printf("Error loading terrain from '%s'\n", opts.filename);
-					return;
-				}
-			}
-			undergroundMode(true);
-			if (g_OffsetY == 2) {
-				optimizeTerrain2((img_opts.numSplitsX == 0 ? img_opts.cropLeft : 0), (img_opts.numSplitsX == 0 ? img_opts.cropRight : 0));
-			} else {
-				optimizeTerrain3();
-			}
-			printf("Creating cave overlay...\n");
-			for (size_t x = CHUNKSIZE_X; x < g_MapsizeX - CHUNKSIZE_X; ++x) {
-				printProgress(x - CHUNKSIZE_X, g_MapsizeX);
-				for (size_t z = CHUNKSIZE_Z; z < g_MapsizeZ - CHUNKSIZE_Z; ++z) {
-					const size_t bmpPosX = (g_MapsizeZ - z - CHUNKSIZE_Z) * 2 + (x - CHUNKSIZE_X) * 2 + (img_opts.splitImage ? -2 : bitmapStartX) - img_opts.cropLeft;
-					size_t bmpPosY = g_MapsizeY * g_OffsetY + z + x - CHUNKSIZE_Z - CHUNKSIZE_X + (img_opts.splitImage ? 0 : bitmapStartY) - img_opts.cropTop;
-					for (int y = 0; y < MIN(g_MapsizeY, 64); ++y) {
-						Block &c = BLOCKAT(x, y, z);
-						if (c != "minecraft:air") { // If block is not air (colors[c][3] != 0)
-							blendPixel(bmpPosX, bmpPosY, c, float(y + 30) * .0048f);
-						}
-						bmpPosY -= g_OffsetY;
-					}
-				}
-			}
-			printProgress(10, 10);
-		} // End blend-underground
 		// If disk caching is used, save part to disk
 		if (img_opts.splitImage && !saveImagePart()) {
 			printf("Error saving partially rendered image.\n");
@@ -291,294 +162,6 @@ void renderParts(struct cli_options& opts, struct image_options& img_opts) {
 
 	delete[] brightnessLookup;
 }*/
-
-/*void optimizeTerrain2(int cropLeft, int cropRight) {
-	// Routine parsing the world and populating
-	// g_heightmap with min|max vals on 16bits
-	cropLeft++;
-	cropRight++;
-	printf("Optimizing terrain...\n");
-	int offsetZ = 0, offsetY = 0, offsetGlobal = 0;
-	const int maxX = g_MapsizeX - CHUNKSIZE_X;
-	const int maxZ = g_MapsizeZ - CHUNKSIZE_Z;
-	const int modZ = maxZ * g_MapsizeY;
-	uint8_t * const blocked = new uint8_t[modZ];
-	memset(blocked, 0, modZ);
-	for (int x = maxX - 1; x >= CHUNKSIZE_X; --x) {
-		printProgress(maxX - (x + 1), maxX);
-		offsetZ = offsetGlobal;
-		for (int z = CHUNKSIZE_Z; z < maxZ; ++z) {
-			// Get the lowest block at that point
-			Block *block = &BLOCKAT(x, 0, z);
-			// remember lowest and highest block which are visible to limit the Y-for-loop later
-			int highest = 0, lowest = 0xFF;
-			for (int y = 0; y < g_MapsizeY; ++y) { // Go up
-				uint8_t &current = blocked[((y+offsetY) % g_MapsizeY) + (offsetZ % modZ)];
-				if (current) { // Block is hidden, remove // JB: ??? This does not remove shit
-				} else { // block is not hidden by another block
-					// if it's not air, this is the lowest block to draw
-					if (*block != "minecraft:air" && lowest == 0xFF) {
-						lowest = y;
-					}
-					// Block is not hidden, do not remove, but mark spot as blocked for next iteration
-					if (block->getColor()[PALPHA] == 255) {
-						current = 1;
-					}
-					// if it's not air, it's the new highest block encountered so far
-					if (*block != "minecraft:air") highest = y;
-				}
-				++block; // Go up
-			}
-
-			// cram them both into a 16bit int
-			HEIGHTAT(x, z) = (((uint16_t)highest + 1) << 8) | (uint16_t)lowest;
-			blocked[(offsetY % g_MapsizeY) + (offsetZ % modZ)] = 0;
-			offsetZ += g_MapsizeY;
-		}
-		for (int y = 0; y < g_MapsizeY; ++y) {
-			blocked[y + (offsetGlobal % modZ)] = 0;
-		}
-		offsetGlobal += g_MapsizeY;
-		++offsetY;
-	}
-	delete[] blocked;
-	printProgress(10, 10);
-}
-
-void optimizeTerrain3() {
-	// Remove invisible blocks from map (covered by other blocks from isometric pov)
-	// Do so by "raytracing" every block from front to back..
-	printf("Optimizing terrain... (3)\n");
-	printProgress(0, 10);
-	// Helper arrays to remember which block is blocked from being seen. This allows to traverse the array in a slightly more sequential way, which leads to better usage of the CPU cache
-	uint8_t *blocked = new uint8_t[g_MapsizeY*3];
-	const int max = (int)MIN(g_MapsizeX - CHUNKSIZE_X * 2, g_MapsizeZ - CHUNKSIZE_Z * 2);
-	const int maxX = int(g_MapsizeX - CHUNKSIZE_X - 1);
-	const int maxZ = int(g_MapsizeZ - CHUNKSIZE_Z - 1);
-	const size_t maxProgress = size_t(maxX + maxZ);
-	// The following needs to be done twice, once for the X-Y front plane, once for the Z-Y front plane
-	for (int x = CHUNKSIZE_X; x <= maxX; ++x) {
-		memset(blocked, 0, g_MapsizeY*3); // Nothing is blocked at first
-		int offset = 0; // The helper array had to be shifted after each run of the inner most loop. As this is expensive, just use an offset that increases instead
-		const int max2 = MIN(max, x - CHUNKSIZE_X + 1); // Block array will be traversed diagonally, determine how many blocks there are
-		for (int i = 0; i < max2; ++i) { // This traverses the block array diagonally, which would be upwards in the image
-			const int blockedOffset = g_MapsizeY * (i % 3);
-			Block *block = &BLOCKAT(x - i, 0, maxZ - i); // Get the lowest block at that point
-			int highest = 0, lowest = 0xFF;
-			for (int j = 0; j < g_MapsizeY; ++j) { // Go up
-				if (blocked[blockedOffset + (j+offset) % g_MapsizeY]) { // Block is hidden, remove
-				} else {
-					if (*block != "minecraft:air" && lowest == 0xFF) {
-						lowest = j;
-					}
-					if (block->getColor()[PALPHA] == 255) { // Block is not hidden, do not remove, but mark spot as blocked for next iteration
-						blocked[blockedOffset + (j+offset) % g_MapsizeY] = 1;
-					}
-					if (*block != "minecraft:air") highest = j;
-				}
-				++block; // Go up
-			}
-			HEIGHTAT(x - i, maxZ - i) = (((uint16_t)highest + 1) << 8) | (uint16_t)lowest;
-			blocked[blockedOffset + ((offset + 1) % g_MapsizeY)] = 0; // This will be the array index responsible for the top most block in the next itaration. Set it to 0 as it can't be hidden.
-			blocked[blockedOffset + (offset % g_MapsizeY)] = 0;
-			if (i % 3 == 2) {
-				offset += 2; // Increase offset, as block at height n in current row will hide block at n-1 in next row
-			}
-		}
-		printProgress(size_t(x), maxProgress);
-	}
-	for (int z = CHUNKSIZE_Z; z < maxZ; ++z) {
-		memset(blocked, 0, g_MapsizeY*3);
-		int offset = 0;
-		const int max2 = MIN(max, z - CHUNKSIZE_Z + 1);
-		for (int i = 0; i < max2; ++i) {
-			const int blockedOffset = g_MapsizeY * (i % 3);
-			Block *block = &BLOCKAT(maxX - i, 0, z - i);
-			int highest = 0, lowest = 0xFF;
-			for (int j = 0; j < g_MapsizeY; ++j) {
-				if (blocked[blockedOffset + (j+offset) % g_MapsizeY]) {
-				} else {
-					if (*block != "minecraft:air" && lowest == 0xFF) {
-						lowest = j;
-					}
-					if (block->getColor()[PALPHA] == 255) {
-						blocked[blockedOffset + (j+offset) % g_MapsizeY] = 1;
-					}
-					if (*block != "minecraft:air") highest = j;
-				}
-				++block;
-			}
-			HEIGHTAT(maxX - i, z - i) = (((uint16_t)highest + 1) << 8) | (uint16_t)lowest;
-			blocked[blockedOffset + ((offset + 1) % g_MapsizeY)] = 0;
-			blocked[blockedOffset + (offset % g_MapsizeY)] = 0;
-			if (i % 3 == 2) {
-				offset += 2;
-			}
-		}
-		printProgress(size_t(z + maxX), maxProgress);
-	}
-	delete[] blocked;
-	printProgress(10, 10);
-}
-
-void undergroundMode(bool explore) {
-	// This wipes out all blocks that are not caves/tunnels
-	//int cnt[256];
-	//memset(cnt, 0, sizeof(cnt));
-	printf("Exploring underground...\n");
-	if (explore) {
-		clearLightmap();
-		for (size_t x = CHUNKSIZE_X; x < g_MapsizeX - CHUNKSIZE_X; ++x) {
-			printProgress(x - CHUNKSIZE_X, g_MapsizeX);
-			for (size_t z = CHUNKSIZE_Z; z < g_MapsizeZ - CHUNKSIZE_Z; ++z) {
-				for (int y = 0; y < MIN(g_MapsizeY, 64) - 1; y++) {
-					if (BLOCKAT(x, y, z) == "minecraft:torch") {
-						// Torch
-						BLOCKAT(x, y, z).setId("minecraft:air");
-						for (int ty = int(y) - 9; ty < int(y) + 9; ty += 2) { // The trick here is to only take into account
-							if (ty < 0) {
-								continue;   // areas around torches.
-							}
-							if (ty >= int(g_MapsizeY) - 1) {
-								break;
-							}
-							for (int tz = int(z) - 18; tz < int(z) + 18; ++tz) {
-								if (tz < CHUNKSIZE_Z) {
-									continue;
-								}
-								if (tz >= int(g_MapsizeZ) - CHUNKSIZE_Z) {
-									break;
-								}
-								for (int tx = int(x) - 18; tx < int(x) + 18; ++tx) {
-									if (tx < CHUNKSIZE_X) {
-										continue;
-									}
-									if (tx >= int(g_MapsizeX) - CHUNKSIZE_X) {
-										break;
-									}
-									SETLIGHTNORTH(tx, ty, tz) = 0xFF;
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-	for (size_t x = 0; x < g_MapsizeX; ++x) {
-		printProgress(x + g_MapsizeX * (explore ? 1 : 0), g_MapsizeX * (explore ? 2 : 1));
-		for (size_t z = 0; z < g_MapsizeZ; ++z) {
-			size_t ground = 0;
-			size_t cave = 0;
-			for (int y = g_MapsizeY - 1; y >= 0; --y) {
-				Block &c = BLOCKAT(x, y, z);
-				if (c != "minecraft:air" && cave > 0) { // Found a cave, leave floor
-					if (c == "minecraft:grass_block" || c == "minecraft:leaves" || c == "minecraft:snow" || GETLIGHTAT(x, y, z) == 0) {
-						c.setId("minecraft:air");// But never count snow or leaves
-					} //else cnt[*c]++;
-					if (c != "minecraft:water" && c != "minecraft:flowing_water") {
-						--cave;
-					}
-				} else if (c != "minecraft:air") { // Block is not air, count up "ground"
-					c.setId("minecraft:air");
-					if (c != "minecraft:log" && c != "minecraft:leaves" && c != "minecraft:snow" && c != "minecraft:planks" && c != "minecraft:water" && c != "minecraft:flowing_water") {
-						++ground;
-					}
-				} else if (ground < 3) { // Block is air, if there was not enough ground above, don't treat that as a cave
-					ground = 0;
-				} else { // Thats a cave, draw next two blocks below it
-					cave = 2;
-				}
-			}
-		}
-	}
-	printProgress(10, 10);
-}
-
-bool prepareNextArea(int splitX, int splitZ, int &bitmapStartX, int &bitmapStartY) {
-	static int currentAreaX = -1;
-	static int currentAreaZ = 0;
-	// move on to next part and stop if we're done
-	++currentAreaX;
-	if (currentAreaX >= splitX) {
-		currentAreaX = 0;
-		++currentAreaZ;
-	}
-	if (currentAreaZ >= splitZ) {
-		return true;
-	}
-	// For bright map edges
-	if (g_Orientation == West || g_Orientation == East) {
-		gAtBottomRight = (currentAreaZ + 1 == splitZ);
-		gAtBottomLeft = (currentAreaX + 1 == splitX);
-	} else {
-		gAtBottomLeft = (currentAreaZ + 1 == splitZ);
-		gAtBottomRight = (currentAreaX + 1 == splitX);
-	}
-	// Calc size of area to be rendered (in chunks)
-	const int subAreaX = ((g_TotalToChunkX - g_TotalFromChunkX) + (splitX - 1)) / splitX;
-	const int subAreaZ = ((g_TotalToChunkZ - g_TotalFromChunkZ) + (splitZ - 1)) / splitZ;
-	// Adjust values for current frame. order depends on map orientation
-	g_FromChunkX = g_TotalFromChunkX + subAreaX * (g_Orientation == North || g_Orientation == West ? currentAreaX : splitX - (currentAreaX + 1));
-	g_FromChunkZ = g_TotalFromChunkZ + subAreaZ * (g_Orientation == North || g_Orientation == East ? currentAreaZ : splitZ - (currentAreaZ + 1));
-	g_ToChunkX = g_FromChunkX + subAreaX;
-	g_ToChunkZ = g_FromChunkZ + subAreaZ;
-	// Bounds checking
-	if (g_ToChunkX > g_TotalToChunkX) {
-		g_ToChunkX = g_TotalToChunkX;
-	}
-	if (g_ToChunkZ > g_TotalToChunkZ) {
-		g_ToChunkZ = g_TotalToChunkZ;
-	}
-
-	printf("Pass %d of %d...\n", int(currentAreaX + (currentAreaZ * splitX) + 1), int(splitX * splitZ));
-	// Calulate pixel offsets in bitmap. Forgot how this works right after writing it, really.
-	if (g_Orientation == North) {
-		bitmapStartX = (((g_TotalToChunkZ - g_TotalFromChunkZ) * CHUNKSIZE_Z) * 2 + 3)   // Center of image..
-			- ((g_ToChunkZ - g_TotalFromChunkZ) * CHUNKSIZE_Z * 2)  // increasing Z pos will move left in bitmap
-			+ ((g_FromChunkX - g_TotalFromChunkX) * CHUNKSIZE_X * 2);  // increasing X pos will move right in bitmap
-		bitmapStartY = 5 + (g_FromChunkZ - g_TotalFromChunkZ) * CHUNKSIZE_Z + (g_FromChunkX - g_TotalFromChunkX) * CHUNKSIZE_X;
-	} else if (g_Orientation == South) {
-		const int tox = g_TotalToChunkX - g_FromChunkX + g_TotalFromChunkX;
-		const int toz = g_TotalToChunkZ - g_FromChunkZ + g_TotalFromChunkZ;
-		const int fromx = tox - (g_ToChunkX - g_FromChunkX);
-		const int fromz = toz - (g_ToChunkZ - g_FromChunkZ);
-		bitmapStartX = (((g_TotalToChunkZ - g_TotalFromChunkZ) * CHUNKSIZE_Z) * 2 + 3)   // Center of image..
-			- ((toz - g_TotalFromChunkZ) * CHUNKSIZE_Z * 2)  // increasing Z pos will move left in bitmap
-			+ ((fromx - g_TotalFromChunkX) * CHUNKSIZE_X * 2);  // increasing X pos will move right in bitmap
-		bitmapStartY = 5 + (fromz - g_TotalFromChunkZ) * CHUNKSIZE_Z + (fromx - g_TotalFromChunkX) * CHUNKSIZE_X;
-	} else if (g_Orientation == East) {
-		const int tox = g_TotalToChunkX - g_FromChunkX + g_TotalFromChunkX;
-		const int fromx = tox - (g_ToChunkX - g_FromChunkX);
-		bitmapStartX = (((g_TotalToChunkX - g_TotalFromChunkX) * CHUNKSIZE_X) * 2 + 3)   // Center of image..
-			- ((tox - g_TotalFromChunkX) * CHUNKSIZE_X * 2)  // increasing Z pos will move left in bitmap
-			+ ((g_FromChunkZ - g_TotalFromChunkZ) * CHUNKSIZE_Z * 2);  // increasing X pos will move right in bitmap
-		bitmapStartY = 5 + (fromx - g_TotalFromChunkX) * CHUNKSIZE_X + (g_FromChunkZ - g_TotalFromChunkZ) * CHUNKSIZE_Z;
-	} else {
-		const int toz = g_TotalToChunkZ - g_FromChunkZ + g_TotalFromChunkZ;
-		const int fromz = toz - (g_ToChunkZ - g_FromChunkZ);
-		bitmapStartX = (((g_TotalToChunkX - g_TotalFromChunkX) * CHUNKSIZE_X) * 2 + 3)   // Center of image..
-			- ((g_ToChunkX - g_TotalFromChunkX) * CHUNKSIZE_X * 2)  // increasing Z pos will move left in bitmap
-			+ ((fromz - g_TotalFromChunkZ) * CHUNKSIZE_Z * 2);  // increasing X pos will move right in bitmap
-		bitmapStartY = 5 + (g_FromChunkX - g_TotalFromChunkX) * CHUNKSIZE_X + (fromz - g_TotalFromChunkZ) * CHUNKSIZE_Z;
-	}
-
-	return false; // not done yet, return false
-}*/
-
-/**
- * Round down to the nearest multiple of 16
- */
-static inline int floorChunkX(const int val) {
-	return val & ~(CHUNKSIZE_X - 1);
-}
-
-/**
- * Round down to the nearest multiple of 16
- */
-static inline int floorChunkZ(const int val) {
-	return val & ~(CHUNKSIZE_Z - 1);
-}
 
 void printHelp(char *binary) {
 	printf( "\nmcmap - an isometric minecraft map rendering tool.\n"
@@ -698,14 +281,14 @@ bool parseArgs(int argc, char** argv, Settings::WorldOptions& opts) {
 				return false;
 			}
 			opts.colorfile = NEXTARG;
-		} else if (strcmp(option, "-north") == 0) {
-			g_Orientation = NORTH;
-		} else if (strcmp(option, "-south") == 0) {
-			g_Orientation = SOUTH;
-		} else if (strcmp(option, "-east") == 0) {
-			g_Orientation = EAST;
-		} else if (strcmp(option, "-west") == 0) {
-			g_Orientation = WEST;
+		} else if (strcmp(option, "-nw") == 0) {
+			opts.orientation = Terrain::NW;
+		} else if (strcmp(option, "-sw") == 0) {
+			opts.orientation = Terrain::SW;
+		} else if (strcmp(option, "-ne") == 0) {
+			opts.orientation = Terrain::NE;
+		} else if (strcmp(option, "-se") == 0) {
+			opts.orientation = Terrain::SE;
 		} else if (strcmp(option, "-3") == 0) {
 			opts.offsetY = 3;
 		} else if (strcmp(option, "-split") == 0) {
@@ -850,23 +433,35 @@ int main(int argc, char **argv) {
 }
 
 void render(Settings::WorldOptions& opts, Settings::ImageOptions& img_opts, Terrain::Coordinates& coords) {
-	Terrain::Data terrain;
+	Terrain::Data terrain(coords);
+    Terrain::OrientedMap map(coords, opts.orientation);
 
 	std::filesystem::path saveFile(opts.saveName);
 	saveFile /= "region";
 
-	_loadTerrain(terrain, saveFile, coords);
+	_loadTerrain(terrain, saveFile);
 
 	const float split = 1 - ((float)coords.maxX - coords.minX)/(coords.maxZ - coords.minZ + coords.maxX - coords.minX);
-	for (int32_t x = coords.minX; x < coords.maxX + 1; x++) {
-		for (int32_t z = coords.minZ; z < coords.maxZ + 1; z++) {
-			const size_t bmpPosX = img_opts.bitmapX*split + (x - coords.minX - z + coords.minZ)*2;
-			const int maxHeight = heightAt(terrain, x, z);
-			for (int32_t y = std::max(0, opts.mapMinY); y < std::min(maxHeight, opts.mapMaxY + 1); y++) {
-				const size_t bmpPosY = img_opts.bitmapY - 4 - (coords.maxX + coords.maxZ - coords.minX - coords.minZ) - y*opts.offsetY + (x - coords.minX) + (z - coords.minZ);
-				Block block = Terrain::blockAt(terrain, x, z, y);
-				setPixel(bmpPosX, bmpPosY, block, 0);
-			}
+
+    /* There are 3 sets of coordinates here:
+     * - x, y, z: the coordinates of the dot on the isometric map to be drawn;
+     * - mapx, y, mapz: the coordinates in the world, depending on the orientation
+     *   of the world to be drawn;
+     * - bitmapX, bitmapY: the position of the pixel in the resulting bitmap.
+     */
+	for (int32_t x = 0; x < coords.maxX - coords.minX + 1; x++) {
+		for (int32_t z = 0; z < coords.maxZ - coords.minX + 1; z++) {
+            const size_t bmpPosX = img_opts.bitmapX*split + (x - z)*2;
+            int32_t mapx = map.map.minX + x*map.vectorX;
+            int32_t mapz = map.map.minZ + z*map.vectorZ;
+            if (map.direction == Terrain::NE || map.direction == Terrain::SW)
+                std::swap(mapx, mapz);
+            const int maxHeight = heightAt(terrain, mapx, mapz);
+            for (int32_t y = std::max(0, opts.mapMinY); y < std::min(maxHeight, opts.mapMaxY + 1); y++) {
+                const size_t bmpPosY = img_opts.bitmapY - 4 - (coords.maxX + coords.maxZ - coords.minX - coords.minZ) - y*opts.offsetY + x + z;
+                Block block = Terrain::blockAt(terrain, mapx, mapz, y);
+                setPixel(bmpPosX, bmpPosY, block, 0);
+            }
 		}
 	}
 

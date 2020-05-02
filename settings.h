@@ -2,6 +2,7 @@
 #define OPTIONS_H_
 
 #include <cstdint>
+#include "worldloader.h"
 #define UNDEFINED 0x7FFFFFFF
 
 namespace Settings {
@@ -19,6 +20,7 @@ struct WorldOptions {
     int fromX, fromZ, toX, toZ;
     int mapMinY, mapMaxY;
     int mapSizeY;
+    Terrain::Orientation orientation;
 
     int offsetY;
 
@@ -42,6 +44,8 @@ struct WorldOptions {
 
         memlimit = 2000 * uint64_t(1024 * 1024);
         memlimitSet = false;
+
+        orientation = Terrain::Orientation::NW;
     }
 };
 
