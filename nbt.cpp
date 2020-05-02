@@ -29,10 +29,6 @@ NBT::NBT(uint8_t * const data, const size_t len, bool &success) {
 }
 
 NBT::~NBT() {
-	if (_bloblen) {
-		delete[] _blob;
-		_bloblen = 0;
-	}
 }
 
 //  _   _ ____ _____ _____           

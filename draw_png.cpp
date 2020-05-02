@@ -620,7 +620,7 @@ bool composeFinalImage() {
 
 uint64_t _calcImageSize(const Terrain::Coordinates& map, Settings::ImageOptions& img_opts) {
 	img_opts.bitmapX = (map.maxX - map.minX + map.maxZ - map.minZ)*2 + 10;
-	img_opts.bitmapY = (map.maxX - map.minX + map.maxZ - map.minZ + 80 * img_opts.heightOffset) + 10;
+	img_opts.bitmapY = (map.maxX - map.minX + map.maxZ - map.minZ + 256 * img_opts.heightOffset) + 10;
 	return uint64_t(img_opts.bitmapX) * uint64_t(img_opts.bitmapY) * BYTESPERPIXEL;
 }
 

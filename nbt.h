@@ -111,10 +111,6 @@ class NBT_Tag {
 
 class NBT : public NBT_Tag {
 	private:
-		/* \brief The name of the opened file */
-		uint8_t* _blob;
-		uint32_t _bloblen;
-
 	public:
 		explicit NBT(uint8_t * const data, const size_t len, bool &success);
 		virtual ~NBT();

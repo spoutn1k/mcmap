@@ -1,10 +1,16 @@
 #ifndef _HELPER_H_
 #define _HELPER_H_
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <cstring>
+#include <ctime>
+#include <cstdio>
+
 // Just in case these ever change
 #define CHUNKSIZE_Z 16
 #define CHUNKSIZE_X 16
-#define CHUNKSIZE_Y 128
+#define CHUNKSIZE_Y 256
 #define SECTION_Y 16
 #define SECTION_Y_SHIFT 4
 // Some macros for easier array access
@@ -71,14 +77,10 @@
 
 using std::string;
 
-string base36(int val);
-int base10(char *val);
 uint8_t clamp(int32_t val);
 void printProgress(const size_t current, const size_t max);
-bool fileExists(const char *strFilename);
 bool dirExists(const char *strFilename);
 bool isNumeric(char *str);
-bool isAlphaWorld(char *path);
 
 static inline uint16_t _ntohs(uint8_t *val) {
     return (uint16_t(val[0]) << 8)
@@ -102,5 +104,15 @@ static inline uint64_t _ntohll(uint8_t *val) {
         + ((uint64_t)val[6] << 8)
         + ((uint64_t)val[7]); // Looks like crap, but should be endian-safe
 }
+
+#define CHUNK(x) (x >> 4)
+#define REGION(x) (x >> 5)
+
+#define REGIONSIZE 32
+#define CHUNKS_PER_BIOME_FILE 32
+
+#define REGION_HEADER_SIZE REGIONSIZE * REGIONSIZE * 4
+#define DECOMPRESSED_BUFFER 1000 * 1024
+#define COMPRESSED_BUFFER 100 * 1024
 
 #endif
