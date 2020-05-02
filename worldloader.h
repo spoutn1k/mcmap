@@ -33,15 +33,15 @@ struct Coordinates {
 };
 
 struct OrientedMap {
-    struct Terrain::Coordinates map;
+    struct Terrain::Coordinates coords;
     int8_t vectorX, vectorZ;
-    uint8_t direction;
+    Terrain::Orientation orientation;
 
-    OrientedMap(const Terrain::Coordinates& coords,
-            const Terrain::Orientation orientation) {
-        map = coords;
+    OrientedMap(const Terrain::Coordinates& map,
+            const Terrain::Orientation direction) {
+        coords = map;
         vectorX = vectorZ = 1;
-        direction = orientation;
+        orientation = direction;
         reshape(orientation);
     }
 
@@ -51,16 +51,16 @@ struct OrientedMap {
                 // This is the default. No changes
                 break;
             case NE:
-                std::swap(map.maxZ, map.minZ);
+                std::swap(coords.maxZ, coords.minZ);
                 vectorZ = -1;
                 break;
             case SW:
-                std::swap(map.maxX, map.minX);
+                std::swap(coords.maxX, coords.minX);
                 vectorX = -1;
                 break;
             case SE:
-                std::swap(map.maxX, map.minX);
-                std::swap(map.maxZ, map.minZ);
+                std::swap(coords.maxX, coords.minX);
+                std::swap(coords.maxZ, coords.minZ);
                 vectorX = vectorZ = -1;
                 break;
         }

@@ -38,7 +38,7 @@ struct WorldOptions {
         fromX = fromZ = toX = toZ = UNDEFINED;
 
         mapMinY = 0;
-        mapMaxY = 256;
+        mapMaxY = 255;
         mapSizeY = mapMaxY - mapMinY;
         offsetY = 3;
 
@@ -51,7 +51,7 @@ struct WorldOptions {
 
 struct ImageOptions {
     // Final png width and height
-    int bitmapX, bitmapY;
+    int width, height;
 
     // Pixel offset for block rendering
     int heightOffset;
@@ -62,7 +62,7 @@ struct ImageOptions {
     int cropLeft, cropRight, cropTop, cropBottom;
 
     ImageOptions() {
-        bitmapX = bitmapY = 0;
+        height = width = 0;
 
         heightOffset = 3;
 
