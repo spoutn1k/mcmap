@@ -1,5 +1,5 @@
-#ifndef _COLORS_
-#define _COLORS_
+#ifndef COLORS_
+#define COLORS_
 
 #include "json.hpp"
 #include <map>
@@ -45,18 +45,17 @@ bool loadBiomeColors(const char* path);*/
 namespace Colors {
 
 enum BlockTypes {
-	FULL = 0,
-	THIN, // Carpet, trapdoor
-	HALF, // Slab
-	STAIR,
-	THIN_ROD, // Torch/end rod
-	ROD, // Fence-like
-	WIRE, // Redstone dust, tripwire
-	PLANT, // Flower
-	RAILROAD,
-	GROWN, // Grass. GRASS is set using a #define, so I had to improvise not to conflict
-	SPECIAL, // Two color blocks (eg Fire and Cocoa)
-	OTHER // not rendered, like buttons and levers
+#define DEFINETYPE( TYPE, STRING ) TYPE,
+    FULL = 0,
+#include "blocktypes.def"
+#undef DEFINETYPE
+};
+
+const std::map<string, Colors::BlockTypes> valid = {
+    {"Full", Colors::BlockTypes::FULL},
+#define DEFINETYPE( TYPE, STRING ) { STRING, Colors::BlockTypes::TYPE },
+#include "blocktypes.def"
+#undef DEFINETYPE
 };
 
 typedef map<string, list<int>> Palette;
@@ -79,6 +78,10 @@ struct Color {
         for (auto it : values)
             ((uint8_t*) this)[index++] = it;
     }
+
+    void print() {
+        printf("\tColor: %d %d %d %d %d %d\n", R, G, B, ALPHA, NOISE, BRIGHTNESS);
+    }
 };
 
 struct _Block {
@@ -95,9 +98,47 @@ struct _Block {
 
     _Block(const Colors::BlockTypes& bt, list<int> c1, list<int> c2) : primary(c1), secondary(c2) {
         type = bt;
+        primary = Color(c1);
+    }
+
+    _Block(const json& data) : primary(), secondary() {
+        string stype;
+        list<int> color({}), accent({});
+        auto it = data.find("type");
+
+        if (it != data.end()) {
+            it->get_to(stype);
+            auto validIt = Colors::valid.find(stype);
+            if (validIt != valid.end())
+                type = validIt->second;
+            else
+                type = Colors::BlockTypes::FULL;
+        }
+
+        it = data.find("color");
+        if (it != data.end()) {
+            it->get_to(color);
+            primary = Color(color);
+        }
+
+        it = data.find("accent");
+        if (it != data.end()) {
+            it->get_to(accent);
+            secondary = Color(accent);
+        }
+    }
+
+    void print() {
+        printf("Block type %d:\n", type);
+        primary.print();
+        secondary.print();
     }
 };
 
+typedef map<string, Colors::_Block*> _Palette;
+
+bool load(const std::filesystem::path&, _Palette*);
+
 }  // namespace colors
 
-#endif
+#endif  // COLORS_H_

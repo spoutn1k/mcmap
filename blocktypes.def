@@ -1,0 +1,18 @@
+/* Definition of the supported block types.
+ * This file allows to enable or diable specific types, the full block type
+ * being enabled by default. Comment a line to disable its type.
+ * The left member is the name in the code, the right member is the string
+ * to use in the color json files.
+ * They are imported at compile time with some macro magic */
+
+DEFINETYPE( THIN, "Thin" )              // Carpet, trapdoor
+DEFINETYPE( HALF, "Half" )              // Slab
+DEFINETYPE( STAIR, "Stair" )
+DEFINETYPE( THIN_ROD, "Torch" )         // Torch/end rod
+DEFINETYPE( ROD, "Rod" )                // Fence-like
+DEFINETYPE( WIRE, "Wire" )              // Redstone dust, tripwire
+DEFINETYPE( PLANT, "Plant" )            // Flower
+DEFINETYPE( RAILROAD, "Rail" )
+DEFINETYPE( GROWN, "Grown" )            // Grass-like blocks
+DEFINETYPE( SPECIAL, "Special" )        // Two color blocks (eg Fire and Cocoa)
+DEFINETYPE( NODISPLAY, "NoDisplay" )    // Non-renderable (levers etc)
