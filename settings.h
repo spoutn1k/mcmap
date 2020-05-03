@@ -9,7 +9,7 @@
 namespace Settings {
 
 struct WorldOptions {
-    std::filesystem::path saveName, outFile, colorfile;
+    std::filesystem::path saveName, outFile, colorFile;
 
     bool wholeworld;
 
@@ -27,8 +27,8 @@ struct WorldOptions {
 
     WorldOptions() {
         saveName = "";
-        outFile = "";
-        colorfile = "";
+        outFile = "output.png";
+        colorFile = "colors.json";
 
         wholeworld = false;
 
@@ -47,5 +47,7 @@ struct WorldOptions {
 };
 
 }  // namespace Settings
+
+bool parseArgs(int argc, char** argv, Settings::WorldOptions* opts);
 
 #endif  // OPTIONS_H_

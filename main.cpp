@@ -32,88 +32,8 @@ void printHelp(char *binary) {
             , 8*static_cast<int>(sizeof(size_t)), binary, binary, binary);
 }
 
-bool parseArgs(int argc, char** argv, Settings::WorldOptions* opts) {
-#define MOREARGS(x) (argpos + (x) < argc)
-#define NEXTARG argv[++argpos]
-#define POLLARG(x) argv[argpos + (x)]
-    int argpos = 0;
-    while (MOREARGS(1)) {
-        const char *option = NEXTARG;
-        if (strcmp(option, "-from") == 0) {
-            if (!MOREARGS(2)
-                    || !isNumeric(POLLARG(1))
-                    || !isNumeric(POLLARG(2))) {
-                printf("Error: %s needs two integer arguments\n", option);
-                return false;
-            }
-            opts->fromX = atoi(NEXTARG);
-            opts->fromZ = atoi(NEXTARG);
-        } else if (strcmp(option, "-to") == 0) {
-            if (!MOREARGS(2)
-                    || !isNumeric(POLLARG(1))
-                    || !isNumeric(POLLARG(2))) {
-                printf("Error: %s needs two integer arguments\n", option);
-                return false;
-            }
-            opts->toX = atoi(NEXTARG);
-            opts->toZ = atoi(NEXTARG);
-        } else if (strcmp(option, "-max") == 0) {
-            if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
-                printf("Error: %s needs an integer argument\n", option);
-                return false;
-            }
-            opts->mapMaxY = atoi(NEXTARG);
-        } else if (strcmp(option, "-min") == 0) {
-            if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
-                printf("Error: %s needs an integer argument\n", option);
-                return false;
-            }
-            opts->mapMinY = atoi(NEXTARG);
-        } else if (strcmp(option, "-file") == 0) {
-            if (!MOREARGS(1)) {
-                printf("Error: %s needs one argument\n", option);
-                return false;
-            }
-            opts->outFile = NEXTARG;
-        } else if (strcmp(option, "-nw") == 0) {
-            opts->orientation = Terrain::NW;
-        } else if (strcmp(option, "-sw") == 0) {
-            opts->orientation = Terrain::SW;
-        } else if (strcmp(option, "-ne") == 0) {
-            opts->orientation = Terrain::NE;
-        } else if (strcmp(option, "-se") == 0) {
-            opts->orientation = Terrain::SE;
-        } else if (strcmp(option, "-3") == 0) {
-            opts->offsetY = 3;
-        } else if (strcmp(option, "-help") == 0 || strcmp(option, "-h") == 0) {
-            return false;
-        } else {
-            opts->saveName = std::filesystem::path(option);
-        }
-    }
-
-    opts->wholeworld = (opts->fromX == UNDEFINED || opts->toX == UNDEFINED);
-
-    if (opts->saveName.empty() || !std::filesystem::exists(opts->saveName)) {
-        printf("Error: No world given.\n");
-        return false;
-    }
-
-    if (opts->toX < opts->fromX || opts->toZ < opts->fromZ) {
-        printf("Nothing to render: -from X Z has to be <= -to X Z\n");
-        return false;
-    }
-
-    if (opts->mapMaxY - opts->mapMinY < 1) {
-        printf("Nothing to render: -min Y has to be < -max/-height Y\n");
-        return false;
-    }
-
-    return true;
-}
-
 int main(int argc, char **argv) {
-    Settings::WorldOptions opts;
+    Settings::WorldOptions options;
     colorMap colors;
 
     printf("mcmap " VERSION " %dbit\n", 8*static_cast<int>(sizeof(size_t)));
@@ -122,39 +42,34 @@ int main(int argc, char **argv) {
     // which should give the same result for the same input every time
     srand(1337);
 
-    if (argc < 2 || !parseArgs(argc, argv, &opts)) {
+    if (argc < 2 || !parseArgs(argc, argv, &options)) {
         printHelp(argv[0]);
         return 1;
     }
 
-    if (!loadColors(colors)) {
-        fprintf(stderr, "Could not load colors.\n");
+    if (!loadColors(options.colorFile, colors))
         return 1;
-    }
-
-    if (opts.outFile.empty())
-        opts.outFile = "output.png";
 
     Terrain::Coordinates coords;
 
-    coords.minX = opts.fromX;
-    coords.minZ = opts.fromZ;
-    coords.maxX = opts.toX;
-    coords.maxZ = opts.toZ;
+    coords.minX = options.fromX;
+    coords.minZ = options.fromZ;
+    coords.maxX = options.toX;
+    coords.maxZ = options.toZ;
 
-    std::filesystem::path saveFile(opts.saveName);
+    std::filesystem::path saveFile(options.saveName);
     saveFile /= "region";
 
     // The minecraft terrain to render
-    Terrain::OrientedMap world(coords, opts.orientation);
+    Terrain::OrientedMap world(coords, options.orientation);
     world.terrain.load(saveFile);
 
-    PNG::IsometricCanvas canvas(coords, opts);
+    PNG::IsometricCanvas canvas(coords, options);
 
     // Cap the height of the canvas to avoid having a ridiculous height
     canvas.maxY = std::min(canvas.maxY, world.terrain.maxHeight());
 
-    PNG::Image image(opts.outFile, canvas);
+    PNG::Image image(options.outFile, canvas);
 
     render(image, canvas, world);
     saveImage();

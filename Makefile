@@ -7,7 +7,7 @@ LDFLAGS=-O3 -msse -lz -lpng -fomit-frame-pointer -L/usr/local/lib
 DCFLAGS=-g -O0 -std=c++17 -c -Wall -D_DEBUG -DWITHPNG -I/usr/local/include
 DLDFLAGS=-msse -lz -lpng -L/usr/local/lib
 
-SOURCES=main.cpp helper.cpp nbt.cpp colors.cpp worldloader.cpp filesystem.cpp globals.cpp draw_png.cpp block.cpp
+SOURCES=main.cpp helper.cpp nbt.cpp colors.cpp worldloader.cpp filesystem.cpp globals.cpp draw_png.cpp block.cpp settings.cpp
 OBJECTS=$(SOURCES:.cpp=.default.o)
 DOBJECTS=$(SOURCES:.cpp=.debug.o)
 

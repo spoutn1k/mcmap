@@ -1,19 +1,20 @@
 #include "colors.h"
 #include "block.h"
 
-bool loadColors(colorMap& colors) {
-	std::filesystem::path colorFile = "./colors.json";
-
-	if (!std::filesystem::exists(colorFile)) {
-		fprintf(stderr, "Color file not found !\n");
-		return false;
-	}
-
+bool loadColors(const std::filesystem::path& colorFile, colorMap& colors) {
 	FILE *f = fopen(colorFile.c_str(), "r");
-	json data = json::parse(f);
-	fclose(f);
-	colors = data.get<map<string, list<int>>>();
+
+    try {
+	    json data = json::parse(f);
+	    colors = data.get<map<string, list<int>>>();
+    } catch (const nlohmann::detail::parse_error& err) {
+	    fclose(f);
+        fprintf(stderr, "Error parsing color file %s\n", colorFile.c_str());
+        return false;
+    }
+
 	Block::setColors(colors);
+	fclose(f);
 
 	return true;
 }

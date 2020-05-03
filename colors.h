@@ -45,7 +45,7 @@ typedef map<string, list<int>> colorMap;
                                         double(PGREEN[c]) *  double(PGREEN[c]) * .601 + \
                                         double(PBLUE[c]) *  double(PBLUE[c]) * .163)
 
-bool loadColors(colorMap&);
+bool loadColors(const std::filesystem::path& colorFile, colorMap&);
 /*bool loadColorsFromFile(const char *file);
 bool dumpColorsToFile(const char *file);
 bool extractColors(const char *file);
