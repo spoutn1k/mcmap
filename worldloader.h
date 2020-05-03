@@ -46,6 +46,10 @@ struct Data {
     // the latter the lowest section number
     uint8_t *heightMap;
 
+    // The extrema. The first 4 bits indicate the index of the highest section,
+    // the last 4 the index of the lowest
+    uint8_t heightBounds;
+
     // Default constructor
     explicit Data(const Terrain::Coordinates& coords) {
         map.minX = CHUNK(coords.minX);
@@ -57,14 +61,40 @@ struct Data {
 
         chunks = new Terrain::Chunk[chunkLen];
         heightMap = new uint8_t[chunkLen];
+
+        heightBounds = 0x00;
     }
 
     ~Data() {
         free(heightMap);
     }
 
-    string blockAt(int32_t, int32_t, int32_t) const;
-    uint8_t heightAt(int32_t, int32_t) const;
+    size_t index(int64_t, int64_t) const;
+
+    void load(const std::filesystem::path& regionDir);
+    void loadRegion(const std::filesystem::path& regionFile,
+            const int regionX,
+            const int regionZ);
+    void loadChunk(const uint32_t offset,
+            FILE* regionHandle,
+            const int chunkX,
+            const int chunkZ);
+
+    uint8_t maxHeight() const {
+        return heightBounds & 0xf0;
+    }
+
+    uint8_t maxHeight(const int64_t x, const int64_t z) const {
+        return heightMap[index(CHUNK(x), CHUNK(z))] & 0xf0;
+    }
+
+    inline uint8_t minHeight() const {
+        return (heightBounds & 0x0f) << 4;
+    }
+
+    inline uint8_t minHeight(const int64_t x, const int64_t z) const {
+        return (heightMap[index(CHUNK(x), CHUNK(z))] & 0x0f) << 4;
+    }
 };
 
 struct OrientedMap {
@@ -106,8 +136,5 @@ struct OrientedMap {
 Block blockAt(const Terrain::Data&, int32_t, int32_t, int32_t);
 
 }  // namespace Terrain
-
-void _loadTerrain(Terrain::Data&, std::filesystem::path);
-uint16_t heightAt(const Terrain::Data&, int32_t, int32_t);
 
 #endif  // WORLDLOADER_H_

@@ -55,8 +55,8 @@ bool parseArgs(int argc, char** argv, Settings::WorldOptions* opts) {
                 printf("Error: %s needs two integer arguments\n", option);
                 return false;
             }
-            opts->toX = atoi(NEXTARG) + 1;
-            opts->toZ = atoi(NEXTARG) + 1;
+            opts->toX = atoi(NEXTARG);
+            opts->toZ = atoi(NEXTARG);
         } else if (strcmp(option, "-max") == 0) {
             if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
                 printf("Error: %s needs an integer argument\n", option);
@@ -99,7 +99,7 @@ bool parseArgs(int argc, char** argv, Settings::WorldOptions* opts) {
         return false;
     }
 
-    if (opts->toX <= opts->fromX || opts->toZ <= opts->fromZ) {
+    if (opts->toX < opts->fromX || opts->toZ < opts->fromZ) {
         printf("Nothing to render: -from X Z has to be <= -to X Z\n");
         return false;
     }
@@ -142,15 +142,19 @@ int main(int argc, char **argv) {
     coords.maxX = opts.toX;
     coords.maxZ = opts.toZ;
 
-    PNG::IsometricCanvas canvas(coords, opts);
-    PNG::Image image(opts.outFile, canvas);
-
     std::filesystem::path saveFile(opts.saveName);
     saveFile /= "region";
 
     // The minecraft terrain to render
     Terrain::OrientedMap world(coords, opts.orientation);
-    _loadTerrain(world.terrain, saveFile);
+    world.terrain.load(saveFile);
+
+    PNG::IsometricCanvas canvas(coords, opts);
+
+    // Cap the height of the canvas to avoid having a ridiculous height
+    canvas.maxY = std::min(canvas.maxY, world.terrain.maxHeight());
+
+    PNG::Image image(opts.outFile, canvas);
 
     render(image, canvas, world);
     saveImage();
@@ -181,8 +185,8 @@ void render(const PNG::Image& image,
      * and the position on the image are then calculated from the canvas
      * coordinates. */
 
-    for (size_t x = 0; x < canvas.sizeX; x++) {
-        for (size_t z = 0; z < canvas.sizeZ; z++) {
+    for (size_t x = 0; x < canvas.sizeX + 1; x++) {
+        for (size_t z = 0; z < canvas.sizeZ + 1; z++) {
             const size_t bmpPosX = 2*(canvas.sizeZ - 1) + (x - z)*2
                 + image.padding;
 
@@ -199,14 +203,16 @@ void render(const PNG::Image& image,
                     || world.orientation == Terrain::SW)
                 std::swap(x, z);
 
-            const uint8_t maxHeight = heightAt(world.terrain, worldX, worldZ);
+            const uint8_t maxHeight = world.terrain.maxHeight(worldX, worldZ);
+            const uint8_t minHeight = world.terrain.minHeight(worldX, worldZ);
 
-            for (uint8_t y = canvas.minY;
+            for (uint8_t y = std::max(minHeight, canvas.minY);
                     y < std::min(maxHeight, canvas.maxY); y++) {
                 const size_t bmpPosY = image.height - 2 + x + z
                     - canvas.sizeX - canvas.sizeZ - y*image.heightOffset
                     - image.padding;
-                Block block = Terrain::blockAt(world.terrain, worldX, worldZ, y);
+                Block block = Terrain::blockAt(world.terrain,
+                        worldX, worldZ, y);
                 setPixel(bmpPosX, bmpPosY, block, 0);
             }
         }

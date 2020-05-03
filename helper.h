@@ -1,8 +1,8 @@
-#ifndef _HELPER_H_
-#define _HELPER_H_
+#ifndef HELPER_H_
+#define HELPER_H_
 
-#define CHUNK(x) (x >> 4)
-#define REGION(x) (x >> 5)
+#define CHUNK(x) ((x) >> 4)
+#define REGION(x) ((x) >> 5)
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -26,35 +26,35 @@
 // Some macros for easier array access
 // First: Block array
 
-#define MAX(a,b) ((a) > (b) ? (a) : (b))
-#define MIN(a,b) ((a) < (b) ? (a) : (b))
-#define RIGHTSTRING(x,y) (strlen(x) >= (y) ? (x) + strlen(x) - (y) : (x))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define RIGHTSTRING(x, y) (strlen(x) >= (y) ? (x) + strlen(x) - (y) : (x))
 
 #include <string>
 
 // Difference between MSVC++ and gcc/others
 #if defined(_WIN32) && !defined(__GNUC__)
-#	include <windows.h>
-#	define usleep(x) Sleep((x) / 1000);
+#    include <windows.h>
+#    define usleep(x) Sleep((x) / 1000);
 #else
-#	include <unistd.h>
+#    include <unistd.h>
 #endif
 
 // For fseek
 #if defined(_WIN32) && !defined(__GNUC__)
 // MSVC++
-#	define fseek64 _fseeki64
+#    define fseek64 _fseeki64
 #elif defined(__APPLE__)
-#	define fseek64 fseeko
+#    define fseek64 fseeko
 #elif defined(__FreeBSD__)
 #   define fseek64 fseeko
 #else
-#	define fseek64 fseeko64
+#    define fseek64 fseeko64
 #endif
 
 // Differently named
 #if defined(_WIN32) && !defined(__GNUC__)
-#	define snprintf _snprintf
+#    define snprintf _snprintf
 #  define mkdir _mkdir
 #endif
 
@@ -88,7 +88,7 @@ static inline uint64_t _ntohll(uint8_t *val) {
         + ((uint64_t)val[4] << 24)
         + ((uint64_t)val[5] << 16)
         + ((uint64_t)val[6] << 8)
-        + ((uint64_t)val[7]); // Looks like crap, but should be endian-safe
+        + ((uint64_t)val[7]);  // Looks like crap, but should be endian-safe
 }
 
-#endif
+#endif  // HELPER_H_

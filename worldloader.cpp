@@ -3,101 +3,43 @@
 using std::string;
 namespace fs = std::filesystem;
 
-void _loadChunksFromRegion(std::filesystem::path, int32_t regionX, int32_t regionZ, Terrain::Data& terrain);
-bool _loadChunk(uint32_t offset, FILE* regionData, Terrain::Chunk&, uint8_t&);
+uint8_t zData[5*4096];
+uint8_t chunkBuffer[1000*1024];
 
-NBT* loadChunk(const char *savePath, int32_t x, int32_t z) {
-	if (savePath == NULL || *savePath == '\0') {
-		return NULL;
-	}
-
-	size_t maxlen = strlen(savePath) + 40;
-	char *path = new char[maxlen];
-	snprintf(path, maxlen, "%s/region/r.%d.%d.mca", savePath, int(x / REGIONSIZE), int(z / REGIONSIZE));
-	uint8_t description[COMPRESSED_BUFFER], decompressedBuffer[DECOMPRESSED_BUFFER];
-	FILE *rp = fopen(path, "rb");
-
-	if (rp == NULL) {
-		printf("Error opening region file %s\n", path);
-		return NULL;
-	}
-
-	if (fread(description, 1, 4, rp) != 4) {
-		printf("Header too short in %s\n", path);
-		fclose(rp);
-		return NULL;
-	}
-
-	uint32_t offset = (_ntohl(description) >> 8) * 4096;
-	if (0 != fseek(rp, offset, SEEK_SET)) {
-		printf("Error seeking to chunk in region file %s\n", path);
-	}
-	if (1 != fread(description, 5, 1, rp)) {
-		printf("Error reading chunk size from region file %s\n", path);
-	}
-	uint32_t len = _ntohl(description);
-	len--;
-	if (fread(description, 1, len, rp) != len) {
-		printf("Not enough input for chunk in %s\n", path);
-	}
-	fclose(rp);
-
-	z_stream zlibStream;
-	memset(&zlibStream, 0, sizeof(z_stream));
-	zlibStream.next_out = (Bytef*)decompressedBuffer;
-	zlibStream.avail_out = DECOMPRESSED_BUFFER;
-	zlibStream.avail_in = len;
-	zlibStream.next_in = (Bytef*)description;
-	inflateInit2(&zlibStream, 32 + MAX_WBITS);
-
-	int status = inflate(&zlibStream, Z_FINISH); // decompress in one step
-	inflateEnd(&zlibStream);
-
-	if (status != Z_STREAM_END) {
-		printf("Error decompressing chunk from %s\n", path);
-	}
-
-	len = zlibStream.total_out;
-
-	bool success;
-	NBT *chunk = new NBT(decompressedBuffer, len, success);
-
-	delete[] path;
-	return chunk;
-}
-
-/* From a set of coordinates,
- * Return a Terrain::Data object containing all of the loaded terrain */
-void _loadTerrain(Terrain::Data& terrain, fs::path regionDir) {
+void Terrain::Data::load(const fs::path& regionDir) {
     // Parse all the necessary region files
-	for (int8_t rx = REGION(terrain.map.minX); rx < REGION(terrain.map.maxX) + 1; rx++) {
-		for (int8_t rz = REGION(terrain.map.minZ); rz < REGION(terrain.map.maxZ) + 1; rz++) {
-			_loadChunksFromRegion(regionDir, rx, rz, terrain);
-		}
+	for (int8_t rx = REGION(map.minX); rx < REGION(map.maxX) + 1; rx++) {
+		for (int8_t rz = REGION(map.minZ); rz < REGION(map.maxZ) + 1; rz++) {
+            fs::path regionFile = fs::path(regionDir)
+                /= "r."
+                    + std::to_string(rx)
+                    + "."
+                    + std::to_string(rz)
+                    + ".mca";
+
+            if (!fs::exists(regionFile)) {
+                fprintf(stderr, "Region file %s does not exist, skipping ..\n", regionFile.c_str());
+                continue;
+            }
+
+            loadRegion(regionFile, rx, rz);
+        }
 	}
 }
 
-uint32_t chunk_index(int32_t x, int32_t z, const Terrain::Coordinates& map) {
-	return (x - map.minX) + (z - map.minZ)*(map.maxX - map.minX + 1);
-}
+void Terrain::Data::loadRegion(const fs::path& regionFile, const int regionX, const int regionZ) {
+    FILE *regionHandle;
+    uint8_t regionHeader[REGION_HEADER_SIZE];
 
-void _loadChunksFromRegion(fs::path regionDir, int32_t regionX, int32_t regionZ, Terrain::Data& terrain) {
-	// First, we try and open the corresponding region file
-	FILE *regionData;
-	uint8_t regionHeader[REGION_HEADER_SIZE];
+    if (!(regionHandle = fopen(regionFile.c_str(), "rb"))) {
+        printf("Error opening region file %s\n", regionFile.c_str());
+        return;
+    }
+    // Then, we read the header (of size 4K) storing the chunks locations
 
-	fs::path regionFile = regionDir /= "r." + std::to_string(regionX) + "." + std::to_string(regionZ) + ".mca";
-
-	if (!fs::exists(regionFile) || !(regionData = fopen(regionFile.c_str(), "rb"))) {
-		printf("Error opening region file %s\n", regionFile.c_str());
-		return;
-	}
-
-	// Then, we read the header (of size 4K) storing the chunks locations
-
-	if (fread(regionHeader, sizeof(uint8_t), REGION_HEADER_SIZE, regionData) != REGION_HEADER_SIZE) {
-		printf("Header too short in %s\n", regionFile.c_str());
-		fclose(regionData);
+    if (fread(regionHeader, sizeof(uint8_t), REGION_HEADER_SIZE, regionHandle) != REGION_HEADER_SIZE) {
+        printf("Header too short in %s\n", regionFile.c_str());
+        fclose(regionHandle);
 		return;
 	}
 
@@ -106,54 +48,47 @@ void _loadChunksFromRegion(fs::path regionDir, int32_t regionX, int32_t regionZ,
 		// Bound check
 		const int chunkX = (regionX << 5) + (it & 0x1f);
 		const int chunkZ = (regionZ << 5) + (it >> 5);
-		if (chunkX < terrain.map.minX
-				|| chunkX > terrain.map.maxX
-				|| chunkZ < terrain.map.minZ
-				|| chunkZ > terrain.map.maxZ) {
+		if (chunkX < map.minX
+				|| chunkX > map.maxX
+				|| chunkZ < map.minZ
+				|| chunkZ > map.maxZ) {
 			// Chunk is not in bounds
 			continue;
 		}
 
-		//printf("Loading chunk %d %d in r.%d.%d.mca\n", it & 0x1f, it >> 5, regionX, regionZ);
-		//printf("Offset: %d\n", _ntohl(regionHeader + it*4) >> 8);
-
 		// Get the location of the data from the header
 		const uint32_t offset = (_ntohl(regionHeader + it*4) >> 8) * 4096;
-		const uint32_t index = chunk_index(chunkX, chunkZ, terrain.map);
 
-		_loadChunk(offset, regionData, terrain.chunks[index], terrain.heightMap[index]);
+		loadChunk(offset, regionHandle, chunkX, chunkZ);
 	}
 
-	fclose(regionData);
+	fclose(regionHandle);
 }
 
-uint8_t zData[5*4096];
-uint8_t chunkBuffer[1000*1024];
-
-bool _loadChunk(uint32_t offset, FILE* regionData, Terrain::Chunk& destination, uint8_t& heightMap) {
+void Terrain::Data::loadChunk(const uint32_t offset, FILE* regionHandle, const int chunkX, const int chunkZ) {
 	if (!offset) {
 		// Chunk does not exist
 		//printf("Chunk does not exist !\n");
-		return false;
+		return;
 	}
 
-	if (0 != fseek(regionData, offset, SEEK_SET)) {
+	if (0 != fseek(regionHandle, offset, SEEK_SET)) {
 		//printf("Error seeking to chunk\n");
-		return false;
+		return;
 	}
 
 	// Read the 5 bytes that give the size and type of data
-	if (5 != fread(zData, sizeof(uint8_t), 5, regionData)) {
+	if (5 != fread(zData, sizeof(uint8_t), 5, regionHandle)) {
 		//printf("Error reading chunk size from region file\n");
-		return false;
+		return;
 	}
 
 	uint32_t len = _ntohl(zData);
 	//len--; // This dates from Zahl's, no idea of its purpose
 
-	if (fread(zData, sizeof(uint8_t), len, regionData) != len) {
+	if (fread(zData, sizeof(uint8_t), len, regionHandle) != len) {
 		//printf("Not enough input for chunk\n");
-		return false;
+		return;
 	}
 
 	z_stream zlibStream;
@@ -169,7 +104,7 @@ bool _loadChunk(uint32_t offset, FILE* regionData, Terrain::Chunk& destination, 
 
 	if (status != Z_STREAM_END) {
 		printf("Error decompressing chunk: %s\n", zError(status));
-		return false;
+		return;
 	}
 
 	len = zlibStream.total_out;
@@ -178,14 +113,15 @@ bool _loadChunk(uint32_t offset, FILE* regionData, Terrain::Chunk& destination, 
 	NBT tree = NBT(chunkBuffer, len, success);
 	if (!success) {
 		printf("The info could not be understood as NBT\n");
-		return false;
+		return;
 	}
 
 	// Strip the chunk of pointless sections
+    size_t chunkPos = index(chunkX, chunkZ);
 	try {
-		destination = *(*(tree["Level"]))["Sections"];
+		chunks[chunkPos] = *(*(tree["Level"]))["Sections"];
 		list<NBT_Tag*>* sections;
-		destination.getList(sections);
+		chunks[chunkPos].getList(sections);
 
 		// Some chunks have a -1 section, we'll pop that real quick
 		if (!sections->empty() && !sections->front()->contains("Palette")) {
@@ -197,13 +133,24 @@ bool _loadChunk(uint32_t offset, FILE* regionData, Terrain::Chunk& destination, 
 			sections->pop_back();
 		}
 
-		heightMap = (sections->size()) << 4;
+        uint8_t chunkHeight = sections->size() << 4;
+		heightMap[chunkPos] = chunkHeight;
+
+        // If the chunk's height is the highest found, record it
+        if (chunkHeight > (heightBounds & 0xf0))
+            heightBounds = chunkHeight | (heightBounds & 0x0f);
 
 	} catch (const std::invalid_argument& e) {
-		return false;
+		return;
 	}
+}
 
-	return true;
+size_t Terrain::Data::index(int64_t x, int64_t z) const {
+	return (x - map.minX) + (z - map.minZ)*(map.maxX - map.minX + 1);
+}
+
+uint32_t chunk_index(int32_t x, int32_t z, const Terrain::Coordinates& map) {
+	return (x - map.minX) + (z - map.minZ)*(map.maxX - map.minX + 1);
 }
 
 Block Terrain::blockAt(const Terrain::Data& terrain, int32_t x, int32_t z, int32_t y) {
