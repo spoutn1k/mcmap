@@ -133,6 +133,20 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE* regionHandle, const i
 			sections->pop_back();
 		}
 
+        // Complete the cache, to determine the colors to load
+        for (auto it : *sections) {
+            if (!it->contains("Palette"))
+                continue;
+
+		    list<NBT_Tag*>* blocks;
+		    string blockID;
+            (*it)["Palette"]->getList(blocks);
+            for (auto block : *blocks) {
+                (*block)["Name"]->getString(blockID);
+                cache.insert(std::pair<std::string, std::list<int>>(blockID, {}));
+            }
+        }
+
         uint8_t chunkHeight = sections->size() << 4;
 		heightMap[chunkPos] = chunkHeight;
 
@@ -141,6 +155,7 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE* regionHandle, const i
             heightBounds = chunkHeight | (heightBounds & 0x0f);
 
 	} catch (const std::invalid_argument& e) {
+        fprintf(stderr, "Err: %s\n", e.what());
 		return;
 	}
 }

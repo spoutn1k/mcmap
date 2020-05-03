@@ -10,6 +10,7 @@
 #include "./helper.h"
 #include "./nbt.h"
 #include "./block.h"
+#include "./colors.h"
 
 namespace Terrain {
 
@@ -49,6 +50,8 @@ struct Data {
     // The extrema. The first 4 bits indicate the index of the highest section,
     // the last 4 the index of the lowest
     uint8_t heightBounds;
+
+    Colors::Palette cache;
 
     // Default constructor
     explicit Data(const Terrain::Coordinates& coords) {
