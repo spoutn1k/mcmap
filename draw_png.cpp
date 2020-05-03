@@ -885,30 +885,57 @@ namespace {
 		color[2] = clamp(uint16_t(float(color[2]) * v1 + float(add[2]) * v2));
 	}
 
-	void setSnow(const size_t x, const size_t y, const uint8_t * const color) {
-		// Top row (second row)
-		uint8_t *pos = &PIXEL(x, y+1);
+	void setThin(const size_t x, const size_t y, const Colors::Block& block) {
+        /* Overwrite the block below's top layer
+         * |    |
+         * |    |
+         * |    |
+         * |XXXX|
+         *   XX   */
+		uint8_t *pos = &PIXEL(x, y+3);
 		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-			memcpy(pos, color, BYTESPERPIXEL);
+			memcpy(pos, &block.primary, BYTESPERPIXEL);
 		}
+#ifndef LEGACY
+		pos = &PIXEL(x+1, y+4);
+		memcpy(pos, &block.primary, BYTESPERPIXEL);
+		memcpy(pos+CHANSPERPIXEL, &block.primary, BYTESPERPIXEL);
+#endif
 	}
 
-	void setTorch(const size_t x, const size_t y, const uint8_t * const color) {
-		// Maybe the orientation should be considered when drawing, but it probably isn't worth the efford
+	void setTorch(const size_t x, const size_t y, const Colors::Block& block) {
+        /* TODO Callback to handle the orientation
+         * Print the secondary on top of two primary
+         * |    |
+         * |  S |
+         * |  P |
+         * |  P | */
 		uint8_t *pos = &PIXEL(x+2, y+1);
-		memcpy(pos, color, BYTESPERPIXEL);
+		memcpy(pos, &block.secondary, BYTESPERPIXEL);
 		pos = &PIXEL(x+2, y+2);
-		memcpy(pos, color, BYTESPERPIXEL);
+#ifdef LEGACY
+		memcpy(pos, &block.secondary, BYTESPERPIXEL);
+#else
+		memcpy(pos, &block.primary, BYTESPERPIXEL);
+		pos = &PIXEL(x+2, y+3);
+		memcpy(pos, &block.primary, BYTESPERPIXEL);
+#endif
 	}
 
-	void setFlower(const size_t x, const size_t y, const uint8_t * const color) {
+	void setPlant(const size_t x, const size_t y, const Colors::Block& block) {
+        /* Print a plant-like block
+         * TODO Make that nicer ?
+         * |    |
+         * | X X|
+         * |  X |
+         * | X  | */
 		uint8_t *pos = &PIXEL(x, y+1);
-		memcpy(pos+(CHANSPERPIXEL), color, BYTESPERPIXEL);
-		memcpy(pos+(CHANSPERPIXEL*3), color, BYTESPERPIXEL);
+		memcpy(pos+(CHANSPERPIXEL), &block.primary, BYTESPERPIXEL);
+		memcpy(pos+(CHANSPERPIXEL*3), &block.primary, BYTESPERPIXEL);
 		pos = &PIXEL(x+2, y+2);
-		memcpy(pos, color, BYTESPERPIXEL);
+		memcpy(pos, &block.primary, BYTESPERPIXEL);
 		pos = &PIXEL(x+1, y+3);
-		memcpy(pos, color, BYTESPERPIXEL);
+		memcpy(pos, &block.primary, BYTESPERPIXEL);
 	}
 
 	void setFire(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark) {
@@ -930,7 +957,11 @@ namespace {
 	}
 
 	void setGrown(const size_t x, const size_t y, const Colors::Block& b, const uint8_t * const light, const uint8_t * const dark, const int sub) {
-		// this will make grass look like dirt from the side
+        /* Print the secondary color on top
+         * |SSSS|
+         * |DSSL|
+         * |DDLL|
+         * | DL | */
 		uint8_t L[CHANSPERPIXEL], D[CHANSPERPIXEL];
 		memcpy(L, &b.primary, BYTESPERPIXEL);
 		memcpy(D, &b.primary, BYTESPERPIXEL);
@@ -1160,9 +1191,18 @@ void PNG::Image::setPixel(const size_t x, const size_t y, const string& b) const
             setGrown(x, y, blockColor, L, D, sub);
             return;
 
-        case Colors::THIN:
-        case Colors::THIN_ROD:
         case Colors::PLANT:
+            setPlant(x, y, blockColor);
+            return;
+
+        case Colors::THIN:
+            setThin(x, y, blockColor);
+            return;
+
+        case Colors::TORCH:
+            setTorch(x, y, blockColor);
+            return;
+
         case Colors::ROD:
         case Colors::WIRE:
         case Colors::RAILROAD:
