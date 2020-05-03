@@ -117,7 +117,7 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE* regionHandle, const i
 	}
 
 	// Strip the chunk of pointless sections
-    size_t chunkPos = index(chunkX, chunkZ);
+    size_t chunkPos = chunkIndex(chunkX, chunkZ);
 	try {
 		chunks[chunkPos] = *(*(tree["Level"]))["Sections"];
 		list<NBT_Tag*>* sections;
@@ -145,20 +145,16 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE* regionHandle, const i
 	}
 }
 
-size_t Terrain::Data::index(int64_t x, int64_t z) const {
+size_t Terrain::Data::chunkIndex(int64_t x, int64_t z) const {
 	return (x - map.minX) + (z - map.minZ)*(map.maxX - map.minX + 1);
 }
 
-uint32_t chunk_index(int32_t x, int32_t z, const Terrain::Coordinates& map) {
-	return (x - map.minX) + (z - map.minZ)*(map.maxX - map.minX + 1);
-}
-
-Block Terrain::blockAt(const Terrain::Data& terrain, int32_t x, int32_t z, int32_t y) {
-	const uint32_t index = chunk_index(CHUNK(x), CHUNK(z), terrain.map);
+Block Terrain::Data::block(const int32_t x, const int32_t z, const int32_t y) const {
+	const size_t index = chunkIndex(CHUNK(x), CHUNK(z));
 	const uint8_t sectionY = y >> 4;
 	const uint64_t position = (x & 0x0f) + ((z & 0x0f) + (y & 0x0f)*16)*16;
 	try {
-		NBT_Tag* section = (terrain.chunks[index])[sectionY];
+		NBT_Tag* section = (chunks[index])[sectionY];
 		if (section->contains("Palette"))
 			return Block(getBlockId(position, section));
 		return Block("minecraft:air");
@@ -168,7 +164,18 @@ Block Terrain::blockAt(const Terrain::Data& terrain, int32_t x, int32_t z, int32
 	}
 }
 
-uint16_t heightAt(const Terrain::Data& terrain, int32_t x, int32_t z) {
-	const uint64_t index = (CHUNK(x) - terrain.map.minX) + (CHUNK(z) - terrain.map.minZ)*(terrain.map.maxX - terrain.map.minX + 1);
-	return 16*(terrain.heightMap[index] >> 4);
+uint8_t Terrain::Data::maxHeight() const {
+    return heightBounds & 0xf0;
+}
+
+uint8_t Terrain::Data::maxHeight(const int64_t x, const int64_t z) const {
+    return heightMap[chunkIndex(CHUNK(x), CHUNK(z))] & 0xf0;
+}
+
+uint8_t Terrain::Data::minHeight() const {
+    return (heightBounds & 0x0f) << 4;
+}
+
+uint8_t Terrain::Data::minHeight(const int64_t x, const int64_t z) const {
+    return (heightMap[chunkIndex(CHUNK(x), CHUNK(z))] & 0x0f) << 4;
 }

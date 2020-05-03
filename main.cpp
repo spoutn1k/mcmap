@@ -34,7 +34,7 @@ void printHelp(char *binary) {
 
 int main(int argc, char **argv) {
     Settings::WorldOptions options;
-    colorMap colors;
+    Colors::Palette colors;
 
     printf("mcmap " VERSION " %dbit\n", 8*static_cast<int>(sizeof(size_t)));
 
@@ -47,7 +47,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    if (!loadColors(options.colorFile, colors))
+    if (!Colors::load(options.colorFile, &colors))
         return 1;
 
     Terrain::Coordinates coords;
@@ -75,6 +75,7 @@ int main(int argc, char **argv) {
     saveImage();
 
     printf("Job complete.\n");
+
     return 0;
 }
 
@@ -126,9 +127,9 @@ void render(const PNG::Image& image,
                 const size_t bmpPosY = image.height - 2 + x + z
                     - canvas.sizeX - canvas.sizeZ - y*image.heightOffset
                     - image.padding;
-                Block block = Terrain::blockAt(world.terrain,
-                        worldX, worldZ, y);
-                setPixel(bmpPosX, bmpPosY, block, 0);
+                Block block = world.terrain.block(worldX, worldZ, y);
+                if (block != "minecraft:air")
+                    setPixel(bmpPosX, bmpPosY, block, 0);
             }
         }
     }

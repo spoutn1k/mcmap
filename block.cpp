@@ -1,9 +1,9 @@
 #include "block.h"
 #include "globals.h"
 
-colorMap Block::colors = {};
+Colors::Palette Block::colors = {};
 
-void Block::setColors(colorMap colors) {
+void Block::setColors(const Colors::Palette& colors) {
 	Block::colors = colors;
 }
 
@@ -48,9 +48,9 @@ void Block::setColor(uint8_t* color) {
     this->getColor()[PGREEN] = color[1];
     this->getColor()[PBLUE] = color[2];
     this->getColor()[PALPHA] = color[3];
-    this->getColor()[NOISE] = color[4];
+    this->getColor()[PNOISE] = color[4];
 
-    this->getColor()[BRIGHTNESS] = GETBRIGHTNESS(this->getColor());
+    this->getColor()[PBRIGHTNESS] = GETBRIGHTNESS(this->getColor());
 }
 
 void Block::setColor(string id, uint8_t* color) {

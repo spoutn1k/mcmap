@@ -1,7 +1,6 @@
 #ifndef _COLORS_
 #define _COLORS_
 
-#include "helper.h"
 #include "json.hpp"
 #include <map>
 #include <list>
@@ -24,31 +23,81 @@ using std::list;
 using std::string;
 using nlohmann::json;
 
-typedef map<string, list<int>> colorMap;
-
 #define PRED 0
 #define PGREEN 1
 #define PBLUE 2
 #define PALPHA 3
-#define NOISE 4
-#define BRIGHTNESS 5
-#define VINDEX 6	    // Use one of the unused fields to store variant info
-			    // Here we store the offset from 255, the last ID
-			    // ie Dirt variants begin at 263 -> VINDEX = 263 - 255 = 8
-			    // This is for the info to fir on a uint8_t
-
-#define BLOCK_TYPE 7	    // The type of block
-			    // Influences the way it is drawn
+#define PNOISE 4
+#define PBRIGHTNESS 5
+#define VINDEX 6
+#define BLOCK_TYPE 7
 
 #define GETBRIGHTNESS(c) (uint8_t)sqrt( \
-                                        double(PRED[c]) *  double(PRED[c]) * .236 + \
-                                        double(PGREEN[c]) *  double(PGREEN[c]) * .601 + \
-                                        double(PBLUE[c]) *  double(PBLUE[c]) * .163)
+    double(PRED[c]) *  double(PRED[c]) * .236 + \
+    double(PGREEN[c]) *  double(PGREEN[c]) * .601 + \
+    double(PBLUE[c]) *  double(PBLUE[c]) * .163)
 
-bool loadColors(const std::filesystem::path& colorFile, colorMap&);
 /*bool loadColorsFromFile(const char *file);
 bool dumpColorsToFile(const char *file);
 bool extractColors(const char *file);
 bool loadBiomeColors(const char* path);*/
+
+namespace Colors {
+
+enum BlockTypes {
+	FULL = 0,
+	THIN, // Carpet, trapdoor
+	HALF, // Slab
+	STAIR,
+	THIN_ROD, // Torch/end rod
+	ROD, // Fence-like
+	WIRE, // Redstone dust, tripwire
+	PLANT, // Flower
+	RAILROAD,
+	GROWN, // Grass. GRASS is set using a #define, so I had to improvise not to conflict
+	SPECIAL, // Two color blocks (eg Fire and Cocoa)
+	OTHER // not rendered, like buttons and levers
+};
+
+typedef map<string, list<int>> Palette;
+
+bool load(const std::filesystem::path&, Palette*);
+
+struct Color {
+    uint8_t R, G, B;
+    uint8_t ALPHA, NOISE, BRIGHTNESS;
+
+    Color() {
+        R = G = B = ALPHA = NOISE = BRIGHTNESS = 0;
+    }
+
+    Color(list<int> values) : Color() {
+        uint8_t index = 0;
+        // Hacky hacky stuff
+        // convert the struct to a uint8_t list to fill its elements
+        // as we know uint8_t elements will be contiguous in memory
+        for (auto it : values)
+            ((uint8_t*) this)[index++] = it;
+    }
+};
+
+struct _Block {
+    Colors::Color primary, secondary;
+    Colors::BlockTypes type;
+
+    _Block(const Colors::BlockTypes& bt) : primary(), secondary() {
+        type = bt;
+    }
+
+    _Block(const Colors::BlockTypes& bt, list<int> c1) : primary(c1), secondary() {
+        type = bt;
+    }
+
+    _Block(const Colors::BlockTypes& bt, list<int> c1, list<int> c2) : primary(c1), secondary(c2) {
+        type = bt;
+    }
+};
+
+}  // namespace colors
 
 #endif

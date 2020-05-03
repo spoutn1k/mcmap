@@ -7,9 +7,9 @@
 #include <cstdlib>
 #include <string>
 #include <utility>
+#include "./helper.h"
 #include "./nbt.h"
 #include "./block.h"
-#include "./helper.h"
 
 namespace Terrain {
 
@@ -69,7 +69,6 @@ struct Data {
         free(heightMap);
     }
 
-    size_t index(int64_t, int64_t) const;
 
     void load(const std::filesystem::path& regionDir);
     void loadRegion(const std::filesystem::path& regionFile,
@@ -80,21 +79,12 @@ struct Data {
             const int chunkX,
             const int chunkZ);
 
-    uint8_t maxHeight() const {
-        return heightBounds & 0xf0;
-    }
-
-    uint8_t maxHeight(const int64_t x, const int64_t z) const {
-        return heightMap[index(CHUNK(x), CHUNK(z))] & 0xf0;
-    }
-
-    inline uint8_t minHeight() const {
-        return (heightBounds & 0x0f) << 4;
-    }
-
-    inline uint8_t minHeight(const int64_t x, const int64_t z) const {
-        return (heightMap[index(CHUNK(x), CHUNK(z))] & 0x0f) << 4;
-    }
+    size_t chunkIndex(int64_t, int64_t) const;
+    uint8_t maxHeight() const;
+    uint8_t minHeight() const;
+    uint8_t maxHeight(const int64_t x, const int64_t z) const;
+    uint8_t minHeight(const int64_t x, const int64_t z) const;
+    Block block(const int32_t x, const int32_t z, const int32_t y) const;
 };
 
 struct OrientedMap {
@@ -116,11 +106,11 @@ struct OrientedMap {
             case NW:
                 // This is the default. No changes
                 break;
-            case NE:
+            case SW:
                 std::swap(bounds.maxZ, bounds.minZ);
                 vectorZ = -1;
                 break;
-            case SW:
+            case NE:
                 std::swap(bounds.maxX, bounds.minX);
                 vectorX = -1;
                 break;
@@ -132,8 +122,6 @@ struct OrientedMap {
         }
     }
 };
-
-Block blockAt(const Terrain::Data&, int32_t, int32_t, int32_t);
 
 }  // namespace Terrain
 

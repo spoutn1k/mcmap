@@ -35,7 +35,7 @@ class Block {
 		string id;
 		uint8_t _color[8];
 
-		static colorMap colors;
+		static Colors::Palette colors;
 
 	public:
 		/*! \brief Default constructor
@@ -53,7 +53,7 @@ class Block {
 
 		void setId(const string id);
 
-		static void setColors(colorMap colors);
+		static void setColors(const Colors::Palette& colors);
 
 		/*! \brief Get the block's color array
 		 * \return A pointer to the corresponding line in colors[] (of size 8)

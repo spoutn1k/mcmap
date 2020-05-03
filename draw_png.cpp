@@ -629,7 +629,7 @@ void setPixel(const size_t x, const size_t y, Block& b, const float fsub) {
 	// First determine how much the color has to be lightened up or darkened
 	uint8_t* blockColor = b.getColor();
 
-	int sub = int(fsub * (float(blockColor[BRIGHTNESS]) / 323.0f + .21f)); // The brighter the color, the stronger the impact
+	int sub = int(fsub * (float(blockColor[PBRIGHTNESS]) / 323.0f + .21f)); // The brighter the color, the stronger the impact
 	uint8_t L[CHANSPERPIXEL], D[CHANSPERPIXEL], c[CHANSPERPIXEL];
 
 	//if (color || block || variant)
@@ -738,8 +738,8 @@ void setPixel(const size_t x, const size_t y, Block& b, const float fsub) {
 	}
 	// In case the user wants noise, calc the strength now, depending on the desired intensity and the block's brightness
 	int noise = 0;
-	if (g_Noise && b.getColor()[NOISE]) {
-		noise = int(float(g_Noise * b.getColor()[NOISE]) * (float(GETBRIGHTNESS(c) + 10) / 2650.0f));
+	if (g_Noise && b.getColor()[PNOISE]) {
+		noise = int(float(g_Noise * b.getColor()[PNOISE]) * (float(GETBRIGHTNESS(c) + 10) / 2650.0f));
 	}
 	// Ordinary blocks are all rendered the same way
 	if (c[PALPHA] == 255) { // Fully opaque - faster
@@ -835,8 +835,8 @@ void blendPixel(const size_t x, const size_t y, Block b, const float fsub) {
 	modColor(D, -27);
 	// In case the user wants noise, calc the strength now, depending on the desired intensity and the block's brightness
 	int noise = 0;
-	if (g_Noise && b.getColor()[NOISE]) {
-		noise = int(float(g_Noise * b.getColor()[NOISE]) * (float(GETBRIGHTNESS(c) + 10) / 2650.0f));
+	if (g_Noise && b.getColor()[PNOISE]) {
+		noise = int(float(g_Noise * b.getColor()[PNOISE]) * (float(GETBRIGHTNESS(c) + 10) / 2650.0f));
 	}
 	// Top row
 	uint8_t *pos = &PIXEL(x, y);
@@ -937,8 +937,8 @@ namespace {
 		modColor(D, sub - 25);
 		// consider noise
 		int noise = 0;
-		if (g_Noise && Block::getColor("minecraft:grass_block")[NOISE]) {
-			noise = int(float(g_Noise * Block::getColor("minecraft:grass_block")[NOISE]) * (float(GETBRIGHTNESS(color) + 10) / 2650.0f));
+		if (g_Noise && Block::getColor("minecraft:grass_block")[PNOISE]) {
+			noise = int(float(g_Noise * Block::getColor("minecraft:grass_block")[PNOISE]) * (float(GETBRIGHTNESS(color) + 10) / 2650.0f));
 		}
 		// Top row
 		uint8_t *pos = &PIXEL(x, y);
@@ -1047,8 +1047,8 @@ namespace {
 		modColor(D, sub - 25);
 		// consider noise
 		int noise = 0;
-		if (g_Noise && Block::getColor("minecraft:grass_block")[NOISE]) {
-			noise = int(float(g_Noise * Block::getColor("minecraft:grass_block")[NOISE]) * (float(GETBRIGHTNESS(color) + 10) / 2650.0f));
+		if (g_Noise && Block::getColor("minecraft:grass_block")[PNOISE]) {
+			noise = int(float(g_Noise * Block::getColor("minecraft:grass_block")[PNOISE]) * (float(GETBRIGHTNESS(color) + 10) / 2650.0f));
 		}
 		// Top row
 		uint8_t *pos = &PIXEL(x, y);
