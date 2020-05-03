@@ -21,6 +21,8 @@ struct WorldOptions {
 
     int offsetY;
 
+    bool hideWater;
+
     // Memory limits, legacy code for image splitting
     uint64_t memlimit;
     bool memlimitSet;
@@ -30,7 +32,7 @@ struct WorldOptions {
         outFile = "output.png";
         colorFile = "colors.json";
 
-        wholeworld = false;
+        hideWater = false;
 
         fromX = fromZ = toX = toZ = UNDEFINED;
 
@@ -39,6 +41,7 @@ struct WorldOptions {
         mapSizeY = mapMaxY - mapMinY;
         offsetY = 3;
 
+        wholeworld = false;
         memlimit = 2000 * uint64_t(1024 * 1024);
         memlimitSet = false;
 

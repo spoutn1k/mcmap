@@ -22,6 +22,7 @@ __Linux / MacOS__
 |-min/max VAL  |minimum/maximum Y index (height) of blocks to render|
 |-file NAME    |sets the output filename to 'NAME'; default is output.png|
 |-nw -ne -se -sw |controls which direction will point to the *top left* corner; North-West is default|
+|-nowater      |do not render water|
 
 *Note: Currently you need both -from and -to to define bounds, otherwise the entire world will be rendered.*
 

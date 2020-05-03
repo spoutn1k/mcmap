@@ -39,6 +39,8 @@ bool parseArgs(int argc, char** argv, Settings::WorldOptions* opts) {
                 return false;
             }
             opts->mapMinY = atoi(NEXTARG);
+        } else if (strcmp(option, "-nowater") == 0) {
+            opts->hideWater = true;
         } else if (strcmp(option, "-file") == 0) {
             if (!MOREARGS(1)) {
                 fprintf(stderr, "Error: %s needs one argument\n", option);

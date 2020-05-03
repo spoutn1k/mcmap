@@ -18,10 +18,12 @@ void printHelp(char *binary) {
     printf("\nmcmap - an isometric minecraft map rendering tool.\n"
             "Version " VERSION " %dbit\n\n"
             "Usage: %s <options> WORLDPATH\n\n"
-            "  -from X Z     coordinates of the block to start rendering at\n"
-            "  -to X Z       coordinates of the block to stop rendering at\n"
-            "  -min/max VAL  minimum/maximum Y index of blocks to render\n"
-            "  -file NAME    output file to 'NAME'; default is output.png\n"
+            "  -from X Z        coordinates of the block to start rendering at\n"
+            "  -to X Z          coordinates of the block to stop rendering at\n"
+            "  -min/max VAL     minimum/maximum Y index of blocks to render\n"
+            "  -file NAME       output file to 'NAME'; default is output.png\n"
+            "  -nw -ne -se -sw  the orientation of the map\n"
+            "  -nowater         do not render water\n"
             "\n    WORLDPATH is the path of the desired Minecraft world.\n\n"
             "Examples:\n\n"
             "%s ~/.minecraft/saves/World1\n"
@@ -64,11 +66,14 @@ int main(int argc, char **argv) {
     if (!Colors::load(options.colorFile, world.terrain.cache, &colors))
         return 1;
 
-    PNG::IsometricCanvas canvas(coords, options);
+    // Overwrite water if asked to
+    // TODO expand this to other blocks
+    if (options.hideWater)
+        colors["minecraft:water"] = Colors::Block();
 
+    PNG::IsometricCanvas canvas(coords, options);
     // Cap the height of the canvas to avoid having a ridiculous height
     canvas.maxY = std::min(canvas.maxY, world.terrain.maxHeight());
-
     PNG::Image image(options.outFile, canvas, colors);
 
     render(image, canvas, world);
