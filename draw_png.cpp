@@ -929,23 +929,24 @@ namespace {
 		blend(pos+(CHANSPERPIXEL*2), light);
 	}
 
-    /*
-	void setGrass(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark, const int sub) {
+	void setGrown(const size_t x, const size_t y, const Colors::Block& b, const uint8_t * const light, const uint8_t * const dark, const int sub) {
 		// this will make grass look like dirt from the side
 		uint8_t L[CHANSPERPIXEL], D[CHANSPERPIXEL];
-		memcpy(L, Block::getColor("minecraft:dirt"), BYTESPERPIXEL);
-		memcpy(D, Block::getColor("minecraft:dirt"), BYTESPERPIXEL);
+		memcpy(L, &b.primary, BYTESPERPIXEL);
+		memcpy(D, &b.primary, BYTESPERPIXEL);
 		modColor(L, sub - 15);
 		modColor(D, sub - 25);
+
 		// consider noise
 		int noise = 0;
-		if (g_Noise && Block::getColor("minecraft:grass_block")[PNOISE]) {
-			noise = int(float(g_Noise * Block::getColor("minecraft:grass_block")[PNOISE]) * (float(GETBRIGHTNESS(color) + 10) / 2650.0f));
+		if (g_Noise && b.secondary.NOISE) {
+			noise = int(float(g_Noise * b.secondary.NOISE) * (float(b.secondary.brightness()) + 10) / 2650.0f);
 		}
+
 		// Top row
 		uint8_t *pos = &PIXEL(x, y);
 		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-			memcpy(pos, color, BYTESPERPIXEL);
+			memcpy(pos, &b.secondary, BYTESPERPIXEL);
 			if (noise) {
 				modColor(pos, rand() % (noise * 2) - noise);
 			}
@@ -953,8 +954,13 @@ namespace {
 		// Second row
 		pos = &PIXEL(x, y+1);
 		memcpy(pos, dark, BYTESPERPIXEL);
+#ifdef LEGACY
 		memcpy(pos+CHANSPERPIXEL, dark, BYTESPERPIXEL);
 		memcpy(pos+CHANSPERPIXEL*2, light, BYTESPERPIXEL);
+#else
+		memcpy(pos+CHANSPERPIXEL, &b.secondary, BYTESPERPIXEL);
+		memcpy(pos+CHANSPERPIXEL*2, &b.secondary, BYTESPERPIXEL);
+#endif
 		memcpy(pos+CHANSPERPIXEL*3, light, BYTESPERPIXEL);
 		// Third row
 		pos = &PIXEL(x, y+2);
@@ -970,6 +976,7 @@ namespace {
 		memcpy(pos+CHANSPERPIXEL*3, L, BYTESPERPIXEL);
 	}
 
+    /*
 	void setFence(const size_t x, const size_t y, const uint8_t * const color) {
 		// First row
 		uint8_t *pos = &PIXEL(x, y);
@@ -1146,6 +1153,10 @@ void PNG::Image::setPixel(const size_t x, const size_t y, const string& b) const
         case Colors::NODISPLAY:
             return;
 
+        case Colors::GROWN:
+            setGrown(x, y, blockColor, L, D, sub);
+            return;
+
         case Colors::THIN:
         case Colors::THIN_ROD:
         case Colors::PLANT:
@@ -1155,7 +1166,6 @@ void PNG::Image::setPixel(const size_t x, const size_t y, const string& b) const
         case Colors::SPECIAL:
         case Colors::STAIR:
         case Colors::HALF:
-        case Colors::GROWN:
         case Colors::FULL:
             break;
     }
