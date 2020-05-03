@@ -1129,8 +1129,11 @@ void PNG::Image::setPixel(const size_t x, const size_t y, const string& b) const
     try {
          blockColor = palette.at(b);
     } catch(const std::out_of_range& e) {
+        fprintf(stderr, "Error getting block color %s\n", e.what());
         return;
     }
+
+    if (blockColor.primary.empty() || blockColor.type == Colors::NODISPLAY) return;
 
 	// First determine how much the color has to be lightened up or darkened
     // The brighter the color, the stronger the impact
