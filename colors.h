@@ -87,6 +87,15 @@ struct Color {
         return !(R || G || B || ALPHA);
     }
 
+
+
+    uint8_t brightness() const {
+        return (uint8_t)sqrt(double(R)*double(R)*.236
+            + double(G)*double(G) * .601
+            + double(B)*double(B) * .163);
+    }
+
+
     void print() const {
         if (!empty())
             printf("\tColor: %d %d %d %d %d %d\n", R, G, B, ALPHA, NOISE, BRIGHTNESS);
@@ -118,6 +127,7 @@ struct Block {
 
 typedef map<string, Colors::Block> Palette;
 bool load(const std::filesystem::path&, Palette*);
+bool load(const std::filesystem::path&, const map<string, uint8_t>& filter, Palette*);
 
 void to_json(json& j, const Block& b);
 void from_json(const json& j, Block& b);

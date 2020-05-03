@@ -47,9 +47,6 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    if (!Colors::load(options.colorFile, &colors))
-        return 1;
-
     Terrain::Coordinates coords;
 
     coords.minX = options.fromX;
@@ -63,6 +60,9 @@ int main(int argc, char **argv) {
     // The minecraft terrain to render
     Terrain::OrientedMap world(coords, options.orientation);
     world.terrain.load(saveFile);
+
+    if (!Colors::load(options.colorFile, world.terrain.cache, &colors))
+        return 1;
 
     PNG::IsometricCanvas canvas(coords, options);
 
