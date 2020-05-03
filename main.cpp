@@ -69,13 +69,12 @@ int main(int argc, char **argv) {
     // Cap the height of the canvas to avoid having a ridiculous height
     canvas.maxY = std::min(canvas.maxY, world.terrain.maxHeight());
 
-    PNG::Image image(options.outFile, canvas);
+    PNG::Image image(options.outFile, canvas, colors);
 
     render(image, canvas, world);
     saveImage();
 
     printf("Job complete.\n");
-
     return 0;
 }
 
@@ -127,9 +126,8 @@ void render(const PNG::Image& image,
                 const size_t bmpPosY = image.height - 2 + x + z
                     - canvas.sizeX - canvas.sizeZ - y*image.heightOffset
                     - image.padding;
-                Block block = world.terrain.block(worldX, worldZ, y);
-                if (block != "minecraft:air")
-                    setPixel(bmpPosX, bmpPosY, block, 0);
+                const string block = world.terrain.block(worldX, worldZ, y); 
+                image.setPixel(bmpPosX, bmpPosY, block);
             }
         }
     }

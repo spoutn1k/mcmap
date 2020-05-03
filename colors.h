@@ -65,10 +65,6 @@ const std::map<Colors::BlockTypes, string> typeToString = {
 #undef DEFINETYPE
 };
 
-typedef map<string, list<int>> Palette;
-
-bool load(const std::filesystem::path&, Palette*);
-
 struct Color {
     uint8_t R, G, B;
     uint8_t ALPHA, NOISE, BRIGHTNESS;
@@ -97,19 +93,19 @@ struct Color {
     }
 };
 
-struct _Block {
+struct Block {
     Colors::Color primary, secondary; // 12 bytes
     Colors::BlockTypes type;
 
-    _Block() : primary(), secondary() {
+    Block() : primary(), secondary() {
         type = Colors::BlockTypes::FULL;
     }
 
-    _Block(const Colors::BlockTypes& bt, list<int> c1) : primary(c1), secondary() {
+    Block(const Colors::BlockTypes& bt, list<int> c1) : primary(c1), secondary() {
         type = bt;
     }
 
-    _Block(const Colors::BlockTypes& bt, list<int> c1, list<int> c2) : primary(c1), secondary(c2) {
+    Block(const Colors::BlockTypes& bt, list<int> c1, list<int> c2) : primary(c1), secondary(c2) {
         type = bt;
     }
 
@@ -120,14 +116,14 @@ struct _Block {
     }
 };
 
-typedef map<string, Colors::_Block> _Palette;
-bool load(const std::filesystem::path&, _Palette*);
+typedef map<string, Colors::Block> Palette;
+bool load(const std::filesystem::path&, Palette*);
 
-void to_json(json& j, const _Block& b);
-void from_json(const json& j, _Block& b);
+void to_json(json& j, const Block& b);
+void from_json(const json& j, Block& b);
 
-void to_json(json& j, const _Palette& p);
-void from_json(const json& j, _Palette& p);
+void to_json(json& j, const Palette& p);
+void from_json(const json& j, Palette& p);
 
 }  // namespace colors
 

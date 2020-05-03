@@ -143,7 +143,7 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE* regionHandle, const i
             (*it)["Palette"]->getList(blocks);
             for (auto block : *blocks) {
                 (*block)["Name"]->getString(blockID);
-                cache.insert(std::pair<std::string, std::list<int>>(blockID, {}));
+                cache.insert(std::pair<std::string, uint8_t>(blockID, 0));
             }
         }
 
@@ -164,18 +164,18 @@ size_t Terrain::Data::chunkIndex(int64_t x, int64_t z) const {
 	return (x - map.minX) + (z - map.minZ)*(map.maxX - map.minX + 1);
 }
 
-Block Terrain::Data::block(const int32_t x, const int32_t z, const int32_t y) const {
+string Terrain::Data::block(const int32_t x, const int32_t z, const int32_t y) const {
 	const size_t index = chunkIndex(CHUNK(x), CHUNK(z));
 	const uint8_t sectionY = y >> 4;
 	const uint64_t position = (x & 0x0f) + ((z & 0x0f) + (y & 0x0f)*16)*16;
 	try {
 		NBT_Tag* section = (chunks[index])[sectionY];
 		if (section->contains("Palette"))
-			return Block(getBlockId(position, section));
-		return Block("minecraft:air");
+			return getBlockId(position, section);
+		return "minecraft:air";
 	} catch (std::exception& e) {
 		printf("Got air because: %s (%d.%d.%d)\n", e.what(), x >> 4, z >> 4, y);
-		return Block("minecraft:air");
+		return "minecraft:air";
 	}
 }
 

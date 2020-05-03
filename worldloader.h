@@ -9,7 +9,6 @@
 #include <utility>
 #include "./helper.h"
 #include "./nbt.h"
-#include "./block.h"
 #include "./colors.h"
 
 namespace Terrain {
@@ -51,7 +50,7 @@ struct Data {
     // the last 4 the index of the lowest
     uint8_t heightBounds;
 
-    Colors::Palette cache;
+    std::map<string, uint8_t> cache;
 
     // Default constructor
     explicit Data(const Terrain::Coordinates& coords) {
@@ -87,7 +86,7 @@ struct Data {
     uint8_t minHeight() const;
     uint8_t maxHeight(const int64_t x, const int64_t z) const;
     uint8_t minHeight(const int64_t x, const int64_t z) const;
-    Block block(const int32_t x, const int32_t z, const int32_t y) const;
+    string block(const int32_t x, const int32_t z, const int32_t y) const;
 };
 
 struct OrientedMap {

@@ -611,7 +611,7 @@ bool composeFinalImage() {
 	return true;
 }
 
-void setPixel(const size_t x, const size_t y, Block& b, const float fsub) {
+/*void setPixel(const size_t x, const size_t y, Block& b, const float fsub) {
 	// Sets pixels around x,y where A is the anchor
 	// T = given color, D = darker, L = lighter
 	// A T T T
@@ -814,8 +814,9 @@ void setPixel(const size_t x, const size_t y, Block& b, const float fsub) {
 		}
 	}
 	// The above two branches are almost the same, maybe one could just create a function pointer and...
-}
+}*/
 
+/*
 void blendPixel(const size_t x, const size_t y, Block b, const float fsub) {
 	// This one is used for cave overlay
 	// Sets pixels around x,y where A is the anchor
@@ -854,7 +855,7 @@ void blendPixel(const size_t x, const size_t y, Block b, const float fsub) {
 			modColor(pos, rand() % (noise * 2) - noise * (i == 0 || i == 3 ? 1 : 2));
 		}
 	}
-}
+}*/
 
 namespace {
 
@@ -928,6 +929,7 @@ namespace {
 		blend(pos+(CHANSPERPIXEL*2), light);
 	}
 
+    /*
 	void setGrass(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark, const int sub) {
 		// this will make grass look like dirt from the side
 		uint8_t L[CHANSPERPIXEL], D[CHANSPERPIXEL];
@@ -1099,4 +1101,142 @@ namespace {
 			blend(pos, color);
 		}
 	}
+    */
+}
+
+void PNG::Image::setPixel(const size_t x, const size_t y, const string& b) const {
+	// Sets pixels around x,y where A is the anchor
+	// T = given color, D = darker, L = lighter
+	// A T T T
+	// D D L L
+	// D D L L
+	//	 D L
+
+	if (x < 0 || x > width - 1)
+		throw std::range_error("Invalid x: " + std::to_string(x) + "/" + std::to_string(gPngWidth));
+
+	if (y < 0 || y > height -1)
+		throw std::range_error("Invalid y: " + std::to_string(y) + "/" + std::to_string(gPngHeight));
+
+    Colors::Block blockColor;
+    try {
+         blockColor = palette.at(b);
+    } catch(const std::out_of_range& e) {
+        return;
+    }
+
+	// First determine how much the color has to be lightened up or darkened
+    // The brighter the color, the stronger the impact
+	int sub = (float(blockColor.primary.BRIGHTNESS) / 323.0f + .21f);
+	uint8_t L[CHANSPERPIXEL], D[CHANSPERPIXEL], c[CHANSPERPIXEL];
+
+	//if (color || block || variant)
+	//printf("Color: %d: block %d - variant %d\n", color, block, variant);
+
+	// Now make a local copy of the color that we can modify just for this one block
+	memcpy(c, &blockColor.primary, BYTESPERPIXEL);
+	modColor(c, sub);
+	memcpy(L, c, BYTESPERPIXEL);
+	memcpy(D, c, BYTESPERPIXEL);
+	modColor(L, -17);
+	modColor(D, -27);
+
+		// Then check the block type, as some types will be drawn differently
+    switch (blockColor.type) {
+        case Colors::NODISPLAY:
+            return;
+
+        case Colors::THIN:
+        case Colors::THIN_ROD:
+        case Colors::PLANT:
+        case Colors::ROD:
+        case Colors::WIRE:
+        case Colors::RAILROAD:
+        case Colors::SPECIAL:
+        case Colors::STAIR:
+        case Colors::HALF:
+        case Colors::GROWN:
+        case Colors::FULL:
+            break;
+    }
+
+	// In case the user wants noise, calc the strength now, depending on the desired intensity and the block's brightness
+	int noise = 0;
+
+	if (g_Noise && blockColor.primary.NOISE) {
+		noise = int(float(g_Noise * blockColor.primary.NOISE) * (float(GETBRIGHTNESS(c) + 10) / 2650.0f));
+	}
+	// Ordinary blocks are all rendered the same way
+	if (c[PALPHA] == 255) { // Fully opaque - faster
+		// Top row
+		uint8_t *pos = &PIXEL(x, y);
+		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
+			memcpy(pos, c, BYTESPERPIXEL);
+			if (noise) {
+				modColor(pos, rand() % (noise * 2) - noise);
+			}
+		}
+		// Second row
+		pos = &PIXEL(x, y+1);
+		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
+			memcpy(pos, (i < 2 ? D : L), BYTESPERPIXEL);
+			// The weird check here is to get the pattern right, as the noise should be stronger
+			// every other row, but take into account the isometric perspective
+			if (noise) {
+				modColor(pos, rand() % (noise * 2) - noise * (i == 0 || i == 3 ? 1 : 2));
+			}
+		}
+		// Third row
+		pos = &PIXEL(x, y+2);
+		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
+			memcpy(pos, (i < 2 ? D : L), BYTESPERPIXEL);
+			if (noise) {
+				modColor(pos, rand() % (noise * 2) - noise * (i == 0 || i == 3 ? 2 : 1));
+			}
+		}
+		// Last row
+		pos = &PIXEL(x, y+3);
+		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
+			memcpy(pos, (i < 2 ? D : L), BYTESPERPIXEL);
+			// The weird check here is to get the pattern right, as the noise should be stronger
+			// every other row, but take into account the isometric perspective
+			if (noise) {
+				modColor(pos, rand() % (noise * 2) - noise * (i == 0 || i == 3 ? 1 : 2));
+			}
+		}
+	} else { // Not opaque, use slower blending code
+		// Top row
+		uint8_t *pos = &PIXEL(x, y);
+		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
+			blend(pos, c);
+			if (noise) {
+				modColor(pos, rand() % (noise * 2) - noise);
+			}
+		}
+		// Second row
+		pos = &PIXEL(x, y+1);
+		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
+			blend(pos, (i < 2 ? D : L));
+			if (noise) {
+				modColor(pos, rand() % (noise * 2) - noise * (i == 0 || i == 3 ? 1 : 2));
+			}
+		}
+		// Third row
+		pos = &PIXEL(x, y+2);
+		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
+			blend(pos, (i < 2 ? D : L));
+			if (noise) {
+				modColor(pos, rand() % (noise * 2) - noise * (i == 0 || i == 3 ? 2 : 1));
+			}
+		}
+		// Last row
+		pos = &PIXEL(x, y+3);
+		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
+			blend(pos, (i < 2 ? D : L));
+			if (noise) {
+				modColor(pos, rand() % (noise * 2) - noise * (i == 0 || i == 3 ? 1 : 2));
+			}
+		}
+	}
+	// The above two branches are almost the same, maybe one could just create a function pointer and...
 }

@@ -1,25 +1,6 @@
 #include "colors.h"
-#include "block.h"
 
 bool Colors::load(const std::filesystem::path& colorFile, Palette* colors) {
-	FILE *f = fopen(colorFile.c_str(), "r");
-
-    try {
-	    json data = json::parse(f);
-	    *colors = data.get<map<string, list<int>>>();
-    } catch (const nlohmann::detail::parse_error& err) {
-	    fclose(f);
-        fprintf(stderr, "Error parsing color file %s\n", colorFile.c_str());
-        return false;
-    }
-
-	Block::setColors(*colors);
-	fclose(f);
-
-	return true;
-}
-
-bool Colors::load(const std::filesystem::path& colorFile, _Palette* colors) {
 	FILE *f = fopen(colorFile.c_str(), "r");
     json data;
 
@@ -31,14 +12,14 @@ bool Colors::load(const std::filesystem::path& colorFile, _Palette* colors) {
         return false;
     }
 
-    *colors = data.get<Colors::_Palette>();
+    *colors = data.get<Colors::Palette>();
 
 	fclose(f);
 	return true;
 }
 
 #define LIST(C) {(C).R, (C).G, (C).B, (C).ALPHA, (C).NOISE, (C).BRIGHTNESS}
-void Colors::to_json(json& j, const _Block& b) {
+void Colors::to_json(json& j, const Block& b) {
     if (b.type == Colors::BlockTypes::FULL) {
         j = json(LIST(b.primary));
         return;
@@ -60,7 +41,7 @@ void Colors::to_json(json& j, const _Block& b) {
     }
 }
 
-void Colors::from_json(const json& j, _Block& b) {
+void Colors::from_json(const json& j, Block& b) {
     string stype;
 
     if (j.is_array()) {
@@ -82,12 +63,12 @@ void Colors::from_json(const json& j, _Block& b) {
     }
 }
 
-void Colors::to_json(json& j, const _Palette& p) {
+void Colors::to_json(json& j, const Palette& p) {
     for (auto it : p)
         j.emplace(it.first, json(it.second));
 }
 
-void Colors::from_json(const json& j, _Palette& p) {
+void Colors::from_json(const json& j, Palette& p) {
     for (auto it : j.get<map<string, json>>())
-        p.emplace(it.first, it.second.get<Colors::_Block>());
+        p.emplace(it.first, it.second.get<Colors::Block>());
 }

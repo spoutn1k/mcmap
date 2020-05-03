@@ -25,7 +25,6 @@ uint8_t g_LastDoubleFlower = 0;
 
 uint8_t *g_Light = NULL;
 uint16_t *g_HeightMap = NULL;
-Block *g_Terrain = NULL;
 
 char *g_TilePath = NULL;
 
