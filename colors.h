@@ -51,9 +51,16 @@ enum BlockTypes {
 #undef DEFINETYPE
 };
 
-const std::map<string, Colors::BlockTypes> valid = {
+const std::map<string, Colors::BlockTypes> stringToType = {
     {"Full", Colors::BlockTypes::FULL},
 #define DEFINETYPE( TYPE, STRING ) { STRING, Colors::BlockTypes::TYPE },
+#include "blocktypes.def"
+#undef DEFINETYPE
+};
+
+const std::map<Colors::BlockTypes, string> typeToString = {
+    {Colors::BlockTypes::FULL, "Full"},
+#define DEFINETYPE( TYPE, STRING ) { Colors::BlockTypes::TYPE, STRING },
 #include "blocktypes.def"
 #undef DEFINETYPE
 };
@@ -76,20 +83,26 @@ struct Color {
         // convert the struct to a uint8_t list to fill its elements
         // as we know uint8_t elements will be contiguous in memory
         for (auto it : values)
-            ((uint8_t*) this)[index++] = it;
+            if (index < 6)
+                ((uint8_t*) this)[index++] = it;
     }
 
-    void print() {
-        printf("\tColor: %d %d %d %d %d %d\n", R, G, B, ALPHA, NOISE, BRIGHTNESS);
+    bool empty() const {
+        return !(R || G || B || ALPHA);
+    }
+
+    void print() const {
+        if (!empty())
+            printf("\tColor: %d %d %d %d %d %d\n", R, G, B, ALPHA, NOISE, BRIGHTNESS);
     }
 };
 
 struct _Block {
-    Colors::Color primary, secondary;
+    Colors::Color primary, secondary; // 12 bytes
     Colors::BlockTypes type;
 
-    _Block(const Colors::BlockTypes& bt) : primary(), secondary() {
-        type = bt;
+    _Block() : primary(), secondary() {
+        type = Colors::BlockTypes::FULL;
     }
 
     _Block(const Colors::BlockTypes& bt, list<int> c1) : primary(c1), secondary() {
@@ -98,34 +111,6 @@ struct _Block {
 
     _Block(const Colors::BlockTypes& bt, list<int> c1, list<int> c2) : primary(c1), secondary(c2) {
         type = bt;
-        primary = Color(c1);
-    }
-
-    _Block(const json& data) : primary(), secondary() {
-        string stype;
-        list<int> color({}), accent({});
-        auto it = data.find("type");
-
-        if (it != data.end()) {
-            it->get_to(stype);
-            auto validIt = Colors::valid.find(stype);
-            if (validIt != valid.end())
-                type = validIt->second;
-            else
-                type = Colors::BlockTypes::FULL;
-        }
-
-        it = data.find("color");
-        if (it != data.end()) {
-            it->get_to(color);
-            primary = Color(color);
-        }
-
-        it = data.find("accent");
-        if (it != data.end()) {
-            it->get_to(accent);
-            secondary = Color(accent);
-        }
     }
 
     void print() {
@@ -135,9 +120,14 @@ struct _Block {
     }
 };
 
-typedef map<string, Colors::_Block*> _Palette;
-
+typedef map<string, Colors::_Block> _Palette;
 bool load(const std::filesystem::path&, _Palette*);
+
+void to_json(json& j, const _Block& b);
+void from_json(const json& j, _Block& b);
+
+void to_json(json& j, const _Palette& p);
+void from_json(const json& j, _Palette& p);
 
 }  // namespace colors
 

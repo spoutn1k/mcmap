@@ -31,11 +31,63 @@ bool Colors::load(const std::filesystem::path& colorFile, _Palette* colors) {
         return false;
     }
 
-    auto defList = data.get<map<string, json>>();
-    for(auto el : defList) {
-        colors->insert(std::pair<string, Colors::_Block*>(el.first, new _Block(el.second)));
-    }
+    *colors = data.get<Colors::_Palette>();
 
 	fclose(f);
 	return true;
+}
+
+#define LIST(C) {(C).R, (C).G, (C).B, (C).ALPHA, (C).NOISE, (C).BRIGHTNESS}
+void Colors::to_json(json& j, const _Block& b) {
+    if (b.type == Colors::BlockTypes::FULL) {
+        j = json(LIST(b.primary));
+        return;
+    }
+
+    string type = typeToString.at(b.type);
+
+    if (!b.secondary.empty()) {
+        j = json{
+            {"type", type},
+            {"color", LIST(b.primary)},
+            {"accent", LIST(b.secondary)}
+        };
+    } else {
+        j = json{
+            {"type", type},
+            {"color", LIST(b.primary)},
+        };
+    }
+}
+
+void Colors::from_json(const json& j, _Block& b) {
+    string stype;
+
+    if (j.is_array()) {
+        b.primary = Color(j.get<list<int>>());
+        return;
+    }
+
+    if (j.find("type") != j.end()) {
+        if (Colors::stringToType.find(j["type"].get<string>()) != stringToType.end())
+            b.type = stringToType.at(j["type"].get<string>());
+    }
+
+    if (j.find("color") != j.end()) {
+        b.primary = Color(j["color"].get<list<int>>());
+    }
+
+    if (j.find("accent") != j.end()) {
+        b.secondary = Color(j["accent"].get<list<int>>());
+    }
+}
+
+void Colors::to_json(json& j, const _Palette& p) {
+    for (auto it : p)
+        j.emplace(it.first, json(it.second));
+}
+
+void Colors::from_json(const json& j, _Palette& p) {
+    for (auto it : j.get<map<string, json>>())
+        p.emplace(it.first, it.second.get<Colors::_Block>());
 }

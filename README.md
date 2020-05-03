@@ -24,3 +24,51 @@ __Linux / MacOS__
 |-nw -ne -se -sw |controls which direction will point to the *top left* corner; North-West is default|
 
 *Note: Currently you need both -from and -to to define bounds, otherwise the entire world will be rendered.*
+
+## Color file format
+
+The accepted format is a `json` file, with a specific structure. The root contains a list of all the defined [block IDs](https://minecraft.gamepedia.com/Java_Edition_data_values#Blocks), with the namespace prefix, such as `namespace:block`.
+
+#### Simple block
+
+To define a color for a simple, regular block, a list must be provided, the fields meaning the following: `"namespace:block": [RED, GREEN, BLUE, ALPHA, NOISE, BRIGHTNESS]`
+
+Examples:
+```
+{
+    "minecraft:dirt":   [134, 96, 67, 255, 22],
+    "minecraft:stone":  [128, 128, 128, 255, 16],
+    ...
+}
+```
+
+#### Complex block
+
+Some blocks are better looking when drawn in a specific way. To specify that a block has to be drawn differently, you have to provide a `json` structure with the fields:
+
+```
+{
+    "type":     <BlockType>,
+    "color":    [RED, GREEN, BLUE, ALPHA, NOISE, BRIGHTNESS],
+    "accent":   [RED, GREEN, BLUE, ALPHA, NOISE, BRIGHTNESS] (Optional)
+}
+```
+
+The different available block types are defined in the file `blockTypes.def`.
+
+Examples:
+
+```
+{
+    "minecraft:dirt":   [134, 96, 67, 255, 22],
+    "minecraft:grass_block": {
+        "type":     "Grown",
+        "color":    [134, 96, 67, 255, 22],
+        "accent":   [102, 142, 62, 255, 14]
+    },
+    "minecraft:snow": {
+        "type":     "Thin",
+        "color":    [245, 246, 245, 254, 13]
+    }
+}
+```
