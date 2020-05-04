@@ -84,6 +84,8 @@ void Colors::from_json(const json& j, Block& b) {
     if (j.find("type") != j.end()) {
         if (Colors::stringToType.find(j["type"].get<string>()) != stringToType.end())
             b.type = stringToType.at(j["type"].get<string>());
+        else
+            fprintf(stderr, "Could not tag block with type %s\n", j["type"].get<string>().c_str());
     }
 
     if (j.find("color") != j.end()) {

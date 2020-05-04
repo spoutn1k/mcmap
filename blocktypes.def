@@ -6,9 +6,9 @@
  * They are imported at compile time with some macro magic */
 
 DEFINETYPE( THIN, "Thin" )              // Carpet, trapdoor
-DEFINETYPE( HALF, "Half" )              // Slab
+DEFINETYPE( SLAB, "Slab" )              // Slab
 DEFINETYPE( STAIR, "Stair" )
-DEFINETYPE( THIN_ROD, "Torch" )         // Torch/end rod
+DEFINETYPE( TORCH, "Torch" )         // Torch/end rod
 DEFINETYPE( ROD, "Rod" )                // Fence-like
 DEFINETYPE( WIRE, "Wire" )              // Redstone dust, tripwire
 DEFINETYPE( PLANT, "Plant" )            // Flower

@@ -1007,8 +1007,18 @@ namespace {
 		memcpy(pos+CHANSPERPIXEL*3, L, BYTESPERPIXEL);
 	}
 
-    /*
-	void setFence(const size_t x, const size_t y, const uint8_t * const color) {
+	void setRod(const size_t x, const size_t y, const Colors::Block& block, const uint8_t* const light, const uint8_t* const dark) {
+		uint8_t *pos = &PIXEL(x+1, y);
+		memcpy(pos, &block.primary, BYTESPERPIXEL);
+		memcpy(pos+CHANSPERPIXEL, &block.primary, BYTESPERPIXEL);
+        for (int i = 1; i < 4; i++) {
+		    pos = &PIXEL(x+1, y+i);
+		    memcpy(pos, dark, BYTESPERPIXEL);
+		    memcpy(pos+CHANSPERPIXEL, light, BYTESPERPIXEL);
+        }
+    }
+
+	/*void setFence(const size_t x, const size_t y, const uint8_t * const color) {
 		// First row
 		uint8_t *pos = &PIXEL(x, y);
 		blend(pos+CHANSPERPIXEL, color);
@@ -1020,19 +1030,26 @@ namespace {
 		pos = &PIXEL(x, y+2);
 		blend(pos+CHANSPERPIXEL, color);
 		blend(pos+CHANSPERPIXEL*2, color);
-	}
+	}*/
 
-	void setStep(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark) {
+	void setSlab(const size_t x, const size_t y, const Colors::Block& block, const uint8_t * const light, const uint8_t * const dark) {
 		uint8_t *pos = &PIXEL(x, y+1);
 		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-			memcpy(pos, color, BYTESPERPIXEL);
+			memcpy(pos, &block.primary, BYTESPERPIXEL);
 		}
+
 		pos = &PIXEL(x, y+2);
+		memcpy(pos, dark, BYTESPERPIXEL);
+		memcpy(pos+CHANSPERPIXEL, &block.primary, BYTESPERPIXEL);
+		memcpy(pos+CHANSPERPIXEL*2, &block.primary, BYTESPERPIXEL);
+		memcpy(pos+CHANSPERPIXEL*3, light, BYTESPERPIXEL);
+
+		pos = &PIXEL(x, y+3);
 		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-			memcpy(pos, color, BYTESPERPIXEL);
+			memcpy(pos, (i < 2 ? dark : light), BYTESPERPIXEL);
 		}
 	}
-
+/*
 	void setUpStep(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark) {
 		uint8_t *pos = &PIXEL(x, y);
 		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
@@ -1203,12 +1220,18 @@ void PNG::Image::setPixel(const size_t x, const size_t y, const string& b) const
             setTorch(x, y, blockColor);
             return;
 
+        case Colors::SLAB:
+            setSlab(x, y, blockColor, L, D);
+            return;
+
         case Colors::ROD:
+            setRod(x, y, blockColor, L, D);
+            return;
+
         case Colors::WIRE:
         case Colors::RAILROAD:
         case Colors::SPECIAL:
         case Colors::STAIR:
-        case Colors::HALF:
         case Colors::FULL:
             break;
     }
