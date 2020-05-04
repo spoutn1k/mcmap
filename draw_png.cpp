@@ -918,7 +918,7 @@ namespace {
 	void setTransparent(const size_t x, const size_t y, const Colors::Block& block) {
         // Avoid the dark/light edges for a clearer look through
         for (uint8_t i = 0; i < 4; i++)
-            for (uint8_t j = 0; j < 4; j++)
+            for (uint8_t j = 0; j < 3; j++)
 		        blend(&PIXEL(x+i, y+j), block);
     }
 
