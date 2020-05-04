@@ -5,14 +5,14 @@
  * to use in the color json files.
  * They are imported at compile time with some macro magic */
 
-DEFINETYPE( THIN, "Thin" )              // Carpet, trapdoor
-DEFINETYPE( SLAB, "Slab" )              // Slab
-DEFINETYPE( STAIR, "Stair" )
-DEFINETYPE( TORCH, "Torch" )         // Torch/end rod
-DEFINETYPE( ROD, "Rod" )                // Fence-like
+DEFINETYPE( HIDE, "Hide" )              // Non-renderable (levers etc)
+DEFINETYPE( CLEAR, "Clear" )            // See-through: clearer look when in large quantities.
+DEFINETYPE( SLAB, "Slab" )              // Slab and half-blocks
+DEFINETYPE( STAIR, "Stair" )            // Not implemented yet.
+DEFINETYPE( TORCH, "Torch" )            // Torch/end rod. Accent is the color of the flame.
+DEFINETYPE( ROD, "Rod" )                // Fence and walls.
 DEFINETYPE( WIRE, "Wire" )              // Redstone dust, tripwire
-DEFINETYPE( PLANT, "Plant" )            // Flower
-DEFINETYPE( RAILROAD, "Rail" )
-DEFINETYPE( GROWN, "Grown" )            // Grass-like blocks
-DEFINETYPE( SPECIAL, "Special" )        // Two color blocks (eg Fire and Cocoa)
-DEFINETYPE( NODISPLAY, "NoDisplay" )    // Non-renderable (levers etc)
+DEFINETYPE( PLANT, "Plant" )            // Flower and plants.
+DEFINETYPE( THIN, "Thin" )              // Snow-like.
+DEFINETYPE( GROWN, "Grown" )            // Grass-like blocks, accent is the color on top.
+DEFINETYPE( SPECIAL, "Special" )        // Two color blocks (eg Fire and Cocoa). Not implemented yet.

@@ -871,6 +871,18 @@ namespace {
 		destination[PALPHA] += (size_t(source[PALPHA]) * size_t(255 - destination[PALPHA])) / 255;
 	}
 
+	inline void blend(uint8_t * const destination, const Colors::Block& block) {
+		if (destination[PALPHA] == 0 || block.primary.ALPHA == 255) {
+			memcpy(destination, &block.primary, BYTESPERPIXEL);
+			return;
+		}
+#		define BLEND(ca,aa,cb) uint8_t(((size_t(ca) * size_t(aa)) + (size_t(255 - aa) * size_t(cb))) / 255)
+		destination[0] = BLEND(block.primary.R, block.primary.ALPHA, destination[0]);
+		destination[1] = BLEND(block.primary.G, block.primary.ALPHA, destination[1]);
+		destination[2] = BLEND(block.primary.B, block.primary.ALPHA, destination[2]);
+		destination[PALPHA] += (size_t(block.primary.ALPHA) * size_t(255 - destination[PALPHA])) / 255;
+	}
+
 	inline void modColor(uint8_t * const color, const int mod) {
 		color[0] = clamp(color[0] + mod);
 		color[1] = clamp(color[1] + mod);
@@ -902,6 +914,13 @@ namespace {
 		memcpy(pos+CHANSPERPIXEL, &block.primary, BYTESPERPIXEL);
 #endif
 	}
+
+	void setTransparent(const size_t x, const size_t y, const Colors::Block& block) {
+        // Avoid the dark/light edges for a clearer look through
+        for (uint8_t i = 0; i < 4; i++)
+            for (uint8_t j = 0; j < 4; j++)
+		        blend(&PIXEL(x+i, y+j), block);
+    }
 
 	void setTorch(const size_t x, const size_t y, const Colors::Block& block) {
         /* TODO Callback to handle the orientation
@@ -1008,6 +1027,11 @@ namespace {
 	}
 
 	void setRod(const size_t x, const size_t y, const Colors::Block& block, const uint8_t* const light, const uint8_t* const dark) {
+        /* A full fat rod
+         * | PP |
+         * | DL |
+         * | DL |
+         * | DL | */
 		uint8_t *pos = &PIXEL(x+1, y);
 		memcpy(pos, &block.primary, BYTESPERPIXEL);
 		memcpy(pos+CHANSPERPIXEL, &block.primary, BYTESPERPIXEL);
@@ -1033,6 +1057,13 @@ namespace {
 	}*/
 
 	void setSlab(const size_t x, const size_t y, const Colors::Block& block, const uint8_t * const light, const uint8_t * const dark) {
+        /* This one has a hack to make it look like a gradual step up:
+         * The second layer has primary colors to make the difference less
+         * obvious.
+         * |    |
+         * |PPPP|
+         * |DPPL|
+         * |DDLL| */
 		uint8_t *pos = &PIXEL(x, y+1);
 		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
 			memcpy(pos, &block.primary, BYTESPERPIXEL);
@@ -1049,6 +1080,13 @@ namespace {
 			memcpy(pos, (i < 2 ? dark : light), BYTESPERPIXEL);
 		}
 	}
+
+	void setWire(const size_t x, const size_t y, const Colors::Block& block) {
+        uint8_t *pos = &PIXEL(x+1, y+2);
+        memcpy(pos, &block.primary, BYTESPERPIXEL);
+        memcpy(pos+CHANSPERPIXEL, &block.primary, BYTESPERPIXEL);
+	}
+
 /*
 	void setUpStep(const size_t x, const size_t y, const uint8_t * const color, const uint8_t * const light, const uint8_t * const dark) {
 		uint8_t *pos = &PIXEL(x, y);
@@ -1059,12 +1097,6 @@ namespace {
 		for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
 			memcpy(pos, color, BYTESPERPIXEL);
 		}
-	}
-
-	void setRedwire(const size_t x, const size_t y, const uint8_t * const color) {
-		uint8_t *pos = &PIXEL(x+1, y+2);
-		blend(pos, color);
-		blend(pos+CHANSPERPIXEL, color);
 	}
 
 	// The g_BlendAll versions of the block set functions
@@ -1181,15 +1213,12 @@ void PNG::Image::setPixel(const size_t x, const size_t y, const string& b) const
         return;
     }
 
-    if (blockColor.primary.empty() || blockColor.type == Colors::NODISPLAY) return;
+    if (blockColor.primary.empty() || blockColor.type == Colors::HIDE) return;
 
 	// First determine how much the color has to be lightened up or darkened
     // The brighter the color, the stronger the impact
 	int sub = (float(blockColor.primary.BRIGHTNESS) / 323.0f + .21f);
 	uint8_t L[CHANSPERPIXEL], D[CHANSPERPIXEL], c[CHANSPERPIXEL];
-
-	//if (color || block || variant)
-	//printf("Color: %d: block %d - variant %d\n", color, block, variant);
 
 	// Now make a local copy of the color that we can modify just for this one block
 	memcpy(c, &blockColor.primary, BYTESPERPIXEL);
@@ -1201,7 +1230,11 @@ void PNG::Image::setPixel(const size_t x, const size_t y, const string& b) const
 
 		// Then check the block type, as some types will be drawn differently
     switch (blockColor.type) {
-        case Colors::NODISPLAY:
+        case Colors::HIDE:
+            return;
+
+        case Colors::CLEAR:
+            setTransparent(x, y, blockColor);
             return;
 
         case Colors::GROWN:
@@ -1229,7 +1262,9 @@ void PNG::Image::setPixel(const size_t x, const size_t y, const string& b) const
             return;
 
         case Colors::WIRE:
-        case Colors::RAILROAD:
+            setWire(x, y, blockColor);
+            return;
+
         case Colors::SPECIAL:
         case Colors::STAIR:
         case Colors::FULL:
