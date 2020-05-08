@@ -30,6 +30,9 @@ public:
   using tag_short_t = int16_t;
   using tag_int_t = int32_t;
   using tag_long_t = int64_t;
+  using tag_float_t = float;
+  using tag_double_t = double;
+  using tag_string_t = std::string;
   using tag_compound_t = std::unordered_map<std::string, NBT>;
 
   using key_type = std::string;
@@ -54,11 +57,25 @@ public:
   NBT(uint8_t *&data, uint8_t *end);
   ~NBT();
 
-  std::string get_name() { return name; };
-  nbt::tag_type get_type() { return type; };
+  std::string get_name() const { return name; };
+  nbt::tag_type get_type() const { return type; };
 
   constexpr bool is_end() const noexcept { return type == tag_type::tag_end; }
   constexpr bool is_byte() const noexcept { return type == tag_type::tag_byte; }
+  constexpr bool is_short() const noexcept {
+    return type == tag_type::tag_short;
+  }
+  constexpr bool is_int() const noexcept { return type == tag_type::tag_int; }
+  constexpr bool is_long() const noexcept { return type == tag_type::tag_long; }
+  constexpr bool is_float() const noexcept {
+    return type == tag_type::tag_float;
+  }
+  constexpr bool is_double() const noexcept {
+    return type == tag_type::tag_double;
+  }
+  constexpr bool is_string() const noexcept {
+    return type == tag_type::tag_string;
+  }
   constexpr bool is_compound() const noexcept {
     return type == tag_type::tag_compound;
   }
@@ -114,8 +131,20 @@ public:
     switch (type) {
     case tag_type::tag_byte:
       return "byte";
+    case tag_type::tag_short:
+      return "short";
+    case tag_type::tag_int:
+      return "int";
+    case tag_type::tag_long:
+      return "long";
+    case tag_type::tag_float:
+      return "float";
+    case tag_type::tag_double:
+      return "double";
     case tag_type::tag_compound:
       return "compound";
+    case tag_type::tag_string:
+      return "string";
     default:
       return "end";
     }
@@ -190,6 +219,9 @@ private:
     tag_short_t short_n;
     tag_int_t int_n;
     tag_long_t long_n;
+    tag_float_t float_n;
+    tag_double_t double_n;
+    tag_string_t *string;
     tag_compound_t *compound;
 
     tag_content() = default;
@@ -197,6 +229,8 @@ private:
     tag_content(tag_short_t v) : short_n(v){};
     tag_content(tag_int_t v) : int_n(v){};
     tag_content(tag_long_t v) : long_n(v){};
+    tag_content(tag_float_t v) : float_n(v){};
+    tag_content(tag_double_t v) : double_n(v){};
     tag_content(tag_type t) {
       switch (t) {
       case tag_type::tag_end: {
@@ -219,11 +253,29 @@ private:
         long_n = tag_long_t(0);
         break;
       }
+      case tag_type::tag_float: {
+        float_n = tag_float_t(0);
+        break;
+      }
+      case tag_type::tag_double: {
+        double_n = tag_double_t(0);
+        break;
+      }
+      case tag_type::tag_string: {
+        string = new tag_string_t("");
+        break;
+      }
       case tag_type::tag_compound: {
         compound = new tag_compound_t();
         break;
       }
       }
+    }
+
+    tag_content(const tag_string_t &value) { string = new std::string(value); }
+
+    tag_content(tag_string_t &&value) {
+      string = new std::string(std::move(value));
     }
 
     tag_content(const tag_compound_t &value)
@@ -286,6 +338,18 @@ NBT::NBT(const NBT &other) : type(other.type), name(other.name) {
     content = other.content.long_n;
     break;
   }
+  case tag_type::tag_float: {
+    content.float_n = other.content.float_n;
+    break;
+  }
+  case tag_type::tag_double: {
+    content.float_n = other.content.float_n;
+    break;
+  }
+  case tag_type::tag_string: {
+    content = *other.content.string;
+    break;
+  }
   case tag_type::tag_compound: {
     content = *other.content.compound;
     break;
@@ -307,12 +371,13 @@ NBT::NBT(uint8_t *&data, uint8_t *end) {
   if (type == tag_type::tag_end)
     return;
 
-  name = std::string((char *)(data + 3), *(int16_t *)(data + 1));
-  data += NTOHUS(data + 1) + 3;
+  uint16_t len = *(uint16_t *)(data + 1);
+  name = std::string((char *)(data + 3), len);
+  data += len + 3;
 
   switch (type) {
   case tag_type::tag_byte: {
-    content = tag_content(int8_t(*data));
+    content.byte = int8_t(*data);
     data++;
     break;
   }
@@ -331,6 +396,24 @@ NBT::NBT(uint8_t *&data, uint8_t *end) {
     data += 8;
     break;
   }
+  case tag_type::tag_float: {
+    content.int_n = float(NTOHI(data));
+    data += 4;
+    break;
+  }
+  case tag_type::tag_double: {
+    content.long_n = double(NTOHL(data));
+    data += 8;
+    break;
+  }
+
+  case tag_type::tag_string: {
+    uint16_t len = *(uint16_t *)(data);
+    content.string = new std::string((char *)(data + 2), len);
+    data += (len + 2);
+    break;
+  }
+
   case tag_type::tag_compound: {
     content = tag_content(tag_type::tag_compound);
     while (data[0]) {
