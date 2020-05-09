@@ -193,6 +193,19 @@ public:
     }
   }
 
+  reference front() { return *begin(); }
+  const_reference front() const { return *cbegin(); }
+  reference back() {
+    auto tmp = end();
+    --tmp;
+    return *tmp;
+  }
+  const_reference back() const {
+    auto tmp = cend();
+    --tmp;
+    return *tmp;
+  }
+
   iterator begin() noexcept {
     iterator result(this);
     result.set_begin();
@@ -253,6 +266,23 @@ public:
     return is_compound() and
            content.compound->find(std::forward<std::string>(key)) !=
                content.compound->end();
+  }
+
+  bool empty() const noexcept {
+    switch (type) {
+    case tag_type::tag_end:
+      return true;
+    case tag_type::tag_byte_array:
+      return content.byte_array->empty();
+    case tag_type::tag_list:
+      return content.list->empty();
+    case tag_type::tag_int_array:
+      return content.int_array->empty();
+    case tag_type::tag_long_array:
+      return content.long_array->empty();
+    default:
+      return false;
+    }
   }
 
 private:

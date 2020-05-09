@@ -377,6 +377,50 @@ public:
     return *this;
   }
 
+  iter const operator--(int) {
+    auto result = *this;
+    --(*this);
+    return result;
+  }
+
+  iter &operator--() {
+    assert(content != nullptr);
+
+    switch (content->type) {
+    case tag_type::tag_compound: {
+      std::advance(it.compound_iterator, -1);
+      break;
+    }
+
+    case tag_type::tag_list: {
+      std::advance(it.list_iterator, -1);
+      break;
+    }
+
+    case tag_type::tag_byte_array: {
+      std::advance(it.byte_iterator, -1);
+      break;
+    }
+
+    case tag_type::tag_int_array: {
+      std::advance(it.int_iterator, -1);
+      break;
+    }
+
+    case tag_type::tag_long_array: {
+      std::advance(it.long_iterator, -1);
+      break;
+    }
+
+    default: {
+      ++it.primitive_iterator;
+      break;
+    }
+    }
+
+    return *this;
+  }
+
   bool operator==(const iter &other) const {
     if (content != other.content) {
       throw(std::domain_error("Bad comparison between iterators of type " +
