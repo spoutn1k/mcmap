@@ -1,56 +1,56 @@
 #ifndef OPTIONS_H_
 #define OPTIONS_H_
 
+#include "worldloader.h"
 #include <cstdint>
 #include <filesystem>
-#include "worldloader.h"
 #define UNDEFINED 0x7FFFFFFF
 
 namespace Settings {
 
 struct WorldOptions {
-    std::filesystem::path saveName, outFile, colorFile;
+  std::filesystem::path saveName, outFile, colorFile;
 
-    bool wholeworld;
+  bool wholeworld;
 
-    // Map boundaries
-    int fromX, fromZ, toX, toZ;
-    int mapMinY, mapMaxY;
-    int mapSizeY;
-    Terrain::Orientation orientation;
+  // Map boundaries
+  int fromX, fromZ, toX, toZ;
+  int mapMinY, mapMaxY;
+  int mapSizeY;
+  Terrain::Orientation orientation;
 
-    int offsetY;
+  int offsetY;
 
-    bool hideWater;
+  bool hideWater;
 
-    // Memory limits, legacy code for image splitting
-    uint64_t memlimit;
-    bool memlimitSet;
+  // Memory limits, legacy code for image splitting
+  uint64_t memlimit;
+  bool memlimitSet;
 
-    WorldOptions() {
-        saveName = "";
-        outFile = "output.png";
-        colorFile = "colors.json";
+  WorldOptions() {
+    saveName = "";
+    outFile = "output.png";
+    colorFile = "colors.json";
 
-        hideWater = false;
+    hideWater = false;
 
-        fromX = fromZ = toX = toZ = UNDEFINED;
+    fromX = fromZ = toX = toZ = UNDEFINED;
 
-        mapMinY = 0;
-        mapMaxY = 255;
-        mapSizeY = mapMaxY - mapMinY;
-        offsetY = 3;
+    mapMinY = 0;
+    mapMaxY = 255;
+    mapSizeY = mapMaxY - mapMinY;
+    offsetY = 3;
 
-        wholeworld = false;
-        memlimit = 2000 * uint64_t(1024 * 1024);
-        memlimitSet = false;
+    wholeworld = false;
+    memlimit = 2000 * uint64_t(1024 * 1024);
+    memlimitSet = false;
 
-        orientation = Terrain::Orientation::NW;
-    }
+    orientation = Terrain::Orientation::NW;
+  }
 };
 
-}  // namespace Settings
+} // namespace Settings
 
-bool parseArgs(int argc, char** argv, Settings::WorldOptions* opts);
+bool parseArgs(int argc, char **argv, Settings::WorldOptions *opts);
 
-#endif  // OPTIONS_H_
+#endif // OPTIONS_H_

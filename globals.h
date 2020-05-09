@@ -3,21 +3,17 @@
 
 #define VERSION "2.5.0 (compatible with Minecraft up to 1.12.x)"
 
-#include <stdint.h>
 #include <cstdlib>
+#include <stdint.h>
 
 #define UNDEFINED 0x7FFFFFFF
 #define MAX_MARKERS 200
 
-enum Orientation {
-	NORTH,
-	EAST,
-	SOUTH,
-	WEST
-};
+enum Orientation { NORTH, EAST, SOUTH, WEST };
 
 // Global area of world being rendered
-extern int g_TotalFromChunkX, g_TotalFromChunkZ, g_TotalToChunkX, g_TotalToChunkZ;
+extern int g_TotalFromChunkX, g_TotalFromChunkZ, g_TotalToChunkX,
+    g_TotalToChunkZ;
 // size of that area in blocks (no offset)
 extern size_t g_MapsizeZ, g_MapsizeX;
 
@@ -28,7 +24,8 @@ extern bool g_Underground;
 extern bool g_BlendUnderground;
 extern bool g_Skylight;
 extern int g_Noise;
-extern bool g_BlendAll; // If set, do not assume certain blocks (like grass) are always opaque
+extern bool g_BlendAll; // If set, do not assume certain blocks (like grass) are
+                        // always opaque
 extern bool g_Hell, g_ServerHell; // rendering the nether
 extern bool g_End;
 extern bool g_NoWater; // render water clear
@@ -44,7 +41,8 @@ extern uint8_t g_LastDoubleFlower;
 // 3D arrays holding terrain/lightmap
 extern uint8_t *g_Light;
 
-// If output is to be split up (for google maps etc) this contains the path to output to, NULL otherwise
+// If output is to be split up (for google maps etc) this contains the path to
+// output to, NULL otherwise
 extern char *g_TilePath;
 
 extern int8_t g_SectionMin, g_SectionMax;
