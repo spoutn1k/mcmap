@@ -115,6 +115,24 @@ public:
     throw(std::domain_error("Invalid type"));
   }
 
+  reference operator[](size_type index) {
+    if (is_list()) {
+      return content.list->operator[](index);
+    }
+    throw(std::domain_error(
+        "Cannot use operator[] with a numeric argument on tag of type " +
+        std::string(type_name())));
+  }
+
+  const_reference operator[](size_type index) const {
+    if (is_list()) {
+      return content.list->operator[](index);
+    }
+    throw(std::domain_error(
+        "Cannot use operator[] with a numeric argument on tag of type " +
+        std::string(type_name())));
+  }
+
   reference operator[](const std::string &key) {
     if (is_compound()) {
       return content.compound->operator[](key);
