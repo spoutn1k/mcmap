@@ -257,27 +257,27 @@ public:
       assert(it.compound_iterator != content->content.compound->end());
       return it.compound_iterator->second;
     }
+      /*
+          case tag_type::tag_list: {
+            assert(it.list_iterator != content->content.list->end());
+            return *it.list_iterator;
+          }
 
-    case tag_type::tag_list: {
-      assert(it.list_iterator != content->content.list->end());
-      return *it.list_iterator;
-    }
+          case tag_type::tag_byte_array: {
+            assert(it.byte_iterator != content->content.byte_array->end());
+            return *it.byte_iterator;
+          }
 
-    case tag_type::tag_byte_array: {
-      assert(it.byte_iterator != content->content.byte_array->end());
-      return *it.byte_iterator;
-    }
+          case tag_type::tag_int_array: {
+            assert(it.int_iterator != content->content.int_array->end());
+            return *it.int_iterator;
+          }
 
-    case tag_type::tag_int_array: {
-      assert(it.int_iterator != content->content.int_array->end());
-      return *it.int_iterator;
-    }
-
-    case tag_type::tag_long_array: {
-      assert(it.long_iterator != content->content.long_array->end());
-      return *it.long_iterator;
-    }
-
+          case tag_type::tag_long_array: {
+            assert(it.long_iterator != content->content.long_array->end());
+            return *it.long_iterator;
+          }
+      */
     case tag_type::tag_end:
       throw(std::range_error("No values in end tag"));
 

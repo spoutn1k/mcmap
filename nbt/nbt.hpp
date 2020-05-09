@@ -32,12 +32,12 @@ public:
   using tag_long_t = int64_t;
   using tag_float_t = float;
   using tag_double_t = double;
-  using tag_byte_array_t = std::vector<uint8_t>;
+  using tag_byte_array_t = std::vector<int8_t>;
   using tag_string_t = std::string;
   using tag_list_t = std::vector<NBT>;
   using tag_compound_t = std::unordered_map<std::string, NBT>;
-  using tag_int_array_t = std::vector<uint32_t>;
-  using tag_long_array_t = std::vector<uint64_t>;
+  using tag_int_array_t = std::vector<int32_t>;
+  using tag_long_array_t = std::vector<int64_t>;
 
   using key_type = std::string;
   using value_type = NBT;
@@ -95,6 +95,24 @@ public:
   }
   constexpr bool is_long_array() const noexcept {
     return type == tag_type::tag_long_array;
+  }
+
+  reference at(size_type index) {
+    if (is_list()) {
+      return content.list->at(index);
+    } else {
+      throw(std::domain_error("Cannot use at() with " +
+                              std::string(type_name())));
+    }
+  }
+
+  const_reference at(size_type index) const {
+    if (is_list()) {
+      return content.list->at(index);
+    } else {
+      throw(std::domain_error("Cannot use at() with " +
+                              std::string(type_name())));
+    }
   }
 
   reference at(const std::string &key) {
@@ -469,6 +487,223 @@ private:
   tag_type type = tag_type::tag_end;
   tag_content content = {};
   std::string name = "";
+
+  //            _
+  //  __ _  ___| |_
+  // / _` |/ _ \ __|
+  //| (_| |  __/ |_
+  // \__, |\___|\__|
+  // |___/
+
+  // Byte pointers
+  tag_byte_t *get_impl_ptr(tag_byte_t *) noexcept {
+    return is_byte() ? &content.byte : nullptr;
+  }
+
+  constexpr const tag_byte_t *get_impl_ptr(tag_byte_t *) const noexcept {
+    return is_byte() ? &content.byte : nullptr;
+  }
+
+  // Short pointers
+  tag_short_t *get_impl_ptr(tag_short_t *) noexcept {
+    return is_short() ? &content.short_n : nullptr;
+  }
+
+  constexpr const tag_short_t *get_impl_ptr(tag_short_t *) const noexcept {
+    return is_short() ? &content.short_n : nullptr;
+  }
+
+  // Int pointers
+  tag_int_t *get_impl_ptr(tag_int_t *) noexcept {
+    return is_int() ? &content.int_n : nullptr;
+  }
+
+  constexpr const tag_int_t *get_impl_ptr(tag_int_t *) const noexcept {
+    return is_int() ? &content.int_n : nullptr;
+  }
+
+  // Long pointers
+  tag_long_t *get_impl_ptr(tag_long_t *) noexcept {
+    return is_long() ? &content.long_n : nullptr;
+  }
+
+  constexpr const tag_long_t *get_impl_ptr(tag_long_t *) const noexcept {
+    return is_long() ? &content.long_n : nullptr;
+  }
+
+  // Float pointers
+  tag_float_t *get_impl_ptr(tag_float_t *) noexcept {
+    return is_float() ? &content.float_n : nullptr;
+  }
+
+  constexpr const tag_float_t *get_impl_ptr(tag_float_t *) const noexcept {
+    return is_float() ? &content.float_n : nullptr;
+  }
+
+  // Double pointers
+  tag_double_t *get_impl_ptr(tag_double_t *) noexcept {
+    return is_double() ? &content.double_n : nullptr;
+  }
+
+  constexpr const tag_double_t *get_impl_ptr(tag_double_t *) const noexcept {
+    return is_double() ? &content.double_n : nullptr;
+  }
+
+  // Byte Array pointers
+  tag_byte_array_t *get_impl_ptr(tag_byte_array_t *) noexcept {
+    return is_byte_array() ? content.byte_array : nullptr;
+  }
+
+  constexpr const tag_byte_array_t *
+  get_impl_ptr(tag_byte_array_t *) const noexcept {
+    return is_byte_array() ? content.byte_array : nullptr;
+  }
+
+  // String pointers
+  tag_string_t *get_impl_ptr(tag_string_t *) noexcept {
+    return is_string() ? content.string : nullptr;
+  }
+
+  constexpr const tag_string_t *get_impl_ptr(tag_string_t *) const noexcept {
+    return is_string() ? content.string : nullptr;
+  }
+
+  // List pointers
+  tag_list_t *get_impl_ptr(tag_list_t *) noexcept {
+    return is_list() ? content.list : nullptr;
+  }
+
+  constexpr const tag_list_t *get_impl_ptr(tag_list_t *) const noexcept {
+    return is_list() ? content.list : nullptr;
+  }
+
+  // Compound pointers
+  tag_compound_t *get_impl_ptr(tag_compound_t *) noexcept {
+    return is_compound() ? content.compound : nullptr;
+  }
+
+  constexpr const tag_compound_t *
+  get_impl_ptr(tag_compound_t *) const noexcept {
+    return is_compound() ? content.compound : nullptr;
+  }
+
+  // Int Array pointers
+  tag_int_array_t *get_impl_ptr(tag_int_array_t *) noexcept {
+    return is_int_array() ? content.int_array : nullptr;
+  }
+
+  constexpr const tag_int_array_t *
+  get_impl_ptr(tag_int_array_t *) const noexcept {
+    return is_int_array() ? content.int_array : nullptr;
+  }
+
+  // Long Array pointers
+  tag_long_array_t *get_impl_ptr(tag_long_array_t *) noexcept {
+    return is_long_array() ? content.long_array : nullptr;
+  }
+
+  constexpr const tag_long_array_t *
+  get_impl_ptr(tag_long_array_t *) const noexcept {
+    return is_long_array() ? content.long_array : nullptr;
+  }
+
+public:
+  template <typename PointerType,
+            typename std::enable_if<std::is_pointer<PointerType>::value,
+                                    int>::type = 0>
+  PointerType get_ptr() noexcept {
+    return get_impl_ptr(static_cast<PointerType>(nullptr));
+  }
+
+  template <
+      typename PointerType,
+      typename std::enable_if<std::is_pointer<PointerType>::value and
+                                  std::is_const<typename std::remove_pointer<
+                                      PointerType>::type>::value,
+                              int>::type = 0>
+  constexpr PointerType get_ptr() const noexcept {
+    return get_impl_ptr(static_cast<PointerType>(nullptr));
+  }
+
+  template <typename PointerType,
+            typename std::enable_if<std::is_pointer<PointerType>::value,
+                                    int>::type = 0>
+  auto get() noexcept -> decltype(get_ptr<PointerType>()) {
+    return get_ptr<PointerType>();
+  }
+
+  template <typename PointerType,
+            typename std::enable_if<std::is_pointer<PointerType>::value,
+                                    int>::type = 0>
+  constexpr auto get() const noexcept -> decltype(get_ptr<PointerType>()) {
+    return get_ptr<PointerType>();
+  }
+
+  void print(int level = 0) {
+    for (int i = 0; i < level; i++)
+      printf("  ");
+    printf("%s (%s) ", name.c_str(), type_name());
+
+    switch (type) {
+    case tag_type::tag_byte: {
+      printf("%d\n", content.byte);
+      break;
+    }
+    case tag_type::tag_short: {
+      printf("%d\n", content.short_n);
+      break;
+    }
+    case tag_type::tag_int: {
+      printf("%d\n", content.int_n);
+      break;
+    }
+    case tag_type::tag_long: {
+      printf("%ld\n", content.long_n);
+      break;
+    }
+    case tag_type::tag_float: {
+      printf("%f\n", content.float_n);
+      break;
+    }
+    case tag_type::tag_double: {
+      printf("%f\n", content.double_n);
+      break;
+    }
+    case tag_type::tag_byte_array: {
+      for (auto e : *content.byte_array)
+        printf("%d\n", e);
+      break;
+    }
+    case tag_type::tag_string: {
+      printf("%s\n", content.string->c_str());
+      break;
+    }
+    case tag_type::tag_list: {
+      printf("\n");
+      for (auto e : *content.list)
+        e.print(level + 1);
+      break;
+    }
+    case tag_type::tag_compound: {
+      printf("\n");
+      for (auto e : *content.compound)
+        e.second.print(level + 1);
+      break;
+    }
+    case tag_type::tag_int_array: {
+      for (auto e : *content.int_array)
+        printf("%d\n", e);
+      break;
+    }
+    case tag_type::tag_long_array: {
+      for (auto e : *content.long_array)
+        printf("%ld\n", e);
+      break;
+    }
+    default:
+      break;
+    }
+  }
 };
 
 NBT::NBT(const NBT &other) : type(other.type), name(other.name) {
@@ -490,11 +725,11 @@ NBT::NBT(const NBT &other) : type(other.type), name(other.name) {
     break;
   }
   case tag_type::tag_float: {
-    content.float_n = other.content.float_n;
+    content = other.content.float_n;
     break;
   }
   case tag_type::tag_double: {
-    content.float_n = other.content.float_n;
+    content = other.content.float_n;
     break;
   }
   case tag_type::tag_byte_array: {
