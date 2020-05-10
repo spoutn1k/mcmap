@@ -1065,7 +1065,7 @@ void setPlant(const size_t x, const size_t y, const Colors::Block &block) {
   memcpy(pos, &block.primary, BYTESPERPIXEL);
 }
 
-void setFire(const size_t x, const size_t y, const uint8_t *const color,
+void setFire(const size_t x, const size_t y, const Colors::Block &color,
              const uint8_t *const light, const uint8_t *const dark) {
   // This basically just leaves out a few pixels
   // Top row
@@ -1317,7 +1317,7 @@ void PNG::Image::setPixel(const size_t x, const size_t y,
   // A T T T
   // D D L L
   // D D L L
-  //	 D L
+  //   D L
 
   if (x < 0 || x > width - 1)
     throw std::range_error("Invalid x: " + std::to_string(x) + "/" +
@@ -1390,6 +1390,9 @@ void PNG::Image::setPixel(const size_t x, const size_t y,
     return;
 
   case Colors::SPECIAL:
+    setFire(x, y, blockColor, L, D);
+    return;
+
   case Colors::STAIR:
   case Colors::FULL:
     break;
