@@ -17,4 +17,4 @@ enum class tag_type : uint8_t {
   tag_int_array,
   tag_long_array,
 };
-};
+}

@@ -12,9 +12,13 @@
 #include <vector>
 #include <zlib.h>
 
+using nbt::NBT;
+using std::string;
+using std::vector;
+
 namespace Terrain {
 
-typedef nbt::NBT Chunk;
+typedef NBT Chunk;
 typedef Chunk *ChunkList;
 
 enum Orientation {

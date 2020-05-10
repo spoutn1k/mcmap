@@ -338,6 +338,20 @@ public:
         std::string(type_name())));
   }
 
+  template <typename T> reference operator[](T *key) {
+    if (is_end()) {
+      type = tag_type::tag_compound;
+      content = tag_type::tag_compound;
+    }
+
+    if (is_compound()) {
+      return content.compound->operator[](key);
+    }
+
+    throw(std::domain_error("Cannot use operator[] with type" +
+                            std::string(type_name())));
+  }
+
   NBT &operator=(NBT other) noexcept {
     using std::swap;
     swap(type, other.type);

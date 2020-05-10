@@ -1,21 +1,16 @@
 #include "worldloader.h"
-#include <bitset>
-
-using std::string;
-using std::vector;
-namespace fs = std::filesystem;
 
 uint8_t zData[5 * 4096];
 uint8_t chunkBuffer[1000 * 1024];
 
-void Terrain::Data::load(const fs::path &regionDir) {
+void Terrain::Data::load(const std::filesystem::path &regionDir) {
   // Parse all the necessary region files
   for (int8_t rx = REGION(map.minX); rx < REGION(map.maxX) + 1; rx++) {
     for (int8_t rz = REGION(map.minZ); rz < REGION(map.maxZ) + 1; rz++) {
-      fs::path regionFile = fs::path(regionDir) /=
+      std::filesystem::path regionFile = std::filesystem::path(regionDir) /=
           "r." + std::to_string(rx) + "." + std::to_string(rz) + ".mca";
 
-      if (!fs::exists(regionFile)) {
+      if (!std::filesystem::exists(regionFile)) {
         fprintf(stderr, "Region file %s does not exist, skipping ..\n",
                 regionFile.c_str());
         continue;
@@ -26,8 +21,8 @@ void Terrain::Data::load(const fs::path &regionDir) {
   }
 }
 
-void Terrain::Data::loadRegion(const fs::path &regionFile, const int regionX,
-                               const int regionZ) {
+void Terrain::Data::loadRegion(const std::filesystem::path &regionFile,
+                               const int regionX, const int regionZ) {
   FILE *regionHandle;
   uint8_t regionHeader[REGION_HEADER_SIZE];
 
@@ -109,13 +104,13 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
 
   len = zlibStream.total_out;
 
-  nbt::NBT tree = nbt::NBT::parse(chunkBuffer, len);
+  NBT tree = NBT::parse(chunkBuffer, len);
 
   // Strip the chunk of pointless sections
   size_t chunkPos = chunkIndex(chunkX, chunkZ);
   try {
     chunks[chunkPos] = tree["Level"]["Sections"];
-    vector<nbt::NBT> *sections = chunks[chunkPos].get<vector<nbt::NBT> *>();
+    vector<NBT> *sections = chunks[chunkPos].get<vector<NBT> *>();
 
     // Some chunks have a -1 section, we'll pop that real quick
     if (!sections->empty() && !sections->front().contains("Palette")) {
@@ -133,7 +128,7 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
         continue;
 
       string blockID;
-      vector<nbt::NBT> *blocks = section["Palette"].get<vector<nbt::NBT> *>();
+      vector<NBT> *blocks = section["Palette"].get<vector<NBT> *>();
       for (auto block : *blocks) {
         string *id = block["Name"].get<string *>();
         cache.insert(std::pair<std::string, uint8_t>(*id, 0));
@@ -157,32 +152,47 @@ size_t Terrain::Data::chunkIndex(int64_t x, int64_t z) const {
   return (x - map.minX) + (z - map.minZ) * (map.maxX - map.minX + 1);
 }
 
-string blockAt(const nbt::NBT &section, uint8_t x, uint8_t z, uint8_t y) {
-  /* Get a block string from the raw section data */
-  const vector<int64_t> *data =
+string blockAt(const NBT &section, uint8_t x, uint8_t z, uint8_t y) {
+  // The `BlockStates` array contains data on the section's blocks. You have to
+  // extract it by understanfing its structure.
+  //
+  // Although it is a array of long values, one must see it as an array of block
+  // indexes, whose element size depends on the size of the Palette. This
+  // routine locates the necessary long, extracts the block with bit
+  // comparisons, and cross-references it in the palette to get the block name.
+  const vector<int64_t> *blockStates =
       section["BlockStates"].get<const vector<int64_t> *>();
-  const uint64_t position = (x & 0x0f) + ((z & 0x0f) + (y & 0x0f) * 16) * 16;
+  const uint64_t index = (x & 0x0f) + ((z & 0x0f) + (y & 0x0f) * 16) * 16;
 
-  const uint64_t size =
+  // The length of a block index has to be coded on the minimal possible size,
+  // which is the logarithm in base2 of the size of the palette, or 4 if the
+  // logarithm is smaller.
+  const uint64_t length =
       std::max((uint64_t)ceil(log2(section["Palette"].size())), (uint64_t)4);
 
-  // The number of longs to skip
-  const uint64_t skip = position * size / 64;
+  // We skip the `position` first blocks, of length `size`, then divide by 64 to
+  // get the number of longs to skip from the array
+  const uint64_t skip_longs = index * length >> 6;
 
-  // The bits to skip in the first non-skipped long
-  const int64_t remain = position * size - 64 * skip;
+  // Once we located the data in a long, we have to know where in the 64 bits it
+  // is located. This is the remaining of the previous operation
+  const int64_t padding = index * length & 63;
 
-  // The bits in the second non-skipped long
-  const int64_t overflow = remain + size - 64;
+  // Craft a mask from the length of the block index and the padding, the apply
+  // it to the long
+  const uint64_t mask = ((1l << length) - 1) << padding;
+  uint64_t lower_data = ((*blockStates)[skip_longs] & mask) >> padding;
 
-  const uint64_t mask = ((1l << size) - 1) << remain;
-  uint64_t lower_data = ((*data)[skip] & mask) >> remain;
-
+  // Sometimes the length of the index does not fall entirely into a long, so
+  // here we check if there is overflow and extract it too
+  const int64_t overflow = padding + length - 64;
   if (overflow > 0) {
-    const uint64_t upper_data = (*data)[skip + 1] & ((1l << overflow) - 1);
-    lower_data = lower_data | upper_data << (size - overflow);
+    const uint64_t upper_data =
+        (*blockStates)[skip_longs + 1] & ((1l << overflow) - 1);
+    lower_data = lower_data | upper_data << (length - overflow);
   }
 
+  // Lower data now contains the index in the palette
   const string *id =
       section["Palette"][lower_data]["Name"].get<const string *>();
   return *id;
@@ -191,16 +201,11 @@ string blockAt(const nbt::NBT &section, uint8_t x, uint8_t z, uint8_t y) {
 string Terrain::Data::block(const int32_t x, const int32_t z,
                             const int32_t y) const {
   const size_t index = chunkIndex(CHUNK(x), CHUNK(z));
-  const uint8_t sectionY = y >> 4;
-  try {
-    const nbt::NBT section = chunks[index][sectionY];
-    if (section.contains("Palette"))
-      return blockAt(section, x, z, y);
-    return "minecraft:air";
-  } catch (std::exception &e) {
-    printf("Got air because: %s (%d.%d.%d)\n", e.what(), x, z, y);
-    return "minecraft:air";
-  }
+
+  const NBT &section = chunks[index][y >> 4];
+  if (section.contains("Palette"))
+    return blockAt(section, x, z, y);
+  return "minecraft:air";
 }
 
 uint8_t Terrain::Data::maxHeight() const { return heightBounds & 0xf0; }
