@@ -1,4 +1,7 @@
 #pragma once
+#ifndef NBT_HPP_
+#define NBT_HPP_
+
 #include "./iterators.hpp"
 #include "./tag_types.hpp"
 #include <stdint.h>
@@ -55,15 +58,178 @@ public:
   NBT(const tag_type type) : type(type), content(type){};
   NBT(std::nullptr_t = nullptr) : NBT(tag_type::tag_end){};
 
-  NBT(const NBT &other);
-  NBT(NBT &&other) noexcept;
+  NBT(const NBT &other) : type(other.type), name(other.name) {
+    switch (type) {
+    case tag_type::tag_byte: {
+      content = other.content.byte;
+      break;
+    }
+    case tag_type::tag_short: {
+      content = other.content.short_n;
+      break;
+    }
+    case tag_type::tag_int: {
+      content = other.content.int_n;
+      break;
+    }
+    case tag_type::tag_long: {
+      content = other.content.long_n;
+      break;
+    }
+    case tag_type::tag_float: {
+      content = other.content.float_n;
+      break;
+    }
+    case tag_type::tag_double: {
+      content = other.content.float_n;
+      break;
+    }
+    case tag_type::tag_byte_array: {
+      content = *other.content.byte_array;
+      break;
+    }
+    case tag_type::tag_string: {
+      content = *other.content.string;
+      break;
+    }
+    case tag_type::tag_list: {
+      content = *other.content.list;
+      break;
+    }
+    case tag_type::tag_compound: {
+      content = *other.content.compound;
+      break;
+    }
+    case tag_type::tag_int_array: {
+      content = *other.content.int_array;
+      break;
+    }
+    case tag_type::tag_long_array: {
+      content = *other.content.long_array;
+      break;
+    }
+    default:
+      break;
+    }
+  }
 
-  ~NBT();
+  NBT(NBT &&other)
+  noexcept
+      : type(other.type), content(std::move(other.content)), name(other.name) {
+    other.name = "";
+    other.type = tag_type::tag_end;
+    other.content = {};
+  }
+
+  ~NBT() { content.destroy(type); }
 
   static NBT parse(uint8_t *data, size_t size) {
     return NBT(data, data + size);
   }
 
+  void parse(uint8_t *&data, uint8_t *end) {
+    switch (type) {
+    case tag_type::tag_byte: {
+      content.byte = int8_t(*data);
+      data++;
+      break;
+    }
+
+    case tag_type::tag_short: {
+      content.short_n = NTOHS(data);
+      data += 2;
+      break;
+    }
+
+    case tag_type::tag_int: {
+      content.int_n = NTOHI(data);
+      data += 4;
+      break;
+    }
+
+    case tag_type::tag_long: {
+      content.long_n = NTOHL(data);
+      data += 8;
+      break;
+    }
+
+    case tag_type::tag_float: {
+      content.int_n = float(NTOHI(data));
+      data += 4;
+      break;
+    }
+
+    case tag_type::tag_double: {
+      content.long_n = double(NTOHL(data));
+      data += 8;
+      break;
+    }
+
+    case tag_type::tag_byte_array: {
+      uint32_t len = NTOHI(data);
+      content = tag_content(tag_type::tag_byte_array);
+
+      for (size_t i = 0; i < len; i++)
+        content.byte_array->push_back(*(data + 4 + i));
+
+      data += (len + 4);
+      break;
+    }
+
+    case tag_type::tag_string: {
+      uint16_t len = NTOHS(data);
+      content = tag_string_t((char *)(data + 2), len);
+      data += (len + 2);
+      break;
+    }
+
+    case tag_type::tag_list: {
+      tag_type chid_type = tag_type(data[0]);
+      uint32_t len = NTOHI(data + 1);
+      data += 5;
+      content = tag_content(tag_type::tag_list);
+
+      for (size_t i = 0; i < len; i++)
+        content.list->push_back(NBT(data, end, chid_type));
+      break;
+    }
+
+    case tag_type::tag_compound: {
+      content = tag_content(tag_type::tag_compound);
+      while (data[0]) {
+        NBT child(data, end);
+        content.compound->emplace(std::make_pair(child.name, std::move(child)));
+      }
+      data++;
+      break;
+    }
+
+    case tag_type::tag_int_array: {
+      uint32_t len = NTOHI(data);
+      content = tag_content(tag_type::tag_int_array);
+
+      for (size_t i = 0; i < len; i++)
+        content.int_array->push_back(NTOHI(data + 4 * (i + 1)));
+
+      data += (len * 4 + 4);
+      break;
+    }
+
+    case tag_type::tag_long_array: {
+      uint32_t len = NTOHI(data);
+      content = tag_content(tag_type::tag_long_array);
+
+      for (size_t i = 0; i < len; i++)
+        content.long_array->push_back(NTOHL(data + i * 8 + 4));
+
+      data += (len * 8 + 4);
+      break;
+    }
+
+    default:
+      break;
+    }
+  }
   std::string get_name() const { return name; };
   nbt::tag_type get_type() const { return type; };
 
@@ -303,6 +469,39 @@ public:
     }
   }
 
+  size_type size() const noexcept {
+    switch (type) {
+    case tag_type::tag_end: {
+      return 0;
+    }
+
+    case tag_type::tag_byte_array: {
+      return content.byte_array->size();
+    }
+
+    case tag_type::tag_list: {
+      return content.list->size();
+    }
+
+    case tag_type::tag_compound: {
+      return content.compound->size();
+    }
+
+    case tag_type::tag_int_array: {
+      return content.int_array->size();
+    }
+
+    case tag_type::tag_long_array: {
+      return content.long_array->size();
+    }
+
+    default: {
+      // all other types have size 1
+      return 1;
+    }
+    }
+  }
+
 private:
   union tag_content {
     tag_end_t end;
@@ -403,9 +602,7 @@ private:
       long_array = new tag_long_array_t(value);
     }
 
-    tag_content(tag_long_array_t &&value) {
-      long_array = new tag_long_array_t(std::move(value));
-    }
+    tag_content(tag_long_array_t &&value) { *long_array = std::move(value); }
 
     tag_content(const tag_string_t &value) { string = new tag_string_t(value); }
 
@@ -480,9 +677,22 @@ private:
     }
   };
 
-  NBT(uint8_t *&data, uint8_t *end);
-  NBT(uint8_t *&data, uint8_t *end, tag_type t);
-  void parse(uint8_t *&data, uint8_t *end);
+  NBT(uint8_t *&data, uint8_t *end) : NBT() {
+    type = tag_type(data[0]);
+    if (type == tag_type::tag_end)
+      return;
+
+    uint16_t len = NTOHS(data + 1);
+    name = std::string((char *)(data + 3), len);
+    data += len + 3;
+
+    this->parse(data, end);
+  }
+
+  NBT(uint8_t *&data, uint8_t *end, tag_type t) {
+    type = t;
+    this->parse(data, end);
+  }
 
   tag_type type = tag_type::tag_end;
   tag_content content = {};
@@ -500,7 +710,7 @@ private:
     return is_byte() ? &content.byte : nullptr;
   }
 
-  constexpr const tag_byte_t *get_impl_ptr(tag_byte_t *) const noexcept {
+  constexpr const tag_byte_t *get_impl_ptr(const tag_byte_t *) const noexcept {
     return is_byte() ? &content.byte : nullptr;
   }
 
@@ -509,7 +719,8 @@ private:
     return is_short() ? &content.short_n : nullptr;
   }
 
-  constexpr const tag_short_t *get_impl_ptr(tag_short_t *) const noexcept {
+  constexpr const tag_short_t *
+  get_impl_ptr(const tag_short_t *) const noexcept {
     return is_short() ? &content.short_n : nullptr;
   }
 
@@ -518,7 +729,7 @@ private:
     return is_int() ? &content.int_n : nullptr;
   }
 
-  constexpr const tag_int_t *get_impl_ptr(tag_int_t *) const noexcept {
+  constexpr const tag_int_t *get_impl_ptr(const tag_int_t *) const noexcept {
     return is_int() ? &content.int_n : nullptr;
   }
 
@@ -527,7 +738,7 @@ private:
     return is_long() ? &content.long_n : nullptr;
   }
 
-  constexpr const tag_long_t *get_impl_ptr(tag_long_t *) const noexcept {
+  constexpr const tag_long_t *get_impl_ptr(const tag_long_t *) const noexcept {
     return is_long() ? &content.long_n : nullptr;
   }
 
@@ -536,7 +747,8 @@ private:
     return is_float() ? &content.float_n : nullptr;
   }
 
-  constexpr const tag_float_t *get_impl_ptr(tag_float_t *) const noexcept {
+  constexpr const tag_float_t *
+  get_impl_ptr(const tag_float_t *) const noexcept {
     return is_float() ? &content.float_n : nullptr;
   }
 
@@ -545,7 +757,8 @@ private:
     return is_double() ? &content.double_n : nullptr;
   }
 
-  constexpr const tag_double_t *get_impl_ptr(tag_double_t *) const noexcept {
+  constexpr const tag_double_t *
+  get_impl_ptr(const tag_double_t *) const noexcept {
     return is_double() ? &content.double_n : nullptr;
   }
 
@@ -555,7 +768,7 @@ private:
   }
 
   constexpr const tag_byte_array_t *
-  get_impl_ptr(tag_byte_array_t *) const noexcept {
+  get_impl_ptr(const tag_byte_array_t *) const noexcept {
     return is_byte_array() ? content.byte_array : nullptr;
   }
 
@@ -564,7 +777,8 @@ private:
     return is_string() ? content.string : nullptr;
   }
 
-  constexpr const tag_string_t *get_impl_ptr(tag_string_t *) const noexcept {
+  constexpr const tag_string_t *
+  get_impl_ptr(const tag_string_t *) const noexcept {
     return is_string() ? content.string : nullptr;
   }
 
@@ -573,7 +787,7 @@ private:
     return is_list() ? content.list : nullptr;
   }
 
-  constexpr const tag_list_t *get_impl_ptr(tag_list_t *) const noexcept {
+  constexpr const tag_list_t *get_impl_ptr(const tag_list_t *) const noexcept {
     return is_list() ? content.list : nullptr;
   }
 
@@ -583,7 +797,7 @@ private:
   }
 
   constexpr const tag_compound_t *
-  get_impl_ptr(tag_compound_t *) const noexcept {
+  get_impl_ptr(const tag_compound_t *) const noexcept {
     return is_compound() ? content.compound : nullptr;
   }
 
@@ -593,7 +807,7 @@ private:
   }
 
   constexpr const tag_int_array_t *
-  get_impl_ptr(tag_int_array_t *) const noexcept {
+  get_impl_ptr(const tag_int_array_t *) const noexcept {
     return is_int_array() ? content.int_array : nullptr;
   }
 
@@ -603,7 +817,7 @@ private:
   }
 
   constexpr const tag_long_array_t *
-  get_impl_ptr(tag_long_array_t *) const noexcept {
+  get_impl_ptr(const tag_long_array_t *) const noexcept {
     return is_long_array() ? content.long_array : nullptr;
   }
 
@@ -706,189 +920,6 @@ public:
   }
 };
 
-NBT::NBT(const NBT &other) : type(other.type), name(other.name) {
-  switch (type) {
-  case tag_type::tag_byte: {
-    content = other.content.byte;
-    break;
-  }
-  case tag_type::tag_short: {
-    content = other.content.short_n;
-    break;
-  }
-  case tag_type::tag_int: {
-    content = other.content.int_n;
-    break;
-  }
-  case tag_type::tag_long: {
-    content = other.content.long_n;
-    break;
-  }
-  case tag_type::tag_float: {
-    content = other.content.float_n;
-    break;
-  }
-  case tag_type::tag_double: {
-    content = other.content.float_n;
-    break;
-  }
-  case tag_type::tag_byte_array: {
-    content = *other.content.byte_array;
-    break;
-  }
-  case tag_type::tag_string: {
-    content = *other.content.string;
-    break;
-  }
-  case tag_type::tag_list: {
-    content = *other.content.list;
-    break;
-  }
-  case tag_type::tag_compound: {
-    content = *other.content.compound;
-    break;
-  }
-  case tag_type::tag_int_array: {
-    content = *other.content.int_array;
-    break;
-  }
-  case tag_type::tag_long_array: {
-    content = *other.content.long_array;
-    break;
-  }
-  default:
-    break;
-  }
-}
-
-NBT::NBT(NBT &&other) noexcept
-    : type(other.type), content(std::move(other.content)), name(other.name) {
-  other.name = "";
-  other.type = tag_type::tag_end;
-  other.content = {};
-}
-
-NBT::NBT(uint8_t *&data, uint8_t *end) : NBT() {
-  type = tag_type(data[0]);
-  if (type == tag_type::tag_end)
-    return;
-
-  uint16_t len = NTOHS(data + 1);
-  name = std::string((char *)(data + 3), len);
-  data += len + 3;
-
-  this->parse(data, end);
-}
-
-NBT::NBT(uint8_t *&data, uint8_t *end, tag_type t) {
-  type = t;
-  this->parse(data, end);
-}
-
-void NBT::parse(uint8_t *&data, uint8_t *end) {
-  switch (type) {
-  case tag_type::tag_byte: {
-    content.byte = int8_t(*data);
-    data++;
-    break;
-  }
-
-  case tag_type::tag_short: {
-    content.short_n = NTOHS(data);
-    data += 2;
-    break;
-  }
-
-  case tag_type::tag_int: {
-    content.int_n = NTOHI(data);
-    data += 4;
-    break;
-  }
-
-  case tag_type::tag_long: {
-    content.long_n = NTOHL(data);
-    data += 8;
-    break;
-  }
-
-  case tag_type::tag_float: {
-    content.int_n = float(NTOHI(data));
-    data += 4;
-    break;
-  }
-
-  case tag_type::tag_double: {
-    content.long_n = double(NTOHL(data));
-    data += 8;
-    break;
-  }
-
-  case tag_type::tag_byte_array: {
-    uint32_t len = NTOHI(data);
-    content = tag_content(tag_type::tag_byte_array);
-
-    for (size_t i = 0; i < len; i++)
-      content.byte_array->push_back(*(data + 4 + i));
-
-    data += (len + 4);
-    break;
-  }
-
-  case tag_type::tag_string: {
-    uint16_t len = NTOHS(data);
-    content = tag_string_t((char *)(data + 2), len);
-    data += (len + 2);
-    break;
-  }
-
-  case tag_type::tag_list: {
-    tag_type chid_type = tag_type(data[0]);
-    uint32_t len = NTOHI(data + 1);
-    data += 5;
-    content = tag_content(tag_type::tag_list);
-
-    for (size_t i = 0; i < len; i++)
-      content.list->push_back(NBT(data, end, chid_type));
-    break;
-  }
-
-  case tag_type::tag_compound: {
-    content = tag_content(tag_type::tag_compound);
-    while (data[0]) {
-      NBT child(data, end);
-      content.compound->emplace(std::make_pair(child.name, std::move(child)));
-    }
-    data++;
-    break;
-  }
-
-  case tag_type::tag_int_array: {
-    uint32_t len = NTOHI(data);
-    content = tag_content(tag_type::tag_int_array);
-
-    for (size_t i = 0; i < len; i++)
-      content.int_array->push_back(NTOHI(data + 4 * (i + 1)));
-
-    data += (len * 4 + 4);
-    break;
-  }
-
-  case tag_type::tag_long_array: {
-    uint32_t len = NTOHI(data);
-    content = tag_content(tag_type::tag_long_array);
-
-    for (size_t i = 0; i < len; i++)
-      content.long_array->push_back(NTOHL(data + i * 8 + 4));
-
-    data += (len * 8 + 4);
-    break;
-  }
-
-  default:
-    break;
-  }
-}
-
-NBT::~NBT() { content.destroy(type); }
-
 } // namespace nbt
+
+#endif
