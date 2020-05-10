@@ -109,11 +109,11 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
   // Strip the chunk of pointless sections
   size_t chunkPos = chunkIndex(chunkX, chunkZ);
   try {
-    chunks[chunkPos] = tree["Level"]["Sections"];
+    chunks[chunkPos] = std::move(tree["Level"]["Sections"]);
     vector<NBT> *sections = chunks[chunkPos].get<vector<NBT> *>();
 
     // Some chunks have a -1 section, we'll pop that real quick
-    if (!sections->empty() && !sections->front().contains("Palette")) {
+    if (!sections->empty() && *sections->front()["Y"].get<int8_t *>() == -1) {
       sections->erase(sections->begin());
     }
 
@@ -135,12 +135,23 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
       }
     }
 
-    uint8_t chunkHeight = sections->size() << 4;
-    heightMap[chunkPos] = chunkHeight;
+    // Analyze the sections vector for height info
+    if (size_t nSections = sections->size()) {
+      // If there are sections in the chunk
+      const uint8_t chunkMin =
+          nSections ? *sections->front()["Y"].get<int8_t *>() : 0;
+      const uint8_t chunkHeight = (nSections + chunkMin) << 4;
 
-    // If the chunk's height is the highest found, record it
-    if (chunkHeight > (heightBounds & 0xf0))
-      heightBounds = chunkHeight | (heightBounds & 0x0f);
+      heightMap[chunkPos] = chunkHeight | chunkMin;
+
+      // If the chunk's height is the highest found, record it
+      if (chunkHeight > (heightBounds & 0xf0))
+        heightBounds = chunkHeight | (heightBounds & 0x0f);
+
+    } else {
+      // If there are no sections, max = min = 0
+      heightMap[chunkPos] = 0;
+    }
 
   } catch (const std::invalid_argument &e) {
     fprintf(stderr, "Err: %s\n", e.what());
