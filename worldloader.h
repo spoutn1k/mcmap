@@ -3,17 +3,22 @@
 
 #include "./colors.h"
 #include "./helper.h"
-#include "./nbt.h"
+#include "./nbt/nbt.hpp"
 #include <cstdlib>
 #include <filesystem>
 #include <stdint.h>
 #include <string>
 #include <utility>
+#include <vector>
 #include <zlib.h>
+
+using nbt::NBT;
+using std::string;
+using std::vector;
 
 namespace Terrain {
 
-typedef NBT_Tag Chunk;
+typedef NBT Chunk;
 typedef Chunk *ChunkList;
 
 enum Orientation {
