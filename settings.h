@@ -9,6 +9,12 @@
 
 namespace Settings {
 
+enum Dimension {
+  OVERWORLD,
+  NETHER,
+  END,
+};
+
 struct WorldOptions {
   std::filesystem::path saveName, outFile, colorFile;
 
@@ -28,8 +34,11 @@ struct WorldOptions {
   uint64_t memlimit;
   bool memlimitSet;
 
+  Dimension dim;
+
   WorldOptions() {
     saveName = "";
+    dim = OVERWORLD;
     outFile = "output.png";
     colorFile = "colors.json";
 
@@ -48,10 +57,22 @@ struct WorldOptions {
 
     orientation = Terrain::Orientation::NW;
   }
+
+  std::filesystem::path regionDir() {
+    switch (dim) {
+    case NETHER:
+      return std::filesystem::path(saveName) /= "DIM-1/region";
+    case END:
+      return std::filesystem::path(saveName) /= "DIM1/region";
+    default:
+      break;
+    }
+    return std::filesystem::path(saveName) /= "region";
+  }
 };
 
-} // namespace Settings
-
 bool parseArgs(int argc, char **argv, Settings::WorldOptions *opts);
+
+} // namespace Settings
 
 #endif // OPTIONS_H_

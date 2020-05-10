@@ -2,7 +2,7 @@
 
 #define ISPATH(p) (!(p).empty() && std::filesystem::exists((p)))
 
-bool parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
+bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
 #define MOREARGS(x) (argpos + (x) < argc)
 #define NEXTARG argv[++argpos]
 #define POLLARG(x) argv[argpos + (x)]
@@ -41,6 +41,10 @@ bool parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
           (height < MIN_TERRAIN_HEIGHT ? MIN_TERRAIN_HEIGHT : height);
     } else if (strcmp(option, "-nowater") == 0) {
       opts->hideWater = true;
+    } else if (strcmp(option, "-nether") == 0) {
+      opts->dim = Dimension::NETHER;
+    } else if (strcmp(option, "-end") == 0) {
+      opts->dim = Dimension::END;
     } else if (strcmp(option, "-file") == 0) {
       if (!MOREARGS(1)) {
         fprintf(stderr, "Error: %s needs one argument\n", option);

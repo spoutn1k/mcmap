@@ -56,12 +56,11 @@ int main(int argc, char **argv) {
   coords.maxX = options.toX;
   coords.maxZ = options.toZ;
 
-  std::filesystem::path saveFile(options.saveName);
-  saveFile /= "region";
+  std::filesystem::path regionDir = options.regionDir();
 
   // The minecraft terrain to render
   Terrain::OrientedMap world(coords, options.orientation);
-  world.terrain.load(saveFile);
+  world.terrain.load(regionDir);
 
   if (!Colors::load(options.colorFile, world.terrain.cache, &colors))
     return 1;
