@@ -58,6 +58,7 @@ public:
   NBT(const tag_type type) : type(type), content(type){};
   NBT(std::nullptr_t = nullptr) : NBT(tag_type::tag_end){};
 
+  NBT(const int8_t byte) : type(tag_type::tag_byte), content(byte){};
   NBT(const NBT &other) : type(other.type), name(other.name) {
     switch (type) {
     case tag_type::tag_byte: {
@@ -898,8 +899,6 @@ public:
       break;
     }
     case tag_type::tag_byte_array: {
-      for (auto e : *content.byte_array)
-        printf("%d\n", e);
       break;
     }
     case tag_type::tag_string: {
@@ -919,13 +918,9 @@ public:
       break;
     }
     case tag_type::tag_int_array: {
-      for (auto e : *content.int_array)
-        printf("%d\n", e);
       break;
     }
     case tag_type::tag_long_array: {
-      for (auto e : *content.long_array)
-        printf("%ld\n", e);
       break;
     }
     default:

@@ -259,12 +259,12 @@ public:
       assert(it.compound_iterator != content->content.compound->end());
       return it.compound_iterator->second;
     }
-      /*
-          case tag_type::tag_list: {
-            assert(it.list_iterator != content->content.list->end());
-            return *it.list_iterator;
-          }
+    case tag_type::tag_list: {
+      assert(it.list_iterator != content->content.list->end());
+      return *it.list_iterator;
+    }
 
+      /*
           case tag_type::tag_byte_array: {
             assert(it.byte_iterator != content->content.byte_array->end());
             return *it.byte_iterator;

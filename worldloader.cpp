@@ -59,6 +59,32 @@ void Terrain::Data::loadRegion(const std::filesystem::path &regionFile,
   fclose(regionHandle);
 }
 
+void inflate(vector<NBT> *sections) {
+  // Some chunks are "hollow", empty sections being present between blocks.
+  // Internally, minecraft does not store those empty sections, instead relying
+  // on the section index (key "Y"). This routine creates empty sections where
+  // they should be, to save a lot of time when rendering.
+  vector<NBT>::iterator it = sections->begin(), next = it + 1;
+  int8_t index = *(sections->front()["Y"].get<int8_t *>());
+
+  while (it != sections->end() && next != sections->end()) {
+    uint8_t diff = *(next->operator[]("Y").get<int8_t *>()) - index - 1;
+
+    if (diff) {
+      while (diff--) {
+        it = sections->insert(it + 1, NBT(nbt::tag_type::tag_compound));
+        it->operator[]("Y") = NBT(++index);
+      }
+      it++;
+    } else {
+      it++;
+    }
+
+    index++;
+    next = it + 1;
+  }
+}
+
 void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
                               const int chunkX, const int chunkZ) {
   if (!offset) {
@@ -140,7 +166,8 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
       // If there are sections in the chunk
       const uint8_t chunkMin =
           nSections ? *sections->front()["Y"].get<int8_t *>() : 0;
-      const uint8_t chunkHeight = (nSections + chunkMin) << 4;
+      const uint8_t chunkHeight = (*sections->back()["Y"].get<int8_t *>() + 1)
+                                  << 4;
 
       heightMap[chunkPos] = chunkHeight | chunkMin;
 
@@ -148,6 +175,7 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
       if (chunkHeight > (heightBounds & 0xf0))
         heightBounds = chunkHeight | (heightBounds & 0x0f);
 
+      inflate(sections);
     } else {
       // If there are no sections, max = min = 0
       heightMap[chunkPos] = 0;
@@ -212,10 +240,10 @@ string blockAt(const NBT &section, uint8_t x, uint8_t z, uint8_t y) {
 string Terrain::Data::block(const int32_t x, const int32_t z,
                             const int32_t y) const {
   const size_t index = chunkIndex(CHUNK(x), CHUNK(z));
-
   const NBT &section = chunks[index][y >> 4];
   if (section.contains("Palette"))
     return blockAt(section, x, z, y);
+
   return "minecraft:air";
 }
 
