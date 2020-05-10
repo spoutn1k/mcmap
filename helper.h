@@ -1,36 +1,16 @@
 #ifndef HELPER_H_
 #define HELPER_H_
 
-#define CHUNK(x) ((x) >> 4)
-#define REGION(x) ((x) >> 5)
-
 #include <cstdio>
 #include <cstring>
 #include <ctime>
+#include <stdint.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-
-#define REGIONSIZE 32
-#define CHUNKS_PER_BIOME_FILE 32
-
-#define REGION_HEADER_SIZE REGIONSIZE *REGIONSIZE * 4
-#define DECOMPRESSED_BUFFER 1000 * 1024
-#define COMPRESSED_BUFFER 100 * 1024
-
-// Just in case these ever change
-#define CHUNKSIZE_Z 16
-#define CHUNKSIZE_X 16
-#define CHUNKSIZE_Y 256
-#define SECTION_Y 16
-#define SECTION_Y_SHIFT 4
-// Some macros for easier array access
-// First: Block array
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define RIGHTSTRING(x, y) (strlen(x) >= (y) ? (x) + strlen(x) - (y) : (x))
-
-#include <string>
 
 // Difference between MSVC++ and gcc/others
 #if defined(_WIN32) && !defined(__GNUC__)
@@ -58,9 +38,17 @@
 #define mkdir _mkdir
 #endif
 
-#include <stdint.h>
+#define CHUNKSIZE 16
+#define REGIONSIZE 32
+#define MIN_TERRAIN_HEIGHT 0
+#define MAX_TERRAIN_HEIGHT 255
 
-using std::string;
+#define REGION_HEADER_SIZE REGIONSIZE *REGIONSIZE * 4
+#define DECOMPRESSED_BUFFER 1000 * 1024
+#define COMPRESSED_BUFFER 100 * 1024
+
+#define CHUNK(x) ((x) >> 4)
+#define REGION(x) ((x) >> 5)
 
 uint8_t clamp(int32_t val);
 void printProgress(const size_t current, const size_t max);

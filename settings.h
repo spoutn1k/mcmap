@@ -1,7 +1,8 @@
 #ifndef OPTIONS_H_
 #define OPTIONS_H_
 
-#include "worldloader.h"
+#include "./helper.h"
+#include "./worldloader.h"
 #include <cstdint>
 #include <filesystem>
 #define UNDEFINED 0x7FFFFFFF

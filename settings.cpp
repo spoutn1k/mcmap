@@ -28,13 +28,17 @@ bool parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
         fprintf(stderr, "Error: %s needs an integer argument\n", option);
         return false;
       }
-      opts->mapMaxY = atoi(NEXTARG);
+      const int height = atoi(NEXTARG);
+      opts->mapMaxY =
+          (height > MAX_TERRAIN_HEIGHT ? MAX_TERRAIN_HEIGHT : height);
     } else if (strcmp(option, "-min") == 0) {
       if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
         fprintf(stderr, "Error: %s needs an integer argument\n", option);
         return false;
       }
-      opts->mapMinY = atoi(NEXTARG);
+      const int height = atoi(NEXTARG);
+      opts->mapMinY =
+          (height < MIN_TERRAIN_HEIGHT ? MIN_TERRAIN_HEIGHT : height);
     } else if (strcmp(option, "-nowater") == 0) {
       opts->hideWater = true;
     } else if (strcmp(option, "-file") == 0) {
@@ -83,7 +87,7 @@ bool parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
     return false;
   }
 
-  if (opts->mapMaxY - opts->mapMinY < 1) {
+  if (opts->mapMaxY - opts->mapMinY < 0) {
     fprintf(stderr, "Nothing to render: -min Y has to be < -max/-height Y\n");
     return false;
   }

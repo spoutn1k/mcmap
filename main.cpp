@@ -1,3 +1,4 @@
+#include "./VERSION"
 #include "./draw_png.h"
 #include "./globals.h"
 #include "./helper.h"
@@ -72,6 +73,7 @@ int main(int argc, char **argv) {
 
   PNG::IsometricCanvas canvas(coords, options);
   // Cap the height of the canvas to avoid having a ridiculous height
+  canvas.minY = std::max(canvas.minY, world.terrain.minHeight());
   canvas.maxY = std::min(canvas.maxY, world.terrain.maxHeight());
   PNG::Image image(options.outFile, canvas, colors);
 
@@ -119,14 +121,15 @@ void render(const PNG::Image &image, const PNG::IsometricCanvas &canvas,
       if (world.orientation == Terrain::NE || world.orientation == Terrain::SW)
         std::swap(x, z);
 
-      const uint8_t maxHeight = world.terrain.maxHeight(worldX, worldZ);
-      const uint8_t minHeight = world.terrain.minHeight(worldX, worldZ);
+      const uint8_t localMaxHeight = std::min(
+          world.terrain.maxHeight(worldX, worldZ), uint8_t(canvas.maxY + 1));
+      const uint8_t localMinHeight =
+          std::max(world.terrain.minHeight(worldX, worldZ), canvas.minY);
 
-      for (uint8_t y = std::max(minHeight, canvas.minY);
-           y < std::min(maxHeight, canvas.maxY); y++) {
-        const size_t bmpPosY = image.height - 2 + x + z - canvas.sizeX -
-                               canvas.sizeZ - y * image.heightOffset -
-                               image.padding;
+      for (uint8_t y = localMinHeight; y < localMaxHeight; y++) {
+        const size_t bmpPosY =
+            image.height - 2 + x + z - canvas.sizeX - canvas.sizeZ -
+            (y - canvas.minY) * image.heightOffset - image.padding;
         const string block = world.terrain.block(worldX, worldZ, y);
         image.setPixel(bmpPosX, bmpPosY, block);
       }

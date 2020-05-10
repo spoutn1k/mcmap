@@ -1,7 +1,7 @@
 #include "worldloader.h"
 
-uint8_t zData[5 * 4096];
-uint8_t chunkBuffer[1000 * 1024];
+uint8_t zData[COMPRESSED_BUFFER];
+uint8_t chunkBuffer[DECOMPRESSED_BUFFER];
 
 void Terrain::Data::load(const std::filesystem::path &regionDir) {
   // Parse all the necessary region files
@@ -91,7 +91,7 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
   zlibStream.next_in = (Bytef *)zData;
   zlibStream.next_out = (Bytef *)chunkBuffer;
   zlibStream.avail_in = len;
-  zlibStream.avail_out = 1000 * 1024;
+  zlibStream.avail_out = DECOMPRESSED_BUFFER;
   inflateInit2(&zlibStream, 32 + MAX_WBITS);
 
   int status = inflate(&zlibStream, Z_FINISH); // decompress in one step
