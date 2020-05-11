@@ -125,11 +125,12 @@ void render(const PNG::Image &image, const PNG::IsometricCanvas &canvas,
       const uint8_t localMinHeight =
           std::max(world.terrain.minHeight(worldX, worldZ), canvas.minY);
 
-      for (uint8_t y = 0; y < (localMaxHeight - localMinHeight); y++) {
+      for (uint8_t y = localMinHeight; y < localMaxHeight; y++) {
         const size_t bmpPosY =
             image.height - 2 + x + z - canvas.sizeX - canvas.sizeZ -
-            (y + localMinHeight) * image.heightOffset - image.padding;
-        const string block = world.terrain.block(worldX, worldZ, y);
+            (y - localMinHeight) * image.heightOffset - image.padding;
+
+        const NBT &block = world.terrain.block(worldX, worldZ, y);
         image.setPixel(bmpPosX, bmpPosY, block);
       }
     }

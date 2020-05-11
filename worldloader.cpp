@@ -64,24 +64,37 @@ void inflate(vector<NBT> *sections) {
   // Internally, minecraft does not store those empty sections, instead relying
   // on the section index (key "Y"). This routine creates empty sections where
   // they should be, to save a lot of time when rendering.
-  vector<NBT>::iterator it = sections->begin(), next = it + 1;
+  //
+  // This method ensure all sections from index 0 to the highest existing
+  // section are inside the vector. This allows us to bypass al lot of checks
+  // inside the critical drawing loop.
+
+  // First of all, pad the beginning of the array if the lowest sections are
+  // empty. This index is important and will be used later
   int8_t index = *(sections->front()["Y"].get<int8_t *>());
+
+  // We use `tag_end` to avoid initalizing too much stuff
+  for (int i = index - 1; i > -1; i--)
+    sections->insert(sections->begin(), NBT(nbt::tag_type::tag_end));
+
+  // Then, go through the array and fill holes
+  // As we check for the "Y" child in the compound, and did not add it
+  // previously, the index MUST not change from the original first index
+  vector<NBT>::iterator it = sections->begin() + index, next = it + 1;
 
   while (it != sections->end() && next != sections->end()) {
     uint8_t diff = *(next->operator[]("Y").get<int8_t *>()) - index - 1;
 
     if (diff) {
       while (diff--) {
-        it = sections->insert(it + 1, NBT(nbt::tag_type::tag_compound));
-        it->operator[]("Y") = NBT(++index);
+        it = sections->insert(it + 1, NBT(nbt::tag_type::tag_end));
+        ++index;
       }
-      it++;
-    } else {
-      it++;
     }
 
+    // Increment both iterators
+    next = ++it + 1;
     index++;
-    next = it + 1;
   }
 }
 
@@ -150,7 +163,7 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
 
     // Complete the cache, to determine the colors to load
     for (auto section : *sections) {
-      if (!section.contains("Palette"))
+      if (section.is_end() || !section.contains("Palette"))
         continue;
 
       string blockID;
@@ -175,7 +188,9 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
       if (chunkHeight > (heightBounds & 0xf0))
         heightBounds = chunkHeight | (heightBounds & 0x0f);
 
+      // Fill the chunk with empty sections
       inflate(sections);
+
     } else {
       // If there are no sections, max = min = 0
       heightMap[chunkPos] = 0;
