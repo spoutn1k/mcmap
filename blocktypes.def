@@ -11,6 +11,7 @@ DEFINETYPE( SLAB, "Slab" )              // Slab and half-blocks
 DEFINETYPE( STAIR, "Stair" )            // Not implemented yet.
 DEFINETYPE( TORCH, "Torch" )            // Torch/end rod. Accent is the color of the flame.
 DEFINETYPE( ROD, "Rod" )                // Fence and walls.
+DEFINETYPE( ORE, "Ore" )                // Ores
 DEFINETYPE( WIRE, "Wire" )              // Redstone dust, tripwire
 DEFINETYPE( PLANT, "Plant" )            // Flower and plants.
 DEFINETYPE( THIN, "Thin" )              // Snow-like.

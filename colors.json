@@ -51,13 +51,15 @@
     "minecraft:cocoa": [145, 80, 30, 200],
     "minecraft:ender_chest": [18, 16, 27, 255, 5],
 
-    "minecraft:coal_ore": [115, 115, 115, 255],
-    "minecraft:iron_ore": [136, 130, 127, 255],
-    "minecraft:gold_ore": [143, 140, 125, 255],
-    "minecraft:lapis_ore": [102, 112, 134, 255, 10],
-    "minecraft:emerald_ore": [109, 128, 116, 255, 18],
-    "minecraft:diamond_ore": [129, 140, 143, 255],
-    "minecraft:redstone_ore": [131, 107, 107, 255],
+    "minecraft:stone": [128, 128, 128, 255, 16],
+    "minecraft:coal_ore": {"type": "Ore", "color": [128, 128, 128, 255, 16], "accent": [60, 60, 60, 255]},
+    "minecraft:iron_ore": {"type": "Ore", "color": [128, 128, 128, 255, 16], "accent": [136, 130, 127, 255]},
+    "minecraft:gold_ore": {"type": "Ore", "color": [128, 128, 128, 255, 16], "accent": [226, 207, 113, 255]},
+    "minecraft:lapis_ore": {"type": "Ore", "color": [128, 128, 128, 255, 16], "accent": [37, 89, 204, 255, 10]},
+    "minecraft:emerald_ore": {"type": "Ore", "color": [128, 128, 128, 255, 16], "accent": [109, 128, 116, 255, 18]},
+    "minecraft:diamond_ore": {"type": "Ore", "color": [128, 128, 128, 255, 16], "accent": [135, 207, 227, 255]},
+    "minecraft:redstone_ore": {"type": "Ore", "color": [128, 128, 128, 255, 16], "accent": [151, 58, 58, 255]},
+    "minecraft:nether_quartz_ore" : {"type": "Ore", "color": [110, 53, 51, 255, 16], "accent": [237, 216, 216, 255]},
 
     "minecraft:coal_block": [21, 21, 21, 255 ],
     "minecraft:iron_block": [191, 191, 191, 255],
@@ -130,10 +132,6 @@
 
     "minecraft:beacon": [21, 255, 255, 255 ],
     "minecraft:anvil": [110, 110, 110, 255 ],
-
-    "minecraft:quartz_ore": [168, 54, 69, 255],
-    "minecraft:quartz_block": [240, 238, 232, 255],
-    "minecraft:quartz_stairs": [240, 238, 232, 255],
 
     "minecraft:rail": {"type": "Thin", "color": [140, 134, 72, 250]},
     "minecraft:activator_rail": {"type": "Thin", "color": [120, 114, 92, 250]},
