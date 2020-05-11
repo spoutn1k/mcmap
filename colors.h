@@ -1,7 +1,8 @@
 #ifndef COLORS_
 #define COLORS_
 
-#include "json.hpp"
+#include "./helper.h"
+#include "./json.hpp"
 #include <filesystem>
 #include <list>
 #include <map>
@@ -51,14 +52,14 @@ enum BlockTypes {
 #undef DEFINETYPE
 };
 
-const std::map<string, Colors::BlockTypes> stringToType = {
+const std::unordered_map<string, Colors::BlockTypes> stringToType = {
     {"Full", Colors::BlockTypes::FULL},
 #define DEFINETYPE(TYPE, STRING) {STRING, Colors::BlockTypes::TYPE},
 #include "blocktypes.def"
 #undef DEFINETYPE
 };
 
-const std::map<Colors::BlockTypes, string> typeToString = {
+const std::unordered_map<Colors::BlockTypes, string> typeToString = {
     {Colors::BlockTypes::FULL, "Full"},
 #define DEFINETYPE(TYPE, STRING) {Colors::BlockTypes::TYPE, STRING},
 #include "blocktypes.def"
@@ -81,6 +82,12 @@ struct Color {
         ((uint8_t *)this)[index++] = it;
   }
 
+  inline void modColor(const int mod) {
+    R = clamp(R + mod);
+    G = clamp(G + mod);
+    B = clamp(B + mod);
+  }
+
   bool empty() const { return !(R || G || B || ALPHA); }
 
   uint8_t brightness() const {
@@ -98,16 +105,22 @@ struct Color {
 struct Block {
   Colors::Color primary, secondary; // 12 bytes
   Colors::BlockTypes type;
+  Colors::Color light, dark; // 12 bytes
 
   Block() : primary(), secondary() { type = Colors::BlockTypes::FULL; }
 
-  Block(const Colors::BlockTypes &bt, list<int> c1) : primary(c1), secondary() {
+  Block(const Colors::BlockTypes &bt, list<int> c1)
+      : primary(c1), secondary(), light(c1), dark(c1) {
     type = bt;
+    light.modColor(-17);
+    light.modColor(-27);
   }
 
   Block(const Colors::BlockTypes &bt, list<int> c1, list<int> c2)
-      : primary(c1), secondary(c2) {
+      : primary(c1), secondary(c2), light(c1), dark(c1) {
     type = bt;
+    light.modColor(-17);
+    light.modColor(-27);
   }
 
   void print() {

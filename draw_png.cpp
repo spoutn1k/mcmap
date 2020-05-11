@@ -976,18 +976,21 @@ inline void blend(uint8_t *const destination, const uint8_t *const source) {
       (size_t(source[PALPHA]) * size_t(255 - destination[PALPHA])) / 255;
 }
 
-inline void blend(uint8_t *const destination, const Colors::Block &block) {
-  if (destination[PALPHA] == 0 || block.primary.ALPHA == 255) {
-    memcpy(destination, &block.primary, BYTESPERPIXEL);
+inline void blend(uint8_t *const destination, const Colors::Block *block) {
+  if (destination[PALPHA] == 0 || block->primary.ALPHA == 255) {
+    memcpy(destination, &block->primary, BYTESPERPIXEL);
     return;
   }
 #define BLEND(ca, aa, cb)                                                      \
   uint8_t(((size_t(ca) * size_t(aa)) + (size_t(255 - aa) * size_t(cb))) / 255)
-  destination[0] = BLEND(block.primary.R, block.primary.ALPHA, destination[0]);
-  destination[1] = BLEND(block.primary.G, block.primary.ALPHA, destination[1]);
-  destination[2] = BLEND(block.primary.B, block.primary.ALPHA, destination[2]);
+  destination[0] =
+      BLEND(block->primary.R, block->primary.ALPHA, destination[0]);
+  destination[1] =
+      BLEND(block->primary.G, block->primary.ALPHA, destination[1]);
+  destination[2] =
+      BLEND(block->primary.B, block->primary.ALPHA, destination[2]);
   destination[PALPHA] +=
-      (size_t(block.primary.ALPHA) * size_t(255 - destination[PALPHA])) / 255;
+      (size_t(block->primary.ALPHA) * size_t(255 - destination[PALPHA])) / 255;
 }
 
 inline void modColor(uint8_t *const color, const int mod) {
@@ -1004,7 +1007,7 @@ inline void addColor(uint8_t *const color, const uint8_t *const add) {
   color[2] = clamp(uint16_t(float(color[2]) * v1 + float(add[2]) * v2));
 }
 
-void setThin(const size_t x, const size_t y, const Colors::Block &block) {
+void setThin(const size_t x, const size_t y, const Colors::Block *block) {
   /* Overwrite the block below's top layer
    * |    |
    * |    |
@@ -1013,24 +1016,24 @@ void setThin(const size_t x, const size_t y, const Colors::Block &block) {
    *   XX   */
   uint8_t *pos = &PIXEL(x, y + 3);
   for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-    memcpy(pos, &block.primary, BYTESPERPIXEL);
+    memcpy(pos, &block->primary, BYTESPERPIXEL);
   }
 #ifndef LEGACY
   pos = &PIXEL(x + 1, y + 4);
-  memcpy(pos, &block.primary, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL, &block.primary, BYTESPERPIXEL);
+  memcpy(pos, &block->primary, BYTESPERPIXEL);
+  memcpy(pos + CHANSPERPIXEL, &block->primary, BYTESPERPIXEL);
 #endif
 }
 
 void setTransparent(const size_t x, const size_t y,
-                    const Colors::Block &block) {
+                    const Colors::Block *block) {
   // Avoid the dark/light edges for a clearer look through
   for (uint8_t i = 0; i < 4; i++)
     for (uint8_t j = 0; j < 3; j++)
       blend(&PIXEL(x + i, y + j), block);
 }
 
-void setTorch(const size_t x, const size_t y, const Colors::Block &block) {
+void setTorch(const size_t x, const size_t y, const Colors::Block *block) {
   /* TODO Callback to handle the orientation
    * Print the secondary on top of two primary
    * |    |
@@ -1038,18 +1041,18 @@ void setTorch(const size_t x, const size_t y, const Colors::Block &block) {
    * |  P |
    * |  P | */
   uint8_t *pos = &PIXEL(x + 2, y + 1);
-  memcpy(pos, &block.secondary, BYTESPERPIXEL);
+  memcpy(pos, &block->secondary, BYTESPERPIXEL);
   pos = &PIXEL(x + 2, y + 2);
 #ifdef LEGACY
-  memcpy(pos, &block.secondary, BYTESPERPIXEL);
+  memcpy(pos, &block->secondary, BYTESPERPIXEL);
 #else
-  memcpy(pos, &block.primary, BYTESPERPIXEL);
+  memcpy(pos, &block->primary, BYTESPERPIXEL);
   pos = &PIXEL(x + 2, y + 3);
-  memcpy(pos, &block.primary, BYTESPERPIXEL);
+  memcpy(pos, &block->primary, BYTESPERPIXEL);
 #endif
 }
 
-void setPlant(const size_t x, const size_t y, const Colors::Block &block) {
+void setPlant(const size_t x, const size_t y, const Colors::Block *block) {
   /* Print a plant-like block
    * TODO Make that nicer ?
    * |    |
@@ -1057,35 +1060,33 @@ void setPlant(const size_t x, const size_t y, const Colors::Block &block) {
    * |  X |
    * | X  | */
   uint8_t *pos = &PIXEL(x, y + 1);
-  memcpy(pos + (CHANSPERPIXEL), &block.primary, BYTESPERPIXEL);
-  memcpy(pos + (CHANSPERPIXEL * 3), &block.primary, BYTESPERPIXEL);
+  memcpy(pos + (CHANSPERPIXEL), &block->primary, BYTESPERPIXEL);
+  memcpy(pos + (CHANSPERPIXEL * 3), &block->primary, BYTESPERPIXEL);
   pos = &PIXEL(x + 2, y + 2);
-  memcpy(pos, &block.primary, BYTESPERPIXEL);
+  memcpy(pos, &block->primary, BYTESPERPIXEL);
   pos = &PIXEL(x + 1, y + 3);
-  memcpy(pos, &block.primary, BYTESPERPIXEL);
+  memcpy(pos, &block->primary, BYTESPERPIXEL);
 }
 
-void setFire(const size_t x, const size_t y, const Colors::Block &color,
-             const uint8_t *const light, const uint8_t *const dark) {
+void setFire(const size_t x, const size_t y, const Colors::Block *const color) {
   // This basically just leaves out a few pixels
   // Top row
   uint8_t *pos = &PIXEL(x, y);
-  blend(pos, light);
-  blend(pos + CHANSPERPIXEL * 2, dark);
+  blend(pos, (uint8_t *)&color->light);
+  blend(pos + CHANSPERPIXEL * 2, (uint8_t *)&color->dark);
   // Second and third row
   for (size_t i = 1; i < 3; ++i) {
     pos = &PIXEL(x, y + i);
-    blend(pos, dark);
+    blend(pos, (uint8_t *)&color->dark);
     blend(pos + (CHANSPERPIXEL * i), color);
-    blend(pos + (CHANSPERPIXEL * 3), light);
+    blend(pos + (CHANSPERPIXEL * 3), (uint8_t *)&color->light);
   }
   // Last row
   pos = &PIXEL(x, y + 3);
-  blend(pos + (CHANSPERPIXEL * 2), light);
+  blend(pos + (CHANSPERPIXEL * 2), (uint8_t *)&color->light);
 }
 
-void setGrown(const size_t x, const size_t y, const Colors::Block &b,
-              const uint8_t *const light, const uint8_t *const dark,
+void setGrown(const size_t x, const size_t y, const Colors::Block *const color,
               const int sub) {
   /* Print the secondary color on top
    * |SSSS|
@@ -1093,37 +1094,37 @@ void setGrown(const size_t x, const size_t y, const Colors::Block &b,
    * |DDLL|
    * | DL | */
   uint8_t L[CHANSPERPIXEL], D[CHANSPERPIXEL];
-  memcpy(L, &b.primary, BYTESPERPIXEL);
-  memcpy(D, &b.primary, BYTESPERPIXEL);
+  memcpy(L, &color->primary, BYTESPERPIXEL);
+  memcpy(D, &color->primary, BYTESPERPIXEL);
   modColor(L, sub - 15);
   modColor(D, sub - 25);
 
   // consider noise
   int noise = 0;
-  if (g_Noise && b.secondary.NOISE) {
-    noise = int(float(g_Noise * b.secondary.NOISE) *
-                (float(b.secondary.brightness()) + 10) / 2650.0f);
+  if (g_Noise && color->secondary.NOISE) {
+    noise = int(float(g_Noise * color->secondary.NOISE) *
+                (float(color->secondary.brightness()) + 10) / 2650.0f);
   }
 
   // Top row
   uint8_t *pos = &PIXEL(x, y);
   for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-    memcpy(pos, &b.secondary, BYTESPERPIXEL);
+    memcpy(pos, &color->secondary, BYTESPERPIXEL);
     if (noise) {
       modColor(pos, rand() % (noise * 2) - noise);
     }
   }
   // Second row
   pos = &PIXEL(x, y + 1);
-  memcpy(pos, dark, BYTESPERPIXEL);
+  memcpy(pos, &color->dark, BYTESPERPIXEL);
 #ifdef LEGACY
-  memcpy(pos + CHANSPERPIXEL, dark, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL * 2, light, BYTESPERPIXEL);
+  memcpy(pos + CHANSPERPIXEL, &color->dark, BYTESPERPIXEL);
+  memcpy(pos + CHANSPERPIXEL * 2, &color->light, BYTESPERPIXEL);
 #else
-  memcpy(pos + CHANSPERPIXEL, &b.secondary, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL * 2, &b.secondary, BYTESPERPIXEL);
+  memcpy(pos + CHANSPERPIXEL, &color->secondary, BYTESPERPIXEL);
+  memcpy(pos + CHANSPERPIXEL * 2, &color->secondary, BYTESPERPIXEL);
 #endif
-  memcpy(pos + CHANSPERPIXEL * 3, light, BYTESPERPIXEL);
+  memcpy(pos + CHANSPERPIXEL * 3, &color->light, BYTESPERPIXEL);
   // Third row
   pos = &PIXEL(x, y + 2);
   memcpy(pos, D, BYTESPERPIXEL);
@@ -1138,20 +1139,19 @@ void setGrown(const size_t x, const size_t y, const Colors::Block &b,
   memcpy(pos + CHANSPERPIXEL * 3, L, BYTESPERPIXEL);
 }
 
-void setRod(const size_t x, const size_t y, const Colors::Block &block,
-            const uint8_t *const light, const uint8_t *const dark) {
+void setRod(const size_t x, const size_t y, const Colors::Block *const color) {
   /* A full fat rod
    * | PP |
    * | DL |
    * | DL |
    * | DL | */
   uint8_t *pos = &PIXEL(x + 1, y);
-  memcpy(pos, &block.primary, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL, &block.primary, BYTESPERPIXEL);
+  memcpy(pos, &color->primary, BYTESPERPIXEL);
+  memcpy(pos + CHANSPERPIXEL, &color->primary, BYTESPERPIXEL);
   for (int i = 1; i < 4; i++) {
     pos = &PIXEL(x + 1, y + i);
-    memcpy(pos, dark, BYTESPERPIXEL);
-    memcpy(pos + CHANSPERPIXEL, light, BYTESPERPIXEL);
+    memcpy(pos, &color->dark, BYTESPERPIXEL);
+    memcpy(pos + CHANSPERPIXEL, &color->light, BYTESPERPIXEL);
   }
 }
 
@@ -1169,8 +1169,7 @@ void setRod(const size_t x, const size_t y, const Colors::Block &block,
         blend(pos+CHANSPERPIXEL*2, color);
 }*/
 
-void setSlab(const size_t x, const size_t y, const Colors::Block &block,
-             const uint8_t *const light, const uint8_t *const dark) {
+void setSlab(const size_t x, const size_t y, const Colors::Block *color) {
   /* This one has a hack to make it look like a gradual step up:
    * The second layer has primary colors to make the difference less
    * obvious.
@@ -1180,25 +1179,25 @@ void setSlab(const size_t x, const size_t y, const Colors::Block &block,
    * |DDLL| */
   uint8_t *pos = &PIXEL(x, y + 1);
   for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-    memcpy(pos, &block.primary, BYTESPERPIXEL);
+    memcpy(pos, &color->primary, BYTESPERPIXEL);
   }
 
   pos = &PIXEL(x, y + 2);
-  memcpy(pos, dark, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL, &block.primary, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL * 2, &block.primary, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL * 3, light, BYTESPERPIXEL);
+  memcpy(pos, &color->dark, BYTESPERPIXEL);
+  memcpy(pos + CHANSPERPIXEL, &color->primary, BYTESPERPIXEL);
+  memcpy(pos + CHANSPERPIXEL * 2, &color->primary, BYTESPERPIXEL);
+  memcpy(pos + CHANSPERPIXEL * 3, &color->light, BYTESPERPIXEL);
 
   pos = &PIXEL(x, y + 3);
   for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-    memcpy(pos, (i < 2 ? dark : light), BYTESPERPIXEL);
+    memcpy(pos, (i < 2 ? &color->dark : &color->light), BYTESPERPIXEL);
   }
 }
 
-void setWire(const size_t x, const size_t y, const Colors::Block &block) {
+void setWire(const size_t x, const size_t y, const Colors::Block *color) {
   uint8_t *pos = &PIXEL(x + 1, y + 2);
-  memcpy(pos, &block.primary, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL, &block.primary, BYTESPERPIXEL);
+  memcpy(pos, &color->primary, BYTESPERPIXEL);
+  memcpy(pos + CHANSPERPIXEL, &color->primary, BYTESPERPIXEL);
 }
 
 /*
@@ -1330,34 +1329,25 @@ void PNG::Image::setPixel(const size_t x, const size_t y,
   if (!block.contains("Name"))
     return;
 
-  Colors::Block blockColor;
+  const string &name = *(block["Name"].get<const string *>());
+  auto defined = palette.find(name);
 
-  try {
-    blockColor = palette.at(*(block["Name"].get<const string *>()));
-  } catch (const std::out_of_range &e) {
-    fprintf(stderr, "Error getting block color %s\n", e.what());
+  if (defined == palette.end()) {
+    fprintf(stderr, "Error getting color of block %s\n", name.c_str());
     return;
   }
 
-  if (blockColor.primary.empty() || blockColor.type == Colors::HIDE)
+  const Colors::Block *blockColor = &(defined->second);
+
+  if (blockColor->primary.empty() || blockColor->type == Colors::HIDE)
     return;
 
   // First determine how much the color has to be lightened up or darkened
   // The brighter the color, the stronger the impact
-  int sub = (float(blockColor.primary.BRIGHTNESS) / 323.0f + .21f);
-  uint8_t light[CHANSPERPIXEL], dark[CHANSPERPIXEL], c[CHANSPERPIXEL];
-
-  // Now make a local copy of the color that we can modify just for this one
-  // block
-  memcpy(c, &blockColor.primary, BYTESPERPIXEL);
-  modColor(c, sub);
-  memcpy(light, c, BYTESPERPIXEL);
-  memcpy(dark, c, BYTESPERPIXEL);
-  modColor(light, -17);
-  modColor(dark, -27);
+  int sub = (float(blockColor->primary.BRIGHTNESS) / 323.0f + .21f);
 
   // Then check the block type, as some types will be drawn differently
-  switch (blockColor.type) {
+  switch (blockColor->type) {
   case Colors::HIDE:
     return;
 
@@ -1366,7 +1356,7 @@ void PNG::Image::setPixel(const size_t x, const size_t y,
     return;
 
   case Colors::GROWN:
-    setGrown(x, y, blockColor, light, dark, sub);
+    setGrown(x, y, blockColor, sub);
     return;
 
   case Colors::PLANT:
@@ -1382,11 +1372,11 @@ void PNG::Image::setPixel(const size_t x, const size_t y,
     return;
 
   case Colors::SLAB:
-    setSlab(x, y, blockColor, light, dark);
+    setSlab(x, y, blockColor);
     return;
 
   case Colors::ROD:
-    setRod(x, y, blockColor, light, dark);
+    setRod(x, y, blockColor);
     return;
 
   case Colors::WIRE:
@@ -1394,7 +1384,7 @@ void PNG::Image::setPixel(const size_t x, const size_t y,
     return;
 
   case Colors::SPECIAL:
-    setFire(x, y, blockColor, light, dark);
+    setFire(x, y, blockColor);
     return;
 
   case Colors::STAIR:
@@ -1402,92 +1392,57 @@ void PNG::Image::setPixel(const size_t x, const size_t y,
     break;
   }
 
-  // In case the user wants noise, calc the strength now, depending on the
-  // desired intensity and the block's brightness
-  int noise = 0;
-
-  if (g_Noise && blockColor.primary.NOISE) {
-    noise = int(float(g_Noise * blockColor.primary.NOISE) *
-                (float(GETBRIGHTNESS(c) + 10) / 2650.0f));
-  }
   // Ordinary blocks are all rendered the same way
-  if (c[PALPHA] == 255) { // Fully opaque - faster
+  if (blockColor->primary.ALPHA == 255) { // Fully opaque - faster
     // Top row
     uint8_t *pos = &PIXEL(x, y);
     for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-      memcpy(pos, c, BYTESPERPIXEL);
-      if (noise) {
-        modColor(pos, rand() % (noise * 2) - noise);
-      }
+      memcpy(pos, &blockColor->primary, BYTESPERPIXEL);
     }
     // Second row
     pos = &PIXEL(x, y + 1);
     for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-      memcpy(pos, (i < 2 ? dark : light), BYTESPERPIXEL);
-      // The weird check here is to get the pattern right, as the noise should
-      // be stronger every other row, but take into account the isometric
-      // perspective
-      if (noise) {
-        modColor(pos,
-                 rand() % (noise * 2) - noise * (i == 0 || i == 3 ? 1 : 2));
-      }
+      memcpy(pos, (i < 2 ? &blockColor->dark : &blockColor->light),
+             BYTESPERPIXEL);
     }
     // Third row
     pos = &PIXEL(x, y + 2);
     for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-      memcpy(pos, (i < 2 ? dark : light), BYTESPERPIXEL);
-      if (noise) {
-        modColor(pos,
-                 rand() % (noise * 2) - noise * (i == 0 || i == 3 ? 2 : 1));
-      }
+      memcpy(pos, (i < 2 ? &blockColor->dark : &blockColor->light),
+             BYTESPERPIXEL);
     }
     // Last row
     pos = &PIXEL(x, y + 3);
     for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-      memcpy(pos, (i < 2 ? dark : light), BYTESPERPIXEL);
+      memcpy(pos, (i < 2 ? &blockColor->dark : &blockColor->light),
+             BYTESPERPIXEL);
       // The weird check here is to get the pattern right, as the noise should
       // be stronger every other row, but take into account the isometric
       // perspective
-      if (noise) {
-        modColor(pos,
-                 rand() % (noise * 2) - noise * (i == 0 || i == 3 ? 1 : 2));
-      }
     }
   } else { // Not opaque, use slower blending code
     // Top row
     uint8_t *pos = &PIXEL(x, y);
     for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-      blend(pos, c);
-      if (noise) {
-        modColor(pos, rand() % (noise * 2) - noise);
-      }
+      blend(pos, blockColor);
     }
     // Second row
     pos = &PIXEL(x, y + 1);
     for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-      blend(pos, (i < 2 ? dark : light));
-      if (noise) {
-        modColor(pos,
-                 rand() % (noise * 2) - noise * (i == 0 || i == 3 ? 1 : 2));
-      }
+      blend(pos, (i < 2 ? (uint8_t *)&blockColor->dark
+                        : (uint8_t *)&blockColor->light));
     }
     // Third row
     pos = &PIXEL(x, y + 2);
     for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-      blend(pos, (i < 2 ? dark : light));
-      if (noise) {
-        modColor(pos,
-                 rand() % (noise * 2) - noise * (i == 0 || i == 3 ? 2 : 1));
-      }
+      blend(pos, (i < 2 ? (uint8_t *)&blockColor->dark
+                        : (uint8_t *)&blockColor->light));
     }
     // Last row
     pos = &PIXEL(x, y + 3);
     for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-      blend(pos, (i < 2 ? dark : light));
-      if (noise) {
-        modColor(pos,
-                 rand() % (noise * 2) - noise * (i == 0 || i == 3 ? 1 : 2));
-      }
+      blend(pos, (i < 2 ? (uint8_t *)&blockColor->dark
+                        : (uint8_t *)&blockColor->light));
     }
   }
   // The above two branches are almost the same, maybe one could just create a
