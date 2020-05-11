@@ -88,7 +88,7 @@ struct Image {
       fclose(imageHandle);
   }
 
-  void setPixel(const size_t x, const size_t y, const string &b) const;
+  void setPixel(const size_t x, const size_t y, const NBT &block) const;
 };
 
 } // namespace PNG

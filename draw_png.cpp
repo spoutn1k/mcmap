@@ -1311,7 +1311,7 @@ void setWire(const size_t x, const size_t y, const Colors::Block &block) {
 } // namespace
 
 void PNG::Image::setPixel(const size_t x, const size_t y,
-                          const string &b) const {
+                          const NBT &block) const {
   // Sets pixels around x,y where A is the anchor
   // T = given color, D = darker, L = lighter
   // A T T T
@@ -1327,9 +1327,13 @@ void PNG::Image::setPixel(const size_t x, const size_t y,
     throw std::range_error("Invalid y: " + std::to_string(y) + "/" +
                            std::to_string(gPngHeight));
 
+  if (!block.contains("Name"))
+    return;
+
   Colors::Block blockColor;
+
   try {
-    blockColor = palette.at(b);
+    blockColor = palette.at(*(block["Name"].get<const string *>()));
   } catch (const std::out_of_range &e) {
     fprintf(stderr, "Error getting block color %s\n", e.what());
     return;
@@ -1341,16 +1345,16 @@ void PNG::Image::setPixel(const size_t x, const size_t y,
   // First determine how much the color has to be lightened up or darkened
   // The brighter the color, the stronger the impact
   int sub = (float(blockColor.primary.BRIGHTNESS) / 323.0f + .21f);
-  uint8_t L[CHANSPERPIXEL], D[CHANSPERPIXEL], c[CHANSPERPIXEL];
+  uint8_t light[CHANSPERPIXEL], dark[CHANSPERPIXEL], c[CHANSPERPIXEL];
 
   // Now make a local copy of the color that we can modify just for this one
   // block
   memcpy(c, &blockColor.primary, BYTESPERPIXEL);
   modColor(c, sub);
-  memcpy(L, c, BYTESPERPIXEL);
-  memcpy(D, c, BYTESPERPIXEL);
-  modColor(L, -17);
-  modColor(D, -27);
+  memcpy(light, c, BYTESPERPIXEL);
+  memcpy(dark, c, BYTESPERPIXEL);
+  modColor(light, -17);
+  modColor(dark, -27);
 
   // Then check the block type, as some types will be drawn differently
   switch (blockColor.type) {
@@ -1362,7 +1366,7 @@ void PNG::Image::setPixel(const size_t x, const size_t y,
     return;
 
   case Colors::GROWN:
-    setGrown(x, y, blockColor, L, D, sub);
+    setGrown(x, y, blockColor, light, dark, sub);
     return;
 
   case Colors::PLANT:
@@ -1378,11 +1382,11 @@ void PNG::Image::setPixel(const size_t x, const size_t y,
     return;
 
   case Colors::SLAB:
-    setSlab(x, y, blockColor, L, D);
+    setSlab(x, y, blockColor, light, dark);
     return;
 
   case Colors::ROD:
-    setRod(x, y, blockColor, L, D);
+    setRod(x, y, blockColor, light, dark);
     return;
 
   case Colors::WIRE:
@@ -1390,7 +1394,7 @@ void PNG::Image::setPixel(const size_t x, const size_t y,
     return;
 
   case Colors::SPECIAL:
-    setFire(x, y, blockColor, L, D);
+    setFire(x, y, blockColor, light, dark);
     return;
 
   case Colors::STAIR:
@@ -1419,7 +1423,7 @@ void PNG::Image::setPixel(const size_t x, const size_t y,
     // Second row
     pos = &PIXEL(x, y + 1);
     for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-      memcpy(pos, (i < 2 ? D : L), BYTESPERPIXEL);
+      memcpy(pos, (i < 2 ? dark : light), BYTESPERPIXEL);
       // The weird check here is to get the pattern right, as the noise should
       // be stronger every other row, but take into account the isometric
       // perspective
@@ -1431,7 +1435,7 @@ void PNG::Image::setPixel(const size_t x, const size_t y,
     // Third row
     pos = &PIXEL(x, y + 2);
     for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-      memcpy(pos, (i < 2 ? D : L), BYTESPERPIXEL);
+      memcpy(pos, (i < 2 ? dark : light), BYTESPERPIXEL);
       if (noise) {
         modColor(pos,
                  rand() % (noise * 2) - noise * (i == 0 || i == 3 ? 2 : 1));
@@ -1440,7 +1444,7 @@ void PNG::Image::setPixel(const size_t x, const size_t y,
     // Last row
     pos = &PIXEL(x, y + 3);
     for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-      memcpy(pos, (i < 2 ? D : L), BYTESPERPIXEL);
+      memcpy(pos, (i < 2 ? dark : light), BYTESPERPIXEL);
       // The weird check here is to get the pattern right, as the noise should
       // be stronger every other row, but take into account the isometric
       // perspective
@@ -1461,7 +1465,7 @@ void PNG::Image::setPixel(const size_t x, const size_t y,
     // Second row
     pos = &PIXEL(x, y + 1);
     for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-      blend(pos, (i < 2 ? D : L));
+      blend(pos, (i < 2 ? dark : light));
       if (noise) {
         modColor(pos,
                  rand() % (noise * 2) - noise * (i == 0 || i == 3 ? 1 : 2));
@@ -1470,7 +1474,7 @@ void PNG::Image::setPixel(const size_t x, const size_t y,
     // Third row
     pos = &PIXEL(x, y + 2);
     for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-      blend(pos, (i < 2 ? D : L));
+      blend(pos, (i < 2 ? dark : light));
       if (noise) {
         modColor(pos,
                  rand() % (noise * 2) - noise * (i == 0 || i == 3 ? 2 : 1));
@@ -1479,7 +1483,7 @@ void PNG::Image::setPixel(const size_t x, const size_t y,
     // Last row
     pos = &PIXEL(x, y + 3);
     for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-      blend(pos, (i < 2 ? D : L));
+      blend(pos, (i < 2 ? dark : light));
       if (noise) {
         modColor(pos,
                  rand() % (noise * 2) - noise * (i == 0 || i == 3 ? 1 : 2));

@@ -206,7 +206,7 @@ size_t Terrain::Data::chunkIndex(int64_t x, int64_t z) const {
   return (x - map.minX) + (z - map.minZ) * (map.maxX - map.minX + 1);
 }
 
-string blockAt(const NBT &section, uint8_t x, uint8_t z, uint8_t y) {
+const NBT &blockAt(const NBT &section, uint8_t x, uint8_t z, uint8_t y) {
   // The `BlockStates` array contains data on the section's blocks. You have to
   // extract it by understanfing its structure.
   //
@@ -247,19 +247,19 @@ string blockAt(const NBT &section, uint8_t x, uint8_t z, uint8_t y) {
   }
 
   // Lower data now contains the index in the palette
-  const string *id =
-      section["Palette"][lower_data]["Name"].get<const string *>();
-  return *id;
+  return section["Palette"][lower_data];
 }
 
-string Terrain::Data::block(const int32_t x, const int32_t z,
-                            const int32_t y) const {
+NBT air(nbt::tag_type::tag_end);
+
+const NBT &Terrain::Data::block(const int32_t x, const int32_t z,
+                                const int32_t y) const {
   const size_t index = chunkIndex(CHUNK(x), CHUNK(z));
   const NBT &section = chunks[index][y >> 4];
   if (section.contains("Palette"))
     return blockAt(section, x, z, y);
 
-  return "minecraft:air";
+  return air;
 }
 
 uint8_t Terrain::Data::maxHeight() const { return heightBounds & 0xf0; }

@@ -83,7 +83,7 @@ struct Data {
   uint8_t minHeight() const;
   uint8_t maxHeight(const int64_t x, const int64_t z) const;
   uint8_t minHeight(const int64_t x, const int64_t z) const;
-  string block(const int32_t x, const int32_t z, const int32_t y) const;
+  const NBT &block(const int32_t x, const int32_t z, const int32_t y) const;
 };
 
 struct OrientedMap {
