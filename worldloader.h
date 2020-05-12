@@ -70,7 +70,10 @@ struct Data {
     heightBounds = 0x00;
   }
 
-  ~Data() { free(heightMap); }
+  ~Data() {
+    delete[] heightMap;
+    delete[] chunks;
+  }
 
   void load(const std::filesystem::path &regionDir);
   void loadRegion(const std::filesystem::path &regionFile, const int regionX,
