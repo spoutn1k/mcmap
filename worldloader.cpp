@@ -1,4 +1,5 @@
 #include "worldloader.h"
+#include <bitset>
 
 uint8_t zData[COMPRESSED_BUFFER];
 uint8_t chunkBuffer[DECOMPRESSED_BUFFER];
@@ -147,58 +148,53 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
 
   // Strip the chunk of pointless sections
   size_t chunkPos = chunkIndex(chunkX, chunkZ);
-  try {
-    chunks[chunkPos] = std::move(tree["Level"]["Sections"]);
-    vector<NBT> *sections = chunks[chunkPos].get<vector<NBT> *>();
 
-    // Some chunks have a -1 section, we'll pop that real quick
-    if (!sections->empty() && *sections->front()["Y"].get<int8_t *>() == -1) {
-      sections->erase(sections->begin());
+  chunks[chunkPos] = std::move(tree["Level"]["Sections"]);
+  vector<NBT> *sections = chunks[chunkPos].get<vector<NBT> *>();
+
+  // Some chunks have a -1 section, we'll pop that real quick
+  if (!sections->empty() && *sections->front()["Y"].get<int8_t *>() == -1) {
+    sections->erase(sections->begin());
+  }
+
+  // Pop all the empty top sections
+  while (!sections->empty() && !sections->back().contains("Palette")) {
+    sections->pop_back();
+  }
+
+  // Complete the cache, to determine the colors to load
+  for (auto section : *sections) {
+    if (section.is_end() || !section.contains("Palette"))
+      continue;
+
+    string blockID;
+    vector<NBT> *blocks = section["Palette"].get<vector<NBT> *>();
+    for (auto block : *blocks) {
+      string *id = block["Name"].get<string *>();
+      cache.insert(std::pair<std::string, uint8_t>(*id, 0));
     }
+  }
 
-    // Pop all the empty top sections
-    while (!sections->empty() && !sections->back().contains("Palette")) {
-      sections->pop_back();
-    }
+  // Analyze the sections vector for height info
+  if (size_t nSections = sections->size()) {
+    // If there are sections in the chunk
+    const uint8_t chunkMin =
+        nSections ? *sections->front()["Y"].get<int8_t *>() : 0;
+    const uint8_t chunkHeight = (*sections->back()["Y"].get<int8_t *>() + 1)
+                                << 4;
 
-    // Complete the cache, to determine the colors to load
-    for (auto section : *sections) {
-      if (section.is_end() || !section.contains("Palette"))
-        continue;
+    heightMap[chunkPos] = chunkHeight | chunkMin;
 
-      string blockID;
-      vector<NBT> *blocks = section["Palette"].get<vector<NBT> *>();
-      for (auto block : *blocks) {
-        string *id = block["Name"].get<string *>();
-        cache.insert(std::pair<std::string, uint8_t>(*id, 0));
-      }
-    }
+    // If the chunk's height is the highest found, record it
+    if (chunkHeight > (heightBounds & 0xf0))
+      heightBounds = chunkHeight | (heightBounds & 0x0f);
 
-    // Analyze the sections vector for height info
-    if (size_t nSections = sections->size()) {
-      // If there are sections in the chunk
-      const uint8_t chunkMin =
-          nSections ? *sections->front()["Y"].get<int8_t *>() : 0;
-      const uint8_t chunkHeight = (*sections->back()["Y"].get<int8_t *>() + 1)
-                                  << 4;
+    // Fill the chunk with empty sections
+    inflate(sections);
 
-      heightMap[chunkPos] = chunkHeight | chunkMin;
-
-      // If the chunk's height is the highest found, record it
-      if (chunkHeight > (heightBounds & 0xf0))
-        heightBounds = chunkHeight | (heightBounds & 0x0f);
-
-      // Fill the chunk with empty sections
-      inflate(sections);
-
-    } else {
-      // If there are no sections, max = min = 0
-      heightMap[chunkPos] = 0;
-    }
-
-  } catch (const std::invalid_argument &e) {
-    fprintf(stderr, "Err: %s\n", e.what());
-    return;
+  } else {
+    // If there are no sections, max = min = 0
+    heightMap[chunkPos] = 0;
   }
 }
 
@@ -207,13 +203,17 @@ size_t Terrain::Data::chunkIndex(int64_t x, int64_t z) const {
 }
 
 const NBT &blockAt(const NBT &section, uint8_t x, uint8_t z, uint8_t y) {
-  // The `BlockStates` array contains data on the section's blocks. You have to
-  // extract it by understanfing its structure.
+  // The `BlockStates` array contains data on the section's blocks. You have
+  // to extract it by understanfing its structure.
   //
-  // Although it is a array of long values, one must see it as an array of block
-  // indexes, whose element size depends on the size of the Palette. This
-  // routine locates the necessary long, extracts the block with bit
-  // comparisons, and cross-references it in the palette to get the block name.
+  // Although it is a array of long values, one must see it as an array of
+  // block indexes, whose element size depends on the size of the Palette.
+  // This routine locates the necessary long, extracts the block with bit
+  // comparisons, and cross-references it in the palette to get the block
+  // name.
+  //
+  // NEW in 1.16, longs are padded by 0s when a block cannot fit.
+
   const vector<int64_t> *blockStates =
       section["BlockStates"].get<const vector<int64_t> *>();
   const uint64_t index = (x & 0x0f) + ((z & 0x0f) + (y & 0x0f) * 16) * 16;
@@ -224,30 +224,24 @@ const NBT &blockAt(const NBT &section, uint8_t x, uint8_t z, uint8_t y) {
   const uint64_t length =
       std::max((uint64_t)ceil(log2(section["Palette"].size())), (uint64_t)4);
 
-  // We skip the `position` first blocks, of length `size`, then divide by 64 to
-  // get the number of longs to skip from the array
-  const uint64_t skip_longs = index * length >> 6;
+  // First, determine how many blocks are in each long. There is an implicit
+  // `floor` here, needed later.
+  const uint8_t blocksPerLong = 64 / length;
 
-  // Once we located the data in a long, we have to know where in the 64 bits it
-  // is located. This is the remaining of the previous operation
-  const int64_t padding = index * length & 63;
+  // Next, calculate where in the long array is the long containing the block.
+  const uint64_t longIndex = index / blocksPerLong;
 
-  // Craft a mask from the length of the block index and the padding, the apply
-  // it to the long
-  const uint64_t mask = ((1l << length) - 1) << padding;
-  uint64_t lower_data = ((*blockStates)[skip_longs] & mask) >> padding;
+  // Once we located a long, we have to know where in the 64 bits
+  // the relevant block is located.
+  const uint64_t padding = (index - longIndex * blocksPerLong) * length;
 
-  // Sometimes the length of the index does not fall entirely into a long, so
-  // here we check if there is overflow and extract it too
-  const int64_t overflow = padding + length - 64;
-  if (overflow > 0) {
-    const uint64_t upper_data =
-        (*blockStates)[skip_longs + 1] & ((1l << overflow) - 1);
-    lower_data = lower_data | upper_data << (length - overflow);
-  }
+  // Bring the data to the first bits of the long, then extract it by bitwise
+  // comparison
+  const uint64_t blockIndex =
+      ((*blockStates)[longIndex] >> padding) & ((1l << length) - 1);
 
   // Lower data now contains the index in the palette
-  return section["Palette"][lower_data];
+  return section["Palette"][blockIndex];
 }
 
 NBT air(nbt::tag_type::tag_end);
