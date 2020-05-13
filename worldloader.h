@@ -75,11 +75,16 @@ struct Data {
     delete[] chunks;
   }
 
+  // Chunk loading methods - only load should be useful
   void load(const std::filesystem::path &regionDir);
   void loadRegion(const std::filesystem::path &regionFile, const int regionX,
                   const int regionZ);
   void loadChunk(const uint32_t offset, FILE *regionHandle, const int chunkX,
                  const int chunkZ);
+
+  // Chunk analysis methods - using the list of sections
+  void tagSections(vector<NBT> *);
+  void inflateChunk(vector<NBT> *);
 
   size_t chunkIndex(int64_t, int64_t) const;
   uint8_t maxHeight() const;
