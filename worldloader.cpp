@@ -143,6 +143,41 @@ void Terrain::Data::tagSections(vector<NBT> *sections) {
   }
 }
 
+void Terrain::Data::stripChunk(vector<NBT> *sections) {
+  // Some chunks have a -1 section, we'll pop that real quick
+  if (!sections->empty() && *sections->front()["Y"].get<int8_t *>() == -1) {
+    sections->erase(sections->begin());
+  }
+
+  // Pop all the empty top sections
+  while (!sections->empty() && !sections->back().contains("Palette")) {
+    sections->pop_back();
+  }
+}
+
+void Terrain::Data::cacheColors(vector<NBT> *sections) {
+  // Complete the cache, to determine the colors to load
+  for (auto section : *sections) {
+    if (section.is_end() || !section.contains("Palette"))
+      continue;
+
+    for (auto block : *section["Palette"].get<vector<NBT> *>())
+      cache.push_back(*block["Name"].get<string *>());
+  }
+}
+
+uint8_t Terrain::Data::importHeight(vector<NBT> *sections) {
+  // If there are sections in the chunk
+  const uint8_t chunkMin = *sections->front()["Y"].get<int8_t *>();
+  const uint8_t chunkHeight = (*sections->back()["Y"].get<int8_t *>() + 1) << 4;
+
+  // If the chunk's height is the highest found, record it
+  if (chunkHeight > (heightBounds & 0xf0))
+    heightBounds = chunkHeight | (heightBounds & 0x0f);
+
+  return chunkHeight | chunkMin;
+}
+
 void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
                               const int chunkX, const int chunkZ) {
   if (!offset) {
@@ -190,62 +225,28 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
 
   NBT tree = NBT::parse(chunkBuffer, len);
 
-  // Strip the chunk of pointless sections
   size_t chunkPos = chunkIndex(chunkX, chunkZ);
 
   chunks[chunkPos] = std::move(tree["Level"]["Sections"]);
   vector<NBT> *sections = chunks[chunkPos].get<vector<NBT> *>();
 
-  // Some chunks have a -1 section, we'll pop that real quick
-  if (!sections->empty() && *sections->front()["Y"].get<int8_t *>() == -1) {
-    sections->erase(sections->begin());
+  // Strip the chunk of pointless sections
+  stripChunk(sections);
+
+  if (!sections->empty()) {
+    // Cache the blocks contained in the chunks, to load only the necessary
+    // colors later on
+    cacheColors(sections);
+
+    // Analyze the sections vector for height info
+    heightMap[chunkPos] = importHeight(sections);
+
+    // Check for sections of older versions of minecraft
+    tagSections(sections);
+
+    // Fill the chunk's holes with empty sections
+    inflateChunk(sections);
   }
-
-  // Pop all the empty top sections
-  while (!sections->empty() && !sections->back().contains("Palette")) {
-    sections->pop_back();
-  }
-
-  // Complete the cache, to determine the colors to load
-  for (auto section : *sections) {
-    if (section.is_end() || !section.contains("Palette"))
-      continue;
-
-    string blockID;
-    vector<NBT> *blocks = section["Palette"].get<vector<NBT> *>();
-    for (auto block : *blocks) {
-      string *id = block["Name"].get<string *>();
-      cache.insert(std::pair<std::string, uint8_t>(*id, 0));
-    }
-  }
-
-  // Analyze the sections vector for height info
-  if (size_t nSections = sections->size()) {
-    // If there are sections in the chunk
-    const uint8_t chunkMin =
-        nSections ? *sections->front()["Y"].get<int8_t *>() : 0;
-    const uint8_t chunkHeight = (*sections->back()["Y"].get<int8_t *>() + 1)
-                                << 4;
-
-    heightMap[chunkPos] = chunkHeight | chunkMin;
-
-    // If the chunk's height is the highest found, record it
-    if (chunkHeight > (heightBounds & 0xf0))
-      heightBounds = chunkHeight | (heightBounds & 0x0f);
-
-  } else {
-    // If there are no sections, max = min = 0
-    heightMap[chunkPos] = 0;
-  }
-
-  tagSections(sections);
-
-  // Fill the chunk with empty sections
-  inflateChunk(sections);
-}
-
-inline size_t Terrain::Data::chunkIndex(int64_t x, int64_t z) const {
-  return (x - map.minX) + (z - map.minZ) * (map.maxX - map.minX + 1);
 }
 
 const NBT &blockAtEmpty(const NBT &, uint8_t, uint8_t, uint8_t) { return air; }
@@ -338,23 +339,10 @@ const NBT &blockAtPre116(const NBT &section, uint8_t x, uint8_t z, uint8_t y) {
 
 const NBT &Terrain::Data::block(const int32_t x, const int32_t z,
                                 const int32_t y) const {
-  const size_t index = chunkIndex(CHUNK(x), CHUNK(z));
-  const NBT &section = chunks[index][y >> 4];
+  const NBT &section = chunks[chunkIndex(CHUNK(x), CHUNK(z))][y >> 4];
   if (!section.is_end() && section.contains("_type"))
     return (*getBlock[*section["_type"].get<const int8_t *>()])(section, x, z,
                                                                 y);
 
   return air;
-}
-
-uint8_t Terrain::Data::maxHeight() const { return heightBounds & 0xf0; }
-
-uint8_t Terrain::Data::maxHeight(const int64_t x, const int64_t z) const {
-  return heightMap[chunkIndex(CHUNK(x), CHUNK(z))] & 0xf0;
-}
-
-uint8_t Terrain::Data::minHeight() const { return (heightBounds & 0x0f) << 4; }
-
-uint8_t Terrain::Data::minHeight(const int64_t x, const int64_t z) const {
-  return (heightMap[chunkIndex(CHUNK(x), CHUNK(z))] & 0x0f) << 4;
 }

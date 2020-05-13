@@ -19,7 +19,7 @@ bool Colors::load(const std::filesystem::path &colorFile, Palette *colors) {
 }
 
 bool Colors::load(const std::filesystem::path &colorFile,
-                  const std::map<string, uint8_t> &filter, Palette *colors) {
+                  const std::vector<string> &filter, Palette *colors) {
   FILE *f = fopen(colorFile.c_str(), "r");
   json data;
 
@@ -34,14 +34,13 @@ bool Colors::load(const std::filesystem::path &colorFile,
   const std::map<string, json> fullList = data.get<map<string, json>>();
 
   for (auto it : filter) {
-    if (fullList.find(it.first) != fullList.end()) {
+    if (fullList.find(it) != fullList.end()) {
       colors->insert(std::pair<string, Colors::Block>(
-          it.first, fullList.at(it.first).get<Colors::Block>()));
+          it, fullList.at(it).get<Colors::Block>()));
       continue;
     } else {
-      fprintf(stderr, "No color for block %s\n", it.first.c_str());
-      colors->insert(
-          std::pair<string, Colors::Block>(it.first, Colors::Block()));
+      fprintf(stderr, "No color for block %s\n", it.c_str());
+      colors->insert(std::pair<string, Colors::Block>(it, Colors::Block()));
     }
   }
 
