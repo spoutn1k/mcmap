@@ -24,14 +24,9 @@ void printHelp(char *binary) {
          "  -file NAME       output file to 'NAME'; default is output.png\n"
          "  -nw -ne -se -sw  the orientation of the map\n"
          "  -nowater         do not render water\n"
-         "\n    WORLDPATH is the path of the desired Minecraft world.\n\n"
-         "Examples:\n\n"
-         "%s ~/.minecraft/saves/World1\n"
-         "  - This would render your entire singleplayer world in slot 1\n"
-         "%s -night -from -10 -10 -to 10 10 ~/.minecraft/saves/World1\n"
-         "  - This would render the same world but at night, and only\n"
-         "    from chunk (-10 -10) to chunk (10 10)\n",
-         8 * static_cast<int>(sizeof(size_t)), binary, binary, binary);
+         "  -nether          render the nether"
+         "  -end             render the end",
+         8 * static_cast<int>(sizeof(size_t)), binary);
 }
 
 int main(int argc, char **argv) {

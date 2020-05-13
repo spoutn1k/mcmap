@@ -1,4 +1,4 @@
-# mcmap - Tiny map visualizer
+# `mcmap` - Isometric map visualizer
 
 `mcmap` is a tool allowing you to create isometric renders of your Minecraft save file.
 
@@ -17,14 +17,16 @@ __Linux / MacOS__
 
 | Name         | Description                              |
 |--------------|------------------------------------------|
-|-from X Z     |sets the coordinates of the block to start rendering at|
-|-to X Z       |sets the coordinates of the block to end rendering at|
-|-min/max VAL  |minimum/maximum Y index (height) of blocks to render|
-|-file NAME    |sets the output filename to 'NAME'; default is output.png|
-|-nw -ne -se -sw |controls which direction will point to the *top left* corner; North-West is default|
-|-nowater      |do not render water|
+|`-from X Z`     |sets the coordinates of the block to start rendering at|
+|`-to X Z`       |sets the coordinates of the block to end rendering at|
+|`-min/max VAL`  |minimum/maximum Y index (height) of blocks to render|
+|`-file NAME`    |sets the output filename to 'NAME'; default is output.png|
+|`-nw` `-ne` `-se` `-sw` |controls which direction will point to the top corner; North-West is default|
+|`-nowater`      |do not render water|
+|`-nether`      |render the nether|
+|`-end`          |render the end|
 
-*Note: Currently you need both -from and -to to define bounds, otherwise the entire world will be rendered.*
+*Note: Currently you need both -from and -to to define bounds.*
 
 ## Color file format
 
