@@ -178,38 +178,32 @@ uint8_t Terrain::Data::importHeight(vector<NBT> *sections) {
   return chunkHeight | chunkMin;
 }
 
-void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
-                              const int chunkX, const int chunkZ) {
-  if (!offset) {
-    // Chunk does not exist
-    // printf("Chunk does not exist !\n");
-    return;
-  }
-
+bool decompressChunk(const uint32_t offset, FILE *regionHandle,
+                     uint64_t *length) {
   if (0 != fseek(regionHandle, offset, SEEK_SET)) {
     // printf("Error seeking to chunk\n");
-    return;
+    return false;
   }
 
   // Read the 5 bytes that give the size and type of data
   if (5 != fread(zData, sizeof(uint8_t), 5, regionHandle)) {
     // printf("Error reading chunk size from region file\n");
-    return;
+    return false;
   }
 
-  uint32_t len = _ntohl(zData);
+  *length = _ntohl(zData);
   // len--; // This dates from Zahl's, no idea of its purpose
 
-  if (fread(zData, sizeof(uint8_t), len, regionHandle) != len) {
+  if (fread(zData, sizeof(uint8_t), *length, regionHandle) != *length) {
     // printf("Not enough input for chunk\n");
-    return;
+    return false;
   }
 
   z_stream zlibStream;
   memset(&zlibStream, 0, sizeof(z_stream));
   zlibStream.next_in = (Bytef *)zData;
   zlibStream.next_out = (Bytef *)chunkBuffer;
-  zlibStream.avail_in = len;
+  zlibStream.avail_in = *length;
   zlibStream.avail_out = DECOMPRESSED_BUFFER;
   inflateInit2(&zlibStream, 32 + MAX_WBITS);
 
@@ -218,35 +212,43 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
 
   if (status != Z_STREAM_END) {
     printf("Error decompressing chunk: %s\n", zError(status));
-    return;
+    return false;
   }
 
-  len = zlibStream.total_out;
+  *length = zlibStream.total_out;
+  return true;
+}
 
-  NBT tree = NBT::parse(chunkBuffer, len);
+void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
+                              const int chunkX, const int chunkZ) {
+  uint64_t length, chunkPos = chunkIndex(chunkX, chunkZ);
 
-  size_t chunkPos = chunkIndex(chunkX, chunkZ);
+  if (!offset || !decompressChunk(offset, regionHandle, &length))
+    return;
 
-  chunks[chunkPos] = std::move(tree["Level"]["Sections"]);
+  NBT chunk = NBT::parse(chunkBuffer, length);
+
+  chunks[chunkPos] = std::move(chunk["Level"]["Sections"]);
   vector<NBT> *sections = chunks[chunkPos].get<vector<NBT> *>();
 
   // Strip the chunk of pointless sections
   stripChunk(sections);
 
-  if (!sections->empty()) {
-    // Cache the blocks contained in the chunks, to load only the necessary
-    // colors later on
-    cacheColors(sections);
+  if (sections->empty())
+    return;
 
-    // Analyze the sections vector for height info
-    heightMap[chunkPos] = importHeight(sections);
+  // Cache the blocks contained in the chunks, to load only the necessary
+  // colors later on
+  cacheColors(sections);
 
-    // Check for sections of older versions of minecraft
-    tagSections(sections);
+  // Analyze the sections vector for height info
+  heightMap[chunkPos] = importHeight(sections);
 
-    // Fill the chunk's holes with empty sections
-    inflateChunk(sections);
-  }
+  // Check for sections of older versions of minecraft
+  tagSections(sections);
+
+  // Fill the chunk's holes with empty sections
+  inflateChunk(sections);
 }
 
 const NBT &blockAtEmpty(const NBT &, uint8_t, uint8_t, uint8_t) { return air; }
