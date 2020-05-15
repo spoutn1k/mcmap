@@ -1,12 +1,14 @@
 # `mcmap` - Isometric map visualizer
 
+![](https://img.shields.io/badge/version-20w20a-success)
+
 *Original project by Simon Rettberg. All credits to him for the idea and vision.*
 
 `mcmap` is a tool allowing you to create isometric renders of your Minecraft save file.
 
 ![sample](assets/sample.png)
 
-This fork is under heavy development, but compatible with newer versions of Minecraft.
+This project is under heavy development, but compatible with newer versions of Minecraft.
 
 ## Usage
 
