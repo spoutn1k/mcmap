@@ -24,8 +24,8 @@ void printHelp(char *binary) {
          "  -file NAME       output file to 'NAME'; default is output.png\n"
          "  -nw -ne -se -sw  the orientation of the map\n"
          "  -nowater         do not render water\n"
-         "  -nether          render the nether"
-         "  -end             render the end",
+         "  -nether          render the nether\n"
+         "  -end             render the end\n",
          8 * static_cast<int>(sizeof(size_t)), binary);
 }
 
@@ -121,9 +121,9 @@ void render(const PNG::Image &image, const PNG::IsometricCanvas &canvas,
           std::max(world.terrain.minHeight(worldX, worldZ), canvas.minY);
 
       for (uint8_t y = localMinHeight; y < localMaxHeight; y++) {
-        const size_t bmpPosY =
-            image.height - 2 + x + z - canvas.sizeX - canvas.sizeZ -
-            (y - localMinHeight) * image.heightOffset - image.padding;
+        const size_t bmpPosY = image.height - 2 + x + z - canvas.sizeX -
+                               canvas.sizeZ - y * image.heightOffset -
+                               image.padding;
 
         const NBT &block = world.terrain.block(worldX, worldZ, y);
         image.setPixel(bmpPosX, bmpPosY, block);

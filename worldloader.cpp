@@ -121,7 +121,10 @@ void Terrain::Data::tagSections(vector<NBT> *sections) {
 
   for (auto it = sections->begin(); it != sections->end(); it++) {
     // First, skip it if you can
-    if (!it->is_compound() || !it->contains("Palette")) {
+    if (!it->is_compound())
+      return;
+
+    if (!it->contains("Palette")) {
       it->operator[]("_type") = NBT(renderTypes::SKIP);
       continue;
     }
@@ -234,8 +237,10 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
   // Strip the chunk of pointless sections
   stripChunk(sections);
 
-  if (sections->empty())
+  if (sections->empty()) {
+    heightMap[chunkPos] = 0;
     return;
+  }
 
   // Cache the blocks contained in the chunks, to load only the necessary
   // colors later on
