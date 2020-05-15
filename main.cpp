@@ -122,9 +122,12 @@ void render(const PNG::Image &image, const PNG::IsometricCanvas &canvas,
           std::max(world.terrain.minHeight(worldX, worldZ), canvas.minY);
 
       for (uint8_t y = localMinHeight; y < localMaxHeight; y++) {
-        const size_t bmpPosY = image.height - 2 + x + z - canvas.sizeX -
-                               canvas.sizeZ - y * image.heightOffset -
-                               image.padding;
+        const size_t bmpPosY =
+            image.height - 2 + x + z - canvas.sizeX - canvas.sizeZ -
+            (y - canvas.minY) * image.heightOffset - image.padding;
+        //     ^^^^^^^^^^^^^
+        // We move y down in this formula to render the bottom of the map at the
+        // bottom of the image
 
         const NBT &block = world.terrain.block(worldX, worldZ, y);
         image.setPixel(bmpPosX, bmpPosY, block);
