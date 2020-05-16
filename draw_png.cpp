@@ -915,7 +915,7 @@ void setRod(const size_t x, const size_t y, const NBT &,
   }
 }
 
-void setSlab(const size_t x, const size_t y, const NBT &,
+void setSlab(const size_t x, const size_t y, const NBT &metadata,
              const Colors::Block *color) {
   /* This one has a hack to make it look like a gradual step up:
    * The second layer has primary colors to make the difference less
@@ -924,21 +924,33 @@ void setSlab(const size_t x, const size_t y, const NBT &,
    * |PPPP|
    * |DPPL|
    * |DDLL| */
-  uint8_t *pos = &PIXEL(x, y + 1);
+
+  bool top = false;
+#define SLAB_OFFSET (top ? 0 : 1)
+  if (*metadata["Properties"]["type"].get<const string *>() == "top")
+    top = true;
+
+  uint8_t *pos = &PIXEL(x, y + SLAB_OFFSET);
   for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
     memcpy(pos, &color->primary, BYTESPERPIXEL);
   }
 
-  pos = &PIXEL(x, y + 2);
+  pos = &PIXEL(x, y + SLAB_OFFSET + 1);
   memcpy(pos, &color->dark, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL, &color->primary, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL * 2, &color->primary, BYTESPERPIXEL);
+  if (top) {
+    memcpy(pos + CHANSPERPIXEL, &color->dark, BYTESPERPIXEL);
+    memcpy(pos + CHANSPERPIXEL * 2, &color->light, BYTESPERPIXEL);
+  } else {
+    memcpy(pos + CHANSPERPIXEL, &color->primary, BYTESPERPIXEL);
+    memcpy(pos + CHANSPERPIXEL * 2, &color->primary, BYTESPERPIXEL);
+  }
   memcpy(pos + CHANSPERPIXEL * 3, &color->light, BYTESPERPIXEL);
 
-  pos = &PIXEL(x, y + 3);
+  pos = &PIXEL(x, y + SLAB_OFFSET + 2);
   for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
     memcpy(pos, (i < 2 ? &color->dark : &color->light), BYTESPERPIXEL);
   }
+#undef SLAB_OFFSET
 }
 
 void setWire(const size_t x, const size_t y, const NBT &,
