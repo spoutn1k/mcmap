@@ -128,48 +128,61 @@ public:
     return NBT(data, data + size);
   }
 
+  void assertSize(uint8_t *data, uint8_t *end, size_t length) {
+    if (uint64_t(end - data) < length)
+      throw(std::domain_error("NBT file ends too soon"));
+  }
+
   void parse(uint8_t *&data, uint8_t *end) {
     switch (type) {
     case tag_type::tag_byte: {
+      assertSize(data, end, 1);
       content.byte = int8_t(*data);
       data++;
       break;
     }
 
     case tag_type::tag_short: {
+      assertSize(data, end, 2);
       content.short_n = NTOHS(data);
       data += 2;
       break;
     }
 
     case tag_type::tag_int: {
+      assertSize(data, end, 4);
       content.int_n = NTOHI(data);
       data += 4;
       break;
     }
 
     case tag_type::tag_long: {
+      assertSize(data, end, 8);
       content.long_n = NTOHL(data);
       data += 8;
       break;
     }
 
     case tag_type::tag_float: {
+      assertSize(data, end, 4);
       content.int_n = float(NTOHI(data));
       data += 4;
       break;
     }
 
     case tag_type::tag_double: {
+      assertSize(data, end, 8);
       content.long_n = double(NTOHL(data));
       data += 8;
       break;
     }
 
     case tag_type::tag_byte_array: {
+      assertSize(data, end, 4);
       uint32_t len = NTOHI(data);
       content = tag_content(tag_type::tag_byte_array);
 
+      assertSize(data + 4, end, len);
       for (size_t i = 0; i < len; i++)
         content.byte_array->push_back(*(data + 4 + i));
 
@@ -178,15 +191,23 @@ public:
     }
 
     case tag_type::tag_string: {
+      assertSize(data, end, 4);
       uint16_t len = NTOHS(data);
+
+      assertSize(data + 2, end, len);
       content = tag_string_t((char *)(data + 2), len);
+
       data += (len + 2);
       break;
     }
 
     case tag_type::tag_list: {
+      assertSize(data, end, 1);
       tag_type chid_type = tag_type(data[0]);
+
+      assertSize(data + 1, end, 4);
       uint32_t len = NTOHI(data + 1);
+
       data += 5;
       content = tag_content(tag_type::tag_list);
 
@@ -206,9 +227,11 @@ public:
     }
 
     case tag_type::tag_int_array: {
+      assertSize(data, end, 4);
       uint32_t len = NTOHI(data);
       content = tag_content(tag_type::tag_int_array);
 
+      assertSize(data + 4, end, 4 * len);
       for (size_t i = 0; i < len; i++)
         content.int_array->push_back(NTOHI(data + 4 * (i + 1)));
 
@@ -217,9 +240,11 @@ public:
     }
 
     case tag_type::tag_long_array: {
+      assertSize(data, end, 4);
       uint32_t len = NTOHI(data);
       content = tag_content(tag_type::tag_long_array);
 
+      assertSize(data + 4, end, 8 * len);
       for (size_t i = 0; i < len; i++)
         content.long_array->push_back(NTOHL(data + i * 8 + 4));
 
@@ -693,11 +718,15 @@ private:
   };
 
   NBT(uint8_t *&data, uint8_t *end) : NBT() {
+    assertSize(data, end, 1);
     type = tag_type(data[0]);
     if (type == tag_type::tag_end)
       return;
 
+    assertSize(data + 1, end, 2);
     uint16_t len = NTOHS(data + 1);
+
+    assertSize(data + 3, end, len);
     name = std::string((char *)(data + 3), len);
     data += len + 3;
 
@@ -899,6 +928,7 @@ public:
       break;
     }
     case tag_type::tag_byte_array: {
+      printf("\n");
       break;
     }
     case tag_type::tag_string: {
@@ -918,9 +948,11 @@ public:
       break;
     }
     case tag_type::tag_int_array: {
+      printf("\n");
       break;
     }
     case tag_type::tag_long_array: {
+      printf("\n");
       break;
     }
     default:
