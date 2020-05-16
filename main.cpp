@@ -130,7 +130,7 @@ void render(const PNG::Image &image, const PNG::IsometricCanvas &canvas,
         // bottom of the image
 
         const NBT &block = world.terrain.block(worldX, worldZ, y);
-        image.setPixel(bmpPosX, bmpPosY, block);
+        image.drawBlock(bmpPosX, bmpPosY, block);
       }
     }
   }

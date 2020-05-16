@@ -728,8 +728,24 @@ inline void addColor(uint8_t *const color, const uint8_t *const add) {
   color[2] = clamp(uint16_t(float(color[2]) * v1 + float(add[2]) * v2));
 }
 
-void setThin(const size_t x, const size_t y, const NBT &,
-             const Colors::Block *block) {
+void drawHead(const size_t x, const size_t y, const NBT &,
+              const Colors::Block *block) {
+  /* Small block centered
+   * |    |
+   * |    |
+   * | PP |
+   * | DL | */
+  uint8_t *pos = &PIXEL(x + 1, y + 2);
+  memcpy(pos, &block->primary, BYTESPERPIXEL);
+  memcpy(pos + CHANSPERPIXEL, &block->primary, BYTESPERPIXEL);
+
+  pos = &PIXEL(x + 1, y + 3);
+  memcpy(pos, &block->dark, BYTESPERPIXEL);
+  memcpy(pos + CHANSPERPIXEL, &block->light, BYTESPERPIXEL);
+}
+
+void drawThin(const size_t x, const size_t y, const NBT &,
+              const Colors::Block *block) {
   /* Overwrite the block below's top layer
    * |    |
    * |    |
@@ -747,19 +763,21 @@ void setThin(const size_t x, const size_t y, const NBT &,
 #endif
 }
 
-void setHidden(const size_t, const size_t, const NBT &, const Colors::Block *) {
+void drawHidden(const size_t, const size_t, const NBT &,
+                const Colors::Block *) {
+  return;
 }
 
-void setTransparent(const size_t x, const size_t y, const NBT &,
-                    const Colors::Block *block) {
+void drawTransparent(const size_t x, const size_t y, const NBT &,
+                     const Colors::Block *block) {
   // Avoid the dark/light edges for a clearer look through
   for (uint8_t i = 0; i < 4; i++)
     for (uint8_t j = 0; j < 3; j++)
       blend(&PIXEL(x + i, y + j), block);
 }
 
-void setTorch(const size_t x, const size_t y, const NBT &,
-              const Colors::Block *block) {
+void drawTorch(const size_t x, const size_t y, const NBT &,
+               const Colors::Block *block) {
   /* TODO Callback to handle the orientation
    * Print the secondary on top of two primary
    * |    |
@@ -778,8 +796,8 @@ void setTorch(const size_t x, const size_t y, const NBT &,
 #endif
 }
 
-void setPlant(const size_t x, const size_t y, const NBT &,
-              const Colors::Block *block) {
+void drawPlant(const size_t x, const size_t y, const NBT &,
+               const Colors::Block *block) {
   /* Print a plant-like block
    * TODO Make that nicer ?
    * |    |
@@ -795,8 +813,8 @@ void setPlant(const size_t x, const size_t y, const NBT &,
   memcpy(pos, &block->primary, BYTESPERPIXEL);
 }
 
-void setFire(const size_t x, const size_t y, const NBT &,
-             const Colors::Block *const color) {
+void drawFire(const size_t x, const size_t y, const NBT &,
+              const Colors::Block *const color) {
   // This basically just leaves out a few pixels
   // Top row
   uint8_t *pos = &PIXEL(x, y);
@@ -814,8 +832,8 @@ void setFire(const size_t x, const size_t y, const NBT &,
   blend(pos + (CHANSPERPIXEL * 2), (uint8_t *)&color->light);
 }
 
-void setOre(const size_t x, const size_t y, const NBT &,
-            const Colors::Block *color) {
+void drawOre(const size_t x, const size_t y, const NBT &,
+             const Colors::Block *color) {
   /* Print a vein with the secondary in the block
    * |PPPS|
    * |DDSL|
@@ -847,8 +865,8 @@ void setOre(const size_t x, const size_t y, const NBT &,
   memcpy(pos + CHANSPERPIXEL * 3, &color->light, BYTESPERPIXEL);
 }
 
-void setGrown(const size_t x, const size_t y, const NBT &,
-              const Colors::Block *color) {
+void drawGrown(const size_t x, const size_t y, const NBT &,
+               const Colors::Block *color) {
   /* Print the secondary color on top
    * |SSSS|
    * |DSSL|
@@ -898,8 +916,8 @@ void setGrown(const size_t x, const size_t y, const NBT &,
   memcpy(pos + CHANSPERPIXEL * 3, &color->light, BYTESPERPIXEL);
 }
 
-void setRod(const size_t x, const size_t y, const NBT &,
-            const Colors::Block *const color) {
+void drawRod(const size_t x, const size_t y, const NBT &,
+             const Colors::Block *const color) {
   /* A full fat rod
    * | PP |
    * | DL |
@@ -915,8 +933,8 @@ void setRod(const size_t x, const size_t y, const NBT &,
   }
 }
 
-void setSlab(const size_t x, const size_t y, const NBT &metadata,
-             const Colors::Block *color) {
+void drawSlab(const size_t x, const size_t y, const NBT &metadata,
+              const Colors::Block *color) {
   /* This one has a hack to make it look like a gradual step up:
    * The second layer has primary colors to make the difference less
    * obvious.
@@ -953,8 +971,8 @@ void setSlab(const size_t x, const size_t y, const NBT &metadata,
 #undef SLAB_OFFSET
 }
 
-void setWire(const size_t x, const size_t y, const NBT &,
-             const Colors::Block *color) {
+void drawWire(const size_t x, const size_t y, const NBT &,
+              const Colors::Block *color) {
   uint8_t *pos = &PIXEL(x + 1, y + 2);
   memcpy(pos, &color->primary, BYTESPERPIXEL);
   memcpy(pos + CHANSPERPIXEL, &color->primary, BYTESPERPIXEL);
@@ -975,8 +993,8 @@ void setWire(const size_t x, const size_t y, const NBT &,
 
 } // namespace
 
-void setFull(const size_t x, const size_t y, const NBT &,
-             const Colors::Block *color) {
+void drawFull(const size_t x, const size_t y, const NBT &,
+              const Colors::Block *color) {
   // Sets pixels around x,y where A is the anchor
   // T = given color, D = darker, L = lighter
   // A T T T
@@ -1037,14 +1055,14 @@ void setFull(const size_t x, const size_t y, const NBT &,
 
 void (*blockRenderer[])(const size_t, const size_t, const NBT &,
                         const Colors::Block *) = {
-    &setFull,
+    &drawFull,
 #define DEFINETYPE(STRING, CALLBACK) &CALLBACK,
 #include "./blocktypes.def"
 #undef DEFINETYPE
 };
 
-void PNG::Image::setPixel(const size_t x, const size_t y,
-                          const NBT &blockData) const {
+void PNG::Image::drawBlock(const size_t x, const size_t y,
+                           const NBT &blockData) const {
   if (x < 0 || x > width - 1)
     throw std::range_error("Invalid x: " + std::to_string(x) + "/" +
                            std::to_string(gPngWidth));
