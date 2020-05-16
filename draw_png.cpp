@@ -728,7 +728,8 @@ inline void addColor(uint8_t *const color, const uint8_t *const add) {
   color[2] = clamp(uint16_t(float(color[2]) * v1 + float(add[2]) * v2));
 }
 
-void setThin(const size_t x, const size_t y, const Colors::Block *block) {
+void setThin(const size_t x, const size_t y, const NBT &,
+             const Colors::Block *block) {
   /* Overwrite the block below's top layer
    * |    |
    * |    |
@@ -746,7 +747,10 @@ void setThin(const size_t x, const size_t y, const Colors::Block *block) {
 #endif
 }
 
-void setTransparent(const size_t x, const size_t y,
+void setHidden(const size_t, const size_t, const NBT &, const Colors::Block *) {
+}
+
+void setTransparent(const size_t x, const size_t y, const NBT &,
                     const Colors::Block *block) {
   // Avoid the dark/light edges for a clearer look through
   for (uint8_t i = 0; i < 4; i++)
@@ -754,7 +758,8 @@ void setTransparent(const size_t x, const size_t y,
       blend(&PIXEL(x + i, y + j), block);
 }
 
-void setTorch(const size_t x, const size_t y, const Colors::Block *block) {
+void setTorch(const size_t x, const size_t y, const NBT &,
+              const Colors::Block *block) {
   /* TODO Callback to handle the orientation
    * Print the secondary on top of two primary
    * |    |
@@ -773,7 +778,8 @@ void setTorch(const size_t x, const size_t y, const Colors::Block *block) {
 #endif
 }
 
-void setPlant(const size_t x, const size_t y, const Colors::Block *block) {
+void setPlant(const size_t x, const size_t y, const NBT &,
+              const Colors::Block *block) {
   /* Print a plant-like block
    * TODO Make that nicer ?
    * |    |
@@ -789,7 +795,8 @@ void setPlant(const size_t x, const size_t y, const Colors::Block *block) {
   memcpy(pos, &block->primary, BYTESPERPIXEL);
 }
 
-void setFire(const size_t x, const size_t y, const Colors::Block *const color) {
+void setFire(const size_t x, const size_t y, const NBT &,
+             const Colors::Block *const color) {
   // This basically just leaves out a few pixels
   // Top row
   uint8_t *pos = &PIXEL(x, y);
@@ -807,7 +814,8 @@ void setFire(const size_t x, const size_t y, const Colors::Block *const color) {
   blend(pos + (CHANSPERPIXEL * 2), (uint8_t *)&color->light);
 }
 
-void setOre(const size_t x, const size_t y, const Colors::Block *color) {
+void setOre(const size_t x, const size_t y, const NBT &,
+            const Colors::Block *color) {
   /* Print a vein with the secondary in the block
    * |PPPS|
    * |DDSL|
@@ -839,13 +847,18 @@ void setOre(const size_t x, const size_t y, const Colors::Block *color) {
   memcpy(pos + CHANSPERPIXEL * 3, &color->light, BYTESPERPIXEL);
 }
 
-void setGrown(const size_t x, const size_t y, const Colors::Block *const color,
-              const int sub) {
+void setGrown(const size_t x, const size_t y, const NBT &,
+              const Colors::Block *color) {
   /* Print the secondary color on top
    * |SSSS|
    * |DSSL|
    * |DDLL|
-   * | DL | */
+   * |DDLL| */
+
+  // First determine how much the color has to be lightened up or darkened
+  // The brighter the color, the stronger the impact
+  int sub = (float(color->primary.BRIGHTNESS) / 323.0f + .21f);
+
   uint8_t L[CHANSPERPIXEL], D[CHANSPERPIXEL];
   memcpy(L, &color->secondary, BYTESPERPIXEL);
   memcpy(D, &color->secondary, BYTESPERPIXEL);
@@ -885,7 +898,8 @@ void setGrown(const size_t x, const size_t y, const Colors::Block *const color,
   memcpy(pos + CHANSPERPIXEL * 3, &color->light, BYTESPERPIXEL);
 }
 
-void setRod(const size_t x, const size_t y, const Colors::Block *const color) {
+void setRod(const size_t x, const size_t y, const NBT &,
+            const Colors::Block *const color) {
   /* A full fat rod
    * | PP |
    * | DL |
@@ -901,7 +915,8 @@ void setRod(const size_t x, const size_t y, const Colors::Block *const color) {
   }
 }
 
-void setSlab(const size_t x, const size_t y, const Colors::Block *color) {
+void setSlab(const size_t x, const size_t y, const NBT &,
+             const Colors::Block *color) {
   /* This one has a hack to make it look like a gradual step up:
    * The second layer has primary colors to make the difference less
    * obvious.
@@ -926,7 +941,8 @@ void setSlab(const size_t x, const size_t y, const Colors::Block *color) {
   }
 }
 
-void setWire(const size_t x, const size_t y, const Colors::Block *color) {
+void setWire(const size_t x, const size_t y, const NBT &,
+             const Colors::Block *color) {
   uint8_t *pos = &PIXEL(x + 1, y + 2);
   memcpy(pos, &color->primary, BYTESPERPIXEL);
   memcpy(pos + CHANSPERPIXEL, &color->primary, BYTESPERPIXEL);
@@ -947,8 +963,8 @@ void setWire(const size_t x, const size_t y, const Colors::Block *color) {
 
 } // namespace
 
-void PNG::Image::setPixel(const size_t x, const size_t y,
-                          const NBT &block) const {
+void setFull(const size_t x, const size_t y, const NBT &,
+             const Colors::Block *color) {
   // Sets pixels around x,y where A is the anchor
   // T = given color, D = darker, L = lighter
   // A T T T
@@ -956,6 +972,67 @@ void PNG::Image::setPixel(const size_t x, const size_t y,
   // D D L L
   //   D L
 
+  // Ordinary blocks are all rendered the same way
+  if (color->primary.ALPHA == 255) { // Fully opaque - faster
+    // Top row
+    uint8_t *pos = &PIXEL(x, y);
+    for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
+      memcpy(pos, &color->primary, BYTESPERPIXEL);
+    }
+    // Second row
+    pos = &PIXEL(x, y + 1);
+    for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
+      memcpy(pos, (i < 2 ? &color->dark : &color->light), BYTESPERPIXEL);
+    }
+    // Third row
+    pos = &PIXEL(x, y + 2);
+    for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
+      memcpy(pos, (i < 2 ? &color->dark : &color->light), BYTESPERPIXEL);
+    }
+    // Last row
+    pos = &PIXEL(x, y + 3);
+    for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
+      memcpy(pos, (i < 2 ? &color->dark : &color->light), BYTESPERPIXEL);
+      // The weird check here is to get the pattern right, as the noise should
+      // be stronger every other row, but take into account the isometric
+      // perspective
+    }
+  } else { // Not opaque, use slower blending code
+    // Top row
+    uint8_t *pos = &PIXEL(x, y);
+    for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
+      blend(pos, color);
+    }
+    // Second row
+    pos = &PIXEL(x, y + 1);
+    for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
+      blend(pos, (i < 2 ? (uint8_t *)&color->dark : (uint8_t *)&color->light));
+    }
+    // Third row
+    pos = &PIXEL(x, y + 2);
+    for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
+      blend(pos, (i < 2 ? (uint8_t *)&color->dark : (uint8_t *)&color->light));
+    }
+    // Last row
+    pos = &PIXEL(x, y + 3);
+    for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
+      blend(pos, (i < 2 ? (uint8_t *)&color->dark : (uint8_t *)&color->light));
+    }
+  }
+  // The above two branches are almost the same, maybe one could just create a
+  // function pointer and...
+}
+
+void (*blockRenderer[])(const size_t, const size_t, const NBT &,
+                        const Colors::Block *) = {
+    &setFull,
+#define DEFINETYPE(STRING, CALLBACK) &CALLBACK,
+#include "./blocktypes.def"
+#undef DEFINETYPE
+};
+
+void PNG::Image::setPixel(const size_t x, const size_t y,
+                          const NBT &blockData) const {
   if (x < 0 || x > width - 1)
     throw std::range_error("Invalid x: " + std::to_string(x) + "/" +
                            std::to_string(gPngWidth));
@@ -964,10 +1041,10 @@ void PNG::Image::setPixel(const size_t x, const size_t y,
     throw std::range_error("Invalid y: " + std::to_string(y) + "/" +
                            std::to_string(gPngHeight));
 
-  if (!block.contains("Name"))
+  if (!blockData.contains("Name"))
     return;
 
-  const string &name = *(block["Name"].get<const string *>());
+  const string &name = *(blockData["Name"].get<const string *>());
   auto defined = palette.find(name);
 
   if (defined == palette.end()) {
@@ -977,116 +1054,9 @@ void PNG::Image::setPixel(const size_t x, const size_t y,
 
   const Colors::Block *blockColor = &(defined->second);
 
-  if (blockColor->primary.empty() || blockColor->type == Colors::HIDE)
+  if (blockColor->primary.empty())
     return;
 
-  // First determine how much the color has to be lightened up or darkened
-  // The brighter the color, the stronger the impact
-  int sub = (float(blockColor->primary.BRIGHTNESS) / 323.0f + .21f);
-
-  // Then check the block type, as some types will be drawn differently
-  switch (blockColor->type) {
-  case Colors::HIDE:
-    return;
-
-  case Colors::CLEAR:
-    setTransparent(x, y, blockColor);
-    return;
-
-  case Colors::GROWN:
-    setGrown(x, y, blockColor, sub);
-    return;
-
-  case Colors::ORE:
-    setOre(x, y, blockColor);
-    return;
-
-  case Colors::PLANT:
-    setPlant(x, y, blockColor);
-    return;
-
-  case Colors::THIN:
-    setThin(x, y, blockColor);
-    return;
-
-  case Colors::TORCH:
-    setTorch(x, y, blockColor);
-    return;
-
-  case Colors::SLAB:
-    setSlab(x, y, blockColor);
-    return;
-
-  case Colors::ROD:
-    setRod(x, y, blockColor);
-    return;
-
-  case Colors::WIRE:
-    setWire(x, y, blockColor);
-    return;
-
-  case Colors::SPECIAL:
-    setFire(x, y, blockColor);
-    return;
-
-  case Colors::STAIR:
-  case Colors::FULL:
-    break;
-  }
-
-  // Ordinary blocks are all rendered the same way
-  if (blockColor->primary.ALPHA == 255) { // Fully opaque - faster
-    // Top row
-    uint8_t *pos = &PIXEL(x, y);
-    for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-      memcpy(pos, &blockColor->primary, BYTESPERPIXEL);
-    }
-    // Second row
-    pos = &PIXEL(x, y + 1);
-    for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-      memcpy(pos, (i < 2 ? &blockColor->dark : &blockColor->light),
-             BYTESPERPIXEL);
-    }
-    // Third row
-    pos = &PIXEL(x, y + 2);
-    for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-      memcpy(pos, (i < 2 ? &blockColor->dark : &blockColor->light),
-             BYTESPERPIXEL);
-    }
-    // Last row
-    pos = &PIXEL(x, y + 3);
-    for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-      memcpy(pos, (i < 2 ? &blockColor->dark : &blockColor->light),
-             BYTESPERPIXEL);
-      // The weird check here is to get the pattern right, as the noise should
-      // be stronger every other row, but take into account the isometric
-      // perspective
-    }
-  } else { // Not opaque, use slower blending code
-    // Top row
-    uint8_t *pos = &PIXEL(x, y);
-    for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-      blend(pos, blockColor);
-    }
-    // Second row
-    pos = &PIXEL(x, y + 1);
-    for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-      blend(pos, (i < 2 ? (uint8_t *)&blockColor->dark
-                        : (uint8_t *)&blockColor->light));
-    }
-    // Third row
-    pos = &PIXEL(x, y + 2);
-    for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-      blend(pos, (i < 2 ? (uint8_t *)&blockColor->dark
-                        : (uint8_t *)&blockColor->light));
-    }
-    // Last row
-    pos = &PIXEL(x, y + 3);
-    for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-      blend(pos, (i < 2 ? (uint8_t *)&blockColor->dark
-                        : (uint8_t *)&blockColor->light));
-    }
-  }
-  // The above two branches are almost the same, maybe one could just create a
-  // function pointer and...
+  // Then call the function registered with the block's type
+  blockRenderer[blockColor->type](x, y, blockData, blockColor);
 }

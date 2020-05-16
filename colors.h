@@ -46,7 +46,7 @@ bool loadBiomeColors(const char* path);*/
 namespace Colors {
 
 enum BlockTypes {
-#define DEFINETYPE(TYPE, STRING) TYPE,
+#define DEFINETYPE(STRING, CALLBACK) CALLBACK,
   FULL = 0,
 #include "blocktypes.def"
 #undef DEFINETYPE
@@ -54,14 +54,14 @@ enum BlockTypes {
 
 const std::unordered_map<string, Colors::BlockTypes> stringToType = {
     {"Full", Colors::BlockTypes::FULL},
-#define DEFINETYPE(TYPE, STRING) {STRING, Colors::BlockTypes::TYPE},
+#define DEFINETYPE(STRING, CALLBACK) {STRING, Colors::BlockTypes::CALLBACK},
 #include "blocktypes.def"
 #undef DEFINETYPE
 };
 
 const std::unordered_map<Colors::BlockTypes, string> typeToString = {
     {Colors::BlockTypes::FULL, "Full"},
-#define DEFINETYPE(TYPE, STRING) {Colors::BlockTypes::TYPE, STRING},
+#define DEFINETYPE(STRING, CALLBACK) {Colors::BlockTypes::CALLBACK, STRING},
 #include "blocktypes.def"
 #undef DEFINETYPE
 };

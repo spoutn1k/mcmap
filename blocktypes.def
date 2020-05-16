@@ -1,19 +1,20 @@
 /* Definition of the supported block types.
  * This file allows to enable or diable specific types, the full block type
- * being enabled by default. Comment a line to disable its type.
- * The left member is the name in the code, the right member is the string
- * to use in the color json files.
- * They are imported at compile time with some macro magic */
+ * being enabled by default. Comment a line with a C-style comment to disable
+ *its type. The left argument is the identifier in the `type` attribute of the
+ *`colors.json` file, the other being the callback to use in the code.
+ * They are imported at compile time with some macro
+ * magic */
 
-DEFINETYPE( HIDE, "Hide" )              // Non-renderable (levers etc)
-DEFINETYPE( CLEAR, "Clear" )            // See-through: clearer look when in large quantities.
-DEFINETYPE( SLAB, "Slab" )              // Slab and half-blocks
-DEFINETYPE( STAIR, "Stair" )            // Not implemented yet.
-DEFINETYPE( TORCH, "Torch" )            // Torch/end rod. Accent is the color of the flame.
-DEFINETYPE( ROD, "Rod" )                // Fence and walls.
-DEFINETYPE( ORE, "Ore" )                // Ores
-DEFINETYPE( WIRE, "Wire" )              // Redstone dust, tripwire
-DEFINETYPE( PLANT, "Plant" )            // Flower and plants.
-DEFINETYPE( THIN, "Thin" )              // Snow-like.
-DEFINETYPE( GROWN, "Grown" )            // Grass-like blocks, accent is the color on top.
-DEFINETYPE( SPECIAL, "Special" )        // Two color blocks (eg Fire and Cocoa). Not implemented yet.
+DEFINETYPE("Hide", setHidden)       // Non-renderable (levers etc)
+DEFINETYPE("Clear", setTransparent) // See-through: clearer look when in large quantities.
+DEFINETYPE("Slab", setSlab)         // Slab and half-blocks
+//DEFINETYPE("Stair", setFull)        // Not implemented yet.
+DEFINETYPE("Torch", setTorch)       // Torch/end rod. Accent is the color of the flame.
+DEFINETYPE("Rod", setRod)           // Fence and walls.
+DEFINETYPE("Ore", setOre)           // Ores
+DEFINETYPE("Wire", setWire)         // Redstone dust, tripwire
+DEFINETYPE("Plant", setPlant)       // Flower and plants.
+DEFINETYPE("Thin", setThin)         // Snow-like.
+DEFINETYPE("Grown", setGrown)       // Grass-like blocks, accent is the color on top.
+DEFINETYPE("Fire", setFire)         // Fire-like.

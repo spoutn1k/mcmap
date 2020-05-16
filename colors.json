@@ -20,7 +20,7 @@
     "minecraft:obsidian": [26, 11, 43, 255],
     "minecraft:torch": {"type": "Torch", "color": [157, 128, 79, 255, 11], "accent": [245, 220, 50, 255]},
     "minecraft:wall_torch": {"type": "Torch", "color": [157, 128, 79, 255, 11], "accent": [245, 220, 50, 255]},
-    "minecraft:fire": {"type": "Special", "color": [255, 170, 30, 200]},
+    "minecraft:fire": {"type": "Fire", "color": [255, 170, 30, 200]},
     "minecraft:spawner": [20, 170, 200, 255],
     "minecraft:chest": [125, 91, 38, 255],
     "minecraft:crafting_table": [114, 88, 56, 255],
@@ -397,7 +397,7 @@
 
     "minecraft:nether_wart": [112, 8, 28, 254],
 
-    "minecraft:soul_fire": {"type": "Special", "color": [45, 166, 152, 255]},
+    "minecraft:soul_fire": {"type": "Fire", "color": [45, 166, 152, 255]},
 
     "minecraft:basalt": [95, 95, 95, 255, 24],
 
