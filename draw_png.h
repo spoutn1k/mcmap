@@ -77,7 +77,7 @@ struct Image {
                                "' for writing: " + string(strerror(errno))));
     }
 
-    if (!createImage(imageHandle, width, height, false)) {
+    if (!create()) {
       throw(std::runtime_error("Error allocating bitmap: " +
                                string(strerror(errno))));
     }
@@ -90,7 +90,9 @@ struct Image {
       fclose(imageHandle);
   }
 
-  void drawBlock(const size_t x, const size_t y, const NBT &block) const;
+  bool create();
+  bool save();
+  void drawBlock(const size_t x, const size_t y, const NBT &block);
 };
 
 } // namespace PNG

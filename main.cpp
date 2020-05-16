@@ -11,7 +11,7 @@
 using std::string;
 
 void printHelp(char *binary);
-void render(const PNG::Image &image, const PNG::IsometricCanvas &canvas,
+void render(PNG::Image *image, const PNG::IsometricCanvas &canvas,
             const Terrain::OrientedMap &world);
 
 void printHelp(char *binary) {
@@ -67,14 +67,14 @@ int main(int argc, char **argv) {
   canvas.maxY = std::min(canvas.maxY, world.terrain.maxHeight());
   PNG::Image image(options.outFile, canvas, colors);
 
-  render(image, canvas, world);
-  saveImage();
+  render(&image, canvas, world);
+  image.save();
 
   printf("Job complete.\n");
   return 0;
 }
 
-void render(const PNG::Image &image, const PNG::IsometricCanvas &canvas,
+void render(PNG::Image *image, const PNG::IsometricCanvas &canvas,
             const Terrain::OrientedMap &world) {
   /* There are 3 sets of coordinates here:
    * - x, y, z: the coordinates of the dot on the virtual isometric map
@@ -98,7 +98,7 @@ void render(const PNG::Image &image, const PNG::IsometricCanvas &canvas,
   for (size_t x = 0; x < canvas.sizeX + 1; x++) {
     for (size_t z = 0; z < canvas.sizeZ + 1; z++) {
       const size_t bmpPosX =
-          2 * (canvas.sizeZ - 1) + (x - z) * 2 + image.padding;
+          2 * (canvas.sizeZ - 1) + (x - z) * 2 + image->padding;
 
       // in some orientations, the axis are inverted in the world
       if (world.orientation == Terrain::NE || world.orientation == Terrain::SW)
@@ -118,14 +118,14 @@ void render(const PNG::Image &image, const PNG::IsometricCanvas &canvas,
 
       for (uint8_t y = localMinHeight; y < localMaxHeight; y++) {
         const size_t bmpPosY =
-            image.height - 2 + x + z - canvas.sizeX - canvas.sizeZ -
-            (y - canvas.minY) * image.heightOffset - image.padding;
+            image->height - 2 + x + z - canvas.sizeX - canvas.sizeZ -
+            (y - canvas.minY) * image->heightOffset - image->padding;
         //     ^^^^^^^^^^^^^
         // We move y down in this formula to render the bottom of the map at the
         // bottom of the image
 
         const NBT &block = world.terrain.block(worldX, worldZ, y);
-        image.drawBlock(bmpPosX, bmpPosY, block);
+        image->drawBlock(bmpPosX, bmpPosY, block);
       }
     }
   }

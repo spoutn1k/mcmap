@@ -46,6 +46,7 @@ struct ImagePart {
   }
   ~ImagePart() { free(filename); }
 };
+
 struct ImageTile {
   FILE *fileHandle;
   png_structp pngPtr;
@@ -86,20 +87,21 @@ void createImageBuffer(const size_t width, const size_t height,
   }
 }
 
-bool createImage(FILE *fh, const size_t width, const size_t height,
-                 const bool splitUp) {
+bool PNG::Image::create() {
   gPngLocalWidth = gPngWidth = (int)width;
   gPngLocalHeight = gPngHeight = (int)height;
+
   gPngLocalLineWidthChans = gPngLineWidthChans = gPngWidth * 4;
+
   gPngSize = gPngLocalSize =
       (uint64_t)gPngLineWidthChans * (uint64_t)gPngHeight;
+
   printf("Image dimensions are %dx%d, 32bpp, %.2fMiB\n", gPngWidth, gPngHeight,
          float(gPngSize / float(1024 * 1024)));
-  if (!splitUp) {
-    gImageBuffer = new uint8_t[gPngSize];
-    memset(gImageBuffer, 0, (size_t)gPngSize);
-  }
-  fseeko(fh, 0, SEEK_SET);
+
+  gImageBuffer = new uint8_t[gPngSize];
+  memset(gImageBuffer, 0, (size_t)gPngSize);
+  fseeko(imageHandle, 0, SEEK_SET);
   // Write header
   pngPtrMain = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 
@@ -122,7 +124,7 @@ bool createImage(FILE *fh, const size_t width, const size_t height,
     return false;
   }
 
-  png_init_io(pngPtrMain, fh);
+  png_init_io(pngPtrMain, imageHandle);
 
   png_set_IHDR(pngPtrMain, pngInfoPtrMain, (uint32_t)width, (uint32_t)height, 8,
                PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE,
@@ -135,174 +137,30 @@ bool createImage(FILE *fh, const size_t width, const size_t height,
   png_set_text(pngPtrMain, pngInfoPtrMain, &title_text, 1);
 
   png_write_info(pngPtrMain, pngInfoPtrMain);
-  if (!splitUp) {
-    pngPtrCurrent = pngPtrMain;
-  }
+  pngPtrCurrent = pngPtrMain;
 
   return true;
 }
 
-bool saveImage() {
-  if (g_TilePath == NULL) {
-    // Normal single-file output
-    if (setjmp(png_jmpbuf(pngPtrMain))) { // libpng will issue a longjmp on
-                                          // error, so code flow will end up
-      png_destroy_write_struct(
-          &pngPtrMain,
-          &pngInfoPtrMain); // here if something goes wrong in the code below
-      return false;
-    }
-
-    uint8_t *srcLine = gImageBuffer;
-    printf("Writing to file...\n");
-    for (int y = 0; y < gPngHeight; ++y) {
-      if (y % 25 == 0) {
-        // printProgress(size_t(y), size_t(gPngHeight));
-      }
-      png_write_row(pngPtrMain, (png_bytep)srcLine);
-      srcLine += gPngLineWidthChans;
-    }
-    // printProgress(10, 10);
-    png_write_end(pngPtrMain, NULL);
+bool PNG::Image::save() {
+  // libpng will issue a longjmp on error, so code flow will end up here if
+  // something goes wrong in the code below
+  if (setjmp(png_jmpbuf(pngPtrMain))) {
     png_destroy_write_struct(&pngPtrMain, &pngInfoPtrMain);
-  } else {
-    // Tiled output, suitable for google maps
-    printf("Writing to files...\n");
-    size_t tmpLen = strlen(g_TilePath) + 40;
-    char *tmpString = new char[tmpLen];
-    // Prepare a temporary buffer to copy the current line to, since we need the
-    // width to be a multiple of 4096 and adjusting the whole image to that
-    // would be a waste of memory
-    const size_t tempWidth = ((gPngWidth - 5) / 4096 + 1) * 4096;
-    const size_t tempWidthChans = tempWidth * CHANSPERPIXEL;
-#ifdef _DEBUG
-    printf("Temp width: %d, original width: %d\n", (int)tempWidthChans,
-           (int)gPngLineWidthChans);
-#endif
-    uint8_t *tempLine = new uint8_t[tempWidthChans];
-    memset(tempLine, 0, tempWidth * BYTESPERPIXEL);
-    // Source pointer
-    uint8_t *srcLine = gImageBuffer;
-    // Prepare an array of png structs that will output simultaneously to the
-    // various tiles
-    size_t sizeOffset[7], last = 0;
-    for (size_t i = 0; i < 7; ++i) {
-      sizeOffset[i] = last;
-      last += ((tempWidth - 1) / pow(2, 12 - i)) + 1;
-    }
-    ImageTile *tile = new ImageTile[sizeOffset[6]];
-    memset(tile, 0, sizeOffset[6] * sizeof(ImageTile));
-    for (int y = 0; y < gPngHeight; ++y) {
-      if (y % 25 == 0) {
-        printProgress(size_t(y), size_t(gPngHeight));
-      }
-      memcpy(tempLine, srcLine, gPngLineWidthChans);
-      srcLine += gPngLineWidthChans;
-      // Handle all png files
-      if (y % 128 == 0) {
-        size_t start;
-        if (y % 4096 == 0)
-          start = 0;
-        else if (y % 2048 == 0)
-          start = 1;
-        else if (y % 1024 == 0)
-          start = 2;
-        else if (y % 512 == 0)
-          start = 3;
-        else if (y % 256 == 0)
-          start = 4;
-        else
-          start = 5;
-        for (size_t tileSize = start; tileSize < 6; ++tileSize) {
-          const size_t tileWidth = pow(2, 12 - tileSize);
-          for (size_t tileIndex = sizeOffset[tileSize];
-               tileIndex < sizeOffset[tileSize + 1]; ++tileIndex) {
-            ImageTile &t = tile[tileIndex];
-            if (t.fileHandle != NULL) { // Unload/close first
-              // printf("Calling end with ptr == %p, y == %d, start == %d,
-              // tileSize == %d, tileIndex == %d, to == %d, numpng == %d\n",
-              // t.pngPtr, y, (int)start, (int)tileSize, (int)tileIndex,
-              // (int)sizeOffset[tileSize+1], (int)numpng);
-              png_write_end(t.pngPtr, NULL);
-              png_destroy_write_struct(&(t.pngPtr), &(t.pngInfo));
-              fclose(t.fileHandle);
-              t.fileHandle = NULL;
-            }
-            if (tileWidth * (tileIndex - sizeOffset[tileSize]) <
-                size_t(gPngWidth)) {
-              // Open new tile file for a while
-              snprintf(tmpString, tmpLen, "%s/x%dy%dz%d.png", g_TilePath,
-                       int(tileIndex - sizeOffset[tileSize]),
-                       int((y / pow(2, 12 - tileSize))), int(tileSize));
-#ifdef _DEBUG
-              printf("Starting tile %s of size %d...\n", tmpString,
-                     (int)pow(2, 12 - tileSize));
-#endif
-              t.fileHandle = fopen(tmpString, "wb");
-              if (t.fileHandle == NULL) {
-                printf("Error opening file!\n");
-                return false;
-              }
-              t.pngPtr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL,
-                                                 NULL, NULL);
-              if (t.pngPtr == NULL) {
-                printf("Error creating png write struct!\n");
-                return false;
-              }
-              if (setjmp(png_jmpbuf(t.pngPtr))) {
-                return false;
-              }
-              t.pngInfo = png_create_info_struct(t.pngPtr);
-              if (t.pngInfo == NULL) {
-                printf("Error creating png info struct!\n");
-                png_destroy_write_struct(&(t.pngPtr), NULL);
-                return false;
-              }
-              png_init_io(t.pngPtr, t.fileHandle);
-              png_set_IHDR(t.pngPtr, t.pngInfo, uint32_t(pow(2, 12 - tileSize)),
-                           uint32_t(pow(2, 12 - tileSize)), 8,
-                           PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE,
-                           PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
-              png_write_info(t.pngPtr, t.pngInfo);
-            }
-          }
-        }
-      } // done preparing tiles
-      // Write data to all current tiles
-      for (size_t tileSize = 0; tileSize < 6; ++tileSize) {
-        const size_t tileWidth = pow(2, 12 - tileSize);
-        for (size_t tileIndex = sizeOffset[tileSize];
-             tileIndex < sizeOffset[tileSize + 1]; ++tileIndex) {
-          if (tile[tileIndex].fileHandle == NULL)
-            continue;
-          png_write_row(
-              tile[tileIndex].pngPtr,
-              png_bytep(tempLine + tileWidth *
-                                       (tileIndex - sizeOffset[tileSize]) *
-                                       CHANSPERPIXEL));
-        }
-      } // done writing line
-    }   // done with whole image
-    // Now the last set of tiles is not finished, so do that manually
-    memset(tempLine, 0, tempWidth * BYTESPERPIXEL);
-    for (size_t tileSize = 0; tileSize < 6; ++tileSize) {
-      const size_t tileWidth = pow(2, 12 - tileSize);
-      for (size_t tileIndex = sizeOffset[tileSize];
-           tileIndex < sizeOffset[tileSize + 1]; ++tileIndex) {
-        if (tile[tileIndex].fileHandle == NULL)
-          continue;
-        const int imgEnd = (((gPngHeight - 1) / tileWidth) + 1) * tileWidth;
-        for (int i = gPngHeight; i < imgEnd; ++i) {
-          png_write_row(tile[tileIndex].pngPtr, png_bytep(tempLine));
-        }
-        png_write_end(tile[tileIndex].pngPtr, NULL);
-        png_destroy_write_struct(&(tile[tileIndex].pngPtr),
-                                 &(tile[tileIndex].pngInfo));
-        fclose(tile[tileIndex].fileHandle);
-      }
-    }
-    printProgress(10, 10);
+    return false;
   }
+
+  uint8_t *srcLine = gImageBuffer;
+
+  printf("Writing to file...\n");
+  for (int y = 0; y < gPngHeight; ++y) {
+    png_write_row(pngPtrMain, (png_bytep)srcLine);
+    srcLine += gPngLineWidthChans;
+  }
+
+  png_write_end(pngPtrMain, NULL);
+
+  png_destroy_write_struct(&pngPtrMain, &pngInfoPtrMain);
   delete[] gImageBuffer;
   gImageBuffer = NULL;
   return true;
@@ -1062,7 +920,7 @@ void (*blockRenderer[])(const size_t, const size_t, const NBT &,
 };
 
 void PNG::Image::drawBlock(const size_t x, const size_t y,
-                           const NBT &blockData) const {
+                           const NBT &blockData) {
   if (x < 0 || x > width - 1)
     throw std::range_error("Invalid x: " + std::to_string(x) + "/" +
                            std::to_string(gPngWidth));
