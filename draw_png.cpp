@@ -807,11 +807,11 @@ void setFire(const size_t x, const size_t y, const Colors::Block &color,
 
 void setOre(const size_t x, const size_t y, const Colors::Block &b,
             const uint8_t *const light, const uint8_t *const dark) {
-  /* Print the secondary color on top
-   * |SSSS|
-   * |DSSL|
-   * |DDLL|
-   * | DL | */
+  /* Print a vein with the secondary in the block
+   * |PPPS|
+   * |DDSL|
+   * |DSLS|
+   * |SDLL| */
 
   // Top row
   uint8_t *pos = &PIXEL(x, y);
@@ -847,26 +847,16 @@ void setGrown(const size_t x, const size_t y, const Colors::Block &b,
    * |DDLL|
    * | DL | */
   uint8_t L[CHANSPERPIXEL], D[CHANSPERPIXEL];
-  memcpy(L, &b.primary, BYTESPERPIXEL);
-  memcpy(D, &b.primary, BYTESPERPIXEL);
+  memcpy(L, &b.secondary, BYTESPERPIXEL);
+  memcpy(D, &b.secondary, BYTESPERPIXEL);
   modColor(L, sub - 15);
   modColor(D, sub - 25);
 
-  // consider noise
-  int noise = 0;
-  if (g_Noise && b.secondary.NOISE) {
-    noise = int(float(g_Noise * b.secondary.NOISE) *
-                (float(b.secondary.brightness()) + 10) / 2650.0f);
-  }
-
   // Top row
   uint8_t *pos = &PIXEL(x, y);
-  for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
+  for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
     memcpy(pos, &b.secondary, BYTESPERPIXEL);
-    if (noise) {
-      modColor(pos, rand() % (noise * 2) - noise);
-    }
-  }
+
   // Second row
   pos = &PIXEL(x, y + 1);
   memcpy(pos, dark, BYTESPERPIXEL);
@@ -874,22 +864,22 @@ void setGrown(const size_t x, const size_t y, const Colors::Block &b,
   memcpy(pos + CHANSPERPIXEL, dark, BYTESPERPIXEL);
   memcpy(pos + CHANSPERPIXEL * 2, light, BYTESPERPIXEL);
 #else
-  memcpy(pos + CHANSPERPIXEL, &b.secondary, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL * 2, &b.secondary, BYTESPERPIXEL);
+  memcpy(pos + CHANSPERPIXEL, D, BYTESPERPIXEL);
+  memcpy(pos + CHANSPERPIXEL * 2, L, BYTESPERPIXEL);
 #endif
   memcpy(pos + CHANSPERPIXEL * 3, light, BYTESPERPIXEL);
   // Third row
   pos = &PIXEL(x, y + 2);
-  memcpy(pos, D, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL, D, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL * 2, L, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL * 3, L, BYTESPERPIXEL);
+  memcpy(pos, dark, BYTESPERPIXEL);
+  memcpy(pos + CHANSPERPIXEL, dark, BYTESPERPIXEL);
+  memcpy(pos + CHANSPERPIXEL * 2, light, BYTESPERPIXEL);
+  memcpy(pos + CHANSPERPIXEL * 3, light, BYTESPERPIXEL);
   // Last row
   pos = &PIXEL(x, y + 3);
-  memcpy(pos, D, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL, D, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL * 2, L, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL * 3, L, BYTESPERPIXEL);
+  memcpy(pos, dark, BYTESPERPIXEL);
+  memcpy(pos + CHANSPERPIXEL, dark, BYTESPERPIXEL);
+  memcpy(pos + CHANSPERPIXEL * 2, light, BYTESPERPIXEL);
+  memcpy(pos + CHANSPERPIXEL * 3, light, BYTESPERPIXEL);
 }
 
 void setRod(const size_t x, const size_t y, const Colors::Block &block,
@@ -908,20 +898,6 @@ void setRod(const size_t x, const size_t y, const Colors::Block &block,
     memcpy(pos + CHANSPERPIXEL, light, BYTESPERPIXEL);
   }
 }
-
-/*void setFence(const size_t x, const size_t y, const uint8_t * const color) {
-        // First row
-        uint8_t *pos = &PIXEL(x, y);
-        blend(pos+CHANSPERPIXEL, color);
-        blend(pos+CHANSPERPIXEL*2, color);
-        // Second row
-        pos = &PIXEL(x+1, y+1);
-        blend(pos, color);
-        // Third row
-        pos = &PIXEL(x, y+2);
-        blend(pos+CHANSPERPIXEL, color);
-        blend(pos+CHANSPERPIXEL*2, color);
-}*/
 
 void setSlab(const size_t x, const size_t y, const Colors::Block &block,
              const uint8_t *const light, const uint8_t *const dark) {
@@ -966,102 +942,8 @@ void setWire(const size_t x, const size_t y, const Colors::Block &block) {
                         memcpy(pos, color, BYTESPERPIXEL);
                 }
         }
+*/
 
-        // The g_BlendAll versions of the block set functions
-        //
-        void setSnowBA(const size_t x, const size_t y, const uint8_t * const
-   color) {
-                // Top row (second row)
-                uint8_t *pos = &PIXEL(x, y+1);
-                for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-                        blend(pos, color);
-                }
-        }
-
-        void setTorchBA(const size_t x, const size_t y, const uint8_t * const
-   color) {
-                // Maybe the orientation should be considered when drawing, but
-   it probably isn't worth the effort uint8_t *pos = &PIXEL(x+2, y+1);
-                blend(pos, color);
-                pos = &PIXEL(x+2, y+2);
-                blend(pos, color);
-        }
-
-        void setFlowerBA(const size_t x, const size_t y, const uint8_t * const
-   color) { uint8_t *pos = &PIXEL(x, y+1); blend(pos+CHANSPERPIXEL, color);
-                blend(pos+CHANSPERPIXEL*3, color);
-                pos = &PIXEL(x+2, y+2);
-                blend(pos, color);
-                pos = &PIXEL(x+1, y+3);
-                blend(pos, color);
-        }
-
-        void setGrassBA(const size_t x, const size_t y, const uint8_t * const
-   color, const uint8_t * const light, const uint8_t * const dark, const int
-   sub) {
-                // this will make grass look like dirt from the side
-                uint8_t L[CHANSPERPIXEL], D[CHANSPERPIXEL];
-                memcpy(L, Block::getColor("minecraft:dirt"), BYTESPERPIXEL);
-                memcpy(D, Block::getColor("minecraft:dirt"), BYTESPERPIXEL);
-                modColor(L, sub - 15);
-                modColor(D, sub - 25);
-                // consider noise
-                int noise = 0;
-                if (g_Noise && Block::getColor("minecraft:grass_block")[PNOISE])
-   { noise = int(float(g_Noise *
-   Block::getColor("minecraft:grass_block")[PNOISE]) *
-   (float(GETBRIGHTNESS(color) + 10) / 2650.0f));
-                }
-                // Top row
-                uint8_t *pos = &PIXEL(x, y);
-                for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-                        blend(pos, color);
-                        if (noise) {
-                                modColor(pos, rand() % (noise * 2) - noise);
-                        }
-                }
-                // Second row
-                pos = &PIXEL(x, y+1);
-                blend(pos, dark);
-                blend(pos+CHANSPERPIXEL, dark);
-                blend(pos+CHANSPERPIXEL*2, light);
-                blend(pos+CHANSPERPIXEL*3, light);
-                // Third row
-                pos = &PIXEL(x, y+2);
-                blend(pos, D);
-                blend(pos+CHANSPERPIXEL, D);
-                blend(pos+CHANSPERPIXEL*2, L);
-                blend(pos+CHANSPERPIXEL*3, L);
-                // Last row
-                pos = &PIXEL(x, y+3);
-                blend(pos, D);
-                blend(pos+CHANSPERPIXEL, D);
-                blend(pos+CHANSPERPIXEL*2, L);
-                blend(pos+CHANSPERPIXEL*3, L);
-        }
-
-        void setStepBA(const size_t x, const size_t y, const uint8_t * const
-   color, const uint8_t * const light, const uint8_t * const dark) { uint8_t
-   *pos = &PIXEL(x, y+1); for (size_t i = 0; i < 3; ++i, pos += CHANSPERPIXEL) {
-                        blend(pos, color);
-                }
-                pos = &PIXEL(x, y+2);
-                for (size_t i = 0; i < 10; ++i, pos += CHANSPERPIXEL) {
-                        blend(pos, color);
-                }
-        }
-
-        void setUpStepBA(const size_t x, const size_t y, const uint8_t * const
-   color, const uint8_t * const light, const uint8_t * const dark) { uint8_t
-   *pos = &PIXEL(x, y); for (size_t i = 0; i < 3; ++i, pos += CHANSPERPIXEL) {
-                        blend(pos, color);
-                }
-                pos = &PIXEL(x, y+1);
-                for (size_t i = 0; i < 10; ++i, pos += CHANSPERPIXEL) {
-                        blend(pos, color);
-                }
-        }
-    */
 } // namespace
 
 void PNG::Image::setPixel(const size_t x, const size_t y,
