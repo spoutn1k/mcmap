@@ -19,7 +19,7 @@ bool Colors::load(const std::filesystem::path &colorFile, Palette *colors) {
 }
 
 bool Colors::load(const std::filesystem::path &colorFile,
-                  const std::map<string, uint8_t> &filter, Palette *colors) {
+                  const std::vector<string> &filter, Palette *colors) {
   FILE *f = fopen(colorFile.c_str(), "r");
   json data;
 
@@ -34,14 +34,13 @@ bool Colors::load(const std::filesystem::path &colorFile,
   const std::map<string, json> fullList = data.get<map<string, json>>();
 
   for (auto it : filter) {
-    if (fullList.find(it.first) != fullList.end()) {
+    if (fullList.find(it) != fullList.end()) {
       colors->insert(std::pair<string, Colors::Block>(
-          it.first, fullList.at(it.first).get<Colors::Block>()));
+          it, fullList.at(it).get<Colors::Block>()));
       continue;
     } else {
-      fprintf(stderr, "No color for block %s\n", it.first.c_str());
-      colors->insert(
-          std::pair<string, Colors::Block>(it.first, Colors::Block()));
+      fprintf(stderr, "No color for block %s\n", it.c_str());
+      colors->insert(std::pair<string, Colors::Block>(it, Colors::Block()));
     }
   }
 
@@ -77,27 +76,38 @@ void Colors::to_json(json &j, const Block &b) {
 void Colors::from_json(const json &j, Block &b) {
   string stype;
 
+  // If the definition is an array, the block is a full block with a single
+  // color
   if (j.is_array()) {
-    b.primary = Color(j.get<list<int>>());
+    b = Block(BlockTypes::FULL, j.get<list<int>>());
     return;
   }
 
-  if (j.find("type") != j.end()) {
-    if (Colors::stringToType.find(j["type"].get<string>()) !=
-        stringToType.end())
-      b.type = stringToType.at(j["type"].get<string>());
-    else
-      fprintf(stderr, "Could not tag block with type %s\n",
-              j["type"].get<string>().c_str());
+  // If the definition is an object and there is no color, replace it with air
+  if (j.find("color") == j.end()) {
+    fprintf(stderr, "Wrong color format: no color attribute found\n");
+    b = Block();
+    return;
   }
 
-  if (j.find("color") != j.end()) {
-    b.primary = Color(j["color"].get<list<int>>());
+  // If the type is illegal, default it with a full block
+  if (j.find("type") == j.end() ||
+      Colors::stringToType.find(j["type"].get<string>()) ==
+          stringToType.end()) {
+    fprintf(stderr,
+            "Block with type %s is either disabled or not implemented\n",
+            j["type"].get<string>().c_str());
+
+    b = Block(BlockTypes::FULL, j["color"].get<list<int>>());
+    return;
   }
 
-  if (j.find("accent") != j.end()) {
-    b.secondary = Color(j["accent"].get<list<int>>());
-  }
+  BlockTypes type = stringToType.at(j["type"].get<string>());
+
+  if (j.find("accent") != j.end())
+    b = Block(type, j["color"].get<list<int>>(), j["accent"].get<list<int>>());
+  else
+    b = Block(type, j["color"].get<list<int>>());
 }
 
 void Colors::to_json(json &j, const Palette &p) {

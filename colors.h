@@ -95,11 +95,6 @@ struct Color {
                          double(G) * double(G) * .601 +
                          double(B) * double(B) * .163);
   }
-
-  void print() const {
-    if (!empty())
-      printf("\tColor: %d %d %d %d %d %d\n", R, G, B, ALPHA, NOISE, BRIGHTNESS);
-  }
 };
 
 struct Block {
@@ -113,26 +108,20 @@ struct Block {
       : primary(c1), secondary(), light(c1), dark(c1) {
     type = bt;
     light.modColor(-17);
-    light.modColor(-27);
+    dark.modColor(-27);
   }
 
   Block(const Colors::BlockTypes &bt, list<int> c1, list<int> c2)
       : primary(c1), secondary(c2), light(c1), dark(c1) {
     type = bt;
     light.modColor(-17);
-    light.modColor(-27);
-  }
-
-  void print() {
-    printf("Block type %d:\n", type);
-    primary.print();
-    secondary.print();
+    dark.modColor(-27);
   }
 };
 
 typedef map<string, Colors::Block> Palette;
 bool load(const std::filesystem::path &, Palette *);
-bool load(const std::filesystem::path &, const map<string, uint8_t> &filter,
+bool load(const std::filesystem::path &, const std::vector<string> &filter,
           Palette *);
 
 void to_json(json &j, const Block &b);

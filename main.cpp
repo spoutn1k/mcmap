@@ -21,17 +21,13 @@ void printHelp(char *binary) {
          "  -from X Z        coordinates of the block to start rendering at\n"
          "  -to X Z          coordinates of the block to stop rendering at\n"
          "  -min/max VAL     minimum/maximum Y index of blocks to render\n"
-         "  -file NAME       output file to 'NAME'; default is output.png\n"
+         "  -file NAME       output file; default is 'output.png'\n"
+         "  -colors NAME     color file to use; default is 'colors.json'\n"
          "  -nw -ne -se -sw  the orientation of the map\n"
          "  -nowater         do not render water\n"
-         "\n    WORLDPATH is the path of the desired Minecraft world.\n\n"
-         "Examples:\n\n"
-         "%s ~/.minecraft/saves/World1\n"
-         "  - This would render your entire singleplayer world in slot 1\n"
-         "%s -night -from -10 -10 -to 10 10 ~/.minecraft/saves/World1\n"
-         "  - This would render the same world but at night, and only\n"
-         "    from chunk (-10 -10) to chunk (10 10)\n",
-         8 * static_cast<int>(sizeof(size_t)), binary, binary, binary);
+         "  -nether          render the nether\n"
+         "  -end             render the end\n",
+         8 * static_cast<int>(sizeof(size_t)), binary);
 }
 
 int main(int argc, char **argv) {
@@ -128,7 +124,10 @@ void render(const PNG::Image &image, const PNG::IsometricCanvas &canvas,
       for (uint8_t y = localMinHeight; y < localMaxHeight; y++) {
         const size_t bmpPosY =
             image.height - 2 + x + z - canvas.sizeX - canvas.sizeZ -
-            (y - localMinHeight) * image.heightOffset - image.padding;
+            (y - canvas.minY) * image.heightOffset - image.padding;
+        //     ^^^^^^^^^^^^^
+        // We move y down in this formula to render the bottom of the map at the
+        // bottom of the image
 
         const NBT &block = world.terrain.block(worldX, worldZ, y);
         image.setPixel(bmpPosX, bmpPosY, block);

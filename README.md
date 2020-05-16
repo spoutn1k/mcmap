@@ -1,10 +1,14 @@
-# mcmap - Tiny map visualizer
+# `mcmap` - Isometric map visualizer
+
+![](https://img.shields.io/badge/version-20w20a-success)
+
+*Original project by Simon Rettberg. All credits to him for the idea and vision.*
 
 `mcmap` is a tool allowing you to create isometric renders of your Minecraft save file.
 
-![sample](sample.png)
+![sample](assets/sample.png)
 
-This fork is under heavy development, but compatible with newer versions of Minecraft.
+This project is under heavy development, but compatible with newer versions of Minecraft.
 
 ## Usage
 
@@ -13,18 +17,21 @@ __Linux / MacOS__
 ./mcmap <options> ~/.minecraft/saves/<your save>
 ```
 
-## Options
+### Options
 
 | Name         | Description                              |
 |--------------|------------------------------------------|
-|-from X Z     |sets the coordinates of the block to start rendering at|
-|-to X Z       |sets the coordinates of the block to end rendering at|
-|-min/max VAL  |minimum/maximum Y index (height) of blocks to render|
-|-file NAME    |sets the output filename to 'NAME'; default is output.png|
-|-nw -ne -se -sw |controls which direction will point to the *top left* corner; North-West is default|
-|-nowater      |do not render water|
+|`-from X Z`     |sets the coordinates of the block to start rendering at|
+|`-to X Z`       |sets the coordinates of the block to end rendering at|
+|`-min/max VAL`  |minimum/maximum Y index (height) of blocks to render|
+|`-file NAME`    |sets the output filename to 'NAME'; default is `output.png`|
+|`-colors NAME`    |sets the color file to 'NAME'; default is `colors.png`|
+|`-nw` `-ne` `-se` `-sw` |controls which direction will point to the top corner; North-West is default|
+|`-nowater`      |do not render water|
+|`-nether`      |render the nether|
+|`-end`          |render the end|
 
-*Note: Currently you need both -from and -to to define bounds, otherwise the entire world will be rendered.*
+*Note: Currently you need both -from and -to to define bounds.*
 
 ## Color file format
 
@@ -72,4 +79,19 @@ Examples:
         "color":    [245, 246, 245, 254, 13]
     }
 }
+```
+
+## Installation
+
+`mcmap` depends on the `PNG` and `Zlib` libraries. In most cases `PNG` also requires `Zlib`, so you only have to install:
+
+
+#### `ubuntu`
+```
+apt install libpng-dev
+```
+
+#### `archlinux`
+```
+pacman -S libpng
 ```

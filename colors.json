@@ -20,7 +20,7 @@
     "minecraft:obsidian": [26, 11, 43, 255],
     "minecraft:torch": {"type": "Torch", "color": [157, 128, 79, 255, 11], "accent": [245, 220, 50, 255]},
     "minecraft:wall_torch": {"type": "Torch", "color": [157, 128, 79, 255, 11], "accent": [245, 220, 50, 255]},
-    "minecraft:fire": [255, 170, 30, 200],
+    "minecraft:fire": {"type": "Special", "color": [255, 170, 30, 200]},
     "minecraft:spawner": [20, 170, 200, 255],
     "minecraft:chest": [125, 91, 38, 255],
     "minecraft:crafting_table": [114, 88, 56, 255],
@@ -51,13 +51,16 @@
     "minecraft:cocoa": [145, 80, 30, 200],
     "minecraft:ender_chest": [18, 16, 27, 255, 5],
 
-    "minecraft:coal_ore": [115, 115, 115, 255],
-    "minecraft:iron_ore": [136, 130, 127, 255],
-    "minecraft:gold_ore": [143, 140, 125, 255],
-    "minecraft:lapis_ore": [102, 112, 134, 255, 10],
-    "minecraft:emerald_ore": [109, 128, 116, 255, 18],
-    "minecraft:diamond_ore": [129, 140, 143, 255],
-    "minecraft:redstone_ore": [131, 107, 107, 255],
+    "minecraft:stone": [128, 128, 128, 255, 16],
+    "minecraft:coal_ore": {"type": "Ore", "color": [128, 128, 128, 255, 16], "accent": [60, 60, 60, 255]},
+    "minecraft:iron_ore": {"type": "Ore", "color": [128, 128, 128, 255, 16], "accent": [136, 130, 127, 255]},
+    "minecraft:gold_ore": {"type": "Ore", "color": [128, 128, 128, 255, 16], "accent": [226, 207, 113, 255]},
+    "minecraft:lapis_ore": {"type": "Ore", "color": [128, 128, 128, 255, 16], "accent": [37, 89, 204, 255, 10]},
+    "minecraft:emerald_ore": {"type": "Ore", "color": [128, 128, 128, 255, 16], "accent": [109, 128, 116, 255, 18]},
+    "minecraft:diamond_ore": {"type": "Ore", "color": [128, 128, 128, 255, 16], "accent": [135, 207, 227, 255]},
+    "minecraft:redstone_ore": {"type": "Ore", "color": [128, 128, 128, 255, 16], "accent": [151, 58, 58, 255]},
+    "minecraft:nether_quartz_ore" : {"type": "Ore", "color": [110, 53, 51, 255, 16], "accent": [237, 216, 216, 255]},
+    "minecraft:nether_gold_ore": {"type": "Ore", "color": [110, 53, 51, 255, 16], "accent": [226, 207, 113, 255]},
 
     "minecraft:coal_block": [21, 21, 21, 255 ],
     "minecraft:iron_block": [191, 191, 191, 255],
@@ -130,10 +133,6 @@
 
     "minecraft:beacon": [21, 255, 255, 255 ],
     "minecraft:anvil": [110, 110, 110, 255 ],
-
-    "minecraft:quartz_ore": [168, 54, 69, 255],
-    "minecraft:quartz_block": [240, 238, 232, 255],
-    "minecraft:quartz_stairs": [240, 238, 232, 255],
 
     "minecraft:rail": {"type": "Thin", "color": [140, 134, 72, 250]},
     "minecraft:activator_rail": {"type": "Thin", "color": [120, 114, 92, 250]},
@@ -376,12 +375,16 @@
 
     "minecraft:bubble_column": {"type": "Clear", "color": [43, 97, 230, 36]},
 
-    "minecraft:magma_block": [255, 90, 0, 255],
+    "minecraft:magma_block": [200, 73, 30, 255],
 
     "minecraft:netherrack": [110, 53, 51, 255, 16],
     "minecraft:soul_sand": [84, 64, 51, 255, 7],
-    "minecraft:glowstone": [137, 112, 64, 255, 11],
+    "minecraft:soul_soil": [79, 59, 46, 255, 7],
+    "minecraft:glowstone": [187, 162, 94, 255, 11],
     "minecraft:bone_block": [237, 236, 233, 255],
+
+    "minecraft:crying_obsidian":{"type": "Ore", "color": [26, 11, 43, 255], "accent": [162, 33, 219, 255]},
+    "minecraft:ancient_debris": [84, 64, 51, 255, 7],
 
     "minecraft:nether_bricks": [54, 24, 30, 255, 7],
     "minecraft:nether_brick_slab": {"type": "Slab", "color": [54, 24, 30, 254, 7]},
@@ -393,7 +396,37 @@
     "minecraft:red_nether_bricks": [85, 24, 30, 255, 7],
 
     "minecraft:nether_wart": [112, 8, 28, 254],
+
+    "minecraft:soul_fire": {"type": "Special", "color": [45, 166, 152, 255]},
+
+    "minecraft:basalt": [95, 95, 95, 255, 24],
+
+    "minecraft:blackstone": [70, 70, 70, 255, 24],
+    "minecraft:polished_blackstone": [65, 65, 65, 255, 24],
+    "minecraft:polished_blackstone_slab": {"type": "Slab", "color": [65, 65, 65, 255, 24]},
+    "minecraft:polished_blackstone_bricks": [65, 65, 65, 255, 24],
+    "minecraft:polished_blackstone_brick_slab": {"type": "Slab", "color": [65, 65, 65, 255, 24]},
+    "minecraft:polished_blackstone_brick_stairs": {"type": "Stair", "color": [65, 65, 65, 255, 24]},
+    "minecraft:cracked_polished_blackstone_bricks": [65, 65, 65, 255, 24],
+    "minecraft:chiseled_polished_blackstone": [60, 60, 60, 255, 24],
+
+    "minecraft:shroomlight": [207, 162, 94, 255, 11],
+    "minecraft:warped_nylium": {"type": "Grown", "color": [110, 53, 51, 255, 16], "accent": [35, 110, 87, 255]},
+    "minecraft:warped_stem": [10, 60, 50, 255],
+    "minecraft:warped_wart_block": [15, 150, 127, 255],
+    "minecraft:warped_fungus": {"type": "Plant", "color": [20, 180, 133, 255]},
+    "minecraft:warped_roots": {"type": "Plant", "color": [22, 126, 134, 255]},
+    "minecraft:nether_sprouts": {"type": "Plant", "color": [22, 126, 134, 255]},
+    "minecraft:twisting_vines": {"type": "Plant", "color": [20, 180, 133, 255]},
+    "minecraft:twisting_vines_plant": {"type": "Plant", "color": [20, 180, 133, 255]},
+
+    "minecraft:crimson_nylium": {"type": "Grown", "color": [110, 53, 51, 255, 16], "accent": [87, 16, 32, 255]},
+    "minecraft:crimson_stem": [47, 26, 42, 255],
     "minecraft:nether_wart_block": [117, 26, 42, 255],
+    "minecraft:crimson_fungus": {"type": "Plant", "color": [197, 52, 57, 255]},
+    "minecraft:crimson_roots": {"type": "Plant", "color": [173, 16, 28, 255]},
+    "minecraft:weeping_vines": {"type": "Plant", "color": [130, 5, 44, 255]},
+    "minecraft:weeping_vines_plant": {"type": "Plant", "color": [130, 5, 44, 255]},
 
     "minecraft:glass": [255, 255, 255, 40],
     "minecraft:glass_pane": [255, 255, 255, 40],
