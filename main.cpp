@@ -45,12 +45,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  Terrain::Coordinates coords;
-
-  coords.minX = options.fromX;
-  coords.minZ = options.fromZ;
-  coords.maxX = options.toX;
-  coords.maxZ = options.toZ;
+  Terrain::Coordinates coords = options.boundaries;
 
   std::filesystem::path regionDir = options.regionDir();
 

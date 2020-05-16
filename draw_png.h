@@ -73,11 +73,13 @@ struct Image {
     imageHandle = fopen(file.c_str(), "wb");
 
     if (imageHandle == nullptr) {
-      fprintf(stderr, "Error opening '%s' for writing.\n", file.c_str());
+      throw(std::runtime_error("Error opening '" + file.string() +
+                               "' for writing: " + string(strerror(errno))));
     }
 
     if (!createImage(imageHandle, width, height, false)) {
-      fprintf(stderr, "Error allocating bitmap.\n");
+      throw(std::runtime_error("Error allocating bitmap: " +
+                               string(strerror(errno))));
     }
 
     palette = colors;

@@ -28,17 +28,12 @@ enum Orientation {
   SE,
 };
 
-// A simple coordinates structure
-struct Coordinates {
-  int32_t minX, maxX, minZ, maxZ;
-
-  Coordinates() { minX = maxX = minZ = maxZ = 0; }
-};
+using Coordinates = struct Coordinates;
 
 struct Data {
   // The coordinates of the loaded chunks. This coordinates maps
   // the CHUNKS loaded, not the blocks
-  struct Coordinates map;
+  Coordinates map;
 
   // The internal list of chunks, of size chunkLen
   ChunkList chunks;
@@ -108,7 +103,7 @@ struct Data {
 };
 
 struct OrientedMap {
-  struct Terrain::Coordinates bounds;
+  Terrain::Coordinates bounds;
   struct Terrain::Data terrain;
   int8_t vectorX, vectorZ;
   Terrain::Orientation orientation;

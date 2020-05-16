@@ -14,15 +14,15 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
         fprintf(stderr, "Error: %s needs two integer arguments\n", option);
         return false;
       }
-      opts->fromX = atoi(NEXTARG);
-      opts->fromZ = atoi(NEXTARG);
+      opts->boundaries.minX = atoi(NEXTARG);
+      opts->boundaries.minZ = atoi(NEXTARG);
     } else if (strcmp(option, "-to") == 0) {
       if (!MOREARGS(2) || !isNumeric(POLLARG(1)) || !isNumeric(POLLARG(2))) {
         fprintf(stderr, "Error: %s needs two integer arguments\n", option);
         return false;
       }
-      opts->toX = atoi(NEXTARG);
-      opts->toZ = atoi(NEXTARG);
+      opts->boundaries.maxX = atoi(NEXTARG);
+      opts->boundaries.maxZ = atoi(NEXTARG);
     } else if (strcmp(option, "-max") == 0) {
       if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
         fprintf(stderr, "Error: %s needs an integer argument\n", option);
@@ -84,9 +84,11 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
     }
   }
 
-  opts->wholeworld = (opts->fromX == UNDEFINED || opts->toX == UNDEFINED);
+  opts->wholeworld = (opts->boundaries.minX == UNDEFINED ||
+                      opts->boundaries.maxX == UNDEFINED);
 
-  if (opts->toX < opts->fromX || opts->toZ < opts->fromZ) {
+  if (opts->boundaries.maxX < opts->boundaries.minX ||
+      opts->boundaries.maxZ < opts->boundaries.minZ) {
     fprintf(stderr, "Nothing to render: -from X Z has to be <= -to X Z\n");
     return false;
   }

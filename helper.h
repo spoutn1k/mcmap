@@ -55,21 +55,17 @@ void printProgress(const size_t current, const size_t max);
 bool dirExists(const char *strFilename);
 bool isNumeric(char *str);
 
-static inline uint16_t _ntohs(uint8_t *val) {
-  return (uint16_t(val[0]) << 8) + (uint16_t(val[1]));
-}
-
 static inline uint32_t _ntohl(uint8_t *val) {
   return (uint32_t(val[0]) << 24) + (uint32_t(val[1]) << 16) +
          (uint32_t(val[2]) << 8) + (uint32_t(val[3]));
 }
 
-static inline uint64_t _ntohll(uint8_t *val) {
-  return ((uint64_t)val[0] << 56) + ((uint64_t)val[1] << 48) +
-         ((uint64_t)val[2] << 40) + ((uint64_t)val[3] << 32) +
-         ((uint64_t)val[4] << 24) + ((uint64_t)val[5] << 16) +
-         ((uint64_t)val[6] << 8) +
-         ((uint64_t)val[7]); // Looks like crap, but should be endian-safe
-}
+// A simple coordinates structure
+struct Coordinates {
+  int32_t minX, maxX, minZ, maxZ;
+
+  Coordinates() { minX = maxX = minZ = maxZ = 0; }
+  Coordinates(int32_t init) { minX = maxX = minZ = maxZ = init; }
+};
 
 #endif // HELPER_H_

@@ -21,7 +21,7 @@ struct WorldOptions {
   bool wholeworld;
 
   // Map boundaries
-  int fromX, fromZ, toX, toZ;
+  Coordinates boundaries;
   int mapMinY, mapMaxY;
   int mapSizeY;
   Terrain::Orientation orientation;
@@ -36,15 +36,13 @@ struct WorldOptions {
 
   Dimension dim;
 
-  WorldOptions() {
+  WorldOptions() : boundaries(UNDEFINED) {
     saveName = "";
     dim = OVERWORLD;
     outFile = "output.png";
     colorFile = "colors.json";
 
     hideWater = false;
-
-    fromX = fromZ = toX = toZ = UNDEFINED;
 
     mapMinY = 0;
     mapMaxY = 255;
