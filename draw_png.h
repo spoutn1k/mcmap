@@ -10,7 +10,23 @@
 #include "./helper.h"
 #include "./settings.h"
 #include "./worldloader.h"
+#include "colors.h"
+#include "globals.h"
+#include "helper.h"
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#include <functional>
+#include <list>
+#include <png.h>
 #include <utility>
+#ifndef _WIN32
+#include <sys/stat.h>
+#endif
+#if defined(_WIN32) && !defined(__GNUC__)
+#include <direct.h>
+#endif
 
 void createImageBuffer(const size_t width, const size_t height,
                        const bool splitUp);
@@ -49,17 +65,21 @@ struct IsometricCanvas {
 };
 
 struct Image {
-  // Final png width and height
-  size_t width, height;
-
-  // Pixel offset for block rendering
-  uint8_t heightOffset;
-
-  uint8_t padding;
+  size_t width, height; // Final png width and height
+  uint8_t heightOffset; // Pixel offset for block rendering
+  uint8_t padding;      // Padding inside the image
 
   FILE *imageHandle;
 
   Colors::Palette palette;
+
+  uint8_t *bytesBuffer; // The buffer where pixels are written
+  size_t size;          // The size of the buffer
+
+  uint32_t lineWidthChans; // Width of a single png line
+
+  png_structp pngPtr;
+  png_infop pngInfoPtr;
 
   Image(const std::filesystem::path file, const IsometricCanvas &canvas,
         const Colors::Palette &colors) {
@@ -88,11 +108,27 @@ struct Image {
   ~Image() {
     if (imageHandle)
       fclose(imageHandle);
+    delete[] bytesBuffer;
   }
 
   bool create();
   bool save();
   void drawBlock(const size_t x, const size_t y, const NBT &block);
+  inline uint8_t *pixel(size_t x, size_t y) {
+    return &bytesBuffer[x * CHANSPERPIXEL + y * lineWidthChans];
+  }
+
+  typedef void (PNG::Image::*drawer)(const size_t, const size_t, const NBT &,
+                                     const Colors::Block *);
+
+  void drawFull(const size_t x, const size_t y, const NBT &metadata,
+                const Colors::Block *color);
+
+#define DEFINETYPE(STRING, CALLBACK)                                           \
+  void CALLBACK(const size_t x, const size_t y, const NBT &metadata,           \
+                const Colors::Block *color);
+#include "./blocktypes.def"
+#undef DEFINETYPE
 };
 
 } // namespace PNG
