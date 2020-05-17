@@ -39,6 +39,12 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
       const int height = atoi(NEXTARG);
       opts->mapMinY =
           (height < MIN_TERRAIN_HEIGHT ? MIN_TERRAIN_HEIGHT : height);
+    } else if (strcmp(option, "-splits") == 0) {
+      if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
+        fprintf(stderr, "Error: %s needs an integer argument\n", option);
+        return false;
+      }
+      opts->splits = atoi(NEXTARG);
     } else if (strcmp(option, "-nowater") == 0) {
       opts->hideWater = true;
     } else if (strcmp(option, "-nether") == 0) {

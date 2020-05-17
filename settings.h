@@ -22,6 +22,7 @@ struct WorldOptions {
 
   // Map boundaries
   Coordinates boundaries;
+  uint8_t splits;
   int mapMinY, mapMaxY;
   int mapSizeY;
   Terrain::Orientation orientation;
@@ -44,6 +45,7 @@ struct WorldOptions {
 
     hideWater = false;
 
+    splits = 0;
     mapMinY = 0;
     mapMaxY = 255;
     mapSizeY = mapMaxY - mapMinY;
