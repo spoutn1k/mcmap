@@ -1,0 +1,11 @@
+name: Format Police
+on: [push]
+jobs:
+  formatting-check:
+    name: Formatting Check
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Run clang-format style check for the source.
+      uses: spoutn1k/clang-format-action@master
+
