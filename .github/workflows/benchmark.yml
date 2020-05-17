@@ -1,0 +1,19 @@
+name: Benchmark
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Execution
+      uses: spoutn1k/mcmap-benchmark@master
+    - name: Upload time data
+      uses: actions/upload-artifact@v1
+      with:
+        name: execution_time
+        path: bench_time
+    - name: Upload resulting image
+      uses: actions/upload-artifact@v1
+      with:
+        name: region.png
+        path: output.png
