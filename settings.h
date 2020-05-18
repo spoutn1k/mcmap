@@ -23,9 +23,8 @@ struct WorldOptions {
   // Map boundaries
   Coordinates boundaries;
   uint8_t splits;
-  int mapMinY, mapMaxY;
   int mapSizeY;
-  Terrain::Orientation orientation;
+  Orientation orientation;
 
   int offsetY;
 
@@ -45,17 +44,14 @@ struct WorldOptions {
 
     hideWater = false;
 
-    splits = 0;
-    mapMinY = 0;
-    mapMaxY = 255;
-    mapSizeY = mapMaxY - mapMinY;
+    splits = 1;
+    boundaries.minY = 0;
+    boundaries.maxY = 255;
     offsetY = 3;
 
     wholeworld = false;
     memlimit = 2000 * uint64_t(1024 * 1024);
     memlimitSet = false;
-
-    orientation = Terrain::Orientation::NW;
   }
 
   std::filesystem::path regionDir() {

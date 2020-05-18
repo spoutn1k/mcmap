@@ -2,17 +2,17 @@
  * This file contains functions to draw blocks to a png file
  */
 
-#include "./draw_png.h"
+#include "./canvas.h"
 
-PNG::Image::drawer blockRenderers[] = {
-    &PNG::Image::drawFull,
-#define DEFINETYPE(STRING, CALLBACK) &PNG::Image::CALLBACK,
+IsometricCanvas::drawer blockRenderers[] = {
+    &IsometricCanvas::drawFull,
+#define DEFINETYPE(STRING, CALLBACK) &IsometricCanvas::CALLBACK,
 #include "./blocktypes.def"
 #undef DEFINETYPE
 };
 
-void PNG::Image::drawBlock(const size_t x, const size_t y,
-                           const NBT &blockData) {
+void IsometricCanvas::drawBlock(const size_t x, const size_t y,
+                                const NBT &blockData) {
   if (x < 0 || x > width - 1)
     throw std::range_error("Invalid x: " + std::to_string(x) + "/" +
                            std::to_string(width));
@@ -63,8 +63,8 @@ inline void addColor(uint8_t *const color, const uint8_t *const add) {
   color[2] = clamp(uint16_t(float(color[2]) * v1 + float(add[2]) * v2));
 }
 
-void PNG::Image::drawHead(const size_t x, const size_t y, const NBT &,
-                          const Colors::Block *block) {
+void IsometricCanvas::drawHead(const size_t x, const size_t y, const NBT &,
+                               const Colors::Block *block) {
   /* Small block centered
    * |    |
    * |    |
@@ -79,8 +79,8 @@ void PNG::Image::drawHead(const size_t x, const size_t y, const NBT &,
   memcpy(pos + CHANSPERPIXEL, &block->light, BYTESPERPIXEL);
 }
 
-void PNG::Image::drawThin(const size_t x, const size_t y, const NBT &,
-                          const Colors::Block *block) {
+void IsometricCanvas::drawThin(const size_t x, const size_t y, const NBT &,
+                               const Colors::Block *block) {
   /* Overwrite the block below's top layer
    * |    |
    * |    |
@@ -98,21 +98,21 @@ void PNG::Image::drawThin(const size_t x, const size_t y, const NBT &,
 #endif
 }
 
-void PNG::Image::drawHidden(const size_t, const size_t, const NBT &,
-                            const Colors::Block *) {
+void IsometricCanvas::drawHidden(const size_t, const size_t, const NBT &,
+                                 const Colors::Block *) {
   return;
 }
 
-void PNG::Image::drawTransparent(const size_t x, const size_t y, const NBT &,
-                                 const Colors::Block *block) {
+void IsometricCanvas::drawTransparent(const size_t x, const size_t y,
+                                      const NBT &, const Colors::Block *block) {
   // Avoid the dark/light edges for a clearer look through
   for (uint8_t i = 0; i < 4; i++)
     for (uint8_t j = 0; j < 3; j++)
       blend(pixel(x + i, y + j), (uint8_t *)&block->primary);
 }
 
-void PNG::Image::drawTorch(const size_t x, const size_t y, const NBT &,
-                           const Colors::Block *block) {
+void IsometricCanvas::drawTorch(const size_t x, const size_t y, const NBT &,
+                                const Colors::Block *block) {
   /* TODO Callback to handle the orientation
    * Print the secondary on top of two primary
    * |    |
@@ -131,8 +131,8 @@ void PNG::Image::drawTorch(const size_t x, const size_t y, const NBT &,
 #endif
 }
 
-void PNG::Image::drawPlant(const size_t x, const size_t y, const NBT &,
-                           const Colors::Block *block) {
+void IsometricCanvas::drawPlant(const size_t x, const size_t y, const NBT &,
+                                const Colors::Block *block) {
   /* Print a plant-like block
    * TODO Make that nicer ?
    * |    |
@@ -148,8 +148,8 @@ void PNG::Image::drawPlant(const size_t x, const size_t y, const NBT &,
   memcpy(pos, &block->primary, BYTESPERPIXEL);
 }
 
-void PNG::Image::drawFire(const size_t x, const size_t y, const NBT &,
-                          const Colors::Block *const color) {
+void IsometricCanvas::drawFire(const size_t x, const size_t y, const NBT &,
+                               const Colors::Block *const color) {
   // This basically just leaves out a few pixels
   // Top row
   uint8_t *pos = pixel(x, y);
@@ -167,8 +167,8 @@ void PNG::Image::drawFire(const size_t x, const size_t y, const NBT &,
   blend(pos + (CHANSPERPIXEL * 2), (uint8_t *)&color->light);
 }
 
-void PNG::Image::drawOre(const size_t x, const size_t y, const NBT &,
-                         const Colors::Block *color) {
+void IsometricCanvas::drawOre(const size_t x, const size_t y, const NBT &,
+                              const Colors::Block *color) {
   /* Print a vein with the secondary in the block
    * |PPPS|
    * |DDSL|
@@ -200,8 +200,8 @@ void PNG::Image::drawOre(const size_t x, const size_t y, const NBT &,
   memcpy(pos + CHANSPERPIXEL * 3, &color->light, BYTESPERPIXEL);
 }
 
-void PNG::Image::drawGrown(const size_t x, const size_t y, const NBT &,
-                           const Colors::Block *color) {
+void IsometricCanvas::drawGrown(const size_t x, const size_t y, const NBT &,
+                                const Colors::Block *color) {
   /* Print the secondary color on top
    * |SSSS|
    * |DSSL|
@@ -245,8 +245,8 @@ void PNG::Image::drawGrown(const size_t x, const size_t y, const NBT &,
   memcpy(pos + CHANSPERPIXEL * 3, &color->light, BYTESPERPIXEL);
 }
 
-void PNG::Image::drawRod(const size_t x, const size_t y, const NBT &,
-                         const Colors::Block *const color) {
+void IsometricCanvas::drawRod(const size_t x, const size_t y, const NBT &,
+                              const Colors::Block *const color) {
   /* A full fat rod
    * | PP |
    * | DL |
@@ -262,8 +262,9 @@ void PNG::Image::drawRod(const size_t x, const size_t y, const NBT &,
   }
 }
 
-void PNG::Image::drawSlab(const size_t x, const size_t y, const NBT &metadata,
-                          const Colors::Block *color) {
+void IsometricCanvas::drawSlab(const size_t x, const size_t y,
+                               const NBT &metadata,
+                               const Colors::Block *color) {
   /* This one has a hack to make it look like a gradual step up:
    * The second layer has primary colors to make the difference less
    * obvious.
@@ -300,8 +301,8 @@ void PNG::Image::drawSlab(const size_t x, const size_t y, const NBT &metadata,
 #undef SLAB_OFFSET
 }
 
-void PNG::Image::drawWire(const size_t x, const size_t y, const NBT &,
-                          const Colors::Block *color) {
+void IsometricCanvas::drawWire(const size_t x, const size_t y, const NBT &,
+                               const Colors::Block *color) {
   uint8_t *pos = pixel(x + 1, y + 2);
   memcpy(pos, &color->primary, BYTESPERPIXEL);
   memcpy(pos + CHANSPERPIXEL, &color->primary, BYTESPERPIXEL);
@@ -320,8 +321,8 @@ void PNG::Image::drawWire(const size_t x, const size_t y, const NBT &,
         }
 */
 
-void PNG::Image::drawFull(const size_t x, const size_t y, const NBT &,
-                          const Colors::Block *color) {
+void IsometricCanvas::drawFull(const size_t x, const size_t y, const NBT &,
+                               const Colors::Block *color) {
   // Sets pixels around x,y where A is the anchor
   // T = given color, D = darker, L = lighter
   // A T T T
@@ -378,4 +379,26 @@ void PNG::Image::drawFull(const size_t x, const size_t y, const NBT &,
   }
   // The above two branches are almost the same, maybe one could just create a
   // function pointer and...
+}
+
+void IsometricCanvas::drawTerrain(const Terrain::Data &world) {
+  int64_t worldX = 0, worldZ = 0;
+  for (size_t x = 0; x < sizeX + 1; x++) {
+    for (size_t z = 0; z < sizeZ + 1; z++) {
+
+      translate(x, z, &worldX, &worldZ);
+
+      const uint8_t localMaxHeight =
+          std::min(world.maxHeight(worldX, worldZ), map.maxY);
+      const uint8_t localMinHeight =
+          std::max(world.minHeight(worldX, worldZ), map.minY);
+
+      for (uint8_t y = localMinHeight; y < localMaxHeight; y++) {
+        const NBT &block = world.block(worldX, worldZ, y);
+        drawBlock(x, z, y, block);
+      }
+    }
+  }
+
+  return;
 }

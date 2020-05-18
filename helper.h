@@ -60,12 +60,27 @@ static inline uint32_t _ntohl(uint8_t *val) {
          (uint32_t(val[2]) << 8) + (uint32_t(val[3]));
 }
 
+enum Orientation {
+  NW,
+  SW,
+  NE,
+  SE,
+};
+
 // A simple coordinates structure
 struct Coordinates {
   int32_t minX, maxX, minZ, maxZ;
+  uint8_t minY, maxY;
+  Orientation orientation;
 
-  Coordinates() { minX = maxX = minZ = maxZ = 0; }
-  Coordinates(int32_t init) { minX = maxX = minZ = maxZ = init; }
+  Coordinates() {
+    minX = maxX = minZ = maxZ = minY = maxY = 0;
+    orientation = NW;
+  }
+
+  Coordinates(int32_t init) : Coordinates() {
+    minX = maxX = minZ = maxZ = init;
+  }
 };
 
 #endif // HELPER_H_

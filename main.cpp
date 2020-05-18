@@ -10,10 +10,6 @@
 
 using std::string;
 
-void printHelp(char *binary);
-void render(PNG::Image *image, const PNG::IsometricCanvas &canvas,
-            const Terrain::OrientedMap &world);
-
 void printHelp(char *binary) {
   printf("\nmcmap - an isometric minecraft map rendering tool.\n"
          "Version " VERSION " %dbit\n\n"
@@ -49,11 +45,16 @@ int main(int argc, char **argv) {
 
   std::filesystem::path regionDir = options.regionDir();
 
-  // The minecraft terrain to render
-  Terrain::OrientedMap world(coords, options.orientation);
-  world.terrain.load(regionDir);
+  // Load the minecraft terrain to render, by allocating it for a terrain
+  // described by coords
+  Terrain::Data world(coords);
+  world.load(regionDir);
 
-  if (!Colors::load(options.colorFile, world.terrain.cache, &colors))
+  // Cap the height of the canvas to avoid having a ridiculous height
+  coords.minY = std::max(coords.minY, world.minHeight());
+  coords.maxY = std::min(coords.maxY, world.maxHeight());
+
+  if (!Colors::load(options.colorFile, world.cache, &colors))
     return 1;
 
   // Overwrite water if asked to
@@ -61,74 +62,11 @@ int main(int argc, char **argv) {
   if (options.hideWater)
     colors["minecraft:water"] = Colors::Block();
 
-  PNG::IsometricCanvas canvas(coords, options);
-  // Cap the height of the canvas to avoid having a ridiculous height
-  canvas.minY = std::max(canvas.minY, world.terrain.minHeight());
-  canvas.maxY = std::min(canvas.maxY, world.terrain.maxHeight());
-  PNG::Image image(options.outFile, canvas, colors);
+  IsometricCanvas canvas(coords, colors);
+  canvas.drawTerrain(world);
 
-  render(&image, canvas, world);
-  image.save();
+  PNG::Image(options.outFile, &canvas).save();
 
   printf("Job complete.\n");
   return 0;
-}
-
-void render(PNG::Image *image, const PNG::IsometricCanvas &canvas,
-            const Terrain::OrientedMap &world) {
-  /* There are 3 sets of coordinates here:
-   * - x, y, z: the coordinates of the dot on the virtual isometric map
-   *   to be drawn, here named canvas;
-   * - mapx, y, mapz: the coordinates of the corresponding block in the
-   *   minecraft world, depending on the orientation of the map to be drawn;
-   * - bitmapX, bitmapY: the position of the pixel in the resulting bitmap.
-   *
-   * The virtual map "canvas" is the link between the two other sets of
-   * coordinates. Drawing the map MUST follow a special order to avoid
-   * overwriting pixels when drawing: the horizontal order is as follows:
-   *
-   *   0
-   *  3 1
-   * 5 4 2
-   *
-   * The canvas allows to easily follow this pattern. The world block
-   * and the position on the image are then calculated from the canvas
-   * coordinates. */
-
-  for (size_t x = 0; x < canvas.sizeX + 1; x++) {
-    for (size_t z = 0; z < canvas.sizeZ + 1; z++) {
-      const size_t bmpPosX =
-          2 * (canvas.sizeZ - 1) + (x - z) * 2 + image->padding;
-
-      // in some orientations, the axis are inverted in the world
-      if (world.orientation == Terrain::NE || world.orientation == Terrain::SW)
-        std::swap(x, z);
-
-      const int64_t worldX = world.bounds.minX + x * world.vectorX;
-      const int64_t worldZ = world.bounds.minZ + z * world.vectorZ;
-
-      // swap them back to avoid loop confusion
-      if (world.orientation == Terrain::NE || world.orientation == Terrain::SW)
-        std::swap(x, z);
-
-      const uint8_t localMaxHeight = std::min(
-          world.terrain.maxHeight(worldX, worldZ), uint8_t(canvas.maxY + 1));
-      const uint8_t localMinHeight =
-          std::max(world.terrain.minHeight(worldX, worldZ), canvas.minY);
-
-      for (uint8_t y = localMinHeight; y < localMaxHeight; y++) {
-        const size_t bmpPosY =
-            image->height - 2 + x + z - canvas.sizeX - canvas.sizeZ -
-            (y - canvas.minY) * image->heightOffset - image->padding;
-        //     ^^^^^^^^^^^^^
-        // We move y down in this formula to render the bottom of the map at the
-        // bottom of the image
-
-        const NBT &block = world.terrain.block(worldX, worldZ, y);
-        image->drawBlock(bmpPosX, bmpPosY, block);
-      }
-    }
-  }
-
-  return;
 }

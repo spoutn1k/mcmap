@@ -1,9 +1,5 @@
 #include "worldloader.h"
 
-// Buffers for chunk read from MCA files and decompression.
-uint8_t zData[COMPRESSED_BUFFER];
-uint8_t chunkBuffer[DECOMPRESSED_BUFFER];
-
 NBT air(nbt::tag_type::tag_end);
 
 enum renderTypes {
@@ -182,7 +178,9 @@ uint8_t Terrain::Data::importHeight(vector<NBT> *sections) {
 }
 
 bool decompressChunk(const uint32_t offset, FILE *regionHandle,
-                     uint64_t *length) {
+                     uint8_t *chunkBuffer, uint64_t *length) {
+  uint8_t zData[COMPRESSED_BUFFER];
+
   if (0 != fseek(regionHandle, offset, SEEK_SET)) {
     // printf("Error seeking to chunk\n");
     return false;
@@ -226,7 +224,10 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
                               const int chunkX, const int chunkZ) {
   uint64_t length, chunkPos = chunkIndex(chunkX, chunkZ);
 
-  if (!offset || !decompressChunk(offset, regionHandle, &length))
+  // Buffers for chunk read from MCA files and decompression.
+  uint8_t chunkBuffer[DECOMPRESSED_BUFFER];
+
+  if (!offset || !decompressChunk(offset, regionHandle, chunkBuffer, &length))
     return;
 
   NBT chunk = NBT::parse(chunkBuffer, length);
