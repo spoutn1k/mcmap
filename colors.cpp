@@ -51,6 +51,23 @@ bool Colors::load(const std::filesystem::path &colorFile,
   return true;
 }
 
+void Colors::filter(const Palette &definitions,
+                    const std::vector<string> &filter, Palette *colors) {
+
+  for (auto it : filter) {
+    if (definitions.find(it) != definitions.end()) {
+      colors->insert(std::pair<string, Colors::Block>(it, definitions.at(it)));
+      continue;
+    } else {
+      fprintf(stderr, "No color for block %s\n", it.c_str());
+      colors->insert(std::pair<string, Colors::Block>(it, Colors::Block()));
+    }
+  }
+
+  printf("Loaded %ld colors out of the %ld declared\n", colors->size(),
+         definitions.size());
+}
+
 #define LIST(C)                                                                \
   { (C).R, (C).G, (C).B, (C).ALPHA, (C).NOISE, (C).BRIGHTNESS }
 void Colors::to_json(json &j, const Block &b) {

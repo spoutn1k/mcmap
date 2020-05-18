@@ -32,6 +32,7 @@ void printHelp(char *binary) {
 int main(int argc, char **argv) {
   Settings::WorldOptions options;
   Colors::Palette colors;
+  Colors::load(options.colorFile, &colors);
 
   printf("mcmap " VERSION " %dbit\n", 8 * static_cast<int>(sizeof(size_t)));
 
@@ -63,6 +64,7 @@ int main(int argc, char **argv) {
 #pragma omp for ordered schedule(static)
     for (int i = 0; i < options.splits; i++) {
 #define coords regions[i]
+      Colors::Palette localColors;
 
       // Load the minecraft terrain to render
       Terrain::Data world(coords);
@@ -72,14 +74,14 @@ int main(int argc, char **argv) {
       coords.minY = std::max(coords.minY, world.minHeight());
       coords.maxY = std::min(coords.maxY, world.maxHeight());
 
-      Colors::load(options.colorFile, world.cache, &colors);
+      Colors::filter(colors, world.cache, &localColors);
 
       // Overwrite water if asked to
       // TODO expand this to other blocks
       if (options.hideWater)
-        colors["minecraft:water"] = Colors::Block();
+        localColors["minecraft:water"] = Colors::Block();
 
-      IsometricCanvas canvas(coords, colors);
+      IsometricCanvas canvas(coords, localColors);
       canvas.drawTerrain(world);
 
 #pragma omp ordered
