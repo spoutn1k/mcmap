@@ -10,6 +10,9 @@
 
 using std::string;
 
+void printHelp(char *binary);
+void render(IsometricCanvas *canvas, const Terrain::Data &world);
+
 void printHelp(char *binary) {
   printf("\nmcmap - an isometric minecraft map rendering tool.\n"
          "Version " VERSION " %dbit\n\n"
@@ -45,28 +48,46 @@ int main(int argc, char **argv) {
 
   std::filesystem::path regionDir = options.regionDir();
 
-  // Load the minecraft terrain to render, by allocating it for a terrain
-  // described by coords
-  Terrain::Data world(coords);
-  world.load(regionDir);
+  Terrain::Coordinates *regions = new Terrain::Coordinates[options.splits];
 
-  // Cap the height of the canvas to avoid having a ridiculous height
-  coords.minY = std::max(coords.minY, world.minHeight());
-  coords.maxY = std::min(coords.maxY, world.maxHeight());
+  for (int i = 0; i < options.splits; i++) {
+    regions[i] = Coordinates(coords);
+    regions[i].minX = (i ? regions[i - 1].maxX + 1 : 0);
+    regions[i].maxX = (regions[i].maxX * (i + 1)) / options.splits;
+  }
 
-  if (!Colors::load(options.colorFile, world.cache, &colors))
-    return 1;
+  IsometricCanvas finalCanvas(coords, colors);
 
-  // Overwrite water if asked to
-  // TODO expand this to other blocks
-  if (options.hideWater)
-    colors["minecraft:water"] = Colors::Block();
+#pragma omp parallel shared(regions, finalCanvas)
+  {
+#pragma omp for ordered schedule(static)
+    for (int i = 0; i < options.splits; i++) {
+#define coords regions[i]
 
-  IsometricCanvas canvas(coords, colors);
-  canvas.drawTerrain(world);
+      // Load the minecraft terrain to render
+      Terrain::Data world(coords);
+      world.load(regionDir);
 
-  PNG::Image(options.outFile, &canvas).save();
+      // Cap the height to avoid having a ridiculous image height
+      coords.minY = std::max(coords.minY, world.minHeight());
+      coords.maxY = std::min(coords.maxY, world.maxHeight());
 
+      Colors::load(options.colorFile, world.cache, &colors);
+
+      // Overwrite water if asked to
+      // TODO expand this to other blocks
+      if (options.hideWater)
+        colors["minecraft:water"] = Colors::Block();
+
+      IsometricCanvas canvas(coords, colors);
+      canvas.drawTerrain(world);
+
+#pragma omp ordered
+      { finalCanvas.merge(canvas); }
+    }
+  }
+
+  PNG::Image(options.outFile, &finalCanvas).save();
   printf("Job complete.\n");
   return 0;
 }

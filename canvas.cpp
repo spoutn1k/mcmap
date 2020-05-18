@@ -402,3 +402,39 @@ void IsometricCanvas::drawTerrain(const Terrain::Data &world) {
 
   return;
 }
+
+void IsometricCanvas::merge(const IsometricCanvas &subCanvas) {
+  // This routine determines where the subCanvas' buffer should be written, then
+  // writes it in the objects' own buffer
+  if (subCanvas.width > width || subCanvas.height > height) {
+    fprintf(stderr, "Cannot merge a canvas of bigger dimensions\n");
+    return;
+  }
+
+  printf("Merging canvas: canvas of size %ldx%ld into canvas of size %ldx%ld\n",
+         subCanvas.width, subCanvas.height, width, height);
+
+  const size_t bmpPosX =
+      (subCanvas.map.minX - map.minX + subCanvas.map.minZ - map.minZ) * 2;
+  const size_t bmpPosY =
+      height - (map.maxX - subCanvas.map.maxX + map.maxZ - subCanvas.map.maxZ);
+
+  size_t anchor = (bmpPosX + width * bmpPosY) * BYTESPERPIXEL;
+
+  for (size_t line = 1; line < subCanvas.height + 1; line++) {
+    uint8_t *subLine = subCanvas.bytesBuffer + subCanvas.size -
+                       line * subCanvas.width * BYTESPERPIXEL;
+    uint8_t *position = bytesBuffer + anchor - width * BYTESPERPIXEL * line;
+    for (size_t pixel = 0; pixel < subCanvas.width; pixel++) {
+      uint8_t *data = subLine + pixel * BYTESPERPIXEL;
+
+      if (data[3] == 0)
+        continue;
+
+      if (data[3] == 0xff)
+        memcpy(position + pixel * BYTESPERPIXEL, data, BYTESPERPIXEL);
+
+      blend(position + pixel * BYTESPERPIXEL, data);
+    }
+  }
+}

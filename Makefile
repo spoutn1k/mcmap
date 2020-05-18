@@ -1,8 +1,8 @@
 # if you don't want png support, remove "-DWITHPNG", "-lpng" and "draw_png.cpp" below
 CC=g++
 
-CFLAGS=-O3 -std=c++17 -c -Wall -fomit-frame-pointer -pedantic -DWITHPNG -D_FILE_OFFSET_BITS=64
-LDFLAGS=-lz -lpng
+CFLAGS=-O3 -std=c++17 -c -Wall -fomit-frame-pointer -pedantic -DWITHPNG -D_FILE_OFFSET_BITS=64 -fopenmp
+LDFLAGS=-lz -lpng -fopenmp
 
 DCFLAGS=-g -O0 -std=c++17 -c -Wall -D_DEBUG -DWITHPNG -D_FILE_OFFSET_BITS=64
 DLDFLAGS=-lz -lpng
