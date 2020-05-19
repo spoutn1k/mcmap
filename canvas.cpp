@@ -405,35 +405,47 @@ void IsometricCanvas::drawTerrain(const Terrain::Data &world) {
 
 void IsometricCanvas::merge(const IsometricCanvas &subCanvas) {
   // This routine determines where the subCanvas' buffer should be written, then
-  // writes it in the objects' own buffer
+  // writes it in the objects' own buffer. This results in a "merge" that really
+  // is a superimposition of the subCanvas onto the main canvas.
   if (subCanvas.width > width || subCanvas.height > height) {
     fprintf(stderr, "Cannot merge a canvas of bigger dimensions\n");
     return;
   }
 
-  printf("Merging canvas: canvas of size %ldx%ld into canvas of size %ldx%ld\n",
-         subCanvas.width, subCanvas.height, width, height);
-
-  const size_t bmpPosX =
+  // Determine where in the canvas' 2D matrix is the subcanvas supposed to go:
+  // the anchor is the bottom left pixel in the canvas where the sub-canvas must
+  // be superimposed
+  const size_t anchorX =
       (subCanvas.map.minX - map.minX + subCanvas.map.minZ - map.minZ) * 2;
-  const size_t bmpPosY =
+  const size_t anchorY =
       height - (map.maxX - subCanvas.map.maxX + map.maxZ - subCanvas.map.maxZ);
 
-  size_t anchor = (bmpPosX + width * bmpPosY) * BYTESPERPIXEL;
+  // Translate those coordinates as an offset from the beginning of the buffer
+  const size_t anchor = (anchorX + width * anchorY) * BYTESPERPIXEL;
 
+  // For every line of the subCanvas, we create a pointer to its beginning, and
+  // a pointer to where in the canvas it should be copied
   for (size_t line = 1; line < subCanvas.height + 1; line++) {
-    uint8_t *subLine = subCanvas.bytesBuffer + subCanvas.size -
-                       line * subCanvas.width * BYTESPERPIXEL;
+    const uint8_t *subLine = subCanvas.bytesBuffer + subCanvas.size -
+                             line * subCanvas.width * BYTESPERPIXEL;
     uint8_t *position = bytesBuffer + anchor - width * BYTESPERPIXEL * line;
-    for (size_t pixel = 0; pixel < subCanvas.width; pixel++) {
-      uint8_t *data = subLine + pixel * BYTESPERPIXEL;
 
-      if (data[3] == 0)
+    // Then copy it pixel per pixel in the canvas
+    for (size_t pixel = 0; pixel < subCanvas.width; pixel++) {
+      const uint8_t *data = subLine + pixel * BYTESPERPIXEL;
+
+      // If the subCanvas is empty here, skip
+      if (!data[3])
         continue;
 
-      if (data[3] == 0xff)
+      // If the subCanvas has a fully opaque block or the canvas has nothing,
+      // just overwrite the canvas' pixel
+      if (data[3] == 0xff || !(position + pixel * BYTESPERPIXEL)[3]) {
         memcpy(position + pixel * BYTESPERPIXEL, data, BYTESPERPIXEL);
+        continue;
+      }
 
+      // Finally, blend the transparent pixel into the canvas
       blend(position + pixel * BYTESPERPIXEL, data);
     }
   }
