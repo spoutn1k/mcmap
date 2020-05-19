@@ -53,8 +53,9 @@ int main(int argc, char **argv) {
 
   for (int i = 0; i < options.splits; i++) {
     regions[i] = Coordinates(coords);
-    regions[i].minX = (i ? regions[i - 1].maxX + 1 : 0);
-    regions[i].maxX = (regions[i].maxX * (i + 1)) / options.splits;
+    regions[i].minX = (i ? regions[i - 1].maxX + 1 : coords.minX);
+    regions[i].maxX =
+        (coords.maxX - coords.minX) / options.splits + regions[i].minX;
   }
 
   IsometricCanvas finalCanvas(coords, colors);
