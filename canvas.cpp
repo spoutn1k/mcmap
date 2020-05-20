@@ -408,7 +408,7 @@ size_t calcAnchor(const Coordinates &fullMap, const Coordinates &subMap,
   // Determine where in the canvas' 2D matrix is the subcanvas supposed to go:
   // the anchor is the bottom left pixel in the canvas where the sub-canvas must
   // be superimposed
-  size_t anchorX, anchorY;
+  size_t anchorX = 0, anchorY = height;
   const size_t minOffset =
       subMap.minX - fullMap.minX + subMap.minZ - fullMap.minZ;
   const size_t maxOffset =
@@ -429,8 +429,14 @@ size_t calcAnchor(const Coordinates &fullMap, const Coordinates &subMap,
     anchorY = height - minOffset;
     break;
 
-  default:
-    anchorX = anchorY = 0;
+  case SW:
+    anchorX = maxOffset * 2;
+    anchorY = height - maxOffset;
+    break;
+
+  case NE:
+    anchorX = minOffset * 2;
+    anchorY = height - minOffset;
     break;
   }
   // Translate those coordinates as an offset from the beginning of the buffer
