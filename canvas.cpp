@@ -403,50 +403,106 @@ void IsometricCanvas::drawTerrain(const Terrain::Data &world) {
   return;
 }
 
+size_t calcAnchor(const Coordinates &fullMap, const Coordinates &subMap,
+                  size_t height, size_t width) {
+  // Determine where in the canvas' 2D matrix is the subcanvas supposed to go:
+  // the anchor is the bottom left pixel in the canvas where the sub-canvas must
+  // be superimposed
+  size_t anchorX, anchorY;
+  const size_t minOffset =
+      subMap.minX - fullMap.minX + subMap.minZ - fullMap.minZ;
+  const size_t maxOffset =
+      fullMap.maxX - subMap.maxX + fullMap.maxZ - subMap.maxZ;
+
+  switch (fullMap.orientation) {
+
+    // We know an image's width is relative to it's terrain size; we use that
+    // property to determine where to put the subcanvas.
+  case NW:
+    anchorX = minOffset * 2;
+    anchorY = height - maxOffset;
+    break;
+
+    // This is the opposite of NW
+  case SE:
+    anchorX = maxOffset * 2;
+    anchorY = height - minOffset;
+    break;
+
+  default:
+    anchorX = anchorY = 0;
+    break;
+  }
+  // Translate those coordinates as an offset from the beginning of the buffer
+  return (anchorX + width * anchorY) * BYTESPERPIXEL;
+}
+
+void overLay(uint8_t *const dest, const uint8_t *const source,
+             const size_t width) {
+  for (size_t pixel = 0; pixel < width; pixel++) {
+    const uint8_t *data = source + pixel * BYTESPERPIXEL;
+    // If the subCanvas is empty here, skip
+    if (!data[3])
+      continue;
+
+    // If the subCanvas has a fully opaque block or the canvas has nothing,
+    // just overwrite the canvas' pixel
+    if (data[3] == 0xff || !(dest + pixel * BYTESPERPIXEL)[3]) {
+      memcpy(dest + pixel * BYTESPERPIXEL, data, BYTESPERPIXEL);
+      continue;
+    }
+
+    // Finally, blend the transparent pixel into the canvas
+    blend(dest + pixel * BYTESPERPIXEL, data);
+  }
+}
+
+void underLay(uint8_t *const dest, const uint8_t *const source,
+              const size_t width) {
+  uint8_t tmpPixel[4];
+
+  for (size_t pixel = 0; pixel < width; pixel++) {
+    const uint8_t *data = source + pixel * BYTESPERPIXEL;
+    // If the subCanvas is empty here, or the canvas already has a pixel
+    if (!data[3] || (dest + pixel * BYTESPERPIXEL)[3] == 0xff)
+      continue;
+
+    memcpy(tmpPixel, dest + pixel * BYTESPERPIXEL, BYTESPERPIXEL);
+    memcpy(dest + pixel * BYTESPERPIXEL, data, BYTESPERPIXEL);
+    blend(dest + pixel * BYTESPERPIXEL, tmpPixel);
+  }
+}
+
 void IsometricCanvas::merge(const IsometricCanvas &subCanvas) {
-  // This routine determines where the subCanvas' buffer should be written, then
-  // writes it in the objects' own buffer. This results in a "merge" that really
-  // is a superimposition of the subCanvas onto the main canvas.
+  // This routine determines where the subCanvas' buffer should be written,
+  // then writes it in the objects' own buffer. This results in a "merge" that
+  // really is a superimposition of the subCanvas onto the main canvas.
+  //
+  // This routine is supposed to be called multiple times with ORDERED
+  // subcanvasses
   if (subCanvas.width > width || subCanvas.height > height) {
     fprintf(stderr, "Cannot merge a canvas of bigger dimensions\n");
     return;
   }
 
   // Determine where in the canvas' 2D matrix is the subcanvas supposed to go:
-  // the anchor is the bottom left pixel in the canvas where the sub-canvas must
-  // be superimposed
-  const size_t anchorX =
-      (subCanvas.map.minX - map.minX + subCanvas.map.minZ - map.minZ) * 2;
-  const size_t anchorY =
-      height - (map.maxX - subCanvas.map.maxX + map.maxZ - subCanvas.map.maxZ);
+  // the anchor is the bottom left pixel in the canvas where the sub-canvas
+  // must be superimposed, translated as an offset from the beginning of the
+  // buffer
+  const size_t anchor = calcAnchor(map, subCanvas.map, height, width);
 
-  // Translate those coordinates as an offset from the beginning of the buffer
-  const size_t anchor = (anchorX + width * anchorY) * BYTESPERPIXEL;
-
-  // For every line of the subCanvas, we create a pointer to its beginning, and
-  // a pointer to where in the canvas it should be copied
+  // For every line of the subCanvas, we create a pointer to its beginning,
+  // and a pointer to where in the canvas it should be copied
   for (size_t line = 1; line < subCanvas.height + 1; line++) {
-    const uint8_t *subLine = subCanvas.bytesBuffer + subCanvas.size -
-                             line * subCanvas.width * BYTESPERPIXEL;
-    uint8_t *position = bytesBuffer + anchor - width * BYTESPERPIXEL * line;
+    uint8_t *subLine = subCanvas.bytesBuffer + subCanvas.size -
+                       line * subCanvas.width * BYTESPERPIXEL;
+    uint8_t *position = bytesBuffer + anchor - line * width * BYTESPERPIXEL;
 
-    // Then copy it pixel per pixel in the canvas
-    for (size_t pixel = 0; pixel < subCanvas.width; pixel++) {
-      const uint8_t *data = subLine + pixel * BYTESPERPIXEL;
-
-      // If the subCanvas is empty here, skip
-      if (!data[3])
-        continue;
-
-      // If the subCanvas has a fully opaque block or the canvas has nothing,
-      // just overwrite the canvas' pixel
-      if (data[3] == 0xff || !(position + pixel * BYTESPERPIXEL)[3]) {
-        memcpy(position + pixel * BYTESPERPIXEL, data, BYTESPERPIXEL);
-        continue;
-      }
-
-      // Finally, blend the transparent pixel into the canvas
-      blend(position + pixel * BYTESPERPIXEL, data);
-    }
+    // Then import the line over or under the existing data, depending on the
+    // orientation
+    if (map.orientation == NW || map.orientation == SW)
+      overLay(position, subLine, subCanvas.width);
+    else
+      underLay(position, subLine, subCanvas.width);
   }
 }
