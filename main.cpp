@@ -1,6 +1,5 @@
 #include "./VERSION"
 #include "./draw_png.h"
-#include "./globals.h"
 #include "./helper.h"
 #include "./settings.h"
 #include "./worldloader.h"

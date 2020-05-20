@@ -7,7 +7,7 @@ LDFLAGS=-lz -lpng -fopenmp
 DCFLAGS=-g -O0 -std=c++17 -c -Wall -D_DEBUG -DWITHPNG -D_FILE_OFFSET_BITS=64
 DLDFLAGS=-lz -lpng
 
-SOURCES=main.cpp helper.cpp colors.cpp worldloader.cpp filesystem.cpp globals.cpp draw_png.cpp settings.cpp canvas.cpp
+SOURCES=main.cpp helper.cpp colors.cpp worldloader.cpp draw_png.cpp settings.cpp canvas.cpp
 
 OBJECTS=$(SOURCES:.cpp=.default.o)
 DOBJECTS=$(SOURCES:.cpp=.debug.o)

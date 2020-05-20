@@ -10,7 +10,6 @@
 #include "./settings.h"
 #include "./worldloader.h"
 #include "colors.h"
-#include "globals.h"
 #include "helper.h"
 #include <cstdio>
 #include <cstdlib>
