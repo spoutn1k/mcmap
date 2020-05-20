@@ -3,6 +3,7 @@
  */
 
 #include "./canvas.h"
+#include <ctime>
 
 IsometricCanvas::drawer blockRenderers[] = {
     &IsometricCanvas::drawFull,
@@ -382,6 +383,9 @@ void IsometricCanvas::drawFull(const size_t x, const size_t y, const NBT &,
 }
 
 void IsometricCanvas::drawTerrain(const Terrain::Data &world) {
+#ifdef CLOCK
+  auto begin = std::chrono::high_resolution_clock::now();
+#endif
   int64_t worldX = 0, worldZ = 0;
   for (size_t x = 0; x < sizeX + 1; x++) {
     for (size_t z = 0; z < sizeZ + 1; z++) {
@@ -400,6 +404,11 @@ void IsometricCanvas::drawTerrain(const Terrain::Data &world) {
     }
   }
 
+#ifdef CLOCK
+  auto end = std::chrono::high_resolution_clock::now();
+  printf("Drawn terrain in %lfms\n",
+         std::chrono::duration<double, std::milli>(end - begin).count());
+#endif
   return;
 }
 
@@ -480,6 +489,10 @@ void underLay(uint8_t *const dest, const uint8_t *const source,
 }
 
 void IsometricCanvas::merge(const IsometricCanvas &subCanvas) {
+#ifdef CLOCK
+  auto begin = std::chrono::high_resolution_clock::now();
+#endif
+
   // This routine determines where the subCanvas' buffer should be written,
   // then writes it in the objects' own buffer. This results in a "merge" that
   // really is a superimposition of the subCanvas onto the main canvas.
@@ -511,4 +524,10 @@ void IsometricCanvas::merge(const IsometricCanvas &subCanvas) {
     else
       underLay(position, subLine, subCanvas.width);
   }
+
+#ifdef CLOCK
+  auto end = std::chrono::high_resolution_clock::now();
+  printf("Merged canvas in %lfms\n",
+         std::chrono::duration<double, std::milli>(end - begin).count());
+#endif
 }
