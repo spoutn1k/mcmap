@@ -31,7 +31,6 @@ void printHelp(char *binary) {
 int main(int argc, char **argv) {
   Settings::WorldOptions options;
   Colors::Palette colors;
-  Colors::load(options.colorFile, &colors);
 
   printf("mcmap " VERSION " %dbit\n", 8 * static_cast<int>(sizeof(size_t)));
 
@@ -44,30 +43,36 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  // Get the relevant options from the options parsed
   Terrain::Coordinates coords = options.boundaries;
-
   std::filesystem::path regionDir = options.regionDir();
+  Colors::load(options.colorFile, &colors);
 
+  // This is the canvas on which the final image will be rendered
+  IsometricCanvas finalCanvas(coords, colors);
+
+  // Prepare the sub-regions to render
+  // This could be bypassed when the program is run in single-threaded mode, but
+  // it works just fine when run in single threaded, so why bother making huge
+  // if-elses ?
   Terrain::Coordinates *subCoords = new Terrain::Coordinates[options.splits];
   splitCoords(coords, subCoords, options.splits);
-
-  IsometricCanvas finalCanvas(coords, colors);
 
 #pragma omp parallel shared(subCoords, finalCanvas)
   {
 #pragma omp for ordered schedule(static)
     for (size_t i = 0; i < options.splits; i++) {
-#define coords subCoords[i]
-      Colors::Palette localColors;
-
       // Load the minecraft terrain to render
-      Terrain::Data world(coords);
+      Terrain::Data world(subCoords[i]);
       world.load(regionDir);
 
       // Cap the height to avoid having a ridiculous image height
-      coords.minY = std::max(coords.minY, world.minHeight());
-      coords.maxY = std::min(coords.maxY, world.maxHeight());
+      subCoords[i].minY = std::max(subCoords[i].minY, world.minHeight());
+      subCoords[i].maxY = std::min(subCoords[i].maxY, world.maxHeight());
 
+      // Pre-cache the colors used in the part of the world loaded to squeeze a
+      // few milliseconds of color lookup
+      Colors::Palette localColors;
       Colors::filter(colors, world.cache, &localColors);
 
       // Overwrite water if asked to
@@ -75,11 +80,17 @@ int main(int argc, char **argv) {
       if (options.hideWater)
         localColors["minecraft:water"] = Colors::Block();
 
-      IsometricCanvas canvas(coords, localColors);
+      // Draw the terrain fragment
+      IsometricCanvas canvas(subCoords[i], localColors);
       canvas.drawTerrain(world);
 
 #pragma omp ordered
-      { finalCanvas.merge(canvas); }
+      {
+        // Merge the terrain fragment into the final canvas. The ordered
+        // directive in the pragma is primordial, as the merging algorithm
+        // cannot merge terrain when not in order.
+        finalCanvas.merge(canvas);
+      }
     }
   }
 
