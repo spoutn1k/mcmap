@@ -49,7 +49,7 @@ int main(int argc, char **argv) {
   Colors::load(options.colorFile, &colors);
 
   // This is the canvas on which the final image will be rendered
-  IsometricCanvas finalCanvas(coords, colors);
+  IsometricCanvas finalCanvas(coords, colors, options.padding);
 
   // Prepare the sub-regions to render
   // This could be bypassed when the program is run in single-threaded mode, but

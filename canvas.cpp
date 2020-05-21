@@ -412,19 +412,17 @@ void IsometricCanvas::drawTerrain(const Terrain::Data &world) {
   return;
 }
 
-size_t calcAnchor(const Coordinates &fullMap, const Coordinates &subMap,
-                  size_t height, size_t width) {
+size_t IsometricCanvas::calcAnchor(const IsometricCanvas &subCanvas) {
   // Determine where in the canvas' 2D matrix is the subcanvas supposed to go:
   // the anchor is the bottom left pixel in the canvas where the sub-canvas must
   // be superimposed
   size_t anchorX = 0, anchorY = height;
   const size_t minOffset =
-      subMap.minX - fullMap.minX + subMap.minZ - fullMap.minZ;
+      subCanvas.map.minX - map.minX + subCanvas.map.minZ - map.minZ;
   const size_t maxOffset =
-      fullMap.maxX - subMap.maxX + fullMap.maxZ - subMap.maxZ;
+      map.maxX - subCanvas.map.maxX + map.maxZ - subCanvas.map.maxZ;
 
-  switch (fullMap.orientation) {
-
+  switch (map.orientation) {
     // We know an image's width is relative to it's terrain size; we use that
     // property to determine where to put the subcanvas.
   case NW:
@@ -448,6 +446,10 @@ size_t calcAnchor(const Coordinates &fullMap, const Coordinates &subMap,
     anchorY = height - minOffset;
     break;
   }
+
+  anchorX = anchorX + padding - subCanvas.padding;
+  anchorY = anchorY - padding + subCanvas.padding;
+
   // Translate those coordinates as an offset from the beginning of the buffer
   return (anchorX + width * anchorY) * BYTESPERPIXEL;
 }
@@ -508,7 +510,7 @@ void IsometricCanvas::merge(const IsometricCanvas &subCanvas) {
   // the anchor is the bottom left pixel in the canvas where the sub-canvas
   // must be superimposed, translated as an offset from the beginning of the
   // buffer
-  const size_t anchor = calcAnchor(map, subCanvas.map, height, width);
+  const size_t anchor = calcAnchor(subCanvas);
 
   // For every line of the subCanvas, we create a pointer to its beginning,
   // and a pointer to where in the canvas it should be copied

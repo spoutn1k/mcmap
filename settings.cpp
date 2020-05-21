@@ -45,6 +45,12 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
         return false;
       }
       opts->splits = atoi(NEXTARG);
+    } else if (strcmp(option, "-padding") == 0) {
+      if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
+        fprintf(stderr, "Error: %s needs an integer argument\n", option);
+        return false;
+      }
+      opts->padding = atoi(NEXTARG);
     } else if (strcmp(option, "-nowater") == 0) {
       opts->hideWater = true;
     } else if (strcmp(option, "-nether") == 0) {
