@@ -48,22 +48,16 @@ int main(int argc, char **argv) {
 
   std::filesystem::path regionDir = options.regionDir();
 
-  Terrain::Coordinates *regions = new Terrain::Coordinates[options.splits];
-
-  for (int i = 0; i < options.splits; i++) {
-    regions[i] = Coordinates(coords);
-    regions[i].minX = (i ? regions[i - 1].maxX + 1 : coords.minX);
-    regions[i].maxX =
-        (coords.maxX - coords.minX) / options.splits + regions[i].minX;
-  }
+  Terrain::Coordinates *subCoords = new Terrain::Coordinates[options.splits];
+  splitCoords(coords, subCoords, options.splits);
 
   IsometricCanvas finalCanvas(coords, colors);
 
-#pragma omp parallel shared(regions, finalCanvas)
+#pragma omp parallel shared(subCoords, finalCanvas)
   {
 #pragma omp for ordered schedule(static)
-    for (int i = 0; i < options.splits; i++) {
-#define coords regions[i]
+    for (size_t i = 0; i < options.splits; i++) {
+#define coords subCoords[i]
       Colors::Palette localColors;
 
       // Load the minecraft terrain to render

@@ -104,5 +104,11 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
     return false;
   }
 
+  size_t length = opts->boundaries.maxX - opts->boundaries.minX + 1;
+  if (opts->splits > length) {
+    fprintf(stderr, "Cannot split terrain in more than %ld units.\n", length);
+    return false;
+  }
+
   return true;
 }

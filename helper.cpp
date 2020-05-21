@@ -56,3 +56,16 @@ bool isNumeric(char *str) {
   }
   return true;
 }
+
+void splitCoords(const Coordinates &original, Coordinates *&subCoords,
+                 const size_t count) {
+  for (size_t index = 0; index < count; index++) {
+    subCoords[index] = Coordinates(original);
+    subCoords[index].minX =
+        (index ? subCoords[index - 1].maxX + 1 : original.minX);
+    subCoords[index].maxX =
+        (original.maxX - original.minX + 1) / count + subCoords[index].minX - 1;
+    if (index == count - 1)
+      subCoords[index].maxX = original.maxX;
+  }
+}

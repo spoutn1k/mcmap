@@ -22,7 +22,7 @@ struct WorldOptions {
 
   // Map boundaries
   Coordinates boundaries;
-  uint8_t splits;
+  size_t splits;
   int mapSizeY;
   Orientation orientation;
 
