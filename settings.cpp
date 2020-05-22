@@ -29,7 +29,7 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
         return false;
       }
       const int height = atoi(NEXTARG);
-      opts->mapMaxY =
+      opts->boundaries.maxY =
           (height > MAX_TERRAIN_HEIGHT ? MAX_TERRAIN_HEIGHT : height);
     } else if (strcmp(option, "-min") == 0) {
       if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
@@ -37,8 +37,21 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
         return false;
       }
       const int height = atoi(NEXTARG);
-      opts->mapMinY =
+      opts->boundaries.minY =
           (height < MIN_TERRAIN_HEIGHT ? MIN_TERRAIN_HEIGHT : height);
+    } else if (strcmp(option, "-splits") == 0) {
+      if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
+        fprintf(stderr, "Error: %s needs an integer argument\n", option);
+        return false;
+      }
+      opts->splits = atoi(NEXTARG);
+    } else if (strcmp(option, "-padding") == 0) {
+      if (!MOREARGS(1) || !isNumeric(POLLARG(1)) || atoi(POLLARG(1)) < 0) {
+        fprintf(stderr, "Error: %s needs an positive integer argument\n",
+                option);
+        return false;
+      }
+      opts->padding = atoi(NEXTARG);
     } else if (strcmp(option, "-nowater") == 0) {
       opts->hideWater = true;
     } else if (strcmp(option, "-nether") == 0) {
@@ -63,13 +76,13 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
         return false;
       }
     } else if (strcmp(option, "-nw") == 0) {
-      opts->orientation = Terrain::NW;
+      opts->boundaries.orientation = NW;
     } else if (strcmp(option, "-sw") == 0) {
-      opts->orientation = Terrain::SW;
+      opts->boundaries.orientation = SW;
     } else if (strcmp(option, "-ne") == 0) {
-      opts->orientation = Terrain::NE;
+      opts->boundaries.orientation = NE;
     } else if (strcmp(option, "-se") == 0) {
-      opts->orientation = Terrain::SE;
+      opts->boundaries.orientation = SE;
     } else if (strcmp(option, "-3") == 0) {
       opts->offsetY = 3;
     } else if (strcmp(option, "-help") == 0 || strcmp(option, "-h") == 0) {
@@ -93,8 +106,14 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
     return false;
   }
 
-  if (opts->mapMaxY - opts->mapMinY < 0) {
+  if (opts->boundaries.maxX - opts->boundaries.minX < 0) {
     fprintf(stderr, "Nothing to render: -min Y has to be < -max/-height Y\n");
+    return false;
+  }
+
+  size_t length = opts->boundaries.maxX - opts->boundaries.minX + 1;
+  if (opts->splits > length) {
+    fprintf(stderr, "Cannot split terrain in more than %ld units.\n", length);
     return false;
   }
 

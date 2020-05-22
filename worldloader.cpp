@@ -1,9 +1,5 @@
 #include "worldloader.h"
 
-// Buffers for chunk read from MCA files and decompression.
-uint8_t zData[COMPRESSED_BUFFER];
-uint8_t chunkBuffer[DECOMPRESSED_BUFFER];
-
 NBT air(nbt::tag_type::tag_end);
 
 enum renderTypes {
@@ -182,7 +178,9 @@ uint8_t Terrain::Data::importHeight(vector<NBT> *sections) {
 }
 
 bool decompressChunk(const uint32_t offset, FILE *regionHandle,
-                     uint64_t *length) {
+                     uint8_t *chunkBuffer, uint64_t *length) {
+  uint8_t zData[COMPRESSED_BUFFER];
+
   if (0 != fseek(regionHandle, offset, SEEK_SET)) {
     // printf("Error seeking to chunk\n");
     return false;
@@ -226,7 +224,10 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
                               const int chunkX, const int chunkZ) {
   uint64_t length, chunkPos = chunkIndex(chunkX, chunkZ);
 
-  if (!offset || !decompressChunk(offset, regionHandle, &length))
+  // Buffers for chunk read from MCA files and decompression.
+  uint8_t chunkBuffer[DECOMPRESSED_BUFFER];
+
+  if (!offset || !decompressChunk(offset, regionHandle, chunkBuffer, &length))
     return;
 
   NBT chunk = NBT::parse(chunkBuffer, length);
@@ -346,7 +347,14 @@ const NBT &blockAtPre116(const NBT &section, uint8_t x, uint8_t z, uint8_t y) {
 
 const NBT &Terrain::Data::block(const int32_t x, const int32_t z,
                                 const int32_t y) const {
-  const NBT &section = chunks[chunkIndex(CHUNK(x), CHUNK(z))][y >> 4];
+
+  const NBT &chunk = chunks[chunkIndex(CHUNK(x), CHUNK(z))];
+
+  if (chunk.is_end())
+    return air;
+
+  const NBT &section = chunk[y >> 4];
+
   if (!section.is_end() && section.contains("_type"))
     return (*getBlock[*section["_type"].get<const int8_t *>()])(section, x, z,
                                                                 y);

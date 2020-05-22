@@ -8,19 +8,11 @@
 #define Z_BEST_SPEED 6
 #endif
 
-inline void blend(uint8_t *const destination, const uint8_t *const source);
-inline void addColor(uint8_t *const color, const uint8_t *const add);
-
 bool PNG::Image::create() {
-  lineWidthChans = width * 4;
+  printf("Image dimensions are %ldx%ld, 32bpp, %.2fMiB\n",
+         canvas->getCroppedWidth(), canvas->getCroppedHeight(),
+         float(canvas->getCroppedSize() / float(1024 * 1024)));
 
-  size = uint64_t(lineWidthChans) * uint64_t(height);
-
-  printf("Image dimensions are %ldx%ld, 32bpp, %.2fMiB\n", width, height,
-         float(size / float(1024 * 1024)));
-
-  bytesBuffer = new uint8_t[size];
-  memset(bytesBuffer, 0, size);
   fseeko(imageHandle, 0, SEEK_SET);
 
   // Write header
@@ -46,9 +38,10 @@ bool PNG::Image::create() {
 
   png_init_io(pngPtr, imageHandle);
 
-  png_set_IHDR(pngPtr, pngInfoPtr, (uint32_t)width, (uint32_t)height, 8,
-               PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE,
-               PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+  png_set_IHDR(pngPtr, pngInfoPtr, (uint32_t)canvas->getCroppedWidth(),
+               (uint32_t)canvas->getCroppedHeight(), 8, PNG_COLOR_TYPE_RGBA,
+               PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE,
+               PNG_FILTER_TYPE_BASE);
 
   png_text title_text;
   title_text.compression = PNG_TEXT_COMPRESSION_NONE;
@@ -69,12 +62,13 @@ bool PNG::Image::save() {
     return false;
   }
 
-  uint8_t *srcLine = bytesBuffer;
+  uint8_t *srcLine = canvas->bytesBuffer + canvas->getCroppedOffset();
+  size_t croppedHeight = canvas->getCroppedHeight();
 
   printf("Writing to file...\n");
-  for (size_t y = 0; y < height; ++y) {
+  for (size_t y = 0; y < croppedHeight; ++y) {
     png_write_row(pngPtr, (png_bytep)srcLine);
-    srcLine += lineWidthChans;
+    srcLine += canvas->width * BYTESPERPIXEL;
   }
 
   png_write_end(pngPtr, NULL);

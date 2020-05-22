@@ -1,6 +1,5 @@
 #include "./VERSION"
 #include "./draw_png.h"
-#include "./globals.h"
 #include "./helper.h"
 #include "./settings.h"
 #include "./worldloader.h"
@@ -11,8 +10,7 @@
 using std::string;
 
 void printHelp(char *binary);
-void render(PNG::Image *image, const PNG::IsometricCanvas &canvas,
-            const Terrain::OrientedMap &world);
+void render(IsometricCanvas *canvas, const Terrain::Data &world);
 
 void printHelp(char *binary) {
   printf("\nmcmap - an isometric minecraft map rendering tool.\n"
@@ -45,90 +43,60 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  // Get the relevant options from the options parsed
   Terrain::Coordinates coords = options.boundaries;
-
   std::filesystem::path regionDir = options.regionDir();
+  Colors::load(options.colorFile, &colors);
 
-  // The minecraft terrain to render
-  Terrain::OrientedMap world(coords, options.orientation);
-  world.terrain.load(regionDir);
+  // This is the canvas on which the final image will be rendered
+  IsometricCanvas finalCanvas(coords, colors, options.padding);
 
-  if (!Colors::load(options.colorFile, world.terrain.cache, &colors))
-    return 1;
+  // Prepare the sub-regions to render
+  // This could be bypassed when the program is run in single-threaded mode, but
+  // it works just fine when run in single threaded, so why bother making huge
+  // if-elses ?
+  Terrain::Coordinates *subCoords = new Terrain::Coordinates[options.splits];
+  splitCoords(coords, subCoords, options.splits);
 
-  // Overwrite water if asked to
-  // TODO expand this to other blocks
-  if (options.hideWater)
-    colors["minecraft:water"] = Colors::Block();
+#pragma omp parallel shared(subCoords, finalCanvas)
+  {
+#pragma omp for ordered schedule(static)
+    for (size_t i = 0; i < options.splits; i++) {
+      // Load the minecraft terrain to render
+      Terrain::Data world(subCoords[i]);
+      world.load(regionDir);
 
-  PNG::IsometricCanvas canvas(coords, options);
-  // Cap the height of the canvas to avoid having a ridiculous height
-  canvas.minY = std::max(canvas.minY, world.terrain.minHeight());
-  canvas.maxY = std::min(canvas.maxY, world.terrain.maxHeight());
-  PNG::Image image(options.outFile, canvas, colors);
+      // Cap the height to avoid having a ridiculous image height
+      subCoords[i].minY = std::max(subCoords[i].minY, world.minHeight());
+      subCoords[i].maxY = std::min(subCoords[i].maxY, world.maxHeight());
 
-  render(&image, canvas, world);
-  image.save();
+      // Pre-cache the colors used in the part of the world loaded to squeeze a
+      // few milliseconds of color lookup
+      Colors::Palette localColors;
+      Colors::filter(colors, world.cache, &localColors);
 
-  printf("Job complete.\n");
-  return 0;
-}
+      // Overwrite water if asked to
+      // TODO expand this to other blocks
+      if (options.hideWater)
+        localColors["minecraft:water"] = Colors::Block();
 
-void render(PNG::Image *image, const PNG::IsometricCanvas &canvas,
-            const Terrain::OrientedMap &world) {
-  /* There are 3 sets of coordinates here:
-   * - x, y, z: the coordinates of the dot on the virtual isometric map
-   *   to be drawn, here named canvas;
-   * - mapx, y, mapz: the coordinates of the corresponding block in the
-   *   minecraft world, depending on the orientation of the map to be drawn;
-   * - bitmapX, bitmapY: the position of the pixel in the resulting bitmap.
-   *
-   * The virtual map "canvas" is the link between the two other sets of
-   * coordinates. Drawing the map MUST follow a special order to avoid
-   * overwriting pixels when drawing: the horizontal order is as follows:
-   *
-   *   0
-   *  3 1
-   * 5 4 2
-   *
-   * The canvas allows to easily follow this pattern. The world block
-   * and the position on the image are then calculated from the canvas
-   * coordinates. */
+      // Draw the terrain fragment
+      IsometricCanvas canvas(subCoords[i], localColors);
+      canvas.drawTerrain(world);
 
-  for (size_t x = 0; x < canvas.sizeX + 1; x++) {
-    for (size_t z = 0; z < canvas.sizeZ + 1; z++) {
-      const size_t bmpPosX =
-          2 * (canvas.sizeZ - 1) + (x - z) * 2 + image->padding;
-
-      // in some orientations, the axis are inverted in the world
-      if (world.orientation == Terrain::NE || world.orientation == Terrain::SW)
-        std::swap(x, z);
-
-      const int64_t worldX = world.bounds.minX + x * world.vectorX;
-      const int64_t worldZ = world.bounds.minZ + z * world.vectorZ;
-
-      // swap them back to avoid loop confusion
-      if (world.orientation == Terrain::NE || world.orientation == Terrain::SW)
-        std::swap(x, z);
-
-      const uint8_t localMaxHeight = std::min(
-          world.terrain.maxHeight(worldX, worldZ), uint8_t(canvas.maxY + 1));
-      const uint8_t localMinHeight =
-          std::max(world.terrain.minHeight(worldX, worldZ), canvas.minY);
-
-      for (uint8_t y = localMinHeight; y < localMaxHeight; y++) {
-        const size_t bmpPosY =
-            image->height - 2 + x + z - canvas.sizeX - canvas.sizeZ -
-            (y - canvas.minY) * image->heightOffset - image->padding;
-        //     ^^^^^^^^^^^^^
-        // We move y down in this formula to render the bottom of the map at the
-        // bottom of the image
-
-        const NBT &block = world.terrain.block(worldX, worldZ, y);
-        image->drawBlock(bmpPosX, bmpPosY, block);
+#pragma omp ordered
+      {
+        // Merge the terrain fragment into the final canvas. The ordered
+        // directive in the pragma is primordial, as the merging algorithm
+        // cannot merge terrain when not in order.
+        finalCanvas.merge(canvas);
       }
     }
   }
 
-  return;
+  delete[] subCoords;
+
+  PNG::Image(options.outFile, &finalCanvas).save();
+  printf("Job complete.\n");
+  return 0;
 }

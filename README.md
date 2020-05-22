@@ -30,6 +30,8 @@ __Linux / MacOS__
 |`-nowater`      |do not render water|
 |`-nether`      |render the nether|
 |`-end`          |render the end|
+|`-splits`       |number of sub-terrains to render; if threading is available, every sub-terrain is rendered in a thread|
+|`-padding`      |padding around the final image, in pixels (default: 5)|
 
 *Note: Currently you need both -from and -to to define bounds.*
 

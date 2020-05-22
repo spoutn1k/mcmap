@@ -1,13 +1,13 @@
 # if you don't want png support, remove "-DWITHPNG", "-lpng" and "draw_png.cpp" below
 CC=g++
 
-CFLAGS=-O3 -std=c++17 -c -Wall -fomit-frame-pointer -pedantic -DWITHPNG -D_FILE_OFFSET_BITS=64
-LDFLAGS=-lz -lpng
+CFLAGS=-O3 -std=c++17 -c -Wall -fomit-frame-pointer -pedantic -DWITHPNG -D_FILE_OFFSET_BITS=64 -fopenmp
+LDFLAGS=-lz -lpng -fopenmp
 
 DCFLAGS=-g -O0 -std=c++17 -c -Wall -D_DEBUG -DWITHPNG -D_FILE_OFFSET_BITS=64
 DLDFLAGS=-lz -lpng
 
-SOURCES=main.cpp helper.cpp colors.cpp worldloader.cpp filesystem.cpp globals.cpp draw_png.cpp settings.cpp draw_block.cpp
+SOURCES=main.cpp helper.cpp colors.cpp worldloader.cpp draw_png.cpp settings.cpp canvas.cpp
 
 OBJECTS=$(SOURCES:.cpp=.default.o)
 DOBJECTS=$(SOURCES:.cpp=.debug.o)

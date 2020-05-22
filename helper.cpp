@@ -56,3 +56,27 @@ bool isNumeric(char *str) {
   }
   return true;
 }
+
+void splitCoords(const Coordinates &original, Coordinates *&subCoords,
+                 const size_t count) {
+  // Split the coordinates of the entire terrain in `count` terrain fragments
+
+  for (size_t index = 0; index < count; index++) {
+    // Initialization with the original's values
+    subCoords[index] = Coordinates(original);
+
+    // The first fragment begins at the terrain's beginning, the other fragments
+    // begin one block behind the last fragment
+    subCoords[index].minX =
+        (index ? subCoords[index - 1].maxX + 1 : original.minX);
+
+    // Each fragment has a fixed size
+    subCoords[index].maxX =
+        subCoords[index].minX + (original.maxX - original.minX + 1) / count - 1;
+
+    // Adjust the last terrain fragment to make sure the terrain is fully
+    // covered
+    if (index == count - 1)
+      subCoords[index].maxX = original.maxX;
+  }
+}

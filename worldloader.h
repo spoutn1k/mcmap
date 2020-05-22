@@ -21,13 +21,6 @@ namespace Terrain {
 typedef NBT Chunk;
 typedef Chunk *ChunkList;
 
-enum Orientation {
-  NW,
-  SW,
-  NE,
-  SE,
-};
-
 using Coordinates = struct Coordinates;
 
 struct Data {
@@ -100,43 +93,6 @@ struct Data {
   }
 
   const NBT &block(const int32_t x, const int32_t z, const int32_t y) const;
-};
-
-struct OrientedMap {
-  Terrain::Coordinates bounds;
-  struct Terrain::Data terrain;
-  int8_t vectorX, vectorZ;
-  Terrain::Orientation orientation;
-
-  OrientedMap(const Terrain::Coordinates &map,
-              const Terrain::Orientation direction)
-      : terrain(map) {
-    bounds = map;
-    vectorX = vectorZ = 1;
-    orientation = direction;
-    reshape(orientation);
-  }
-
-  void reshape(const Terrain::Orientation orientation) {
-    switch (orientation) {
-    case NW:
-      // This is the default. No changes
-      break;
-    case SW:
-      std::swap(bounds.maxZ, bounds.minZ);
-      vectorZ = -1;
-      break;
-    case NE:
-      std::swap(bounds.maxX, bounds.minX);
-      vectorX = -1;
-      break;
-    case SE:
-      std::swap(bounds.maxX, bounds.minX);
-      std::swap(bounds.maxZ, bounds.minZ);
-      vectorX = vectorZ = -1;
-      break;
-    }
-  }
 };
 
 } // namespace Terrain

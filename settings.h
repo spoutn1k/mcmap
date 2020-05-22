@@ -16,44 +16,40 @@ enum Dimension {
 };
 
 struct WorldOptions {
+  // Files to use
   std::filesystem::path saveName, outFile, colorFile;
 
-  bool wholeworld;
-
   // Map boundaries
+  Dimension dim;
   Coordinates boundaries;
-  int mapMinY, mapMaxY;
-  int mapSizeY;
-  Terrain::Orientation orientation;
+  size_t splits;
 
+  // Image settings
   int offsetY;
-
+  size_t padding;
   bool hideWater;
 
   // Memory limits, legacy code for image splitting
   uint64_t memlimit;
-  bool memlimitSet;
-
-  Dimension dim;
+  bool memlimitSet, wholeworld;
 
   WorldOptions() : boundaries(UNDEFINED) {
     saveName = "";
-    dim = OVERWORLD;
     outFile = "output.png";
     colorFile = "colors.json";
 
-    hideWater = false;
+    splits = 1;
+    dim = OVERWORLD;
+    boundaries.minY = 0;
+    boundaries.maxY = 255;
 
-    mapMinY = 0;
-    mapMaxY = 255;
-    mapSizeY = mapMaxY - mapMinY;
     offsetY = 3;
+    hideWater = false;
+    padding = 5;
 
     wholeworld = false;
     memlimit = 2000 * uint64_t(1024 * 1024);
     memlimitSet = false;
-
-    orientation = Terrain::Orientation::NW;
   }
 
   std::filesystem::path regionDir() {
