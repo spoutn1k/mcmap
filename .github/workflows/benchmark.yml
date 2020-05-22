@@ -1,12 +1,12 @@
-name: Benchmark
+name: Commando Training
 on: [push, pull_request]
 jobs:
-  build:
+  Benchmark:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
     - name: Execution
-      uses: spoutn1k/mcmap-benchmark@v2
+      uses: spoutn1k/mcmap-benchmark@v3
     - name: Upload time data
       uses: actions/upload-artifact@v1
       with:
