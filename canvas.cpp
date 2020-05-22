@@ -400,7 +400,8 @@ void IsometricCanvas::drawSlab(const size_t x, const size_t y,
 
   bool top = false;
 #define SLAB_OFFSET (top ? 0 : 1)
-  if (*metadata["Properties"]["type"].get<const string *>() == "top")
+  if (metadata["Properties"].contains("type") &&
+      *metadata["Properties"]["type"].get<const string *>() == "top")
     top = true;
 
   uint8_t *pos = pixel(x, y + SLAB_OFFSET);

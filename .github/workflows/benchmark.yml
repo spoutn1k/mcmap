@@ -6,14 +6,14 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Execution
-      uses: spoutn1k/mcmap-benchmark@master
+      uses: spoutn1k/mcmap-benchmark@v2
     - name: Upload time data
       uses: actions/upload-artifact@v1
       with:
-        name: execution_time
-        path: bench_time
+        name: results.log
+        path: time.log
     - name: Upload resulting image
       uses: actions/upload-artifact@v1
       with:
-        name: region.png
-        path: output.png
+        name: images.tgz
+        path: images.tgz
