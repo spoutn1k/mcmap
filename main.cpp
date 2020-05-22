@@ -94,6 +94,8 @@ int main(int argc, char **argv) {
     }
   }
 
+  delete[] subCoords;
+
   PNG::Image(options.outFile, &finalCanvas).save();
   printf("Job complete.\n");
   return 0;

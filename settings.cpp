@@ -46,8 +46,9 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
       }
       opts->splits = atoi(NEXTARG);
     } else if (strcmp(option, "-padding") == 0) {
-      if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
-        fprintf(stderr, "Error: %s needs an integer argument\n", option);
+      if (!MOREARGS(1) || !isNumeric(POLLARG(1)) || atoi(POLLARG(1)) < 0) {
+        fprintf(stderr, "Error: %s needs an positive integer argument\n",
+                option);
         return false;
       }
       opts->padding = atoi(NEXTARG);
