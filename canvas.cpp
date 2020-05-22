@@ -3,7 +3,122 @@
  */
 
 #include "./canvas.h"
+#ifdef CLOCK
 #include <ctime>
+#endif
+
+//  ____                       _
+// / ___|_ __ ___  _ __  _ __ (_)_ __   __ _
+//| |   | '__/ _ \| '_ \| '_ \| | '_ \ / _` |
+//| |___| | | (_) | |_) | |_) | | | | | (_| |
+// \____|_|  \___/| .__/| .__/|_|_| |_|\__, |
+//                |_|   |_|            |___/
+// The following methods are related to the cropping mechanism.
+
+size_t IsometricCanvas::getCroppedWidth() const {
+  // Not implemented, returns the actual width. Might come back to this but it
+  // is not as interesting as the height.
+  return width;
+}
+
+size_t IsometricCanvas::firstLine() const {
+  // Tip: Return -7 for a freaky glichy look
+  // return -7;
+
+  // We search for the first non-empty line
+  size_t line = 0;
+
+  for (size_t row = 0; row < height && !line; row++)
+    for (size_t pixel = 0; pixel < width && !line; pixel++)
+      if (*(bytesBuffer + (pixel + row * width) * BYTESPERPIXEL))
+        line = row;
+
+  return line - (padding - 2);
+}
+
+size_t IsometricCanvas::lastLine() const {
+  // We search for the last non-empty line
+  size_t line = 0;
+
+  for (size_t row = height - 1; row > 0 && !line; row--)
+    for (size_t pixel = 0; pixel < width && !line; pixel++)
+      if (*(bytesBuffer + (pixel + row * width) * BYTESPERPIXEL))
+        line = row;
+
+  return line + (padding - 2);
+}
+
+size_t IsometricCanvas::getCroppedHeight() const {
+  return lastLine() - firstLine() + 1;
+}
+
+size_t IsometricCanvas::getCroppedOffset() const {
+  // The first line to render in the cropped view of the canvas, as an offset
+  // from the beginning of the byte buffer
+  return firstLine() * width * BYTESPERPIXEL;
+}
+
+// ____                     _
+//|  _ \ _ __ __ ___      _(_)_ __   __ _
+//| | | | '__/ _` \ \ /\ / / | '_ \ / _` |
+//| |_| | | | (_| |\ V  V /| | | | | (_| |
+//|____/|_|  \__,_| \_/\_/ |_|_| |_|\__, |
+//                                  |___/
+// The following methods are used to draw the map into the canvas' 2D buffer
+
+void IsometricCanvas::translate(size_t x, size_t z, int64_t *worldX,
+                                int64_t *worldZ) {
+  switch (map.orientation) {
+  case NW:
+    *worldX = map.minX + x;
+    *worldZ = map.minZ + z;
+    break;
+  case SW:
+    std::swap(x, z);
+    *worldX = map.minX + x;
+    *worldZ = map.maxZ - z;
+    break;
+  case NE:
+    std::swap(x, z);
+    *worldX = map.maxX - x;
+    *worldZ = map.minZ + z;
+    break;
+  case SE:
+    *worldX = map.maxX - x;
+    *worldZ = map.maxZ - z;
+    break;
+  }
+}
+
+void IsometricCanvas::drawTerrain(const Terrain::Data &world) {
+#ifdef CLOCK
+  auto begin = std::chrono::high_resolution_clock::now();
+#endif
+  int64_t worldX = 0, worldZ = 0;
+  for (size_t x = 0; x < sizeX + 1; x++) {
+    for (size_t z = 0; z < sizeZ + 1; z++) {
+
+      translate(x, z, &worldX, &worldZ);
+
+      const uint8_t localMaxHeight =
+          std::min(world.maxHeight(worldX, worldZ), map.maxY);
+      const uint8_t localMinHeight =
+          std::max(world.minHeight(worldX, worldZ), map.minY);
+
+      for (uint8_t y = localMinHeight; y < localMaxHeight; y++) {
+        const NBT &block = world.block(worldX, worldZ, y);
+        drawBlock(x, z, y, block);
+      }
+    }
+  }
+
+#ifdef CLOCK
+  auto end = std::chrono::high_resolution_clock::now();
+  printf("Drawn terrain in %lfms\n",
+         std::chrono::duration<double, std::milli>(end - begin).count());
+#endif
+  return;
+}
 
 IsometricCanvas::drawer blockRenderers[] = {
     &IsometricCanvas::drawFull,
@@ -11,6 +126,15 @@ IsometricCanvas::drawer blockRenderers[] = {
 #include "./blocktypes.def"
 #undef DEFINETYPE
 };
+
+inline void IsometricCanvas::drawBlock(const size_t x, const size_t z,
+                                       const size_t y, const NBT &block) {
+  const size_t bmpPosX = 2 * (sizeZ - 1) + (x - z) * 2 + padding;
+  const size_t bmpPosY = height - 2 + x + z - sizeX - sizeZ -
+                         (y - map.minY) * heightOffset - padding;
+
+  drawBlock(bmpPosX, bmpPosY, block);
+}
 
 void IsometricCanvas::drawBlock(const size_t x, const size_t y,
                                 const NBT &blockData) {
@@ -382,35 +506,13 @@ void IsometricCanvas::drawFull(const size_t x, const size_t y, const NBT &,
   // function pointer and...
 }
 
-void IsometricCanvas::drawTerrain(const Terrain::Data &world) {
-#ifdef CLOCK
-  auto begin = std::chrono::high_resolution_clock::now();
-#endif
-  int64_t worldX = 0, worldZ = 0;
-  for (size_t x = 0; x < sizeX + 1; x++) {
-    for (size_t z = 0; z < sizeZ + 1; z++) {
-
-      translate(x, z, &worldX, &worldZ);
-
-      const uint8_t localMaxHeight =
-          std::min(world.maxHeight(worldX, worldZ), map.maxY);
-      const uint8_t localMinHeight =
-          std::max(world.minHeight(worldX, worldZ), map.minY);
-
-      for (uint8_t y = localMinHeight; y < localMaxHeight; y++) {
-        const NBT &block = world.block(worldX, worldZ, y);
-        drawBlock(x, z, y, block);
-      }
-    }
-  }
-
-#ifdef CLOCK
-  auto end = std::chrono::high_resolution_clock::now();
-  printf("Drawn terrain in %lfms\n",
-         std::chrono::duration<double, std::milli>(end - begin).count());
-#endif
-  return;
-}
+// __  __                _
+//|  \/  | ___ _ __ __ _(_)_ __   __ _
+//| |\/| |/ _ \ '__/ _` | | '_ \ / _` |
+//| |  | |  __/ | | (_| | | | | | (_| |
+//|_|  |_|\___|_|  \__, |_|_| |_|\__, |
+//                 |___/         |___/
+// This is the canvas merging code.
 
 size_t IsometricCanvas::calcAnchor(const IsometricCanvas &subCanvas) {
   // Determine where in the canvas' 2D matrix is the subcanvas supposed to go:
@@ -447,6 +549,7 @@ size_t IsometricCanvas::calcAnchor(const IsometricCanvas &subCanvas) {
     break;
   }
 
+  // Adjust the padding before translating to an offset
   anchorX = anchorX + padding - subCanvas.padding;
   anchorY = anchorY - padding + subCanvas.padding;
 
@@ -456,6 +559,7 @@ size_t IsometricCanvas::calcAnchor(const IsometricCanvas &subCanvas) {
 
 void overLay(uint8_t *const dest, const uint8_t *const source,
              const size_t width) {
+  // Render a sub-canvas above the canvas' content
   for (size_t pixel = 0; pixel < width; pixel++) {
     const uint8_t *data = source + pixel * BYTESPERPIXEL;
     // If the subCanvas is empty here, skip
@@ -476,6 +580,7 @@ void overLay(uint8_t *const dest, const uint8_t *const source,
 
 void underLay(uint8_t *const dest, const uint8_t *const source,
               const size_t width) {
+  // Render a sub-canvas under the canvas' content
   uint8_t tmpPixel[4];
 
   for (size_t pixel = 0; pixel < width; pixel++) {

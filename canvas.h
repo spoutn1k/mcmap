@@ -12,18 +12,17 @@
 // created with a set of 3D coordinates, and translate every block drawn into a
 // 2D position.
 struct IsometricCanvas {
-  Coordinates map;
-
+  Coordinates map;     // The coordinates describing the 3D map
   size_t sizeX, sizeZ; // The size of the 3D map
 
   size_t width, height; // Bitmap width and height
-  uint8_t heightOffset; // Offset for block rendering
   size_t padding;       // Padding inside the image
+  uint8_t heightOffset; // Offset for block rendering
 
   uint8_t *bytesBuffer; // The buffer where pixels are written
   size_t size;          // The size of the buffer
 
-  Colors::Palette palette;
+  Colors::Palette palette; // The colors to use when drawing
 
   IsometricCanvas(const Terrain::Coordinates &coords,
                   const Colors::Palette &colors, const size_t padding = 0)
@@ -66,56 +65,47 @@ struct IsometricCanvas {
 
   ~IsometricCanvas() { delete[] bytesBuffer; }
 
+  // Cropping methods
+  // Those getters return a value inferior to the actual underlying values
+  // leaving out empty areas, to essentially 'crop' the canvas to fit perfectly
+  // the image
+  size_t getCroppedWidth() const;
+  size_t getCroppedHeight() const;
+  size_t getCroppedSize() const {
+    return getCroppedWidth() * getCroppedHeight();
+  }
+  size_t getCroppedOffset() const;
+  size_t firstLine() const;
+  size_t lastLine() const;
+
+  // Merging methods
   void merge(const IsometricCanvas &subCanvas);
   size_t calcAnchor(const IsometricCanvas &subCanvas);
 
-  void translate(size_t x, size_t z, int64_t *worldX, int64_t *worldZ) {
-    switch (map.orientation) {
-    case NW:
-      *worldX = map.minX + x;
-      *worldZ = map.minZ + z;
-      break;
-    case SW:
-      std::swap(x, z);
-      *worldX = map.minX + x;
-      *worldZ = map.maxZ - z;
-      break;
-    case NE:
-      std::swap(x, z);
-      *worldX = map.maxX - x;
-      *worldZ = map.minZ + z;
-      break;
-    case SE:
-      *worldX = map.maxX - x;
-      *worldZ = map.maxZ - z;
-      break;
-    }
-  }
-
+  // Drawing methods
+  // Helpers for position lookup
+  void translate(size_t x, size_t z, int64_t *worldX, int64_t *worldZ);
   inline uint8_t *pixel(size_t x, size_t y) {
     return &bytesBuffer[(x + y * width) * BYTESPERPIXEL];
   }
 
-  void drawTerrain(const Terrain::Data &terrain);
-  void drawBlock(const size_t x, const size_t y, const NBT &block);
-  inline void drawBlock(const size_t x, const size_t z, const size_t y,
-                        const NBT &block) {
-    const size_t bmpPosX = 2 * (sizeZ - 1) + (x - z) * 2 + padding;
-    const size_t bmpPosY = height - 2 + x + z - sizeX - sizeZ -
-                           (y - map.minY) * heightOffset - padding;
+  // Drawing entrypoints
+  void drawTerrain(const Terrain::Data &);
+  void drawBlock(const size_t, const size_t, const NBT &);
+  inline void drawBlock(const size_t, const size_t, const size_t, const NBT &);
 
-    drawBlock(bmpPosX, bmpPosY, block);
-  }
-
+  // This obscure typedef allows to create a member function pointer array
+  // (ouch) to render different block types without a switch case
   typedef void (IsometricCanvas::*drawer)(const size_t, const size_t,
                                           const NBT &, const Colors::Block *);
 
-  void drawFull(const size_t x, const size_t y, const NBT &metadata,
-                const Colors::Block *color);
+  // The default block type, hardcoded
+  void drawFull(const size_t, const size_t, const NBT &, const Colors::Block *);
 
+  // The other block types are loaded at compile-time from the `blocktypes.def`
+  // file, with some macro manipulation
 #define DEFINETYPE(STRING, CALLBACK)                                           \
-  void CALLBACK(const size_t x, const size_t y, const NBT &metadata,           \
-                const Colors::Block *color);
+  void CALLBACK(const size_t, const size_t, const NBT &, const Colors::Block *);
 #include "./blocktypes.def"
 #undef DEFINETYPE
 };

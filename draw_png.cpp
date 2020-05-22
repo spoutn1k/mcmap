@@ -9,8 +9,9 @@
 #endif
 
 bool PNG::Image::create() {
-  printf("Image dimensions are %ldx%ld, 32bpp, %.2fMiB\n", canvas->width,
-         canvas->height, float(canvas->size / float(1024 * 1024)));
+  printf("Image dimensions are %ldx%ld, 32bpp, %.2fMiB\n",
+         canvas->getCroppedWidth(), canvas->getCroppedHeight(),
+         float(canvas->getCroppedSize() / float(1024 * 1024)));
 
   fseeko(imageHandle, 0, SEEK_SET);
 
@@ -37,8 +38,8 @@ bool PNG::Image::create() {
 
   png_init_io(pngPtr, imageHandle);
 
-  png_set_IHDR(pngPtr, pngInfoPtr, (uint32_t)canvas->width,
-               (uint32_t)canvas->height, 8, PNG_COLOR_TYPE_RGBA,
+  png_set_IHDR(pngPtr, pngInfoPtr, (uint32_t)canvas->getCroppedWidth(),
+               (uint32_t)canvas->getCroppedHeight(), 8, PNG_COLOR_TYPE_RGBA,
                PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE,
                PNG_FILTER_TYPE_BASE);
 
@@ -61,10 +62,11 @@ bool PNG::Image::save() {
     return false;
   }
 
-  uint8_t *srcLine = canvas->bytesBuffer;
+  uint8_t *srcLine = canvas->bytesBuffer + canvas->getCroppedOffset();
+  size_t croppedHeight = canvas->getCroppedHeight();
 
   printf("Writing to file...\n");
-  for (size_t y = 0; y < canvas->height; ++y) {
+  for (size_t y = 0; y < croppedHeight; ++y) {
     png_write_row(pngPtr, (png_bytep)srcLine);
     srcLine += canvas->width * BYTESPERPIXEL;
   }
