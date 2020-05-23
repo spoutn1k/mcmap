@@ -300,6 +300,13 @@ void IsometricCanvas::drawOre(const size_t x, const size_t y, const NBT &,
    * |DSLS|
    * |SDLL| */
 
+  int sub = (float(color->primary.BRIGHTNESS) / 323.0f + .21f);
+
+  Colors::Color L(color->secondary);
+  Colors::Color D(color->secondary);
+  L.modColor(sub - 15);
+  D.modColor(sub - 25);
+
   // Top row
   uint8_t *pos = pixel(x, y);
   for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
@@ -309,17 +316,17 @@ void IsometricCanvas::drawOre(const size_t x, const size_t y, const NBT &,
   pos = pixel(x, y + 1);
   memcpy(pos, &color->dark, BYTESPERPIXEL);
   memcpy(pos + CHANSPERPIXEL, &color->dark, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL * 2, &color->secondary, BYTESPERPIXEL);
+  memcpy(pos + CHANSPERPIXEL * 2, &L, BYTESPERPIXEL);
   memcpy(pos + CHANSPERPIXEL * 3, &color->light, BYTESPERPIXEL);
   // Third row
   pos = pixel(x, y + 2);
   memcpy(pos, &color->dark, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL, &color->secondary, BYTESPERPIXEL);
+  memcpy(pos + CHANSPERPIXEL, &D, BYTESPERPIXEL);
   memcpy(pos + CHANSPERPIXEL * 2, &color->light, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL * 3, &color->secondary, BYTESPERPIXEL);
+  memcpy(pos + CHANSPERPIXEL * 3, &L, BYTESPERPIXEL);
   // Last row
   pos = pixel(x, y + 3);
-  memcpy(pos, &color->secondary, BYTESPERPIXEL);
+  memcpy(pos, &D, BYTESPERPIXEL);
   memcpy(pos + CHANSPERPIXEL, &color->dark, BYTESPERPIXEL);
   memcpy(pos + CHANSPERPIXEL * 2, &color->light, BYTESPERPIXEL);
   memcpy(pos + CHANSPERPIXEL * 3, &color->light, BYTESPERPIXEL);
