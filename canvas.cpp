@@ -138,11 +138,11 @@ inline void IsometricCanvas::drawBlock(const size_t x, const size_t z,
 
 void IsometricCanvas::drawBlock(const size_t x, const size_t y,
                                 const NBT &blockData) {
-  if (x < 0 || x > width - 1)
+  if (x > width - 1)
     throw std::range_error("Invalid x: " + std::to_string(x) + "/" +
                            std::to_string(width));
 
-  if (y < 0 || y > height - 1)
+  if (y > height - 1)
     throw std::range_error("Invalid y: " + std::to_string(y) + "/" +
                            std::to_string(height));
 

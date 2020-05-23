@@ -1,6 +1,6 @@
 #include "worldloader.h"
 
-NBT air(nbt::tag_type::tag_end);
+NBT minecraft_air(nbt::tag_type::tag_end);
 
 enum renderTypes {
   SKIP = 0,
@@ -17,8 +17,8 @@ const NBT &(*getBlock[3])(const NBT &, uint8_t, uint8_t, uint8_t) = {
 
 void Terrain::Data::load(const std::filesystem::path &regionDir) {
   // Parse all the necessary region files
-  for (int8_t rx = REGION(map.minX); rx < REGION(map.maxX) + 1; rx++) {
-    for (int8_t rz = REGION(map.minZ); rz < REGION(map.maxZ) + 1; rz++) {
+  for (int16_t rx = REGION(map.minX); rx < REGION(map.maxX) + 1; rx++) {
+    for (int16_t rz = REGION(map.minZ); rz < REGION(map.maxZ) + 1; rz++) {
       std::filesystem::path regionFile = std::filesystem::path(regionDir) /=
           "r." + std::to_string(rx) + "." + std::to_string(rz) + ".mca";
 
@@ -257,7 +257,9 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
   inflateChunk(sections);
 }
 
-const NBT &blockAtEmpty(const NBT &, uint8_t, uint8_t, uint8_t) { return air; }
+const NBT &blockAtEmpty(const NBT &, uint8_t, uint8_t, uint8_t) {
+  return minecraft_air;
+}
 
 const NBT &blockAtPost116(const NBT &section, uint8_t x, uint8_t z, uint8_t y) {
   // The `BlockStates` array contains data on the section's blocks. You have
@@ -351,7 +353,7 @@ const NBT &Terrain::Data::block(const int32_t x, const int32_t z,
   const NBT &chunk = chunks[chunkIndex(CHUNK(x), CHUNK(z))];
 
   if (chunk.is_end())
-    return air;
+    return minecraft_air;
 
   const NBT &section = chunk[y >> 4];
 
@@ -359,5 +361,5 @@ const NBT &Terrain::Data::block(const int32_t x, const int32_t z,
     return (*getBlock[*section["_type"].get<const int8_t *>()])(section, x, z,
                                                                 y);
 
-  return air;
+  return minecraft_air;
 }

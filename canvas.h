@@ -1,3 +1,6 @@
+#ifndef CANVAS_H_
+#define CANVAS_H_
+
 #include "./helper.h"
 #include "./settings.h"
 #include "./worldloader.h"
@@ -109,3 +112,5 @@ struct IsometricCanvas {
 #include "./blocktypes.def"
 #undef DEFINETYPE
 };
+
+#endif

@@ -50,7 +50,8 @@ struct Data {
     map.maxX = CHUNK(coords.maxX);
     map.maxZ = CHUNK(coords.maxZ);
 
-    chunkLen = (map.maxX - map.minX + 1) * (map.maxZ - map.minZ + 1);
+    chunkLen =
+        size_t(map.maxX - map.minX + 1) * size_t(map.maxZ - map.minZ + 1);
 
     chunks = new Terrain::Chunk[chunkLen];
     heightMap = new uint8_t[chunkLen];
