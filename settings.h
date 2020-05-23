@@ -33,13 +33,14 @@ struct WorldOptions {
   uint64_t memlimit;
   bool memlimitSet, wholeworld;
 
-  WorldOptions() : boundaries(UNDEFINED) {
+  WorldOptions() {
     saveName = "";
     outFile = "output.png";
     colorFile = "colors.json";
 
     splits = 1;
     dim = OVERWORLD;
+    boundaries.setUndefined();
     boundaries.minY = 0;
     boundaries.maxY = 255;
 

@@ -16,6 +16,8 @@ using nbt::NBT;
 using std::string;
 using std::vector;
 
+void scanWorldDirectory(const std::filesystem::path &, Coordinates *);
+
 namespace Terrain {
 
 typedef NBT Chunk;

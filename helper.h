@@ -1,9 +1,11 @@
 #ifndef HELPER_H_
 #define HELPER_H_
 
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <ctime>
+#include <limits>
 #include <stdint.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -80,6 +82,23 @@ struct Coordinates {
 
   Coordinates(int32_t init) : Coordinates() {
     minX = maxX = minZ = maxZ = init;
+  }
+
+  void setUndefined() {
+    minX = minZ = std::numeric_limits<int32_t>::max();
+    maxX = maxZ = std::numeric_limits<int32_t>::min();
+  }
+
+  bool isUndefined() {
+    return (minX == minZ && minX == std::numeric_limits<int32_t>::max() &&
+            maxX == maxZ && maxX == std::numeric_limits<int32_t>::min());
+  }
+
+  void crop(const Coordinates &boundaries) {
+    minX = std::max(minX, boundaries.minX);
+    minZ = std::max(minZ, boundaries.minZ);
+    maxX = std::min(maxX, boundaries.maxX);
+    maxZ = std::min(maxZ, boundaries.maxZ);
   }
 };
 

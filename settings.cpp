@@ -97,8 +97,22 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
     }
   }
 
-  opts->wholeworld = (opts->boundaries.minX == UNDEFINED ||
-                      opts->boundaries.maxX == UNDEFINED);
+  // Scan the region directory and map the existing terrain in this set of
+  // coordinates
+  Coordinates existingWorld;
+  scanWorldDirectory(opts->regionDir(), &existingWorld);
+
+  if (opts->boundaries.isUndefined()) {
+    // No boundaries were defined, import the whole existing world
+    // No overwriting to preserve potential min/max data
+    opts->boundaries.minX = existingWorld.minX;
+    opts->boundaries.minZ = existingWorld.minZ;
+    opts->boundaries.maxX = existingWorld.maxX;
+    opts->boundaries.maxZ = existingWorld.maxZ;
+  } else {
+    // Restrict the map to draw to the existing terrain
+    opts->boundaries.crop(existingWorld);
+  }
 
   if (opts->boundaries.maxX < opts->boundaries.minX ||
       opts->boundaries.maxZ < opts->boundaries.minZ) {
@@ -107,7 +121,7 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
   }
 
   if (opts->boundaries.maxX - opts->boundaries.minX < 0) {
-    fprintf(stderr, "Nothing to render: -min Y has to be < -max/-height Y\n");
+    fprintf(stderr, "Nothing to render: -min Y has to be < -max Y\n");
     return false;
   }
 

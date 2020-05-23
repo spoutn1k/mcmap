@@ -45,7 +45,7 @@ int main(int argc, char **argv) {
 
   // Get the relevant options from the options parsed
   Terrain::Coordinates coords = options.boundaries;
-  std::filesystem::path regionDir = options.regionDir();
+  const std::filesystem::path regionDir = options.regionDir();
   Colors::load(options.colorFile, &colors);
 
   // This is the canvas on which the final image will be rendered
