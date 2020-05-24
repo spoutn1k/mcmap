@@ -128,12 +128,13 @@ void IsometricCanvas::drawChunk(const Terrain::Data &terrain,
   else
     interpreter = blockAtPost116;
 
-  for (uint8_t yPos = (height & 0x0f); yPos < (height >> 4); yPos++) {
+  const uint8_t minSection = std::max((map.minY >> 4), (height & 0x0f));
+  const uint8_t maxSection = std::min((map.maxY >> 4) + 1, (height >> 4));
+
+  for (uint8_t yPos = minSection; yPos < maxSection; yPos++) {
     drawSection(chunk["Level"]["Sections"][yPos], xPos, zPos, yPos,
                 interpreter);
   }
-
-  return;
 }
 
 void IsometricCanvas::drawSection(const NBT &section, const int64_t xPos,
@@ -164,9 +165,13 @@ void IsometricCanvas::drawSection(const NBT &section, const int64_t xPos,
     }
   }
 
+  const uint8_t minY = (map.minY < (yPos << 4) ? 0 : map.minY - (yPos << 4));
+  const uint8_t maxY =
+      ((yPos + 1) << 4 > map.maxY ? map.maxY - (yPos << 4) + 1 : 16);
+
   for (uint8_t x = 0; x < 16; x++) {
     for (uint8_t z = 0; z < 16; z++) {
-      for (uint8_t y = 0; y < 16; y++) {
+      for (uint8_t y = minY; y < maxY; y++) {
         int16_t index = interpreter(section, x, z, y);
 
         if (index >= colorIndex) {
