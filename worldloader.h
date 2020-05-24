@@ -6,6 +6,7 @@
 #include "./nbt/nbt.hpp"
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
 #include <stdint.h>
 #include <string>
 #include <utility>

@@ -19,6 +19,8 @@ void scanWorldDirectory(const std::filesystem::path &regionDir,
                         Coordinates *savedWorld) {
   const char delimiter = '.';
   std::string index;
+  char buffer[4];
+  int32_t regionX, regionZ;
   savedWorld->setUndefined();
 
   for (auto &region : std::filesystem::directory_iterator(regionDir)) {
@@ -29,20 +31,36 @@ void scanWorldDirectory(const std::filesystem::path &regionDir,
     std::getline(ss, index, delimiter); // This removes the 'r.'
     std::getline(ss, index, delimiter);
 
-    savedWorld->minX = std::min(savedWorld->minX, atoi(index.c_str()));
-    savedWorld->maxX = std::max(savedWorld->maxX, atoi(index.c_str()));
+    regionX = atoi(index.c_str());
 
     std::getline(ss, index, delimiter);
 
-    savedWorld->minZ = std::min(savedWorld->minZ, atoi(index.c_str()));
-    savedWorld->maxZ = std::max(savedWorld->maxZ, atoi(index.c_str()));
+    regionZ = atoi(index.c_str());
+
+    std::ifstream regionData(region.path());
+    for (size_t chunk = 0; chunk < REGIONSIZE * REGIONSIZE; chunk++) {
+      regionData.read(buffer, 4);
+
+      if (*((uint32_t *)&buffer) == 0) {
+        continue;
+      }
+
+      savedWorld->minX =
+          std::min(savedWorld->minX, int32_t((regionX << 5) + (chunk & 0x1f)));
+      savedWorld->maxX =
+          std::max(savedWorld->maxX, int32_t((regionX << 5) + (chunk & 0x1f)));
+      savedWorld->minZ =
+          std::min(savedWorld->minZ, int32_t((regionZ << 5) + (chunk >> 5)));
+      savedWorld->maxZ =
+          std::max(savedWorld->maxZ, int32_t((regionZ << 5) + (chunk >> 5)));
+    }
   }
 
-  // Convert region numbers to blocks
-  savedWorld->minX = savedWorld->minX << 9;
-  savedWorld->minZ = savedWorld->minZ << 9;
-  savedWorld->maxX = ((savedWorld->maxX + 1) << 9) - 1;
-  savedWorld->maxZ = ((savedWorld->maxZ + 1) << 9) - 1;
+  // Convert chunk indexes to blocks
+  savedWorld->minX = savedWorld->minX << 4;
+  savedWorld->minZ = savedWorld->minZ << 4;
+  savedWorld->maxX = ((savedWorld->maxX + 1) << 4) - 1;
+  savedWorld->maxZ = ((savedWorld->maxZ + 1) << 4) - 1;
 }
 
 void Terrain::Data::load(const std::filesystem::path &regionDir) {
