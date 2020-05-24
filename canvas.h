@@ -94,8 +94,14 @@ struct IsometricCanvas {
 
   // Drawing entrypoints
   void drawTerrain(const Terrain::Data &);
+  void drawChunk(const Terrain::Data &, const int64_t, const int64_t);
+  void drawSection(const NBT &, const int64_t, const int64_t, const uint8_t,
+                   sectionInterpreter);
+  void drawChunk(const NBT &);
   void drawBlock(const size_t, const size_t, const NBT &);
   inline void drawBlock(const size_t, const size_t, const size_t, const NBT &);
+  void drawBlock(const Colors::Block *, const size_t, const size_t,
+                 const size_t, const NBT &);
 
   // This obscure typedef allows to create a member function pointer array
   // (ouch) to render different block types without a switch case

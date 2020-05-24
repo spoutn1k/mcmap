@@ -66,26 +66,26 @@ size_t IsometricCanvas::getCroppedOffset() const {
 //                                  |___/
 // The following methods are used to draw the map into the canvas' 2D buffer
 
-void IsometricCanvas::translate(size_t x, size_t z, int64_t *worldX,
-                                int64_t *worldZ) {
+void IsometricCanvas::translate(size_t xCanvasPos, size_t zCanvasPos,
+                                int64_t *xPos, int64_t *zPos) {
   switch (map.orientation) {
   case NW:
-    *worldX = map.minX + x;
-    *worldZ = map.minZ + z;
+    *xPos = (map.minX >> 4) + xCanvasPos;
+    *zPos = (map.minZ >> 4) + zCanvasPos;
     break;
   case SW:
-    std::swap(x, z);
-    *worldX = map.minX + x;
-    *worldZ = map.maxZ - z;
+    std::swap(xCanvasPos, zCanvasPos);
+    *xPos = (map.minX >> 4) + xCanvasPos;
+    *zPos = (map.maxZ >> 4) - zCanvasPos;
     break;
   case NE:
-    std::swap(x, z);
-    *worldX = map.maxX - x;
-    *worldZ = map.minZ + z;
+    std::swap(xCanvasPos, zCanvasPos);
+    *xPos = (map.maxX >> 4) - xCanvasPos;
+    *zPos = (map.minZ >> 4) + zCanvasPos;
     break;
   case SE:
-    *worldX = map.maxX - x;
-    *worldZ = map.maxZ - z;
+    *xPos = (map.maxX >> 4) - xCanvasPos;
+    *zPos = (map.maxZ >> 4) - zCanvasPos;
     break;
   }
 }
@@ -94,21 +94,9 @@ void IsometricCanvas::drawTerrain(const Terrain::Data &world) {
 #ifdef CLOCK
   auto begin = std::chrono::high_resolution_clock::now();
 #endif
-  int64_t worldX = 0, worldZ = 0;
-  for (size_t x = 0; x < sizeX + 1; x++) {
-    for (size_t z = 0; z < sizeZ + 1; z++) {
-
-      translate(x, z, &worldX, &worldZ);
-
-      const uint8_t localMaxHeight =
-          std::min(world.maxHeight(worldX, worldZ), map.maxY);
-      const uint8_t localMinHeight =
-          std::max(world.minHeight(worldX, worldZ), map.minY);
-
-      for (uint8_t y = localMinHeight; y < localMaxHeight; y++) {
-        const NBT &block = world.block(worldX, worldZ, y);
-        drawBlock(x, z, y, block);
-      }
+  for (size_t xCanvasPos = 0; xCanvasPos < (sizeX >> 4) + 1; xCanvasPos++) {
+    for (size_t zCanvasPos = 0; zCanvasPos < (sizeZ >> 4) + 1; zCanvasPos++) {
+      drawChunk(world, xCanvasPos, zCanvasPos);
     }
   }
 
@@ -120,6 +108,83 @@ void IsometricCanvas::drawTerrain(const Terrain::Data &world) {
   return;
 }
 
+void IsometricCanvas::drawChunk(const Terrain::Data &terrain,
+                                const int64_t xPos, const int64_t zPos) {
+  int64_t worldChunkX = 0, worldChunkZ = 0;
+  translate(xPos, zPos, &worldChunkX, &worldChunkZ);
+
+  const NBT &chunk = terrain.chunkAt(worldChunkX, worldChunkZ);
+  const uint8_t height = terrain.heightAt(worldChunkX, worldChunkZ);
+
+  if (chunk.is_end() || !chunk.contains("DataVersion"))
+    return;
+
+  const int dataVersion = *chunk["DataVersion"].get<const int *>();
+
+  // Set the interpreter according to the type of chunk encountered
+  sectionInterpreter interpreter = NULL;
+  if (dataVersion < 2534)
+    interpreter = blockAtPre116;
+  else
+    interpreter = blockAtPost116;
+
+  for (uint8_t yPos = (height & 0x0f); yPos < (height >> 4); yPos++) {
+    drawSection(chunk["Level"]["Sections"][yPos], xPos, zPos, yPos,
+                interpreter);
+  }
+
+  return;
+}
+
+void IsometricCanvas::drawSection(const NBT &section, const int64_t xPos,
+                                  const int64_t zPos, const uint8_t yPos,
+                                  sectionInterpreter interpreter) {
+  if (!interpreter) {
+    fprintf(stderr, "Invalid section interpreter\n");
+    return;
+  }
+
+  if (section.is_end() || !section.contains("Palette"))
+    return;
+
+  uint16_t colorIndex = 0;
+  Colors::Block *cache[256];
+  Colors::Block fallback; // empty color to use in case no color is defined
+
+  // Preload the colors in the order they appear in the palette
+  for (auto &color : section["Palette"]) {
+    auto defined = palette.find(*color["Name"].get<const string *>());
+
+    if (defined == palette.end()) {
+      fprintf(stderr, "Color of block %s not found\n",
+              color["Name"].get<const string *>()->c_str());
+      cache[colorIndex++] = &fallback;
+    } else {
+      cache[colorIndex++] = &defined->second;
+    }
+  }
+
+  for (uint8_t x = 0; x < 16; x++) {
+    for (uint8_t z = 0; z < 16; z++) {
+      for (uint8_t y = 0; y < 16; y++) {
+        int16_t index = interpreter(section, x, z, y);
+
+        if (index >= colorIndex) {
+          fprintf(stderr, "Cache error in chunk %ld %ld: %d/%d\n", xPos, zPos,
+                  index, colorIndex);
+          continue;
+        }
+
+        if (index)
+          drawBlock(cache[index], (xPos << 4) + x, (zPos << 4) + z,
+                    (yPos << 4) + y, section["Palette"][index]);
+      }
+    }
+  }
+
+  return;
+}
+
 IsometricCanvas::drawer blockRenderers[] = {
     &IsometricCanvas::drawFull,
 #define DEFINETYPE(STRING, CALLBACK) &IsometricCanvas::CALLBACK,
@@ -127,43 +192,26 @@ IsometricCanvas::drawer blockRenderers[] = {
 #undef DEFINETYPE
 };
 
-inline void IsometricCanvas::drawBlock(const size_t x, const size_t z,
-                                       const size_t y, const NBT &block) {
+inline void IsometricCanvas::drawBlock(const Colors::Block *color,
+                                       const size_t x, const size_t z,
+                                       const size_t y, const NBT &metadata) {
   const size_t bmpPosX = 2 * (sizeZ - 1) + (x - z) * 2 + padding;
   const size_t bmpPosY = height - 2 + x + z - sizeX - sizeZ -
                          (y - map.minY) * heightOffset - padding;
 
-  drawBlock(bmpPosX, bmpPosY, block);
-}
-
-void IsometricCanvas::drawBlock(const size_t x, const size_t y,
-                                const NBT &blockData) {
-  if (x > width - 1)
-    throw std::range_error("Invalid x: " + std::to_string(x) + "/" +
+  if (bmpPosX > width - 1)
+    throw std::range_error("Invalid x: " + std::to_string(bmpPosX) + "/" +
                            std::to_string(width));
 
-  if (y > height - 1)
-    throw std::range_error("Invalid y: " + std::to_string(y) + "/" +
+  if (bmpPosY > height - 1)
+    throw std::range_error("Invalid y: " + std::to_string(bmpPosY) + "/" +
                            std::to_string(height));
 
-  if (!blockData.contains("Name"))
-    return;
-
-  const string &name = *(blockData["Name"].get<const string *>());
-  auto defined = palette.find(name);
-
-  if (defined == palette.end()) {
-    fprintf(stderr, "Error getting color of block %s\n", name.c_str());
-    return;
-  }
-
-  const Colors::Block *blockColor = &(defined->second);
-
-  if (blockColor->primary.empty())
+  if (color->primary.empty())
     return;
 
   // Then call the function registered with the block's type
-  (this->*blockRenderers[blockColor->type])(x, y, blockData, blockColor);
+  (this->*blockRenderers[color->type])(bmpPosX, bmpPosY, metadata, color);
 }
 
 inline void blend(uint8_t *const destination, const uint8_t *const source) {
@@ -442,10 +490,10 @@ void IsometricCanvas::drawWire(const size_t x, const size_t y, const NBT &,
 }
 
 /*
-        void setUpStep(const size_t x, const size_t y, const uint8_t * const
-   color, const uint8_t * const light, const uint8_t * const dark) { uint8_t
-   *pos = pixel(x, y); for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-                        memcpy(pos, color, BYTESPERPIXEL);
+        void setUpStep(const size_t x, const size_t y, const uint8_t *
+   const color, const uint8_t * const light, const uint8_t * const dark) {
+   uint8_t *pos = pixel(x, y); for (size_t i = 0; i < 4; ++i, pos +=
+   CHANSPERPIXEL) { memcpy(pos, color, BYTESPERPIXEL);
                 }
                 pos = pixel(x, y+1);
                 for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
@@ -484,9 +532,9 @@ void IsometricCanvas::drawFull(const size_t x, const size_t y, const NBT &,
     pos = pixel(x, y + 3);
     for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
       memcpy(pos, (i < 2 ? &color->dark : &color->light), BYTESPERPIXEL);
-      // The weird check here is to get the pattern right, as the noise should
-      // be stronger every other row, but take into account the isometric
-      // perspective
+      // The weird check here is to get the pattern right, as the noise
+      // should be stronger every other row, but take into account the
+      // isometric perspective
     }
   } else { // Not opaque, use slower blending code
     // Top row
@@ -510,8 +558,8 @@ void IsometricCanvas::drawFull(const size_t x, const size_t y, const NBT &,
       blend(pos, (i < 2 ? (uint8_t *)&color->dark : (uint8_t *)&color->light));
     }
   }
-  // The above two branches are almost the same, maybe one could just create a
-  // function pointer and...
+  // The above two branches are almost the same, maybe one could just
+  // create a function pointer and...
 }
 
 // __  __                _
@@ -523,9 +571,9 @@ void IsometricCanvas::drawFull(const size_t x, const size_t y, const NBT &,
 // This is the canvas merging code.
 
 size_t IsometricCanvas::calcAnchor(const IsometricCanvas &subCanvas) {
-  // Determine where in the canvas' 2D matrix is the subcanvas supposed to go:
-  // the anchor is the bottom left pixel in the canvas where the sub-canvas must
-  // be superimposed
+  // Determine where in the canvas' 2D matrix is the subcanvas supposed to
+  // go: the anchor is the bottom left pixel in the canvas where the
+  // sub-canvas must be superimposed
   size_t anchorX = 0, anchorY = height;
   const size_t minOffset =
       subCanvas.map.minX - map.minX + subCanvas.map.minZ - map.minZ;
@@ -533,8 +581,8 @@ size_t IsometricCanvas::calcAnchor(const IsometricCanvas &subCanvas) {
       map.maxX - subCanvas.map.maxX + map.maxZ - subCanvas.map.maxZ;
 
   switch (map.orientation) {
-    // We know an image's width is relative to it's terrain size; we use that
-    // property to determine where to put the subcanvas.
+    // We know an image's width is relative to it's terrain size; we use
+    // that property to determine where to put the subcanvas.
   case NW:
     anchorX = minOffset * 2;
     anchorY = height - maxOffset;
@@ -561,7 +609,8 @@ size_t IsometricCanvas::calcAnchor(const IsometricCanvas &subCanvas) {
   anchorX = anchorX + padding - subCanvas.padding;
   anchorY = anchorY - padding + subCanvas.padding;
 
-  // Translate those coordinates as an offset from the beginning of the buffer
+  // Translate those coordinates as an offset from the beginning of the
+  // buffer
   return (anchorX + width * anchorY) * BYTESPERPIXEL;
 }
 
@@ -574,8 +623,8 @@ void overLay(uint8_t *const dest, const uint8_t *const source,
     if (!data[3])
       continue;
 
-    // If the subCanvas has a fully opaque block or the canvas has nothing,
-    // just overwrite the canvas' pixel
+    // If the subCanvas has a fully opaque block or the canvas has
+    // nothing, just overwrite the canvas' pixel
     if (data[3] == 0xff || !(dest + pixel * BYTESPERPIXEL)[3]) {
       memcpy(dest + pixel * BYTESPERPIXEL, data, BYTESPERPIXEL);
       continue;
@@ -608,9 +657,10 @@ void IsometricCanvas::merge(const IsometricCanvas &subCanvas) {
   auto begin = std::chrono::high_resolution_clock::now();
 #endif
 
-  // This routine determines where the subCanvas' buffer should be written,
-  // then writes it in the objects' own buffer. This results in a "merge" that
-  // really is a superimposition of the subCanvas onto the main canvas.
+  // This routine determines where the subCanvas' buffer should be
+  // written, then writes it in the objects' own buffer. This results in a
+  // "merge" that really is a superimposition of the subCanvas onto the
+  // main canvas.
   //
   // This routine is supposed to be called multiple times with ORDERED
   // subcanvasses
@@ -619,21 +669,21 @@ void IsometricCanvas::merge(const IsometricCanvas &subCanvas) {
     return;
   }
 
-  // Determine where in the canvas' 2D matrix is the subcanvas supposed to go:
-  // the anchor is the bottom left pixel in the canvas where the sub-canvas
-  // must be superimposed, translated as an offset from the beginning of the
-  // buffer
+  // Determine where in the canvas' 2D matrix is the subcanvas supposed to
+  // go: the anchor is the bottom left pixel in the canvas where the
+  // sub-canvas must be superimposed, translated as an offset from the
+  // beginning of the buffer
   const size_t anchor = calcAnchor(subCanvas);
 
-  // For every line of the subCanvas, we create a pointer to its beginning,
-  // and a pointer to where in the canvas it should be copied
+  // For every line of the subCanvas, we create a pointer to its
+  // beginning, and a pointer to where in the canvas it should be copied
   for (size_t line = 1; line < subCanvas.height + 1; line++) {
     uint8_t *subLine = subCanvas.bytesBuffer + subCanvas.size -
                        line * subCanvas.width * BYTESPERPIXEL;
     uint8_t *position = bytesBuffer + anchor - line * width * BYTESPERPIXEL;
 
-    // Then import the line over or under the existing data, depending on the
-    // orientation
+    // Then import the line over or under the existing data, depending on
+    // the orientation
     if (map.orientation == NW || map.orientation == SW)
       overLay(position, subLine, subCanvas.width);
     else

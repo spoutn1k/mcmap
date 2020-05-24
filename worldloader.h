@@ -75,7 +75,6 @@ struct Data {
                  const int chunkZ);
 
   // Chunk analysis methods - using the list of sections
-  void tagSections(vector<NBT> *);
   void stripChunk(vector<NBT> *);
   void cacheColors(vector<NBT> *);
   uint8_t importHeight(vector<NBT> *);
@@ -83,6 +82,10 @@ struct Data {
 
   size_t chunkIndex(int64_t x, int64_t z) const {
     return (x - map.minX) + (z - map.minZ) * (map.maxX - map.minX + 1);
+  }
+
+  const NBT &chunkAt(int64_t xPos, int64_t zPos) const {
+    return chunks[chunkIndex(xPos, zPos)];
   }
 
   uint8_t maxHeight() const { return heightBounds & 0xf0; }
@@ -96,9 +99,17 @@ struct Data {
     return (heightMap[chunkIndex(CHUNK(x), CHUNK(z))] & 0x0f) << 4;
   }
 
-  const NBT &block(const int32_t x, const int32_t z, const int32_t y) const;
+  uint8_t heightAt(int64_t xPos, int64_t zPos) const {
+    return heightMap[chunkIndex(xPos, zPos)];
+  }
 };
 
 } // namespace Terrain
+
+typedef int16_t (*sectionInterpreter)(const NBT &, uint8_t, uint8_t, uint8_t);
+
+int16_t blockAtEmpty(const NBT &, uint8_t, uint8_t, uint8_t);
+int16_t blockAtPre116(const NBT &, uint8_t, uint8_t, uint8_t);
+int16_t blockAtPost116(const NBT &, uint8_t, uint8_t, uint8_t);
 
 #endif // WORLDLOADER_H_
