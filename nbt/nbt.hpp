@@ -4,9 +4,9 @@
 
 #include "./iterators.hpp"
 #include "./tag_types.hpp"
+#include <map>
 #include <stdint.h>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -38,7 +38,7 @@ public:
   using tag_byte_array_t = std::vector<int8_t>;
   using tag_string_t = std::string;
   using tag_list_t = std::vector<NBT>;
-  using tag_compound_t = std::unordered_map<std::string, NBT>;
+  using tag_compound_t = std::map<std::string, NBT>;
   using tag_int_array_t = std::vector<int32_t>;
   using tag_long_array_t = std::vector<int64_t>;
 
