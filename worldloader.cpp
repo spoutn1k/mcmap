@@ -8,12 +8,6 @@ enum renderTypes {
   POST116,
 };
 
-int16_t blockAtEmpty(const NBT &, uint8_t, uint8_t, uint8_t);
-int16_t blockAtPre116(const NBT &, uint8_t, uint8_t, uint8_t);
-int16_t blockAtPost116(const NBT &, uint8_t, uint8_t, uint8_t);
-
-const NBT &(*getBlock[3])(const NBT &, uint8_t, uint8_t, uint8_t);
-
 void scanWorldDirectory(const std::filesystem::path &regionDir,
                         Coordinates *savedWorld) {
   const char delimiter = '.';
@@ -270,12 +264,9 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
   inflateChunk(sections);
 }
 
-int16_t blockAtEmpty(const NBT &, uint8_t, uint8_t, uint8_t) {
-  // The first block of a palette is always air
-  return 0;
-}
-
-int16_t blockAtPost116(const NBT &section, uint8_t x, uint8_t z, uint8_t y) {
+int16_t blockAtPost116(const uint64_t length,
+                       const std::vector<int64_t> *blockStates, uint8_t x,
+                       uint8_t z, uint8_t y) {
   // The `BlockStates` array contains data on the section's blocks. You have
   // to extract it by understanfing its structure.
   //
@@ -287,15 +278,11 @@ int16_t blockAtPost116(const NBT &section, uint8_t x, uint8_t z, uint8_t y) {
   //
   // NEW in 1.16, longs are padded by 0s when a block cannot fit.
 
-  const vector<int64_t> *blockStates =
-      section["BlockStates"].get<const vector<int64_t> *>();
   const uint64_t index = (x & 0x0f) + ((z & 0x0f) + (y & 0x0f) * 16) * 16;
 
   // The length of a block index has to be coded on the minimal possible size,
   // which is the logarithm in base2 of the size of the palette, or 4 if the
   // logarithm is smaller.
-  const uint64_t length =
-      std::max((uint64_t)ceil(log2(section["Palette"].size())), 4ul);
 
   // First, determine how many blocks are in each long. There is an implicit
   // `floor` here, needed later.
@@ -317,7 +304,9 @@ int16_t blockAtPost116(const NBT &section, uint8_t x, uint8_t z, uint8_t y) {
   return blockIndex;
 }
 
-int16_t blockAtPre116(const NBT &section, uint8_t x, uint8_t z, uint8_t y) {
+int16_t blockAtPre116(const uint64_t length,
+                      const std::vector<int64_t> *blockStates, uint8_t x,
+                      uint8_t z, uint8_t y) {
   // The `BlockStates` array contains data on the section's blocks. You have to
   // extract it by understanfing its structure.
   //
@@ -325,15 +314,12 @@ int16_t blockAtPre116(const NBT &section, uint8_t x, uint8_t z, uint8_t y) {
   // indexes, whose element size depends on the size of the Palette. This
   // routine locates the necessary long, extracts the block with bit
   // comparisons, and cross-references it in the palette to get the block name.
-  const vector<int64_t> *blockStates =
-      section["BlockStates"].get<const vector<int64_t> *>();
+
   const uint64_t index = (x & 0x0f) + ((z & 0x0f) + (y & 0x0f) * 16) * 16;
 
   // The length of a block index has to be coded on the minimal possible size,
   // which is the logarithm in base2 of the size of the palette, or 4 if the
   // logarithm is smaller.
-  const uint64_t length =
-      std::max((uint64_t)ceil(log2(section["Palette"].size())), (uint64_t)4);
 
   // We skip the `position` first blocks, of length `size`, then divide by 64 to
   // get the number of longs to skip from the array

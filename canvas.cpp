@@ -176,12 +176,18 @@ void IsometricCanvas::drawSection(const NBT &section, const int64_t xPos,
     }
   }
 
+  const uint64_t length =
+      std::max((uint64_t)ceil(log2(section["Palette"].size())), (uint64_t)4);
+
+  const std::vector<int64_t> *blockStates =
+      section["BlockStates"].get<const std::vector<int64_t> *>();
+
   for (uint8_t x = 0; x < 16; x++) {
     for (uint8_t z = 0; z < 16; z++) {
       for (uint8_t y = 0; y < 16; y++) {
         uint8_t xReal = x, zReal = z;
         orient(xReal, zReal, map.orientation);
-        index = interpreter(section, xReal, zReal, y);
+        index = interpreter(length, blockStates, xReal, zReal, y);
 
         if (index >= colorIndex) {
           fprintf(stderr, "Cache error in chunk %ld %ld: %d/%d\n", xPos, zPos,
