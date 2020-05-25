@@ -91,41 +91,12 @@ void IsometricCanvas::translate(size_t xCanvasPos, size_t zCanvasPos,
 }
 
 void IsometricCanvas::drawTerrain(const Terrain::Data &world) {
-#ifdef CLOCK
-  auto begin = std::chrono::high_resolution_clock::now();
-#endif
-  // Those ugly ass values represent the exact number of chunks the map spans.
-  // The tough part is that depending on the coordinates, a section of the same
-  // size can cover a different number of chunks. (0x0 to 15x15 covers one
-  // chunk, -7x-7 to 8x8 covers 4)
-  //
-  // What I came up with is "aligning" the size by removing the length from the
-  // beginning to the first chunk boundary. That way, the length spans
-  // ceil(length) chunks, +1 if the min was on another chunk.
-  const uint64_t nXChunks =
-      ceil(float(sizeX -
-                 (map.minX % 16 > 0 ? 16 - map.minX % 16 : -map.minX % 16) +
-                 1) /
-           16) +
-      (map.minX % 16 ? 1 : 0);
-  const uint64_t nZChunks =
-      ceil(float(sizeZ -
-                 (map.minZ % 16 > 0 ? 16 - map.minZ % 16 : -map.minZ % 16) +
-                 1) /
-           16) +
-      (map.minZ % 16 ? 1 : 0);
-
   for (size_t xCanvasPos = 0; xCanvasPos < nXChunks; xCanvasPos++) {
     for (size_t zCanvasPos = 0; zCanvasPos < nZChunks; zCanvasPos++) {
       drawChunk(world, xCanvasPos, zCanvasPos);
     }
   }
 
-#ifdef CLOCK
-  auto end = std::chrono::high_resolution_clock::now();
-  printf("Drawn terrain in %lfms\n",
-         std::chrono::duration<double, std::milli>(end - begin).count());
-#endif
   return;
 }
 
@@ -158,6 +129,25 @@ void IsometricCanvas::drawChunk(const Terrain::Data &terrain,
   }
 }
 
+void orient(uint8_t &x, uint8_t &z, Orientation o) {
+  switch (o) {
+  case NW:
+    return;
+  case NE:
+    std::swap(x, z);
+    x = 15 - x;
+    return;
+  case SW:
+    std::swap(x, z);
+    z = 15 - z;
+    return;
+  case SE:
+    x = 15 - x;
+    z = 15 - z;
+    return;
+  }
+}
+
 void IsometricCanvas::drawSection(const NBT &section, const int64_t xPos,
                                   const int64_t zPos, const uint8_t yPos,
                                   sectionInterpreter interpreter) {
@@ -169,10 +159,7 @@ void IsometricCanvas::drawSection(const NBT &section, const int64_t xPos,
   if (section.is_end() || !section.contains("Palette"))
     return;
 
-  int64_t worldChunkX = 0, worldChunkZ = 0;
-  translate(xPos, zPos, &worldChunkX, &worldChunkZ);
-
-  uint16_t colorIndex = 0;
+  uint16_t colorIndex = 0, index = 0;
   Colors::Block *cache[256];
   Colors::Block fallback; // empty color to use in case no color is defined
 
@@ -189,27 +176,12 @@ void IsometricCanvas::drawSection(const NBT &section, const int64_t xPos,
     }
   }
 
-  // Get the min/max x index to render in the chunk, between 0 and 16.
-  const uint8_t minX =
-      (16 + (std::max(map.minX, int(worldChunkX << 4))) % 16) % 16;
-  const uint8_t maxX =
-      (16 + std::min(map.maxX, int(((worldChunkX + 1) << 4) - 1)) % 16) % 16;
-  const uint8_t offsetX = (16 + (map.minX % 16)) % 16;
-
-  const uint8_t minZ =
-      (16 + (std::max(map.minZ, int(worldChunkZ << 4))) % 16) % 16;
-  const uint8_t maxZ =
-      (16 + std::min(map.maxZ, int(((worldChunkZ + 1) << 4) - 1)) % 16) % 16;
-  const uint8_t offsetZ = (16 + (map.minZ % 16)) % 16;
-
-  const uint8_t minY = (map.minY < (yPos << 4) ? 0 : map.minY - (yPos << 4));
-  const uint8_t maxY =
-      ((yPos + 1) << 4 > map.maxY ? map.maxY - (yPos << 4) + 1 : 16);
-
-  for (uint8_t x = minX; x < maxX + 1; x++) {
-    for (uint8_t z = minZ; z < maxZ + 1; z++) {
-      for (uint8_t y = minY; y < maxY; y++) {
-        int16_t index = interpreter(section, x, z, y);
+  for (uint8_t x = 0; x < 16; x++) {
+    for (uint8_t z = 0; z < 16; z++) {
+      for (uint8_t y = 0; y < 16; y++) {
+        uint8_t xReal = x, zReal = z;
+        orient(xReal, zReal, map.orientation);
+        index = interpreter(section, xReal, zReal, y);
 
         if (index >= colorIndex) {
           fprintf(stderr, "Cache error in chunk %ld %ld: %d/%d\n", xPos, zPos,
@@ -218,9 +190,8 @@ void IsometricCanvas::drawSection(const NBT &section, const int64_t xPos,
         }
 
         if (index) {
-          drawBlock(cache[index], (xPos << 4) + x - offsetX,
-                    (zPos << 4) + z - offsetZ, (yPos << 4) + y,
-                    section["Palette"][index]);
+          drawBlock(cache[index], (xPos << 4) + x, (zPos << 4) + z,
+                    (yPos << 4) + y, section["Palette"][index]);
         }
       }
     }
@@ -239,6 +210,9 @@ IsometricCanvas::drawer blockRenderers[] = {
 inline void IsometricCanvas::drawBlock(const Colors::Block *color,
                                        const size_t x, const size_t z,
                                        const size_t y, const NBT &metadata) {
+  if (y > map.maxY || y < map.minY)
+    return;
+
   const size_t bmpPosX = 2 * (sizeZ - 1) + (x - z) * 2 + padding;
   const size_t bmpPosY = height - 2 + x + z - sizeX - sizeZ -
                          (y - map.minY) * heightOffset - padding;

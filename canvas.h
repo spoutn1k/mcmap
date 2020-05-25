@@ -25,6 +25,8 @@ struct IsometricCanvas {
   uint8_t *bytesBuffer; // The buffer where pixels are written
   size_t size;          // The size of the buffer
 
+  uint64_t nXChunks, nZChunks;
+
   Colors::Palette palette; // The colors to use when drawing
 
   IsometricCanvas(const Terrain::Coordinates &coords,
@@ -43,11 +45,34 @@ struct IsometricCanvas {
     // that.
     this->padding = 2 + padding;
 
-    sizeX = map.maxX - map.minX;
-    sizeZ = map.maxZ - map.minZ;
+    // Those ugly ass values represent the exact number of chunks the map spans.
+    // The tough part is that depending on the coordinates, a section of the
+    // same size can cover a different number of chunks. (0x0 to 15x15 covers
+    // one chunk, -7x-7 to 8x8 covers 4)
+    //
+    // What I came up with is "aligning" the size by removing the length from
+    // the beginning to the first chunk boundary. That way, the length spans
+    // ceil(length) chunks, +1 if the min was on another chunk.
+    nXChunks =
+        ceil(float(map.maxX - map.minX -
+                   (map.minX % 16 > 0 ? 16 - map.minX % 16 : -map.minX % 16) +
+                   1) /
+             16) +
+        (map.minX % 16 ? 1 : 0);
+    nZChunks =
+        ceil(float(map.maxZ - map.minZ -
+                   (map.minZ % 16 > 0 ? 16 - map.minZ % 16 : -map.minZ % 16) +
+                   1) /
+             16) +
+        (map.minZ % 16 ? 1 : 0);
 
-    if (map.orientation == NE || map.orientation == SW)
+    sizeX = nXChunks << 4;
+    sizeZ = nZChunks << 4;
+
+    if (map.orientation == NE || map.orientation == SW) {
+      std::swap(nXChunks, nZChunks);
       std::swap(sizeX, sizeZ);
+    }
 
     // The isometrical view of the terrain implies that the width of each chunk
     // equals 16 blocks per side. Each block is overlapped so is 2 pixels wide.
