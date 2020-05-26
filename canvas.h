@@ -25,6 +25,8 @@ struct IsometricCanvas {
   uint8_t *bytesBuffer; // The buffer where pixels are written
   size_t size;          // The size of the buffer
 
+  uint64_t nXChunks, nZChunks;
+
   Colors::Palette palette; // The colors to use when drawing
 
   IsometricCanvas(const Terrain::Coordinates &coords,
@@ -43,11 +45,16 @@ struct IsometricCanvas {
     // that.
     this->padding = 2 + padding;
 
-    sizeX = map.maxX - map.minX;
-    sizeZ = map.maxZ - map.minZ;
+    nXChunks = CHUNK(map.maxX) - CHUNK(map.minX) + 1;
+    nZChunks = CHUNK(map.maxZ) - CHUNK(map.minZ) + 1;
 
-    if (map.orientation == NE || map.orientation == SW)
+    sizeX = nXChunks << 4;
+    sizeZ = nZChunks << 4;
+
+    if (map.orientation == NE || map.orientation == SW) {
+      std::swap(nXChunks, nZChunks);
       std::swap(sizeX, sizeZ);
+    }
 
     // The isometrical view of the terrain implies that the width of each chunk
     // equals 16 blocks per side. Each block is overlapped so is 2 pixels wide.
@@ -94,8 +101,14 @@ struct IsometricCanvas {
 
   // Drawing entrypoints
   void drawTerrain(const Terrain::Data &);
+  void drawChunk(const Terrain::Data &, const int64_t, const int64_t);
+  void drawSection(const NBT &, const int64_t, const int64_t, const uint8_t,
+                   sectionInterpreter);
+  void drawChunk(const NBT &);
   void drawBlock(const size_t, const size_t, const NBT &);
   inline void drawBlock(const size_t, const size_t, const size_t, const NBT &);
+  void drawBlock(const Colors::Block *, const size_t, const size_t,
+                 const size_t, const NBT &);
 
   // This obscure typedef allows to create a member function pointer array
   // (ouch) to render different block types without a switch case

@@ -8,13 +8,6 @@ enum renderTypes {
   POST116,
 };
 
-const NBT &blockAtEmpty(const NBT &, uint8_t, uint8_t, uint8_t);
-const NBT &blockAtPre116(const NBT &, uint8_t, uint8_t, uint8_t);
-const NBT &blockAtPost116(const NBT &, uint8_t, uint8_t, uint8_t);
-
-const NBT &(*getBlock[3])(const NBT &, uint8_t, uint8_t, uint8_t) = {
-    blockAtEmpty, blockAtPre116, blockAtPost116};
-
 void scanWorldDirectory(const std::filesystem::path &regionDir,
                         Coordinates *savedWorld) {
   const char delimiter = '.';
@@ -158,38 +151,6 @@ void Terrain::Data::inflateChunk(vector<NBT> *sections) {
   }
 }
 
-void Terrain::Data::tagSections(vector<NBT> *sections) {
-  // The sole purpose of this chunk analysis section is retro-compatibility
-  // with 1.13-1.15 versions. In 1.16 the section format changed, and worlds may
-  // contain sections with multiple formats. We tag chunks here for performance.
-
-  for (auto it = sections->begin(); it != sections->end(); it++) {
-    // First, skip it if you can
-    if (!it->is_compound())
-      return;
-
-    if (!it->contains("Palette")) {
-      it->operator[]("_type") = NBT(renderTypes::SKIP);
-      continue;
-    }
-
-    // Block index size
-    const uint64_t length =
-        std::max((uint64_t)ceil(log2(it->operator[]("Palette").size())), 4ul);
-
-    // Pre-1.16, no padding was added to the BlockStates longs, meaning that the
-    // entire data fits on exactly 16*16*16*length/64 longs (+1 if there is
-    // overflow). This simple check looks at the size of the array to guess what
-    // type it is.
-    if (it->operator[]("BlockStates").size() == uint64_t(ceil(length * 64l))) {
-      it->operator[]("_type") = NBT(renderTypes::PRE116);
-      continue;
-    };
-
-    it->operator[]("_type") = NBT(renderTypes::POST116);
-  }
-}
-
 void Terrain::Data::stripChunk(vector<NBT> *sections) {
   // Some chunks have a -1 section, we'll pop that real quick
   if (!sections->empty() && *sections->front()["Y"].get<int8_t *>() == -1) {
@@ -280,8 +241,9 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
 
   NBT chunk = NBT::parse(chunkBuffer, length);
 
-  chunks[chunkPos] = std::move(chunk["Level"]["Sections"]);
-  vector<NBT> *sections = chunks[chunkPos].get<vector<NBT> *>();
+  chunks[chunkPos] = std::move(chunk);
+  vector<NBT> *sections =
+      chunks[chunkPos]["Level"]["Sections"].get<vector<NBT> *>();
 
   // Strip the chunk of pointless sections
   stripChunk(sections);
@@ -298,18 +260,13 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
   // Analyze the sections vector for height info
   heightMap[chunkPos] = importHeight(sections);
 
-  // Check for sections of older versions of minecraft
-  tagSections(sections);
-
   // Fill the chunk's holes with empty sections
   inflateChunk(sections);
 }
 
-const NBT &blockAtEmpty(const NBT &, uint8_t, uint8_t, uint8_t) {
-  return minecraft_air;
-}
-
-const NBT &blockAtPost116(const NBT &section, uint8_t x, uint8_t z, uint8_t y) {
+int16_t blockAtPost116(const uint64_t length,
+                       const std::vector<int64_t> *blockStates, uint8_t x,
+                       uint8_t z, uint8_t y) {
   // The `BlockStates` array contains data on the section's blocks. You have
   // to extract it by understanfing its structure.
   //
@@ -321,15 +278,11 @@ const NBT &blockAtPost116(const NBT &section, uint8_t x, uint8_t z, uint8_t y) {
   //
   // NEW in 1.16, longs are padded by 0s when a block cannot fit.
 
-  const vector<int64_t> *blockStates =
-      section["BlockStates"].get<const vector<int64_t> *>();
   const uint64_t index = (x & 0x0f) + ((z & 0x0f) + (y & 0x0f) * 16) * 16;
 
   // The length of a block index has to be coded on the minimal possible size,
   // which is the logarithm in base2 of the size of the palette, or 4 if the
   // logarithm is smaller.
-  const uint64_t length =
-      std::max((uint64_t)ceil(log2(section["Palette"].size())), 4ul);
 
   // First, determine how many blocks are in each long. There is an implicit
   // `floor` here, needed later.
@@ -348,10 +301,12 @@ const NBT &blockAtPost116(const NBT &section, uint8_t x, uint8_t z, uint8_t y) {
       ((*blockStates)[longIndex] >> padding) & ((1l << length) - 1);
 
   // Lower data now contains the index in the palette
-  return section["Palette"][blockIndex];
+  return blockIndex;
 }
 
-const NBT &blockAtPre116(const NBT &section, uint8_t x, uint8_t z, uint8_t y) {
+int16_t blockAtPre116(const uint64_t length,
+                      const std::vector<int64_t> *blockStates, uint8_t x,
+                      uint8_t z, uint8_t y) {
   // The `BlockStates` array contains data on the section's blocks. You have to
   // extract it by understanfing its structure.
   //
@@ -359,15 +314,12 @@ const NBT &blockAtPre116(const NBT &section, uint8_t x, uint8_t z, uint8_t y) {
   // indexes, whose element size depends on the size of the Palette. This
   // routine locates the necessary long, extracts the block with bit
   // comparisons, and cross-references it in the palette to get the block name.
-  const vector<int64_t> *blockStates =
-      section["BlockStates"].get<const vector<int64_t> *>();
+
   const uint64_t index = (x & 0x0f) + ((z & 0x0f) + (y & 0x0f) * 16) * 16;
 
   // The length of a block index has to be coded on the minimal possible size,
   // which is the logarithm in base2 of the size of the palette, or 4 if the
   // logarithm is smaller.
-  const uint64_t length =
-      std::max((uint64_t)ceil(log2(section["Palette"].size())), (uint64_t)4);
 
   // We skip the `position` first blocks, of length `size`, then divide by 64 to
   // get the number of longs to skip from the array
@@ -392,22 +344,5 @@ const NBT &blockAtPre116(const NBT &section, uint8_t x, uint8_t z, uint8_t y) {
   }
 
   // Lower data now contains the index in the palette
-  return section["Palette"][lower_data];
-}
-
-const NBT &Terrain::Data::block(const int32_t x, const int32_t z,
-                                const int32_t y) const {
-
-  const NBT &chunk = chunks[chunkIndex(CHUNK(x), CHUNK(z))];
-
-  if (chunk.is_end())
-    return minecraft_air;
-
-  const NBT &section = chunk[y >> 4];
-
-  if (!section.is_end() && section.contains("_type"))
-    return (*getBlock[*section["_type"].get<const int8_t *>()])(section, x, z,
-                                                                y);
-
-  return minecraft_air;
+  return lower_data;
 }
