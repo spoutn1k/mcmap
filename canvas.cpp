@@ -66,6 +66,7 @@ size_t IsometricCanvas::getCroppedOffset() const {
 //                                  |___/
 // The following methods are used to draw the map into the canvas' 2D buffer
 
+// Translate a chunk in the canvas to a chunk in the world
 void IsometricCanvas::translate(size_t xCanvasPos, size_t zCanvasPos,
                                 int64_t *xPos, int64_t *zPos) {
   switch (map.orientation) {
@@ -91,11 +92,9 @@ void IsometricCanvas::translate(size_t xCanvasPos, size_t zCanvasPos,
 }
 
 void IsometricCanvas::drawTerrain(const Terrain::Data &world) {
-  for (size_t xCanvasPos = 0; xCanvasPos < nXChunks; xCanvasPos++) {
-    for (size_t zCanvasPos = 0; zCanvasPos < nZChunks; zCanvasPos++) {
+  for (size_t xCanvasPos = 0; xCanvasPos < nXChunks; xCanvasPos++)
+    for (size_t zCanvasPos = 0; zCanvasPos < nZChunks; zCanvasPos++)
       drawChunk(world, xCanvasPos, zCanvasPos);
-    }
-  }
 
   return;
 }
@@ -111,6 +110,9 @@ void IsometricCanvas::drawChunk(const Terrain::Data &terrain,
   if (chunk.is_end() || !chunk.contains("DataVersion"))
     return;
 
+  // This value is primordial: it states which version of minecraft the chunk
+  // was created under, and we use it to know which interpreter to use later in
+  // the sections
   const int dataVersion = *chunk["DataVersion"].get<const int *>();
 
   // Set the interpreter according to the type of chunk encountered
@@ -129,7 +131,8 @@ void IsometricCanvas::drawChunk(const Terrain::Data &terrain,
   }
 }
 
-void orient(uint8_t &x, uint8_t &z, Orientation o) {
+// Section version of translate above
+inline void orient(uint8_t &x, uint8_t &z, Orientation o) {
   switch (o) {
   case NW:
     return;
@@ -151,20 +154,38 @@ void orient(uint8_t &x, uint8_t &z, Orientation o) {
 void IsometricCanvas::drawSection(const NBT &section, const int64_t xPos,
                                   const int64_t zPos, const uint8_t yPos,
                                   sectionInterpreter interpreter) {
+  // TODO Take care of this case in the chunk drawing
   if (!interpreter) {
     fprintf(stderr, "Invalid section interpreter\n");
     return;
   }
 
+  // Return if the section is undrawable
   if (section.is_end() || !section.contains("Palette"))
     return;
 
   uint16_t colorIndex = 0, index = 0;
-  Colors::Block *cache[256];
-  Colors::Block fallback; // empty color to use in case no color is defined
+  int64_t worldChunkX = 0, worldChunkZ = 0;
+  Colors::Block *cache[256],
+      fallback; // <- empty color to use in case no color is defined
 
-  // Preload the colors in the order they appear in the palette
-  for (auto &color : section["Palette"]) {
+  // Pre-fetch the vectors from the section: the block palette
+  const std::vector<NBT> *sectionPalette =
+      section["Palette"].get<const std::vector<NBT> *>();
+  // The raw block indexes
+  const std::vector<int64_t> *blockStates =
+      section["BlockStates"].get<const std::vector<int64_t> *>();
+
+  // This will be used by the section interpreter later
+  const uint64_t blockBitLength =
+      std::max(uint64_t(ceil(log2(sectionPalette->size()))), 4ul);
+
+  // We need the real position of the section for bounds checking
+  translate(xPos, zPos, &worldChunkX, &worldChunkZ);
+
+  // Preload the colors in the order they appear in the palette into an array
+  // for cheaper access
+  for (auto &color : *sectionPalette) {
     auto defined = palette.find(*color["Name"].get<const string *>());
 
     if (defined == palette.end()) {
@@ -176,18 +197,29 @@ void IsometricCanvas::drawSection(const NBT &section, const int64_t xPos,
     }
   }
 
-  const uint64_t length =
-      std::max((uint64_t)ceil(log2(section["Palette"].size())), (uint64_t)4);
-
-  const std::vector<int64_t> *blockStates =
-      section["BlockStates"].get<const std::vector<int64_t> *>();
-
+  // Main drawing loop, for every block of the section
   for (uint8_t x = 0; x < 16; x++) {
     for (uint8_t z = 0; z < 16; z++) {
+      // Orient the indexes for them to correspond to the orientation
+      uint8_t xReal = x, zReal = z;
+      orient(xReal, zReal, map.orientation);
+
+      // If we are oob, skip the line
+      if ((worldChunkX << 4) + xReal > map.maxX ||
+          (worldChunkX << 4) + xReal < map.minX ||
+          (worldChunkZ << 4) + zReal > map.maxZ ||
+          (worldChunkZ << 4) + zReal < map.minZ)
+        continue;
+
       for (uint8_t y = 0; y < 16; y++) {
-        uint8_t xReal = x, zReal = z;
-        orient(xReal, zReal, map.orientation);
-        index = interpreter(length, blockStates, xReal, zReal, y);
+        // Same on the y axis
+        if ((yPos << 4) + y < map.minY || (yPos << 4) + y > map.maxY)
+          continue;
+
+        // This is the block index as it is stored internally in the section
+        // data: we use a function pointer to call the right interpreter, as
+        // there were changes in the history of minecraft
+        index = interpreter(blockBitLength, blockStates, xReal, zReal, y);
 
         if (index >= colorIndex) {
           fprintf(stderr, "Cache error in chunk %ld %ld: %d/%d\n", xPos, zPos,
@@ -195,10 +227,10 @@ void IsometricCanvas::drawSection(const NBT &section, const int64_t xPos,
           continue;
         }
 
-        if (index) {
+        // Skip air. This does increase performance, but could be tweaked.
+        if (index)
           drawBlock(cache[index], (xPos << 4) + x, (zPos << 4) + z,
-                    (yPos << 4) + y, section["Palette"][index]);
-        }
+                    (yPos << 4) + y, sectionPalette->operator[](index));
       }
     }
   }
@@ -216,9 +248,6 @@ IsometricCanvas::drawer blockRenderers[] = {
 inline void IsometricCanvas::drawBlock(const Colors::Block *color,
                                        const size_t x, const size_t z,
                                        const size_t y, const NBT &metadata) {
-  if (y > map.maxY || y < map.minY)
-    return;
-
   const size_t bmpPosX = 2 * (sizeZ - 1) + (x - z) * 2 + padding;
   const size_t bmpPosY = height - 2 + x + z - sizeX - sizeZ -
                          (y - map.minY) * heightOffset - padding;
