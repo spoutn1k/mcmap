@@ -19,4 +19,4 @@ DEFINETYPE("Plant", drawPlant)       // Flower and plants.
 DEFINETYPE("Thin", drawThin)         // Snow-like.
 DEFINETYPE("Grown", drawGrown)       // Grass-like blocks, accent is the color on top.
 DEFINETYPE("Fire", drawFire)         // Fire-like.
-DEFINETYPE("Log", drawLog)           // Fire-like.
+DEFINETYPE("Log", drawLog)           // Axis-oriented block, accent is the color on top and bottom.
