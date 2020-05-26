@@ -537,7 +537,7 @@ void IsometricCanvas::drawSlab(const size_t x, const size_t y,
 
 void IsometricCanvas::drawWire(const size_t x, const size_t y, const NBT &,
                                const Colors::Block *color) {
-  uint8_t *pos = pixel(x + 1, y + 2);
+  uint8_t *pos = pixel(x + 1, y + 3);
   memcpy(pos, &color->primary, BYTESPERPIXEL);
   memcpy(pos + CHANSPERPIXEL, &color->primary, BYTESPERPIXEL);
 }
@@ -554,6 +554,59 @@ void IsometricCanvas::drawWire(const size_t x, const size_t y, const NBT &,
                 }
         }
 */
+
+void IsometricCanvas::drawLog(const size_t x, const size_t y,
+                              const NBT &metadata, const Colors::Block *color) {
+
+  string axis;
+
+  int sub = (float(color->primary.BRIGHTNESS) / 323.0f + .21f);
+
+  Colors::Color lightSecondary(color->secondary);
+  Colors::Color darkSecondary(color->secondary);
+  lightSecondary.modColor(sub - 15);
+  darkSecondary.modColor(sub - 25);
+
+  if (!metadata.contains("Properties") ||
+      !metadata["Properties"].contains("axis"))
+    axis = "y";
+  else
+    axis = *metadata["Properties"]["axis"].get<const string *>();
+
+  uint8_t *left = (uint8_t *)&color->dark, *right = (uint8_t *)&color->light;
+
+  if (axis == "x") {
+    if (map.orientation == NW || map.orientation == SE)
+      right = (uint8_t *)&lightSecondary;
+    else
+      left = (uint8_t *)&darkSecondary;
+  } else if (axis == "z") {
+    if (map.orientation == NW || map.orientation == SE)
+      left = (uint8_t *)&darkSecondary;
+    else
+      right = (uint8_t *)&lightSecondary;
+  }
+
+  uint8_t *pos = pixel(x, y);
+  for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
+    memcpy(pos, (axis == "y" ? &color->secondary : &color->primary),
+           BYTESPERPIXEL);
+
+  // Second row
+  pos = pixel(x, y + 1);
+  for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
+    memcpy(pos, (i < 2 ? left : right), BYTESPERPIXEL);
+
+  // Third row
+  pos = pixel(x, y + 2);
+  for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
+    memcpy(pos, (i < 2 ? left : right), BYTESPERPIXEL);
+
+  // Last row
+  pos = pixel(x, y + 3);
+  for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
+    memcpy(pos, (i < 2 ? left : right), BYTESPERPIXEL);
+}
 
 void IsometricCanvas::drawFull(const size_t x, const size_t y, const NBT &,
                                const Colors::Block *color) {
