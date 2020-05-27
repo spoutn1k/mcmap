@@ -319,8 +319,8 @@ void IsometricCanvas::drawThin(const size_t x, const size_t y, const NBT &,
   }
 #ifndef LEGACY
   pos = pixel(x + 1, y + 4);
-  memcpy(pos, &block->primary, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL, &block->primary, BYTESPERPIXEL);
+  memcpy(pos, &block->dark, BYTESPERPIXEL);
+  memcpy(pos + CHANSPERPIXEL, &block->light, BYTESPERPIXEL);
 #endif
 }
 
@@ -333,7 +333,7 @@ void IsometricCanvas::drawTransparent(const size_t x, const size_t y,
                                       const NBT &, const Colors::Block *block) {
   // Avoid the dark/light edges for a clearer look through
   for (uint8_t i = 0; i < 4; i++)
-    for (uint8_t j = 0; j < 3; j++)
+    for (uint8_t j = 1; j < 4; j++)
       blend(pixel(x + i, y + j), (uint8_t *)&block->primary);
 }
 
@@ -372,6 +372,40 @@ void IsometricCanvas::drawPlant(const size_t x, const size_t y, const NBT &,
   memcpy(pos, &block->primary, BYTESPERPIXEL);
   pos = pixel(x + 1, y + 3);
   memcpy(pos, &block->primary, BYTESPERPIXEL);
+}
+
+void IsometricCanvas::drawUnderwaterPlant(const size_t x, const size_t y,
+                                          const NBT &,
+                                          const Colors::Block *block) {
+  /* Print a plant-like block
+   * TODO Make that nicer ?
+   * |    |
+   * | X X|
+   * |  X |
+   * | X  | */
+
+  Colors::Block water = palette.find("minecraft:water")->second;
+
+  uint8_t *pos = pixel(x, y + 1);
+  for (size_t i = 0; i < 4; ++i) {
+    if (i % 2)
+      memcpy(pos + CHANSPERPIXEL * i, &block->primary, BYTESPERPIXEL);
+    blend(pos + CHANSPERPIXEL * i, (uint8_t *)&water.primary);
+  }
+
+  pos = pixel(x, y + 2);
+  for (size_t i = 0; i < 4; ++i) {
+    if (i == 2)
+      memcpy(pos + CHANSPERPIXEL * i, &block->primary, BYTESPERPIXEL);
+    blend(pos + CHANSPERPIXEL * i, (uint8_t *)&water.primary);
+  }
+
+  pos = pixel(x, y + 3);
+  for (size_t i = 0; i < 4; ++i) {
+    if (i == 1)
+      memcpy(pos + CHANSPERPIXEL * i, &block->primary, BYTESPERPIXEL);
+    blend(pos + CHANSPERPIXEL * i, (uint8_t *)&water.primary);
+  }
 }
 
 void IsometricCanvas::drawFire(const size_t x, const size_t y, const NBT &,
@@ -507,11 +541,23 @@ void IsometricCanvas::drawSlab(const size_t x, const size_t y,
    * |DDLL| */
 
   bool top = false;
-#define SLAB_OFFSET (top ? 0 : 1)
-  if (metadata["Properties"].contains("type") &&
-      *metadata["Properties"]["type"].get<const string *>() == "top")
-    top = true;
+  string type;
 
+  if (metadata.contains("Properties") &&
+      metadata["Properties"].contains("type")) {
+    type = *metadata["Properties"]["type"].get<const string *>();
+
+    // Draw a full block if it is a double slab
+    if (type == "double") {
+      drawFull(x, y, metadata, color);
+      return;
+    }
+
+    if (type == "top")
+      top = true;
+  }
+
+#define SLAB_OFFSET (top ? 0 : 1)
   uint8_t *pos = pixel(x, y + SLAB_OFFSET);
   for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
     memcpy(pos, &color->primary, BYTESPERPIXEL);
@@ -558,7 +604,8 @@ void IsometricCanvas::drawWire(const size_t x, const size_t y, const NBT &,
 void IsometricCanvas::drawLog(const size_t x, const size_t y,
                               const NBT &metadata, const Colors::Block *color) {
 
-  string axis;
+  string axis = "y";
+  uint8_t *left = (uint8_t *)&color->dark, *right = (uint8_t *)&color->light;
 
   int sub = (float(color->primary.BRIGHTNESS) / 323.0f + .21f);
 
@@ -567,24 +614,21 @@ void IsometricCanvas::drawLog(const size_t x, const size_t y,
   lightSecondary.modColor(sub - 15);
   darkSecondary.modColor(sub - 25);
 
-  if (!metadata.contains("Properties") ||
-      !metadata["Properties"].contains("axis"))
-    axis = "y";
-  else
+  if (metadata.contains("Properties") &&
+      metadata["Properties"].contains("axis")) {
     axis = *metadata["Properties"]["axis"].get<const string *>();
 
-  uint8_t *left = (uint8_t *)&color->dark, *right = (uint8_t *)&color->light;
-
-  if (axis == "x") {
-    if (map.orientation == NW || map.orientation == SE)
-      right = (uint8_t *)&lightSecondary;
-    else
-      left = (uint8_t *)&darkSecondary;
-  } else if (axis == "z") {
-    if (map.orientation == NW || map.orientation == SE)
-      left = (uint8_t *)&darkSecondary;
-    else
-      right = (uint8_t *)&lightSecondary;
+    if (axis == "x") {
+      if (map.orientation == NW || map.orientation == SE)
+        right = (uint8_t *)&lightSecondary;
+      else
+        left = (uint8_t *)&darkSecondary;
+    } else if (axis == "z") {
+      if (map.orientation == NW || map.orientation == SE)
+        left = (uint8_t *)&darkSecondary;
+      else
+        right = (uint8_t *)&lightSecondary;
+    }
   }
 
   uint8_t *pos = pixel(x, y);

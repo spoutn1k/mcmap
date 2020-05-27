@@ -16,6 +16,7 @@ DEFINETYPE("Rod", drawRod)           // Fence and walls.
 DEFINETYPE("Ore", drawOre)           // Ores
 DEFINETYPE("Wire", drawWire)         // Redstone dust and tripwire
 DEFINETYPE("Plant", drawPlant)       // Flower and plants.
+DEFINETYPE("UnderwaterPlant", drawUnderwaterPlant)       // Flower and plants.
 DEFINETYPE("Thin", drawThin)         // Snow-like.
 DEFINETYPE("Grown", drawGrown)       // Grass-like blocks, accent is the color on top.
 DEFINETYPE("Fire", drawFire)         // Fire-like.
