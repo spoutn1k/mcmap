@@ -54,7 +54,19 @@ bool Colors::load(const std::filesystem::path &colorFile,
 void Colors::filter(const Palette &definitions,
                     const std::vector<string> &filter, Palette *colors) {
 
+  std::vector<string> builtin = {"mcmap:beacon_beam"};
+
   for (auto it : filter) {
+    if (definitions.find(it) != definitions.end()) {
+      colors->insert(std::pair<string, Colors::Block>(it, definitions.at(it)));
+      continue;
+    } else {
+      fprintf(stderr, "No color for block %s\n", it.c_str());
+      colors->insert(std::pair<string, Colors::Block>(it, Colors::Block()));
+    }
+  }
+
+  for (auto it : builtin) {
     if (definitions.find(it) != definitions.end()) {
       colors->insert(std::pair<string, Colors::Block>(it, definitions.at(it)));
       continue;

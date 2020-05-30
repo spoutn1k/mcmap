@@ -856,5 +856,7 @@
     "minecraft:potted_red_tulip": { "type": "Head", "color": [83, 46, 36, 254] },
     "minecraft:potted_spruce_sapling": { "type": "Head", "color": [83, 46, 36, 254] },
     "minecraft:potted_white_tulip": { "type": "Head", "color": [83, 46, 36, 254] },
-    "minecraft:potted_wither_rose": { "type": "Head", "color": [83, 46, 36, 254] }
+    "minecraft:potted_wither_rose": { "type": "Head", "color": [83, 46, 36, 254] },
+
+    "mcmap:beacon_beam": { "type": "Rod", "color": [214, 254, 243, 200] }
 }

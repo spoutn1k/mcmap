@@ -28,6 +28,9 @@ struct IsometricCanvas {
   uint64_t nXChunks, nZChunks;
 
   Colors::Palette palette; // The colors to use when drawing
+  Colors::Block beaconBeam;
+
+  uint8_t numBeacons = 0, beacons[256];
 
   IsometricCanvas(const Terrain::Coordinates &coords,
                   const Colors::Palette &colors, const size_t padding = 0)
@@ -63,7 +66,7 @@ struct IsometricCanvas {
     // length on both the horizontal axis times 2.
     width = (sizeX + sizeZ + this->padding) * 2;
 
-    height = sizeX + sizeZ + (map.maxY - map.minY) * heightOffset +
+    height = sizeX + sizeZ + ((13 << 4) - map.minY) * heightOffset +
              this->padding * 2;
 
     size = uint64_t(width * BYTESPERPIXEL) * uint64_t(height);
@@ -71,6 +74,10 @@ struct IsometricCanvas {
     memset(bytesBuffer, 0, size);
 
     palette = colors;
+
+    auto beamColor = colors.find("mcmap:beacon_beam");
+    if (beamColor != colors.end())
+      beaconBeam = beamColor->second;
   }
 
   ~IsometricCanvas() { delete[] bytesBuffer; }
@@ -105,6 +112,7 @@ struct IsometricCanvas {
   void drawSection(const NBT &, const int64_t, const int64_t, const uint8_t,
                    sectionInterpreter);
   void drawChunk(const NBT &);
+  void drawBeams(const int64_t, const int64_t, const uint8_t);
   void drawBlock(const size_t, const size_t, const NBT &);
   inline void drawBlock(const size_t, const size_t, const size_t, const NBT &);
   void drawBlock(const Colors::Block *, const size_t, const size_t,

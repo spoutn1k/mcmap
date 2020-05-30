@@ -122,6 +122,9 @@ void IsometricCanvas::drawChunk(const Terrain::Data &terrain,
   else
     interpreter = blockAtPost116;
 
+  // Reset the beacons
+  numBeacons = 0;
+
   const uint8_t minSection = std::max((map.minY >> 4), (height & 0x0f));
   const uint8_t maxSection = std::min((map.maxY >> 4) + 1, (height >> 4));
 
@@ -129,6 +132,10 @@ void IsometricCanvas::drawChunk(const Terrain::Data &terrain,
     drawSection(chunk["Level"]["Sections"][yPos], xPos, zPos, yPos,
                 interpreter);
   }
+
+  if (numBeacons)
+    for (uint8_t yPos = maxSection; yPos < 13; yPos++)
+      drawBeams(xPos, zPos, yPos);
 }
 
 // Section version of translate above
@@ -151,6 +158,21 @@ inline void orient(uint8_t &x, uint8_t &z, Orientation o) {
   }
 }
 
+void IsometricCanvas::drawBeams(const int64_t xPos, const int64_t zPos,
+                                const uint8_t yPos) {
+  // Draw beacon beams in an empty section
+  uint8_t x, z;
+
+  for (uint8_t beam = 0; beam < numBeacons; beam++) {
+    x = beacons[beam] >> 4;
+    z = beacons[beam] & 0x0f;
+
+    for (uint8_t y = 0; y < 16; y++)
+      drawBlock(&beaconBeam, (xPos << 4) + x, (zPos << 4) + z, (yPos << 4) + y,
+                NBT());
+  }
+}
+
 void IsometricCanvas::drawSection(const NBT &section, const int64_t xPos,
                                   const int64_t zPos, const uint8_t yPos,
                                   sectionInterpreter interpreter) {
@@ -164,7 +186,8 @@ void IsometricCanvas::drawSection(const NBT &section, const int64_t xPos,
   if (section.is_end() || !section.contains("Palette"))
     return;
 
-  uint16_t colorIndex = 0, index = 0;
+  bool beaconBeamColumn = false;
+  uint16_t colorIndex = 0, index = 0, beaconIndex = 4095;
   int64_t worldChunkX = 0, worldChunkZ = 0;
   Colors::Block *cache[256],
       fallback; // <- empty color to use in case no color is defined
@@ -186,14 +209,16 @@ void IsometricCanvas::drawSection(const NBT &section, const int64_t xPos,
   // Preload the colors in the order they appear in the palette into an array
   // for cheaper access
   for (auto &color : *sectionPalette) {
-    auto defined = palette.find(*color["Name"].get<const string *>());
+    const string namespacedId = *color["Name"].get<const string *>();
+    auto defined = palette.find(namespacedId);
 
     if (defined == palette.end()) {
-      fprintf(stderr, "Color of block %s not found\n",
-              color["Name"].get<const string *>()->c_str());
+      fprintf(stderr, "Color of block %s not found\n", namespacedId.c_str());
       cache[colorIndex++] = &fallback;
     } else {
       cache[colorIndex++] = &defined->second;
+      if (namespacedId == "minecraft:beacon")
+        beaconIndex = colorIndex - 1;
     }
   }
 
@@ -211,6 +236,10 @@ void IsometricCanvas::drawSection(const NBT &section, const int64_t xPos,
           (worldChunkZ << 4) + zReal < map.minZ)
         continue;
 
+      for (uint8_t i = 0; i < numBeacons; i++)
+        if (beacons[i] == (x << 4) + z)
+          beaconBeamColumn = true;
+
       for (uint8_t y = 0; y < 16; y++) {
         // Same on the y axis
         if ((yPos << 4) + y < map.minY || (yPos << 4) + y > map.maxY)
@@ -227,11 +256,23 @@ void IsometricCanvas::drawSection(const NBT &section, const int64_t xPos,
           continue;
         }
 
+        if (beaconBeamColumn)
+          drawBlock(&beaconBeam, (xPos << 4) + x, (zPos << 4) + z,
+                    (yPos << 4) + y, NBT());
+
         // Skip air. This does increase performance, but could be tweaked.
         if (index)
           drawBlock(cache[index], (xPos << 4) + x, (zPos << 4) + z,
                     (yPos << 4) + y, sectionPalette->operator[](index));
+
+        // A beam can begin at every moment in a section
+        if (index == beaconIndex) {
+          beacons[numBeacons++] = (x << 4) + z;
+          beaconBeamColumn = true;
+        }
       }
+
+      beaconBeamColumn = false;
     }
   }
 
