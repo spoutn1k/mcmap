@@ -49,7 +49,11 @@ size_t IsometricCanvas::lastLine() const {
 }
 
 size_t IsometricCanvas::getCroppedHeight() const {
-  return lastLine() - firstLine() + 1;
+  size_t croppedHeight = lastLine() - firstLine();
+  if (croppedHeight == (padding - 2) * 2)
+    return 0;
+  else
+    return croppedHeight + 1;
 }
 
 size_t IsometricCanvas::getCroppedOffset() const {

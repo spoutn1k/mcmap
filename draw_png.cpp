@@ -9,9 +9,16 @@
 #endif
 
 bool PNG::Image::create() {
-  printf("Image dimensions are %ldx%ld, 32bpp, %.2fMiB\n",
-         canvas->getCroppedWidth(), canvas->getCroppedHeight(),
+
+  const uint32_t width = canvas->getCroppedWidth(),
+                 height = canvas->getCroppedHeight();
+  printf("Image dimensions are %dx%d, 32bpp, %.2fMiB\n", width, height,
          float(canvas->getCroppedSize() / float(1024 * 1024)));
+
+  if (!(width && height)) {
+    fprintf(stderr, "Nothing to output: canvas is empty\n");
+    return false;
+  }
 
   fseeko(imageHandle, 0, SEEK_SET);
 
@@ -38,8 +45,7 @@ bool PNG::Image::create() {
 
   png_init_io(pngPtr, imageHandle);
 
-  png_set_IHDR(pngPtr, pngInfoPtr, (uint32_t)canvas->getCroppedWidth(),
-               (uint32_t)canvas->getCroppedHeight(), 8, PNG_COLOR_TYPE_RGBA,
+  png_set_IHDR(pngPtr, pngInfoPtr, width, height, 8, PNG_COLOR_TYPE_RGBA,
                PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE,
                PNG_FILTER_TYPE_BASE);
 
@@ -55,6 +61,9 @@ bool PNG::Image::create() {
 }
 
 bool PNG::Image::save() {
+  if (!ready)
+    return false;
+
   // libpng will issue a longjmp on error, so code flow will end up here if
   // something goes wrong in the code below
   if (setjmp(png_jmpbuf(pngPtr))) {
@@ -63,7 +72,7 @@ bool PNG::Image::save() {
   }
 
   uint8_t *srcLine = canvas->bytesBuffer + canvas->getCroppedOffset();
-  size_t croppedHeight = canvas->getCroppedHeight();
+  const size_t croppedHeight = canvas->getCroppedHeight();
 
   printf("Writing to file...\n");
   for (size_t y = 0; y < croppedHeight; ++y) {

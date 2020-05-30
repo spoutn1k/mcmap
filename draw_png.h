@@ -35,6 +35,8 @@ struct Image {
   png_infop pngInfoPtr;
   const IsometricCanvas *canvas;
 
+  bool ready = false;
+
   Image(const std::filesystem::path file, const IsometricCanvas *pixels)
       : canvas(pixels) {
     imageHandle = nullptr;
@@ -45,10 +47,7 @@ struct Image {
                                "' for writing: " + string(strerror(errno))));
     }
 
-    if (!create()) {
-      throw(std::runtime_error("Error allocating bitmap: " +
-                               string(strerror(errno))));
-    }
+    ready = create();
   }
 
   ~Image() {
