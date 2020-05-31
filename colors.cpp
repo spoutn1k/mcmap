@@ -1,6 +1,9 @@
 #include "colors.h"
 
 bool Colors::load(const std::filesystem::path &colorFile, Palette *colors) {
+  if (!std::filesystem::exists(colorFile))
+    throw std::runtime_error("Color file not found");
+
   FILE *f = fopen(colorFile.c_str(), "r");
   json data;
 
@@ -20,6 +23,9 @@ bool Colors::load(const std::filesystem::path &colorFile, Palette *colors) {
 
 bool Colors::load(const std::filesystem::path &colorFile,
                   const std::vector<string> &filter, Palette *colors) {
+  if (!std::filesystem::exists(colorFile))
+    throw std::runtime_error("Color file not found");
+
   FILE *f = fopen(colorFile.c_str(), "r");
   json data;
 
