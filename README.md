@@ -28,6 +28,7 @@ __Linux / MacOS__
 |`-colors NAME`    |sets the color file to 'NAME'; default is `colors.png`|
 |`-nw` `-ne` `-se` `-sw` |controls which direction will point to the top corner; North-West is default|
 |`-nowater`      |do not render water|
+|`-nobeacons`      |do not render beacon beams|
 |`-nether`      |render the nether|
 |`-end`          |render the end|
 |`-splits`       |number of sub-terrains to render; if threading is available, every sub-terrain is rendered in a thread|

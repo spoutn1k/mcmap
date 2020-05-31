@@ -22,9 +22,10 @@ void printHelp(char *binary) {
          "  -file NAME       output file; default is 'output.png'\n"
          "  -colors NAME     color file to use; default is 'colors.json'\n"
          "  -nw -ne -se -sw  the orientation of the map\n"
-         "  -nowater         do not render water\n"
          "  -nether          render the nether\n"
-         "  -end             render the end\n",
+         "  -end             render the end\n"
+         "  -nowater         do not render water\n"
+         "  -nobeacons       do not render beacon beams\n",
          8 * static_cast<int>(sizeof(size_t)), binary);
 }
 
@@ -58,7 +59,7 @@ int main(int argc, char **argv) {
   Terrain::Coordinates *subCoords = new Terrain::Coordinates[options.splits];
   splitCoords(coords, subCoords, options.splits);
 
-#pragma omp parallel shared(subCoords, finalCanvas)
+#pragma omp parallel shared(finalCanvas)
   {
 #pragma omp for ordered schedule(static)
     for (size_t i = 0; i < options.splits; i++) {
@@ -79,6 +80,8 @@ int main(int argc, char **argv) {
       // TODO expand this to other blocks
       if (options.hideWater)
         localColors["minecraft:water"] = Colors::Block();
+      if (options.hideBeacons)
+        localColors["mcmap:beacon_beam"] = Colors::Block();
 
       // Draw the terrain fragment
       IsometricCanvas canvas(subCoords[i], localColors);

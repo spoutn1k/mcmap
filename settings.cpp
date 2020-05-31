@@ -54,6 +54,8 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
       opts->padding = atoi(NEXTARG);
     } else if (strcmp(option, "-nowater") == 0) {
       opts->hideWater = true;
+    } else if (strcmp(option, "-nobeacons") == 0) {
+      opts->hideBeacons = true;
     } else if (strcmp(option, "-nether") == 0) {
       opts->dim = Dimension::NETHER;
     } else if (strcmp(option, "-end") == 0) {

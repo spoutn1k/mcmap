@@ -27,7 +27,7 @@ struct WorldOptions {
   // Image settings
   int offsetY;
   size_t padding;
-  bool hideWater;
+  bool hideWater, hideBeacons;
 
   // Memory limits, legacy code for image splitting
   uint64_t memlimit;
@@ -45,7 +45,7 @@ struct WorldOptions {
     boundaries.maxY = 255;
 
     offsetY = 3;
-    hideWater = false;
+    hideWater = hideBeacons = false;
     padding = 5;
 
     wholeworld = false;
