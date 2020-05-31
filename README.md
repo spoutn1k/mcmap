@@ -8,11 +8,11 @@
 
 ![sample](assets/sample.png)
 
-This project is under heavy development, but compatible with newer versions of Minecraft.
+This project is under __heavy__ development, but compatible with newer versions of Minecraft.
 
 ## Usage
 
-__Linux / MacOS__
+### __Linux / MacOS__
 ```
 ./mcmap <options> ~/.minecraft/saves/<your save>
 ```
@@ -24,8 +24,8 @@ __Linux / MacOS__
 |`-from X Z`     |sets the coordinates of the block to start rendering at|
 |`-to X Z`       |sets the coordinates of the block to end rendering at|
 |`-min/max VAL`  |minimum/maximum Y index (height) of blocks to render|
-|`-file NAME`    |sets the output filename to 'NAME'; default is `output.png`|
-|`-colors NAME`    |sets the color file to 'NAME'; default is `colors.png`|
+|`-file NAME`    |sets the output filename to 'NAME'; default is `./output.png`|
+|`-colors NAME`    |sets the color file to 'NAME'; default is `./colors.json`|
 |`-nw` `-ne` `-se` `-sw` |controls which direction will point to the top corner; North-West is default|
 |`-nowater`      |do not render water|
 |`-nobeacons`      |do not render beacon beams|
@@ -35,6 +35,20 @@ __Linux / MacOS__
 |`-padding`      |padding around the final image, in pixels (default: 5)|
 
 *Note: Currently you need both -from and -to to define bounds.*
+
+#### Tips
+
+`mcmap` needs a color file to run. It will try to load `./colors.json` by default, but you can use the `-colors` option to specify which file to use.
+
+When passing only a level, `mcmap` will try to guess the size of the existing terrain, but the Minecraft storage format does not make is easy. The best results are achieved using `-from x z -to X Z` to define an area to render.
+
+If rendering large areas, working in threded mode can greatly speed up the process. Try using `-splits` with the number of cores your CPU has for the best performance.
+
+### __Windows__
+
+Windows is currently unsupported, by a lack of available OSes. You can try using [ubuntu on windows](https://ubuntu.com/tutorials/tutorial-ubuntu-on-windows#1-overview) to get a linux terminal and launch it from there.
+
+Most of the code uses `std::filesystem` and from my understanding should be cross-platform. I have no experience nor interest in making a Windows GUI, but it should be pretty straightforward.
 
 ## Color file format
 
