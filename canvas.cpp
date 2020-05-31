@@ -7,6 +7,10 @@
 #include <ctime>
 #endif
 
+// End tag to use when in need of an irrelevant NBT value, pre-initialised for
+// performance
+NBT empty;
+
 //  ____                       _
 // / ___|_ __ ___  _ __  _ __ (_)_ __   __ _
 //| |   | '__/ _ \| '_ \| '_ \| | '_ \ / _` |
@@ -177,7 +181,7 @@ void IsometricCanvas::drawBeams(const int64_t xPos, const int64_t zPos,
 
     for (uint8_t y = 0; y < 16; y++)
       drawBlock(&beaconBeam, (xPos << 4) + x, (zPos << 4) + z, (yPos << 4) + y,
-                NBT());
+                empty);
   }
 }
 
@@ -266,7 +270,7 @@ void IsometricCanvas::drawSection(const NBT &section, const int64_t xPos,
 
         if (beaconBeamColumn)
           drawBlock(&beaconBeam, (xPos << 4) + x, (zPos << 4) + z,
-                    (yPos << 4) + y, NBT());
+                    (yPos << 4) + y, empty);
 
         // Skip air. This does increase performance, but could be tweaked.
         if (index)
@@ -325,6 +329,9 @@ inline void IsometricCanvas::drawBlock(const Colors::Block *color,
 }
 
 inline void blend(uint8_t *const destination, const uint8_t *const source) {
+  if (!source[PALPHA])
+    return;
+
   if (destination[PALPHA] == 0 || source[PALPHA] == 255) {
     memcpy(destination, source, BYTESPERPIXEL);
     return;
@@ -336,6 +343,7 @@ inline void blend(uint8_t *const destination, const uint8_t *const source) {
   destination[2] = BLEND(source[2], source[PALPHA], destination[2]);
   destination[PALPHA] +=
       (size_t(source[PALPHA]) * size_t(255 - destination[PALPHA])) / 255;
+#undef BLEND
 }
 
 inline void addColor(uint8_t *const color, const uint8_t *const add) {
@@ -344,15 +352,6 @@ inline void addColor(uint8_t *const color, const uint8_t *const add) {
   color[0] = clamp(uint16_t(float(color[0]) * v1 + float(add[0]) * v2));
   color[1] = clamp(uint16_t(float(color[1]) * v1 + float(add[1]) * v2));
   color[2] = clamp(uint16_t(float(color[2]) * v1 + float(add[2]) * v2));
-}
-
-inline void IsometricCanvas::setPixel(const size_t x, const size_t y,
-                                      const Colors::Color &color) {
-  uint8_t *position = pixel(x, y);
-  if (color.ALPHA == 255 || !position[PALPHA])
-    memcpy(position, &color, BYTESPERPIXEL);
-  else
-    blend(position, (uint8_t *)&color);
 }
 
 void IsometricCanvas::drawHead(const size_t x, const size_t y, const NBT &,
@@ -383,11 +382,9 @@ void IsometricCanvas::drawThin(const size_t x, const size_t y, const NBT &,
   for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
     memcpy(pos, &block->primary, BYTESPERPIXEL);
   }
-#ifndef LEGACY
   pos = pixel(x + 1, y + 4);
   memcpy(pos, &block->dark, BYTESPERPIXEL);
   memcpy(pos + CHANSPERPIXEL, &block->light, BYTESPERPIXEL);
-#endif
 }
 
 void IsometricCanvas::drawHidden(const size_t, const size_t, const NBT &,
@@ -397,10 +394,12 @@ void IsometricCanvas::drawHidden(const size_t, const size_t, const NBT &,
 
 void IsometricCanvas::drawTransparent(const size_t x, const size_t y,
                                       const NBT &, const Colors::Block *block) {
-  // Avoid the dark/light edges for a clearer look through
-  for (uint8_t i = 0; i < 4; i++)
-    for (uint8_t j = 1; j < 4; j++)
-      blend(pixel(x + i, y + j), (uint8_t *)&block->primary);
+  // Avoid the top and dark/light edges for a clearer look through
+  uint8_t *pos = pixel(x, y + 1);
+  for (uint8_t j = 1; j < 4; j++, pos = pixel(x, y + j)) {
+    for (uint8_t i = 0; i < 4; i++)
+      blend(pos + i * CHANSPERPIXEL, (uint8_t *)&block->primary);
+  }
 }
 
 void IsometricCanvas::drawTorch(const size_t x, const size_t y, const NBT &,
@@ -411,16 +410,9 @@ void IsometricCanvas::drawTorch(const size_t x, const size_t y, const NBT &,
    * |  S |
    * |  P |
    * |  P | */
-  uint8_t *pos = pixel(x + 2, y + 1);
-  memcpy(pos, &block->secondary, BYTESPERPIXEL);
-  pos = pixel(x + 2, y + 2);
-#ifdef LEGACY
-  memcpy(pos, &block->secondary, BYTESPERPIXEL);
-#else
-  memcpy(pos, &block->primary, BYTESPERPIXEL);
-  pos = pixel(x + 2, y + 3);
-  memcpy(pos, &block->primary, BYTESPERPIXEL);
-#endif
+  memcpy(pixel(x + 2, y + 1), &block->secondary, BYTESPERPIXEL);
+  memcpy(pixel(x + 2, y + 2), &block->primary, BYTESPERPIXEL);
+  memcpy(pixel(x + 2, y + 3), &block->primary, BYTESPERPIXEL);
 }
 
 void IsometricCanvas::drawPlant(const size_t x, const size_t y, const NBT &,
@@ -434,44 +426,22 @@ void IsometricCanvas::drawPlant(const size_t x, const size_t y, const NBT &,
   uint8_t *pos = pixel(x, y + 1);
   memcpy(pos + (CHANSPERPIXEL), &block->primary, BYTESPERPIXEL);
   memcpy(pos + (CHANSPERPIXEL * 3), &block->primary, BYTESPERPIXEL);
-  pos = pixel(x + 2, y + 2);
-  memcpy(pos, &block->primary, BYTESPERPIXEL);
-  pos = pixel(x + 1, y + 3);
-  memcpy(pos, &block->primary, BYTESPERPIXEL);
+
+  memcpy(pixel(x + 2, y + 2), &block->primary, BYTESPERPIXEL);
+  memcpy(pixel(x + 1, y + 3), &block->primary, BYTESPERPIXEL);
 }
 
 void IsometricCanvas::drawUnderwaterPlant(const size_t x, const size_t y,
                                           const NBT &,
                                           const Colors::Block *block) {
   /* Print a plant-like block
-   * TODO Make that nicer ?
    * |    |
-   * | X X|
-   * |  X |
-   * | X  | */
+   * |WXWX|
+   * |WWXW|
+   * |WXWW| */
 
-  Colors::Block water = palette.find("minecraft:water")->second;
-
-  uint8_t *pos = pixel(x, y + 1);
-  for (size_t i = 0; i < 4; ++i) {
-    if (i % 2)
-      memcpy(pos + CHANSPERPIXEL * i, &block->primary, BYTESPERPIXEL);
-    blend(pos + CHANSPERPIXEL * i, (uint8_t *)&water.primary);
-  }
-
-  pos = pixel(x, y + 2);
-  for (size_t i = 0; i < 4; ++i) {
-    if (i == 2)
-      memcpy(pos + CHANSPERPIXEL * i, &block->primary, BYTESPERPIXEL);
-    blend(pos + CHANSPERPIXEL * i, (uint8_t *)&water.primary);
-  }
-
-  pos = pixel(x, y + 3);
-  for (size_t i = 0; i < 4; ++i) {
-    if (i == 1)
-      memcpy(pos + CHANSPERPIXEL * i, &block->primary, BYTESPERPIXEL);
-    blend(pos + CHANSPERPIXEL * i, (uint8_t *)&water.primary);
-  }
+  drawPlant(x, y, empty, block);
+  drawTransparent(x, y, empty, &water);
 }
 
 void IsometricCanvas::drawFire(const size_t x, const size_t y, const NBT &,
@@ -496,41 +466,28 @@ void IsometricCanvas::drawFire(const size_t x, const size_t y, const NBT &,
 void IsometricCanvas::drawOre(const size_t x, const size_t y, const NBT &,
                               const Colors::Block *color) {
   /* Print a vein with the secondary in the block
-   * |PPPS|
+   * |PSPP|
    * |DDSL|
    * |DSLS|
    * |SDLL| */
 
   int sub = (float(color->primary.BRIGHTNESS) / 323.0f + .21f);
 
-  Colors::Color L(color->secondary);
-  Colors::Color D(color->secondary);
-  L.modColor(sub - 15);
-  D.modColor(sub - 25);
+  Colors::Color secondaryLight(color->secondary);
+  Colors::Color secondaryDark(color->secondary);
+  secondaryLight.modColor(sub - 15);
+  secondaryDark.modColor(sub - 25);
 
-  // Top row
+  const Colors::Color *sprite[4][4] = {
+      {&color->primary, &color->secondary, &color->primary, &color->primary},
+      {&color->dark, &color->dark, &secondaryLight, &color->light},
+      {&color->dark, &secondaryDark, &color->light, &secondaryLight},
+      {&secondaryDark, &color->dark, &color->light, &color->light}};
+
   uint8_t *pos = pixel(x, y);
-  for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
-    memcpy(pos, (i == 3 ? &color->secondary : &color->primary), BYTESPERPIXEL);
-
-  // Second row
-  pos = pixel(x, y + 1);
-  memcpy(pos, &color->dark, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL, &color->dark, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL * 2, &L, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL * 3, &color->light, BYTESPERPIXEL);
-  // Third row
-  pos = pixel(x, y + 2);
-  memcpy(pos, &color->dark, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL, &D, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL * 2, &color->light, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL * 3, &L, BYTESPERPIXEL);
-  // Last row
-  pos = pixel(x, y + 3);
-  memcpy(pos, &D, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL, &color->dark, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL * 2, &color->light, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL * 3, &color->light, BYTESPERPIXEL);
+  for (size_t j = 0; j < 4; ++j, pos = pixel(x, y + j))
+    for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
+      memcpy(pos, sprite[j][i], BYTESPERPIXEL);
 }
 
 void IsometricCanvas::drawGrown(const size_t x, const size_t y, const NBT &,
@@ -545,37 +502,22 @@ void IsometricCanvas::drawGrown(const size_t x, const size_t y, const NBT &,
   // The brighter the color, the stronger the impact
   int sub = (float(color->primary.BRIGHTNESS) / 323.0f + .21f);
 
-  Colors::Color L(color->secondary);
-  Colors::Color D(color->secondary);
-  L.modColor(sub - 15);
-  D.modColor(sub - 25);
+  Colors::Color secondaryLight(color->secondary);
+  Colors::Color secondaryDark(color->secondary);
+  secondaryLight.modColor(sub - 15);
+  secondaryDark.modColor(sub - 25);
 
-  // Top row
+  const Colors::Color *sprite[4][4] = {
+      {&color->secondary, &color->secondary, &color->secondary,
+       &color->secondary},
+      {&color->dark, &secondaryDark, &secondaryLight, &color->light},
+      {&color->dark, &color->dark, &color->light, &color->light},
+      {&color->dark, &color->dark, &color->light, &color->light}};
+
   uint8_t *pos = pixel(x, y);
-  for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-    memcpy(pos, &color->secondary, BYTESPERPIXEL);
-  }
-
-  // Second row
-  pos = pixel(x, y + 1);
-  memcpy(pos, &color->dark, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL, &D, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL * 2, &L, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL * 3, &color->light, BYTESPERPIXEL);
-
-  // Third row
-  pos = pixel(x, y + 2);
-  memcpy(pos, &color->dark, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL, &color->dark, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL * 2, &color->light, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL * 3, &color->light, BYTESPERPIXEL);
-
-  // Last row
-  pos = pixel(x, y + 3);
-  memcpy(pos, &color->dark, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL, &color->dark, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL * 2, &color->light, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL * 3, &color->light, BYTESPERPIXEL);
+  for (size_t j = 0; j < 4; ++j, pos = pixel(x, y + j))
+    for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
+      memcpy(pos, sprite[j][i], BYTESPERPIXEL);
 }
 
 void IsometricCanvas::drawRod(const size_t x, const size_t y, const NBT &,
@@ -585,11 +527,14 @@ void IsometricCanvas::drawRod(const size_t x, const size_t y, const NBT &,
    * | DL |
    * | DL |
    * | DL | */
-  setPixel(x + 1, y, color->primary);
-  setPixel(x + 2, y, color->primary);
-  for (int i = 1; i < 4; i++) {
-    setPixel(x + 1, y + i, color->dark);
-    setPixel(x + 2, y + i, color->light);
+  uint8_t *pos = pixel(x + 1, y);
+  memcpy(pos, &color->primary, BYTESPERPIXEL);
+  memcpy(pos + CHANSPERPIXEL, &color->primary, BYTESPERPIXEL);
+
+  pos = pixel(x + 1, y + 1);
+  for (int i = 1; i < 4; i++, pos = pixel(x + 1, y + i)) {
+    memcpy(pos, &color->dark, BYTESPERPIXEL);
+    memcpy(pos + CHANSPERPIXEL, &color->light, BYTESPERPIXEL);
   }
 }
 
@@ -600,9 +545,10 @@ void IsometricCanvas::drawBeam(const size_t x, const size_t y, const NBT &,
    * | DL |
    * | DL |
    * | DL | */
-  for (int i = 1; i < 4; i++) {
-    setPixel(x + 1, y + i, color->dark);
-    setPixel(x + 2, y + i, color->light);
+  uint8_t *pos = pixel(x + 1, y + 1);
+  for (int i = 1; i < 4; i++, pos = pixel(x + 1, y + i)) {
+    blend(pos, (uint8_t *)&color->dark);
+    blend(pos + CHANSPERPIXEL, (uint8_t *)&color->light);
   }
 }
 
@@ -610,15 +556,27 @@ void IsometricCanvas::drawSlab(const size_t x, const size_t y,
                                const NBT &metadata,
                                const Colors::Block *color) {
   /* This one has a hack to make it look like a gradual step up:
-   * The second layer has primary colors to make the difference less
-   * obvious.
-   * |    |
-   * |PPPP|
-   * |DPPL|
-   * |DDLL| */
+   * The second layer has primary colors to make the height difference
+   * less obvious.
+   * |    |    |PPPP|
+   * |PPPP| or |DDLL| or full
+   * |DPPL|    |DDLL|
+   * |DDLL|    |    | */
 
   bool top = false;
   string type;
+
+  const Colors::Color *spriteTop[3][4] = {
+      {&color->primary, &color->primary, &color->primary, &color->primary},
+      {&color->dark, &color->dark, &color->light, &color->light},
+      {&color->dark, &color->dark, &color->light, &color->light}};
+
+  const Colors::Color *spriteBottom[3][4] = {
+      {&color->primary, &color->primary, &color->primary, &color->primary},
+      {&color->dark, &color->primary, &color->primary, &color->light},
+      {&color->dark, &color->dark, &color->light, &color->light}};
+
+  const Colors::Color *(*target)[3][4] = &spriteBottom;
 
   if (metadata.contains("Properties") &&
       metadata["Properties"].contains("type")) {
@@ -630,32 +588,16 @@ void IsometricCanvas::drawSlab(const size_t x, const size_t y,
       return;
     }
 
-    if (type == "top")
+    if (type == "top") {
       top = true;
+      target = &spriteTop;
+    }
   }
 
-#define SLAB_OFFSET (top ? 0 : 1)
-  uint8_t *pos = pixel(x, y + SLAB_OFFSET);
-  for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-    memcpy(pos, &color->primary, BYTESPERPIXEL);
-  }
-
-  pos = pixel(x, y + SLAB_OFFSET + 1);
-  memcpy(pos, &color->dark, BYTESPERPIXEL);
-  if (top) {
-    memcpy(pos + CHANSPERPIXEL, &color->dark, BYTESPERPIXEL);
-    memcpy(pos + CHANSPERPIXEL * 2, &color->light, BYTESPERPIXEL);
-  } else {
-    memcpy(pos + CHANSPERPIXEL, &color->primary, BYTESPERPIXEL);
-    memcpy(pos + CHANSPERPIXEL * 2, &color->primary, BYTESPERPIXEL);
-  }
-  memcpy(pos + CHANSPERPIXEL * 3, &color->light, BYTESPERPIXEL);
-
-  pos = pixel(x, y + SLAB_OFFSET + 2);
-  for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-    memcpy(pos, (i < 2 ? &color->dark : &color->light), BYTESPERPIXEL);
-  }
-#undef SLAB_OFFSET
+  uint8_t *pos = pixel(x, y + (top ? 0 : 1));
+  for (size_t j = 0; j < 3; ++j, pos = pixel(x, y + j + (top ? 0 : 1)))
+    for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
+      memcpy(pos, (*target)[j][i], BYTESPERPIXEL);
 }
 
 void IsometricCanvas::drawWire(const size_t x, const size_t y, const NBT &,
@@ -682,14 +624,33 @@ void IsometricCanvas::drawLog(const size_t x, const size_t y,
                               const NBT &metadata, const Colors::Block *color) {
 
   string axis = "y";
-  uint8_t *left = (uint8_t *)&color->dark, *right = (uint8_t *)&color->light;
-
   int sub = (float(color->primary.BRIGHTNESS) / 323.0f + .21f);
 
-  Colors::Color lightSecondary(color->secondary);
-  Colors::Color darkSecondary(color->secondary);
-  lightSecondary.modColor(sub - 15);
-  darkSecondary.modColor(sub - 25);
+  Colors::Color secondaryLight(color->secondary);
+  Colors::Color secondaryDark(color->secondary);
+  secondaryLight.modColor(sub - 15);
+  secondaryDark.modColor(sub - 25);
+
+  const Colors::Color *spriteY[4][4] = {
+      {&color->secondary, &color->secondary, &color->secondary,
+       &color->secondary},
+      {&color->dark, &color->dark, &color->light, &color->light},
+      {&color->dark, &color->dark, &color->light, &color->light},
+      {&color->dark, &color->dark, &color->light, &color->light}};
+
+  const Colors::Color *spriteX[4][4] = {
+      {&color->primary, &color->primary, &color->primary, &color->primary},
+      {&secondaryDark, &secondaryDark, &color->light, &color->light},
+      {&secondaryDark, &secondaryDark, &color->light, &color->light},
+      {&secondaryDark, &secondaryDark, &color->light, &color->light}};
+
+  const Colors::Color *spriteZ[4][4] = {
+      {&color->primary, &color->primary, &color->primary, &color->primary},
+      {&color->dark, &color->dark, &secondaryLight, &secondaryLight},
+      {&color->dark, &color->dark, &secondaryLight, &secondaryLight},
+      {&color->dark, &color->dark, &secondaryLight, &secondaryLight}};
+
+  const Colors::Color *(*target)[4][4] = &spriteY;
 
   if (metadata.contains("Properties") &&
       metadata["Properties"].contains("axis")) {
@@ -697,36 +658,21 @@ void IsometricCanvas::drawLog(const size_t x, const size_t y,
 
     if (axis == "x") {
       if (map.orientation == NW || map.orientation == SE)
-        right = (uint8_t *)&lightSecondary;
+        target = &spriteZ;
       else
-        left = (uint8_t *)&darkSecondary;
+        target = &spriteX;
     } else if (axis == "z") {
       if (map.orientation == NW || map.orientation == SE)
-        left = (uint8_t *)&darkSecondary;
+        target = &spriteX;
       else
-        right = (uint8_t *)&lightSecondary;
+        target = &spriteZ;
     }
   }
 
   uint8_t *pos = pixel(x, y);
-  for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
-    memcpy(pos, (axis == "y" ? &color->secondary : &color->primary),
-           BYTESPERPIXEL);
-
-  // Second row
-  pos = pixel(x, y + 1);
-  for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
-    memcpy(pos, (i < 2 ? left : right), BYTESPERPIXEL);
-
-  // Third row
-  pos = pixel(x, y + 2);
-  for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
-    memcpy(pos, (i < 2 ? left : right), BYTESPERPIXEL);
-
-  // Last row
-  pos = pixel(x, y + 3);
-  for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
-    memcpy(pos, (i < 2 ? left : right), BYTESPERPIXEL);
+  for (size_t j = 0; j < 4; ++j, pos = pixel(x, y + j))
+    for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
+      memcpy(pos, (*target)[j][i], BYTESPERPIXEL);
 }
 
 void IsometricCanvas::drawFull(const size_t x, const size_t y, const NBT &,
@@ -738,55 +684,24 @@ void IsometricCanvas::drawFull(const size_t x, const size_t y, const NBT &,
   // D D L L
   // D D L L
 
-  // Ordinary blocks are all rendered the same way
-  if (color->primary.ALPHA == 255) { // Fully opaque - faster
-    // Top row
-    uint8_t *pos = pixel(x, y);
-    for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-      memcpy(pos, &color->primary, BYTESPERPIXEL);
-    }
-    // Second row
-    pos = pixel(x, y + 1);
-    for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-      memcpy(pos, (i < 2 ? &color->dark : &color->light), BYTESPERPIXEL);
-    }
-    // Third row
-    pos = pixel(x, y + 2);
-    for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-      memcpy(pos, (i < 2 ? &color->dark : &color->light), BYTESPERPIXEL);
-    }
-    // Last row
-    pos = pixel(x, y + 3);
-    for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-      memcpy(pos, (i < 2 ? &color->dark : &color->light), BYTESPERPIXEL);
-      // The weird check here is to get the pattern right, as the noise
-      // should be stronger every other row, but take into account the
-      // isometric perspective
-    }
-  } else { // Not opaque, use slower blending code
-    // Top row
-    uint8_t *pos = pixel(x, y);
-    for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-      blend(pos, (uint8_t *)&color->primary);
-    }
-    // Second row
-    pos = pixel(x, y + 1);
-    for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-      blend(pos, (i < 2 ? (uint8_t *)&color->dark : (uint8_t *)&color->light));
-    }
-    // Third row
-    pos = pixel(x, y + 2);
-    for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-      blend(pos, (i < 2 ? (uint8_t *)&color->dark : (uint8_t *)&color->light));
-    }
-    // Last row
-    pos = pixel(x, y + 3);
-    for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-      blend(pos, (i < 2 ? (uint8_t *)&color->dark : (uint8_t *)&color->light));
-    }
+  const Colors::Color *sprite[4][4] = {
+      {&color->primary, &color->primary, &color->primary, &color->primary},
+      {&color->dark, &color->dark, &color->light, &color->light},
+      {&color->dark, &color->dark, &color->light, &color->light},
+      {&color->dark, &color->dark, &color->light, &color->light}};
+
+  // Top row
+  uint8_t *pos = pixel(x, y);
+
+  if (color->primary.ALPHA == 255) {
+    for (size_t j = 0; j < 4; ++j, pos = pixel(x, y + j))
+      for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
+        memcpy(pos, sprite[j][i], BYTESPERPIXEL);
+  } else {
+    for (size_t j = 0; j < 4; ++j, pos = pixel(x, y + j))
+      for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
+        blend(pos, (uint8_t *)sprite[j][i]);
   }
-  // The above two branches are almost the same, maybe one could just
-  // create a function pointer and...
 }
 
 // __  __                _

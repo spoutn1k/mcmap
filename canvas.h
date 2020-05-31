@@ -2,7 +2,6 @@
 #define CANVAS_H_
 
 #include "./helper.h"
-#include "./settings.h"
 #include "./worldloader.h"
 #include <stdint.h>
 
@@ -28,7 +27,7 @@ struct IsometricCanvas {
   uint64_t nXChunks, nZChunks;
 
   Colors::Palette palette; // The colors to use when drawing
-  Colors::Block beaconBeam;
+  Colors::Block water, beaconBeam;
 
   uint8_t numBeacons = 0, beacons[256];
 
@@ -78,6 +77,10 @@ struct IsometricCanvas {
     auto beamColor = colors.find("mcmap:beacon_beam");
     if (beamColor != colors.end())
       beaconBeam = beamColor->second;
+
+    auto waterColor = colors.find("minecraft:water");
+    if (waterColor != colors.end())
+      water = waterColor->second;
   }
 
   ~IsometricCanvas() { delete[] bytesBuffer; }
@@ -105,8 +108,6 @@ struct IsometricCanvas {
   inline uint8_t *pixel(size_t x, size_t y) {
     return &bytesBuffer[(x + y * width) * BYTESPERPIXEL];
   }
-  inline void setPixel(const size_t x, const size_t y,
-                       const Colors::Color &color);
 
   // Drawing entrypoints
   void drawTerrain(const Terrain::Data &);
