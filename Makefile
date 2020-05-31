@@ -7,10 +7,14 @@ LDFLAGS=-lz -lpng -fopenmp
 DCFLAGS=-g -O0 -std=c++17 -c -Wall -D_DEBUG -DWITHPNG -D_FILE_OFFSET_BITS=64
 DLDFLAGS=-lz -lpng
 
+PCFLAGS=-O3 -std=c++17 -c -Wall -pg -pedantic -DWITHPNG -D_FILE_OFFSET_BITS=64 -fopenmp
+PLDFLAGS=-lz -lpng -fopenmp -pg
+
 SOURCES=main.cpp helper.cpp colors.cpp worldloader.cpp draw_png.cpp settings.cpp canvas.cpp
 
 OBJECTS=$(SOURCES:.cpp=.default.o)
 DOBJECTS=$(SOURCES:.cpp=.debug.o)
+POBJECTS=$(SOURCES:.cpp=.profiling.o)
 
 EXECUTABLE=mcmap
 
@@ -23,6 +27,12 @@ debug: $(DOBJECTS)
 	$(CC) $(DOBJECTS) $(DLDFLAGS) -o $(EXECUTABLE)
 	#$(CC) $(DOBJECTS) $(DLDFLAGS) -static -o $(EXECUTABLE)
 
+profile: $(POBJECTS)
+	$(CC) $(POBJECTS) $(PLDFLAGS) -o $(EXECUTABLE)
+
+analyse:
+	gprof $(EXECUTABLE) gmon.out | less -S
+
 clean:
 	rm -f *.o *gch
 
@@ -34,3 +44,6 @@ realClean: clean
 
 %.debug.o: %.cpp
 	$(CC) $(DCFLAGS) $< -o $@
+
+%.profiling.o: %.cpp
+	$(CC) $(PCFLAGS) $< -o $@
