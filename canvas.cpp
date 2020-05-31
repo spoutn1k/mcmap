@@ -111,7 +111,11 @@ void IsometricCanvas::drawChunk(const Terrain::Data &terrain,
   const NBT &chunk = terrain.chunkAt(worldChunkX, worldChunkZ);
   const uint8_t height = terrain.heightAt(worldChunkX, worldChunkZ);
 
-  if (chunk.is_end() || !chunk.contains("DataVersion"))
+  if (chunk.is_end()                          // Catch uninitialized chunks
+      || !chunk.contains("DataVersion")       // Dataversion is required
+      || !chunk.contains("Level")             // Level data is required
+      || !chunk["Level"].contains("Sections") // No sections mean no blocks
+  )
     return;
 
   // This value is primordial: it states which version of minecraft the chunk

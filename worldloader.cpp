@@ -2,12 +2,6 @@
 
 NBT minecraft_air(nbt::tag_type::tag_end);
 
-enum renderTypes {
-  SKIP = 0,
-  PRE116,
-  POST116,
-};
-
 void scanWorldDirectory(const std::filesystem::path &regionDir,
                         Coordinates *savedWorld) {
   const char delimiter = '.';
@@ -240,6 +234,11 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
     return;
 
   NBT chunk = NBT::parse(chunkBuffer, length);
+
+  if (!chunk.contains("Level") || !chunk["Level"].contains("Sections")) {
+    fprintf(stderr, "Chunk %d %d is in an invalid format\n", chunkX, chunkZ);
+    return;
+  }
 
   chunks[chunkPos] = std::move(chunk);
   vector<NBT> *sections =
