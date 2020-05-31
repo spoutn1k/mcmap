@@ -105,6 +105,8 @@ struct IsometricCanvas {
   inline uint8_t *pixel(size_t x, size_t y) {
     return &bytesBuffer[(x + y * width) * BYTESPERPIXEL];
   }
+  inline void setPixel(const size_t x, const size_t y,
+                       const Colors::Color &color);
 
   // Drawing entrypoints
   void drawTerrain(const Terrain::Data &);

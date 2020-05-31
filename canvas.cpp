@@ -287,6 +287,14 @@ void IsometricCanvas::drawSection(const NBT &section, const int64_t xPos,
   return;
 }
 
+// ____  _            _
+//| __ )| | ___   ___| | _____
+//|  _ \| |/ _ \ / __| |/ / __|
+//| |_) | | (_) | (__|   <\__ \.
+//|____/|_|\___/ \___|_|\_\___/
+//
+// Functions to render individual types of blocks
+
 IsometricCanvas::drawer blockRenderers[] = {
     &IsometricCanvas::drawFull,
 #define DEFINETYPE(STRING, CALLBACK) &IsometricCanvas::CALLBACK,
@@ -336,6 +344,15 @@ inline void addColor(uint8_t *const color, const uint8_t *const add) {
   color[0] = clamp(uint16_t(float(color[0]) * v1 + float(add[0]) * v2));
   color[1] = clamp(uint16_t(float(color[1]) * v1 + float(add[1]) * v2));
   color[2] = clamp(uint16_t(float(color[2]) * v1 + float(add[2]) * v2));
+}
+
+inline void IsometricCanvas::setPixel(const size_t x, const size_t y,
+                                      const Colors::Color &color) {
+  uint8_t *position = pixel(x, y);
+  if (color.ALPHA == 255 || !position[PALPHA])
+    memcpy(position, &color, BYTESPERPIXEL);
+  else
+    blend(position, (uint8_t *)&color);
 }
 
 void IsometricCanvas::drawHead(const size_t x, const size_t y, const NBT &,
@@ -568,13 +585,24 @@ void IsometricCanvas::drawRod(const size_t x, const size_t y, const NBT &,
    * | DL |
    * | DL |
    * | DL | */
-  uint8_t *pos = pixel(x + 1, y);
-  memcpy(pos, &color->primary, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL, &color->primary, BYTESPERPIXEL);
+  setPixel(x + 1, y, color->primary);
+  setPixel(x + 2, y, color->primary);
   for (int i = 1; i < 4; i++) {
-    pos = pixel(x + 1, y + i);
-    memcpy(pos, &color->dark, BYTESPERPIXEL);
-    memcpy(pos + CHANSPERPIXEL, &color->light, BYTESPERPIXEL);
+    setPixel(x + 1, y + i, color->dark);
+    setPixel(x + 2, y + i, color->light);
+  }
+}
+
+void IsometricCanvas::drawBeam(const size_t x, const size_t y, const NBT &,
+                               const Colors::Block *const color) {
+  /* No top to make it look more continuous
+   * |    |
+   * | DL |
+   * | DL |
+   * | DL | */
+  for (int i = 1; i < 4; i++) {
+    setPixel(x + 1, y + i, color->dark);
+    setPixel(x + 2, y + i, color->light);
   }
 }
 

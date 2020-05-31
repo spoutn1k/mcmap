@@ -21,3 +21,4 @@ DEFINETYPE("Thin", drawThin)         // Snow-like.
 DEFINETYPE("Grown", drawGrown)       // Grass-like blocks, accent is the color on top.
 DEFINETYPE("Fire", drawFire)         // Fire-like.
 DEFINETYPE("Log", drawLog)           // Axis-oriented block, accent is the color on top and bottom.
+DEFINETYPE("Beam", drawBeam)         // Rod-like, but optimized for transparent colors
