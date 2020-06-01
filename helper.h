@@ -6,7 +6,9 @@
 #include <cstring>
 #include <ctime>
 #include <limits>
+#include <sstream>
 #include <stdint.h>
+#include <string>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -99,6 +101,14 @@ struct Coordinates {
     minZ = std::max(minZ, boundaries.minZ);
     maxX = std::min(maxX, boundaries.maxX);
     maxZ = std::min(maxZ, boundaries.maxZ);
+  }
+
+  std::string to_string() const {
+    std::stringstream ss;
+    ss << "From x:" << minX << " z:" << minZ << " to x:" << maxX
+       << " z:" << maxZ;
+
+    return ss.str();
   }
 };
 

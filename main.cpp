@@ -14,8 +14,6 @@ void render(IsometricCanvas *canvas, const Terrain::Data &world);
 
 void printHelp(char *binary) {
   printf(
-      "\nmcmap - an isometric minecraft map rendering tool.\n"
-      "Version " VERSION " %dbit\n\n"
       "Usage: %s <options> WORLDPATH\n\n"
       "  -from X Z           coordinates of the block to start rendering at\n"
       "  -to X Z             coordinates of the block to stop rendering at\n"
@@ -27,16 +25,18 @@ void printHelp(char *binary) {
       "  -end                render the end\n"
       "  -nowater            do not render water\n"
       "  -nobeacons          do not render beacon beams\n"
-      "  -splits n           render with n threads\n"
-      "  -marker x z color   draw a marker at x z of the desired color\n",
-      8 * static_cast<int>(sizeof(size_t)), binary);
+      "  -splits VAL         render with VAL threads\n"
+      "  -marker X Z color   draw a marker at X Z of the desired color\n"
+      "  -padding VAL        padding to use around the image (default 5\n)",
+      binary);
 }
 
 int main(int argc, char **argv) {
   Settings::WorldOptions options;
   Colors::Palette colors;
 
-  printf("mcmap " VERSION " %dbit\n", 8 * static_cast<int>(sizeof(size_t)));
+  printf(VERSION " %dbit (" COMMENT ")\n",
+         8 * static_cast<int>(sizeof(size_t)));
 
   // Always same random seed, as this is only used for block noise,
   // which should give the same result for the same input every time

@@ -3,6 +3,7 @@
  */
 
 #include "draw_png.h"
+#include <cstdio>
 
 #ifndef Z_BEST_SPEED
 #define Z_BEST_SPEED 6
@@ -45,15 +46,28 @@ bool PNG::Image::create() {
 
   png_init_io(pngPtr, imageHandle);
 
+  // The png file format works by having blocks piled up in a certain order.
+  // Check out http://www.libpng.org/pub/png/book/chapter11.html for more info.
+
+  // First, dump the required IHDR block.
   png_set_IHDR(pngPtr, pngInfoPtr, width, height, 8, PNG_COLOR_TYPE_RGBA,
                PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE,
                PNG_FILTER_TYPE_BASE);
 
-  png_text title_text;
-  title_text.compression = PNG_TEXT_COMPRESSION_NONE;
-  title_text.key = (png_charp) "Software";
-  title_text.text = (png_charp) "mcmap";
-  png_set_text(pngPtr, pngInfoPtr, &title_text, 1);
+  png_text text[2];
+
+#include "VERSION"
+  text[0].compression = PNG_TEXT_COMPRESSION_NONE;
+  text[0].key = (png_charp) "Software";
+  text[0].text = (png_charp)VERSION;
+  text[0].text_length = 5;
+
+  string coords = canvas->map.to_string();
+  text[1].compression = PNG_TEXT_COMPRESSION_NONE;
+  text[1].key = (png_charp) "Coordinates";
+  text[1].text = (png_charp)coords.c_str();
+
+  png_set_text(pngPtr, pngInfoPtr, text, 2);
 
   png_write_info(pngPtr, pngInfoPtr);
 
