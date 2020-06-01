@@ -26,10 +26,17 @@ struct IsometricCanvas {
 
   uint64_t nXChunks, nZChunks;
 
-  Colors::Palette palette; // The colors to use when drawing
-  Colors::Block water, beaconBeam;
+  Colors::Palette palette;         // The colors to use when drawing
+  Colors::Block water, beaconBeam; // Cached colors for easy access
 
+  // Those arrays are chunk-based values, that get overwritten at every new
+  // chunk
   uint8_t numBeacons = 0, beacons[256];
+  uint8_t localMarkers = 0, totalMarkers = 0;
+  // Markers inside the chunk:
+  // 8 bits for the index inside markers, 4 bits for x, 4 bits for z
+  uint16_t chunkMarkers[256];
+  Colors::Marker (*markers)[256];
 
   IsometricCanvas(const Terrain::Coordinates &coords,
                   const Colors::Palette &colors, const size_t padding = 0)
@@ -84,6 +91,11 @@ struct IsometricCanvas {
   }
 
   ~IsometricCanvas() { delete[] bytesBuffer; }
+
+  void setMarkers(uint8_t n, Colors::Marker (*array)[256]) {
+    totalMarkers = n;
+    markers = array;
+  }
 
   // Cropping methods
   // Those getters return a value inferior to the actual underlying values

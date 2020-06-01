@@ -13,20 +13,23 @@ void printHelp(char *binary);
 void render(IsometricCanvas *canvas, const Terrain::Data &world);
 
 void printHelp(char *binary) {
-  printf("\nmcmap - an isometric minecraft map rendering tool.\n"
-         "Version " VERSION " %dbit\n\n"
-         "Usage: %s <options> WORLDPATH\n\n"
-         "  -from X Z        coordinates of the block to start rendering at\n"
-         "  -to X Z          coordinates of the block to stop rendering at\n"
-         "  -min/max VAL     minimum/maximum Y index of blocks to render\n"
-         "  -file NAME       output file; default is 'output.png'\n"
-         "  -colors NAME     color file to use; default is 'colors.json'\n"
-         "  -nw -ne -se -sw  the orientation of the map\n"
-         "  -nether          render the nether\n"
-         "  -end             render the end\n"
-         "  -nowater         do not render water\n"
-         "  -nobeacons       do not render beacon beams\n",
-         8 * static_cast<int>(sizeof(size_t)), binary);
+  printf(
+      "\nmcmap - an isometric minecraft map rendering tool.\n"
+      "Version " VERSION " %dbit\n\n"
+      "Usage: %s <options> WORLDPATH\n\n"
+      "  -from X Z           coordinates of the block to start rendering at\n"
+      "  -to X Z             coordinates of the block to stop rendering at\n"
+      "  -min/max VAL        minimum/maximum Y index of blocks to render\n"
+      "  -file NAME          output file; default is 'output.png'\n"
+      "  -colors NAME        color file to use; default is 'colors.json'\n"
+      "  -nw -ne -se -sw     the orientation of the map\n"
+      "  -nether             render the nether\n"
+      "  -end                render the end\n"
+      "  -nowater            do not render water\n"
+      "  -nobeacons          do not render beacon beams\n"
+      "  -splits n           render with n threads\n"
+      "  -marker x z color   draw a marker at x z of the desired color\n",
+      8 * static_cast<int>(sizeof(size_t)), binary);
 }
 
 int main(int argc, char **argv) {
@@ -85,6 +88,7 @@ int main(int argc, char **argv) {
 
       // Draw the terrain fragment
       IsometricCanvas canvas(subCoords[i], localColors);
+      canvas.setMarkers(options.totalMarkers, &options.markers);
       canvas.drawTerrain(world);
 
 #pragma omp ordered

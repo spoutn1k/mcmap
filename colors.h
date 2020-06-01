@@ -66,6 +66,13 @@ const std::unordered_map<Colors::BlockTypes, string> typeToString = {
 #undef DEFINETYPE
 };
 
+const std::map<string, list<int>> markerColors = {
+    {"white", {250, 250, 250, 70}},
+    {"red", {250, 0, 0, 70}},
+    {"green", {0, 250, 0, 70}},
+    {"blue", {0, 0, 250, 70}},
+};
+
 struct Color {
   uint8_t R, G, B;
   uint8_t ALPHA, NOISE, BRIGHTNESS;
@@ -117,6 +124,27 @@ struct Block {
     light.modColor(-17);
     dark.modColor(-27);
   }
+};
+
+struct Marker {
+  int64_t x, z;
+  string color_name;
+  Block color;
+
+  Marker() : color_name("white") {
+    x = std::numeric_limits<int64_t>::max();
+    z = std::numeric_limits<int64_t>::max();
+  }
+
+  Marker(size_t x, size_t z, string c) : x(x), z(z), color_name(c) {
+    auto marker = markerColors.find(color_name);
+    if (marker == markerColors.end()) {
+      fprintf(stderr, "Invalid marker color: %s\n", color_name.c_str());
+      color_name = "white";
+    }
+
+    color = Block(BlockTypes::drawBeam, markerColors.find(color_name)->second);
+  };
 };
 
 typedef map<string, Colors::Block> Palette;

@@ -1,6 +1,7 @@
 #ifndef OPTIONS_H_
 #define OPTIONS_H_
 
+#include "./colors.h"
 #include "./helper.h"
 #include "./worldloader.h"
 #include <cstdint>
@@ -29,6 +30,10 @@ struct WorldOptions {
   size_t padding;
   bool hideWater, hideBeacons;
 
+  // Marker storage
+  uint8_t totalMarkers;
+  Colors::Marker markers[256];
+
   // Memory limits, legacy code for image splitting
   uint64_t memlimit;
   bool memlimitSet, wholeworld;
@@ -47,6 +52,8 @@ struct WorldOptions {
     offsetY = 3;
     hideWater = hideBeacons = false;
     padding = 5;
+
+    totalMarkers = 0;
 
     wholeworld = false;
     memlimit = 2000 * uint64_t(1024 * 1024);

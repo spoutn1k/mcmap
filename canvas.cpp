@@ -137,6 +137,18 @@ void IsometricCanvas::drawChunk(const Terrain::Data &terrain,
   // Reset the beacons
   numBeacons = 0;
 
+  // Setup the markers
+  localMarkers = 0;
+  for (uint8_t i = 0; i < totalMarkers; i++) {
+    if (CHUNK((*markers)[i].x) == worldChunkX &&
+        CHUNK((*markers)[i].z) == worldChunkZ) {
+      printf("Setting marker in chunk %ld %ld\n", CHUNK((*markers)[i].x),
+             CHUNK((*markers)[i].z));
+      chunkMarkers[localMarkers++] =
+          (i << 8) + (((*markers)[i].x & 0x0f) << 4) + ((*markers)[i].z & 0x0f);
+    }
+  }
+
   const uint8_t minSection = std::max((map.minY >> 4), (height & 0x0f));
   const uint8_t maxSection = std::min((map.maxY >> 4) + 1, (height >> 4));
 
@@ -145,7 +157,7 @@ void IsometricCanvas::drawChunk(const Terrain::Data &terrain,
                 interpreter);
   }
 
-  if (numBeacons)
+  if (numBeacons || localMarkers)
     for (uint8_t yPos = maxSection; yPos < 13; yPos++)
       drawBeams(xPos, zPos, yPos);
 }
@@ -173,7 +185,7 @@ inline void orient(uint8_t &x, uint8_t &z, Orientation o) {
 void IsometricCanvas::drawBeams(const int64_t xPos, const int64_t zPos,
                                 const uint8_t yPos) {
   // Draw beacon beams in an empty section
-  uint8_t x, z;
+  uint8_t x, z, index;
 
   for (uint8_t beam = 0; beam < numBeacons; beam++) {
     x = beacons[beam] >> 4;
@@ -182,6 +194,16 @@ void IsometricCanvas::drawBeams(const int64_t xPos, const int64_t zPos,
     for (uint8_t y = 0; y < 16; y++)
       drawBlock(&beaconBeam, (xPos << 4) + x, (zPos << 4) + z, (yPos << 4) + y,
                 empty);
+  }
+
+  for (uint8_t marker = 0; marker < localMarkers; marker++) {
+    x = (chunkMarkers[marker] >> 4) & 0x0f;
+    z = chunkMarkers[marker] & 0x0f;
+    index = chunkMarkers[marker] >> 8;
+
+    for (uint8_t y = 0; y < 16; y++)
+      drawBlock(&(*markers)[index].color, (xPos << 4) + x, (zPos << 4) + z,
+                (yPos << 4) + y, empty);
   }
 }
 
@@ -198,7 +220,8 @@ void IsometricCanvas::drawSection(const NBT &section, const int64_t xPos,
   if (section.is_end() || !section.contains("Palette"))
     return;
 
-  bool beaconBeamColumn = false;
+  uint8_t markerIndex = 0;
+  bool beaconBeamColumn = false, markerColumn = false;
   uint16_t colorIndex = 0, index = 0, beaconIndex = 4095;
   int64_t worldChunkX = 0, worldChunkZ = 0;
   Colors::Block *cache[256],
@@ -252,8 +275,23 @@ void IsometricCanvas::drawSection(const NBT &section, const int64_t xPos,
         if (beacons[i] == (x << 4) + z)
           beaconBeamColumn = true;
 
+      for (uint8_t i = 0; i < localMarkers; i++)
+        if ((chunkMarkers[i] & 0xff) == (x << 4) + z) {
+          markerColumn = true;
+          markerIndex = chunkMarkers[i] >> 8;
+        }
+
       for (uint8_t y = 0; y < 16; y++) {
-        // Same on the y axis
+        // Render the beams, even if we are oob
+        if (beaconBeamColumn)
+          drawBlock(&beaconBeam, (xPos << 4) + x, (zPos << 4) + z,
+                    (yPos << 4) + y, empty);
+
+        if (markerColumn)
+          drawBlock(&(*markers)[markerIndex].color, (xPos << 4) + x,
+                    (zPos << 4) + z, (yPos << 4) + y, empty);
+
+        // Check that we do not step over the height limit
         if ((yPos << 4) + y < map.minY || (yPos << 4) + y > map.maxY)
           continue;
 
@@ -268,10 +306,6 @@ void IsometricCanvas::drawSection(const NBT &section, const int64_t xPos,
           continue;
         }
 
-        if (beaconBeamColumn)
-          drawBlock(&beaconBeam, (xPos << 4) + x, (zPos << 4) + z,
-                    (yPos << 4) + y, empty);
-
         // Skip air. This does increase performance, but could be tweaked.
         if (index)
           drawBlock(cache[index], (xPos << 4) + x, (zPos << 4) + z,
@@ -284,7 +318,8 @@ void IsometricCanvas::drawSection(const NBT &section, const int64_t xPos,
         }
       }
 
-      beaconBeamColumn = false;
+      markerColumn = beaconBeamColumn = false;
+      markerIndex = 0;
     }
   }
 

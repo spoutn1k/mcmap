@@ -77,6 +77,14 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
                 opts->colorFile.c_str());
         return false;
       }
+    } else if (strcmp(option, "-marker") == 0) {
+      if (!MOREARGS(3) || !(isNumeric(POLLARG(1)) && isNumeric(POLLARG(2)))) {
+        fprintf(stderr, "Error: %s needs three arguments: x z color\n", option);
+        return false;
+      }
+      int x = atoi(NEXTARG), z = atoi(NEXTARG);
+      opts->markers[opts->totalMarkers++] =
+          Colors::Marker(x, z, std::string(NEXTARG));
     } else if (strcmp(option, "-nw") == 0) {
       opts->boundaries.orientation = NW;
     } else if (strcmp(option, "-sw") == 0) {

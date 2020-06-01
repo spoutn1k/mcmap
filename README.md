@@ -27,6 +27,7 @@ This project is under __heavy__ development, but compatible with newer versions 
 |`-file NAME`    |sets the output filename to 'NAME'; default is `./output.png`|
 |`-colors NAME`    |sets the color file to 'NAME'; default is `./colors.json`|
 |`-nw` `-ne` `-se` `-sw` |controls which direction will point to the top corner; North-West is default|
+|`-marker x z color`      |draw a marker at `x` `z` of color `color` in `red`,`green`,`blue` or `white`; can be used up to 256 times |
 |`-nowater`      |do not render water|
 |`-nobeacons`      |do not render beacon beams|
 |`-nether`      |render the nether|
