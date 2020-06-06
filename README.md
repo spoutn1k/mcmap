@@ -47,7 +47,14 @@ If rendering large areas, working in threded mode can greatly speed up the proce
 
 ### __Windows__
 
-Windows is currently unsupported, by a lack of available OSes. You can try using [ubuntu on windows](https://ubuntu.com/tutorials/tutorial-ubuntu-on-windows#1-overview) to get a linux terminal and launch it from there.
+Native Windows is currently unsupported, although the program works using [ubuntu on windows](https://ubuntu.com/tutorials/tutorial-ubuntu-on-windows#1-overview) to get a linux terminal and launch it from there. Once in a terminal, the following steps are needed:
+```
+apt update && apt install git make g++ libpng-dev
+git clone http://github.com/spoutn1k/mcmap
+cd mcmap && make -j
+```
+
+Once this step is done, the program is compiled. Use it with the above options, the path to the root of `C:\\` being `/mnt/c/`.
 
 Most of the code uses `std::filesystem` and from my understanding should be cross-platform. I have no experience nor interest in making a Windows GUI, but it should be pretty straightforward.
 
