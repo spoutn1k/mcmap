@@ -38,6 +38,8 @@ struct IsometricCanvas {
   uint16_t chunkMarkers[256];
   Colors::Marker (*markers)[256];
 
+  float *brightnessLookup;
+
   IsometricCanvas(const Terrain::Coordinates &coords,
                   const Colors::Palette &colors, const size_t padding = 0)
       : map(coords) {
@@ -79,6 +81,7 @@ struct IsometricCanvas {
     bytesBuffer = new uint8_t[size];
     memset(bytesBuffer, 0, size);
 
+    // Setting and pre-caching colors
     palette = colors;
 
     auto beamColor = colors.find("mcmap:beacon_beam");
@@ -88,6 +91,19 @@ struct IsometricCanvas {
     auto waterColor = colors.find("minecraft:water");
     if (waterColor != colors.end())
       water = waterColor->second;
+
+    // Italian code courtesy of Donkey Kong apparently
+    uint16_t mapSizeY = map.maxY - map.minY;
+    brightnessLookup = new float[mapSizeY];
+    for (int y = 0; y < mapSizeY; ++y) {
+      brightnessLookup[y] =
+          ((100.0f /
+            (1.0f +
+             exp(-(1.3f * (float(y) * MIN(mapSizeY, 200) / mapSizeY) / 16.0f) +
+                 6.0f))) -
+           91); // thx Donkey Kong
+    }
+    // DK forgot the spaghetti to english dictionnary again
   }
 
   ~IsometricCanvas() { delete[] bytesBuffer; }
@@ -130,8 +146,8 @@ struct IsometricCanvas {
   void drawBeams(const int64_t, const int64_t, const uint8_t);
   void drawBlock(const size_t, const size_t, const NBT &);
   inline void drawBlock(const size_t, const size_t, const size_t, const NBT &);
-  void drawBlock(const Colors::Block *, const size_t, const size_t,
-                 const size_t, const NBT &);
+  void drawBlock(Colors::Block *, const size_t, const size_t, const size_t,
+                 const NBT &);
 
   // This obscure typedef allows to create a member function pointer array
   // (ouch) to render different block types without a switch case
