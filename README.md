@@ -47,7 +47,7 @@ If rendering large areas, working in threded mode can greatly speed up the proce
 
 ### __Windows__
 
-Native Windows is currently unsupported, although the program works using [ubuntu on windows](https://ubuntu.com/tutorials/tutorial-ubuntu-on-windows#1-overview) to get a linux terminal and launch it from there. Once in a terminal, the following steps are needed:
+Native Windows is currently unsupported, although the program works using [Ubuntu on windows](https://ubuntu.com/tutorials/tutorial-ubuntu-on-windows#1-overview) to get a linux terminal and launch it from there. Once in a terminal, the following steps are needed:
 ```
 apt update && apt install git make g++ libpng-dev
 git clone http://github.com/spoutn1k/mcmap
@@ -108,15 +108,28 @@ Examples:
 
 ## Installation
 
-`mcmap` depends on the `PNG` and `Zlib` libraries. In most cases `PNG` also requires `Zlib`, so you only have to install:
+`mcmap` depends on the `PNG` and `zlib` libraries. Development was made using `gcc` version 10, and can be compiled with `gcc` 8 or later.
 
+#### Ubuntu
+```
+apt update && apt install git make g++ libpng-dev
+git clone http://github.com/spoutn1k/mcmap
+cd mcmap && make -j
+```
 
-#### `ubuntu`
+#### Archlinux
 ```
-apt install libpng-dev
+pacman -S --needed git gcc make libpng #needed means don't reinstall if it is installed
+git clone http://github.com/spoutn1k/mcmap
+cd mcmap && make -j
 ```
 
-#### `archlinux`
-```
-pacman -S libpng
-```
+#### Windows
+
+Download and set up [Ubuntu on windows](https://ubuntu.com/tutorials/tutorial-ubuntu-on-windows#1-overview) then follow the Ubuntu steps.
+
+## Troubleshooting
+
+### Compilation fails with error message about filesystem
+
+This is recurrent on older Ubuntu installs, make sure your `gcc` version is up to date.
