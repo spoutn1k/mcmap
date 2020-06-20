@@ -25,6 +25,8 @@ void printHelp(char *binary) {
       "  -end                render the end\n"
       "  -nowater            do not render water\n"
       "  -nobeacons          do not render beacon beams\n"
+      "  -shading            toggle shading (brightens blocks depending on "
+      "height)\n"
       "  -splits VAL         render with VAL threads\n"
       "  -marker X Z color   draw a marker at X Z of the desired color\n"
       "  -padding VAL        padding to use around the image (default 5\n)",

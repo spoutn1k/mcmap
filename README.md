@@ -1,6 +1,6 @@
 # `mcmap` - Isometric map visualizer
 
-![](https://img.shields.io/badge/version-20w22a-success)
+![](https://img.shields.io/badge/version-1.16rc1-success)
 
 *Original project by Simon Rettberg. All credits to him for the idea and vision.*
 
@@ -30,6 +30,7 @@ This project is under __heavy__ development, but compatible with newer versions 
 |`-marker x z color`      |draw a marker at `x` `z` of color `color` in `red`,`green`,`blue` or `white`; can be used up to 256 times |
 |`-nowater`      |do not render water|
 |`-nobeacons`      |do not render beacon beams|
+|`-shading`      |toggle shading (brightens blocks depending on height)|
 |`-nether`      |render the nether|
 |`-end`          |render the end|
 |`-splits`       |number of sub-terrains to render; if threading is available, every sub-terrain is rendered in a thread|
