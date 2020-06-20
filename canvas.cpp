@@ -341,9 +341,9 @@ IsometricCanvas::drawer blockRenderers[] = {
 #undef DEFINETYPE
 };
 
-inline void IsometricCanvas::drawBlock(const Colors::Block *color,
-                                       const size_t x, const size_t z,
-                                       const size_t y, const NBT &metadata) {
+inline void IsometricCanvas::drawBlock(Colors::Block *color, const size_t x,
+                                       const size_t z, const size_t y,
+                                       const NBT &metadata) {
   const size_t bmpPosX = 2 * (sizeZ - 1) + (x - z) * 2 + padding;
   const size_t bmpPosY = height - 2 + x + z - sizeX - sizeZ -
                          (y - map.minY) * heightOffset - padding;
@@ -359,8 +359,28 @@ inline void IsometricCanvas::drawBlock(const Colors::Block *color,
   if (color->primary.empty())
     return;
 
+  // Pointer to the color to use, and local color copy if changes are due
+  Colors::Block localColor, *colorPtr = color;
+  if (shading) {
+    // Make a local copy of the color
+    localColor = *colorPtr;
+
+    // Get the target shading from the profile
+    float fsub = brightnessLookup[y];
+    int sub = int(fsub * (float(color->primary.brightness()) / 323.0f + .21f));
+
+    // Modify the colors
+    localColor.primary.modColor(sub);
+    localColor.dark.modColor(sub);
+    localColor.light.modColor(sub);
+    localColor.secondary.modColor(sub);
+
+    // Make sure the local color is used later
+    colorPtr = &localColor;
+  }
+
   // Then call the function registered with the block's type
-  (this->*blockRenderers[color->type])(bmpPosX, bmpPosY, metadata, color);
+  (this->*blockRenderers[color->type])(bmpPosX, bmpPosY, metadata, colorPtr);
 }
 
 inline void blend(uint8_t *const destination, const uint8_t *const source) {

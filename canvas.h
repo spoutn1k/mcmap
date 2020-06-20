@@ -14,6 +14,8 @@
 // created with a set of 3D coordinates, and translate every block drawn into a
 // 2D position.
 struct IsometricCanvas {
+  bool shading;
+
   Coordinates map;     // The coordinates describing the 3D map
   size_t sizeX, sizeZ; // The size of the 3D map
 
@@ -37,6 +39,8 @@ struct IsometricCanvas {
   // 8 bits for the index inside markers, 4 bits for x, 4 bits for z
   uint16_t chunkMarkers[256];
   Colors::Marker (*markers)[256];
+
+  float *brightnessLookup;
 
   IsometricCanvas(const Terrain::Coordinates &coords,
                   const Colors::Palette &colors, const size_t padding = 0)
@@ -79,6 +83,7 @@ struct IsometricCanvas {
     bytesBuffer = new uint8_t[size];
     memset(bytesBuffer, 0, size);
 
+    // Setting and pre-caching colors
     palette = colors;
 
     auto beamColor = colors.find("mcmap:beacon_beam");
@@ -88,6 +93,20 @@ struct IsometricCanvas {
     auto waterColor = colors.find("minecraft:water");
     if (waterColor != colors.end())
       water = waterColor->second;
+
+    // Set to true to use shading later on
+    shading = false;
+    // Precompute the shading profile. The values are arbitrary, and will go
+    // through Colors::Color.modcolor further down the code. The 255 array
+    // represents the entire world height. This profile is linear, going from
+    // -100 at height 0 to 100 at height 255. This replaced a convoluted formula
+    // that did a much better job of higlighting overground terrain, but would
+    // look weird in other dimensions.
+    // Legacy formula: ((100.0f / (1.0f + exp(- (1.3f * (float(y) *
+    // MIN(g_MapsizeY, 200) / g_MapsizeY) / 16.0f) + 6.0f))) - 91)
+    brightnessLookup = new float[255];
+    for (int y = 0; y < 255; ++y)
+      brightnessLookup[y] = -100 + 200 * float(y) / 255;
   }
 
   ~IsometricCanvas() { delete[] bytesBuffer; }
@@ -130,8 +149,8 @@ struct IsometricCanvas {
   void drawBeams(const int64_t, const int64_t, const uint8_t);
   void drawBlock(const size_t, const size_t, const NBT &);
   inline void drawBlock(const size_t, const size_t, const size_t, const NBT &);
-  void drawBlock(const Colors::Block *, const size_t, const size_t,
-                 const size_t, const NBT &);
+  void drawBlock(Colors::Block *, const size_t, const size_t, const size_t,
+                 const NBT &);
 
   // This obscure typedef allows to create a member function pointer array
   // (ouch) to render different block types without a switch case

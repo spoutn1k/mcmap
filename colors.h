@@ -98,9 +98,9 @@ struct Color {
   bool empty() const { return !(R || G || B || ALPHA); }
 
   uint8_t brightness() const {
-    return (uint8_t)sqrt(double(R) * double(R) * .236 +
-                         double(G) * double(G) * .601 +
-                         double(B) * double(B) * .163);
+    return (uint8_t)sqrt(double(R) * double(R) * .2126 +
+                         double(G) * double(G) * .7152 +
+                         double(B) * double(B) * .0722);
   }
 };
 
