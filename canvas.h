@@ -14,6 +14,8 @@
 // created with a set of 3D coordinates, and translate every block drawn into a
 // 2D position.
 struct IsometricCanvas {
+  bool shading;
+
   Coordinates map;     // The coordinates describing the 3D map
   size_t sizeX, sizeZ; // The size of the 3D map
 
@@ -92,16 +94,12 @@ struct IsometricCanvas {
     if (waterColor != colors.end())
       water = waterColor->second;
 
+    shading = false;
     // Italian code courtesy of Donkey Kong apparently
-    uint16_t mapSizeY = map.maxY - map.minY;
-    brightnessLookup = new float[mapSizeY];
-    for (int y = 0; y < mapSizeY; ++y) {
-      brightnessLookup[y] =
-          ((100.0f /
-            (1.0f +
-             exp(-(1.3f * (float(y) * MIN(mapSizeY, 200) / mapSizeY) / 16.0f) +
-                 6.0f))) -
-           91); // thx Donkey Kong
+    brightnessLookup = new float[255];
+    for (int y = 0; y < 255; ++y) {
+      brightnessLookup[y] = -100 + 200 * float(y) / 255;
+      // printf("%3d: %f\n", y, brightnessLookup[y]);
     }
     // DK forgot the spaghetti to english dictionnary again
   }

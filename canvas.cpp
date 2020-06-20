@@ -359,16 +359,22 @@ inline void IsometricCanvas::drawBlock(Colors::Block *color, const size_t x,
   if (color->primary.empty())
     return;
 
-  Colors::Block localColor = *color;
-  float fsub = brightnessLookup[y];
-  int sub = int(fsub * (float(color->primary.brightness()) / 323.0f + .21f));
-  localColor.primary.modColor(sub);
-  localColor.dark.modColor(sub);
-  localColor.light.modColor(sub);
-  localColor.secondary.modColor(sub);
+  Colors::Block localColor, *colorPtr = color;
+  if (shading) {
+    localColor = *colorPtr;
+
+    float fsub = brightnessLookup[y];
+    int sub = int(fsub * (float(color->primary.brightness()) / 323.0f + .21f));
+    localColor.primary.modColor(sub);
+    localColor.dark.modColor(sub);
+    localColor.light.modColor(sub);
+    localColor.secondary.modColor(sub);
+
+    colorPtr = &localColor;
+  }
 
   // Then call the function registered with the block's type
-  (this->*blockRenderers[color->type])(bmpPosX, bmpPosY, metadata, &localColor);
+  (this->*blockRenderers[color->type])(bmpPosX, bmpPosY, metadata, colorPtr);
 }
 
 inline void blend(uint8_t *const destination, const uint8_t *const source) {

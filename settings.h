@@ -28,7 +28,7 @@ struct WorldOptions {
   // Image settings
   int offsetY;
   size_t padding;
-  bool hideWater, hideBeacons;
+  bool hideWater, hideBeacons, shading;
 
   // Marker storage
   uint8_t totalMarkers;
@@ -50,7 +50,7 @@ struct WorldOptions {
     boundaries.maxY = 255;
 
     offsetY = 3;
-    hideWater = hideBeacons = false;
+    hideWater = hideBeacons = shading = false;
     padding = 5;
 
     totalMarkers = 0;

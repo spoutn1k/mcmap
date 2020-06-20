@@ -88,6 +88,7 @@ int main(int argc, char **argv) {
 
       // Draw the terrain fragment
       IsometricCanvas canvas(subCoords[i], localColors);
+      canvas.shading = options.shading;
       canvas.setMarkers(options.totalMarkers, &options.markers);
       canvas.drawTerrain(world);
 
