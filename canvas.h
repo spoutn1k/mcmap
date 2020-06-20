@@ -94,14 +94,19 @@ struct IsometricCanvas {
     if (waterColor != colors.end())
       water = waterColor->second;
 
+    // Set to true to use shading later on
     shading = false;
-    // Italian code courtesy of Donkey Kong apparently
+    // Precompute the shading profile. The values are arbitrary, and will go
+    // through Colors::Color.modcolor further down the code. The 255 array
+    // represents the entire world height. This profile is linear, going from
+    // -100 at height 0 to 100 at height 255. This replaced a convoluted formula
+    // that did a much better job of higlighting overground terrain, but would
+    // look weird in other dimensions.
+    // Legacy formula: ((100.0f / (1.0f + exp(- (1.3f * (float(y) *
+    // MIN(g_MapsizeY, 200) / g_MapsizeY) / 16.0f) + 6.0f))) - 91)
     brightnessLookup = new float[255];
-    for (int y = 0; y < 255; ++y) {
+    for (int y = 0; y < 255; ++y)
       brightnessLookup[y] = -100 + 200 * float(y) / 255;
-      // printf("%3d: %f\n", y, brightnessLookup[y]);
-    }
-    // DK forgot the spaghetti to english dictionnary again
   }
 
   ~IsometricCanvas() { delete[] bytesBuffer; }
