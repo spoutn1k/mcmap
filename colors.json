@@ -534,7 +534,7 @@
     "minecraft:nether_bricks": [54, 24, 30, 255, 7],
     "minecraft:nether_brick_slab": { "type": "Slab", "color": [54, 24, 30, 254, 7] },
     "minecraft:nether_brick_wall": { "type": "Rod", "color": [54, 24, 30, 254, 7] },
-    "minecraft:nether_brick_fence": [54, 24, 30, 225],
+    "minecraft:nether_brick_fence": { "type": "Rod", "color": [54, 24, 30, 254, 7] },
     "minecraft:nether_brick_stairs": [54, 24, 30, 255],
 
     "minecraft:red_nether_bricks": [85, 24, 30, 255],
