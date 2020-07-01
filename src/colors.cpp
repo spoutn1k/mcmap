@@ -1,5 +1,7 @@
 #include "colors.h"
 
+std::map<string, int> erroneous;
+
 bool Colors::load(const std::filesystem::path &colorFile, Palette *colors) {
   if (!std::filesystem::exists(colorFile))
     throw std::runtime_error("Color file not found");
@@ -108,41 +110,51 @@ void Colors::to_json(json &j, const Block &b) {
   }
 }
 
-void Colors::from_json(const json &j, Block &b) {
+void Colors::from_json(const json &data, Block &b) {
   string stype;
 
   // If the definition is an array, the block is a full block with a single
   // color
-  if (j.is_array()) {
-    b = Block(BlockTypes::FULL, j.get<list<int>>());
+  if (data.is_array()) {
+    b = Block(BlockTypes::FULL, data.get<list<int>>());
     return;
   }
 
   // If the definition is an object and there is no color, replace it with air
-  if (j.find("color") == j.end()) {
+  if (data.find("color") == data.end()) {
     fprintf(stderr, "Wrong color format: no color attribute found\n");
     b = Block();
     return;
   }
 
   // If the type is illegal, default it with a full block
-  if (j.find("type") == j.end() ||
-      Colors::stringToType.find(j["type"].get<string>()) ==
-          stringToType.end()) {
-    fprintf(stderr,
-            "Block with type %s is either disabled or not implemented\n",
-            j["type"].get<string>().c_str());
-
-    b = Block(BlockTypes::FULL, j["color"].get<list<int>>());
+  if (data.find("type") == data.end()) {
+    b = Block(BlockTypes::FULL, data["color"].get<list<int>>());
     return;
   }
 
-  BlockTypes type = stringToType.at(j["type"].get<string>());
+  stype = data["type"].get<string>();
+  if (Colors::stringToType.find(stype) == stringToType.end()) {
+    auto pair = erroneous.find(stype);
+    if (pair == erroneous.end()) {
+      fprintf(stderr,
+              "Block with type %s is either disabled or not implemented\n",
+              stype.c_str());
+      erroneous.insert(std::pair<string, int>(stype, 1));
+    } else
+      pair->second++;
 
-  if (j.find("accent") != j.end())
-    b = Block(type, j["color"].get<list<int>>(), j["accent"].get<list<int>>());
+    b = Block(BlockTypes::FULL, data["color"].get<list<int>>());
+    return;
+  }
+
+  BlockTypes type = stringToType.at(data["type"].get<string>());
+
+  if (data.find("accent") != data.end())
+    b = Block(type, data["color"].get<list<int>>(),
+              data["accent"].get<list<int>>());
   else
-    b = Block(type, j["color"].get<list<int>>());
+    b = Block(type, data["color"].get<list<int>>());
 }
 
 void Colors::to_json(json &j, const Palette &p) {
