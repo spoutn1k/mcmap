@@ -65,13 +65,19 @@ The accepted format is a `json` file, with a specific structure. The root contai
 
 #### Simple block
 
-To define a color for a simple, regular block, a list must be provided, the fields meaning the following: `"namespace:block": [RED, GREEN, BLUE, ALPHA, NOISE, BRIGHTNESS]`
+To define a color for a simple, regular block, a list of json values following the format: 
+
+```
+"namespace:block": [RED, GREEN, BLUE, ALPHA]
+```
+
+All the fields must be integer values between 0 and 255.
 
 Examples:
 ```
 {
-    "minecraft:dirt":   [134, 96, 67, 255, 22],
-    "minecraft:stone":  [128, 128, 128, 255, 16],
+    "minecraft:dirt":   [134, 96, 67, 255],
+    "minecraft:stone":  [128, 128, 128, 255],
     ...
 }
 ```
@@ -83,26 +89,48 @@ Some blocks are better looking when drawn in a specific way. To specify that a b
 ```
 {
     "type":     <BlockType>,
-    "color":    [RED, GREEN, BLUE, ALPHA, NOISE, BRIGHTNESS],
-    "accent":   [RED, GREEN, BLUE, ALPHA, NOISE, BRIGHTNESS] (Optional)
+    "color":    [RED, GREEN, BLUE, ALPHA],
+    "accent":   [RED, GREEN, BLUE, ALPHA] (Optional)
 }
 ```
 
-The different available block types are defined in the file `blockTypes.def`.
+The available available block types are:
+
+|Name|Appearance|Accent support|
+|-|-|-|
+|`Full`|Default. Full-block.|No|
+|`Hide`|Do not render the block entirely.|No|
+|`Clear`|This block is optimized for transparent block in large quantities, such as glass and water. The top of the block is not rendered, making for a smooth surface when blending blocks together.|No|
+|`Thin`|Will color only the top of the block underneath. Used for snow, rails, pressure plates.|No|
+|`Slab`|Half block.|No|
+|`Stair`|__Not implemented yet__, renders like a full block.|No|
+|`Rod`|A slimmer block, used for fences and walls.|No|
+|`Wire`|Small dot on the floor, used for tripwire and redstone.|No|
+|`Head`|Smaller block, also used for pots, pickles, and mushrooms.|No|
+|`Plant`|Used in a variety of cases, renders a leaf-like block.|No|
+|`UnderwaterPlant`|Same as `Plant`, but the air is water-colored. Used for sea-grass and kelp.|No|
+|`Fire`|Fire-like. Used for fire.|No|
+|`Beam`|Internal block type, used for markers and beacon beams.|No|
+|`Torch`|Three pixels in a vertical line, with the top pixel rendered with the accent color.|Yes|
+|`Ore`|Block with veins of color. The vein is rendered with the accent color.|Yes|
+|`Grown`|Blocks that have a different layer on top. Grass, nylium, etc. The top layer is rendered with the accent color.|Yes|
+|`Log`|Directionnal block, to render logs/pillars as close as possible. The center of the pillar is rendered with the accent color. Used for logs, pillars, basalt.|Yes|
+
+__NOTE__: Waterlogged blocks will be rendered within water instead of air by default according to their blockstates. However, sea-grass and kelp are hardcoded to be underwater and their blockstates won't reflect this, so they have to be defined as `UnderwaterPlants`.
 
 Examples:
 
 ```
 {
-    "minecraft:dirt":   [134, 96, 67, 255, 22],
+    "minecraft:dirt":   [134, 96, 67, 255],
     "minecraft:grass_block": {
         "type":     "Grown",
-        "color":    [134, 96, 67, 255, 22],
-        "accent":   [102, 142, 62, 255, 14]
+        "color":    [134, 96, 67, 255],
+        "accent":   [102, 142, 62, 255]
     },
     "minecraft:snow": {
         "type":     "Thin",
-        "color":    [245, 246, 245, 254, 13]
+        "color":    [245, 246, 245, 254]
     }
 }
 ```
