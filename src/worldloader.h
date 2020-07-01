@@ -3,7 +3,7 @@
 
 #include "./colors.h"
 #include "./helper.h"
-#include "./nbt/nbt.hpp"
+#include "./include/nbt/nbt.hpp"
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
