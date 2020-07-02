@@ -13,13 +13,14 @@ bool PNG::Image::create() {
 
   const uint32_t width = canvas->getCroppedWidth(),
                  height = canvas->getCroppedHeight();
-  printf("Image dimensions are %dx%d, 32bpp, %.2fMiB\n", width, height,
-         float(canvas->getCroppedSize() / float(1024 * 1024)));
 
   if (!(width && height)) {
-    fprintf(stderr, "Nothing to output: canvas is empty\n");
+    logger::error("Nothing to output: canvas is empty\n");
     return false;
   }
+
+  logger::info("Image dimensions are {}x{}, 32bpp, {}MiB\n", width, height,
+               float(canvas->getCroppedSize() / float(1024 * 1024)));
 
   fseeko(imageHandle, 0, SEEK_SET);
 
@@ -88,7 +89,7 @@ bool PNG::Image::save() {
   uint8_t *srcLine = canvas->bytesBuffer + canvas->getCroppedOffset();
   const size_t croppedHeight = canvas->getCroppedHeight();
 
-  printf("Writing to file...\n");
+  logger::info("Writing to file...\n");
   for (size_t y = 0; y < croppedHeight; ++y) {
     png_write_row(pngPtr, (png_bytep)srcLine);
     srcLine += canvas->width * BYTESPERPIXEL;

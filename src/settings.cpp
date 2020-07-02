@@ -11,21 +11,21 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
     const char *option = NEXTARG;
     if (strcmp(option, "-from") == 0) {
       if (!MOREARGS(2) || !isNumeric(POLLARG(1)) || !isNumeric(POLLARG(2))) {
-        fprintf(stderr, "Error: %s needs two integer arguments\n", option);
+        logger::error("Error: {} needs two integer arguments\n", option);
         return false;
       }
       opts->boundaries.minX = atoi(NEXTARG);
       opts->boundaries.minZ = atoi(NEXTARG);
     } else if (strcmp(option, "-to") == 0) {
       if (!MOREARGS(2) || !isNumeric(POLLARG(1)) || !isNumeric(POLLARG(2))) {
-        fprintf(stderr, "Error: %s needs two integer arguments\n", option);
+        logger::error("Error: {} needs two integer arguments\n", option);
         return false;
       }
       opts->boundaries.maxX = atoi(NEXTARG);
       opts->boundaries.maxZ = atoi(NEXTARG);
     } else if (strcmp(option, "-max") == 0) {
       if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
-        fprintf(stderr, "Error: %s needs an integer argument\n", option);
+        logger::error("Error: {} needs an integer argument\n", option);
         return false;
       }
       const int height = atoi(NEXTARG);
@@ -33,7 +33,7 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
           (height > MAX_TERRAIN_HEIGHT ? MAX_TERRAIN_HEIGHT : height);
     } else if (strcmp(option, "-min") == 0) {
       if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
-        fprintf(stderr, "Error: %s needs an integer argument\n", option);
+        logger::error("Error: {} needs an integer argument\n", option);
         return false;
       }
       const int height = atoi(NEXTARG);
@@ -41,14 +41,13 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
           (height < MIN_TERRAIN_HEIGHT ? MIN_TERRAIN_HEIGHT : height);
     } else if (strcmp(option, "-splits") == 0) {
       if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
-        fprintf(stderr, "Error: %s needs an integer argument\n", option);
+        logger::error("Error: {} needs an integer argument\n", option);
         return false;
       }
       opts->splits = atoi(NEXTARG);
     } else if (strcmp(option, "-padding") == 0) {
       if (!MOREARGS(1) || !isNumeric(POLLARG(1)) || atoi(POLLARG(1)) < 0) {
-        fprintf(stderr, "Error: %s needs an positive integer argument\n",
-                option);
+        logger::error("Error: {} needs an positive integer argument\n", option);
         return false;
       }
       opts->padding = atoi(NEXTARG);
@@ -64,24 +63,24 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
       opts->dim = Dimension::END;
     } else if (strcmp(option, "-file") == 0) {
       if (!MOREARGS(1)) {
-        fprintf(stderr, "Error: %s needs one argument\n", option);
+        logger::error("Error: {} needs one argument\n", option);
         return false;
       }
       opts->outFile = NEXTARG;
     } else if (strcmp(option, "-colors") == 0) {
       if (!MOREARGS(1)) {
-        fprintf(stderr, "Error: %s needs one argument\n", option);
+        logger::error("Error: {} needs one argument\n", option);
         return false;
       }
       opts->colorFile = NEXTARG;
       if (!ISPATH(opts->colorFile)) {
-        fprintf(stderr, "Error: File %s does not exist\n",
-                opts->colorFile.c_str());
+        logger::error("Error: File {} does not exist\n",
+                      opts->colorFile.c_str());
         return false;
       }
     } else if (strcmp(option, "-marker") == 0) {
       if (!MOREARGS(3) || !(isNumeric(POLLARG(1)) && isNumeric(POLLARG(2)))) {
-        fprintf(stderr, "Error: %s needs three arguments: x z color\n", option);
+        logger::error("Error: {} needs three arguments: x z color\n", option);
         return false;
       }
       int x = atoi(NEXTARG), z = atoi(NEXTARG);
@@ -102,8 +101,8 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
     } else {
       opts->saveName = std::filesystem::path(option);
       if (!ISPATH(opts->saveName)) {
-        fprintf(stderr, "Error: File %s does not exist\n",
-                opts->saveName.c_str());
+        logger::error("Error: File {} does not exist\n",
+                      opts->saveName.c_str());
         return false;
       }
     }
@@ -128,18 +127,18 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
 
   if (opts->boundaries.maxX < opts->boundaries.minX ||
       opts->boundaries.maxZ < opts->boundaries.minZ) {
-    fprintf(stderr, "Nothing to render: -from X Z has to be <= -to X Z\n");
+    logger::error("Nothing to render: -from X Z has to be <= -to X Z\n");
     return false;
   }
 
   if (opts->boundaries.maxX - opts->boundaries.minX < 0) {
-    fprintf(stderr, "Nothing to render: -min Y has to be < -max Y\n");
+    logger::error("Nothing to render: -min Y has to be < -max Y\n");
     return false;
   }
 
   size_t length = opts->boundaries.maxX - opts->boundaries.minX + 1;
   if (opts->splits > length) {
-    fprintf(stderr, "Cannot split terrain in more than %ld units.\n", length);
+    logger::error("Cannot split terrain in more than {} units.\n", length);
     return false;
   }
 

@@ -142,8 +142,6 @@ void IsometricCanvas::drawChunk(const Terrain::Data &terrain,
   for (uint8_t i = 0; i < totalMarkers; i++) {
     if (CHUNK((*markers)[i].x) == worldChunkX &&
         CHUNK((*markers)[i].z) == worldChunkZ) {
-      printf("Setting marker in chunk %ld %ld\n", CHUNK((*markers)[i].x),
-             CHUNK((*markers)[i].z));
       chunkMarkers[localMarkers++] =
           (i << 8) + (((*markers)[i].x & 0x0f) << 4) + ((*markers)[i].z & 0x0f);
     }
@@ -212,7 +210,7 @@ void IsometricCanvas::drawSection(const NBT &section, const int64_t xPos,
                                   sectionInterpreter interpreter) {
   // TODO Take care of this case in the chunk drawing
   if (!interpreter) {
-    fprintf(stderr, "Invalid section interpreter\n");
+    logger::error("Invalid section interpreter\n");
     return;
   }
 
@@ -248,7 +246,7 @@ void IsometricCanvas::drawSection(const NBT &section, const int64_t xPos,
     auto defined = palette.find(namespacedId);
 
     if (defined == palette.end()) {
-      fprintf(stderr, "Color of block %s not found\n", namespacedId.c_str());
+      logger::error("Color of block {} not found\n", namespacedId);
       cache[colorIndex++] = &fallback;
     } else {
       cache[colorIndex++] = &defined->second;
@@ -301,8 +299,8 @@ void IsometricCanvas::drawSection(const NBT &section, const int64_t xPos,
         index = interpreter(blockBitLength, blockStates, xReal, zReal, y);
 
         if (index >= colorIndex) {
-          fprintf(stderr, "Cache error in chunk %ld %ld: %d/%d\n", xPos, zPos,
-                  index, colorIndex);
+          logger::error("Cache error in chunk {} {}: {}/{}\n", xPos, zPos,
+                        index, colorIndex);
           continue;
         }
 
@@ -862,7 +860,7 @@ void IsometricCanvas::merge(const IsometricCanvas &subCanvas) {
   // This routine is supposed to be called multiple times with ORDERED
   // subcanvasses
   if (subCanvas.width > width || subCanvas.height > height) {
-    fprintf(stderr, "Cannot merge a canvas of bigger dimensions\n");
+    logger::error("Cannot merge a canvas of bigger dimensions\n");
     return;
   }
 
@@ -889,7 +887,7 @@ void IsometricCanvas::merge(const IsometricCanvas &subCanvas) {
 
 #ifdef CLOCK
   auto end = std::chrono::high_resolution_clock::now();
-  printf("Merged canvas in %lfms\n",
-         std::chrono::duration<double, std::milli>(end - begin).count());
+  logger::info("Merged canvas in {}ms\n",
+               std::chrono::duration<double, std::milli>(end - begin).count());
 #endif
 }

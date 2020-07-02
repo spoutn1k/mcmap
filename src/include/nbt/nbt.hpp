@@ -896,69 +896,6 @@ public:
   constexpr auto get() const noexcept -> decltype(get_ptr<PointerType>()) {
     return get_ptr<PointerType>();
   }
-
-  void print(int level = 0) {
-    for (int i = 0; i < level; i++)
-      printf("  ");
-    printf("%s (%s) ", name.c_str(), type_name());
-
-    switch (type) {
-    case tag_type::tag_byte: {
-      printf("%d\n", content.byte);
-      break;
-    }
-    case tag_type::tag_short: {
-      printf("%d\n", content.short_n);
-      break;
-    }
-    case tag_type::tag_int: {
-      printf("%d\n", content.int_n);
-      break;
-    }
-    case tag_type::tag_long: {
-      printf("%ld\n", content.long_n);
-      break;
-    }
-    case tag_type::tag_float: {
-      printf("%f\n", content.float_n);
-      break;
-    }
-    case tag_type::tag_double: {
-      printf("%f\n", content.double_n);
-      break;
-    }
-    case tag_type::tag_byte_array: {
-      printf("\n");
-      break;
-    }
-    case tag_type::tag_string: {
-      printf("%s\n", content.string->c_str());
-      break;
-    }
-    case tag_type::tag_list: {
-      printf("\n");
-      for (auto e : *content.list)
-        e.print(level + 1);
-      break;
-    }
-    case tag_type::tag_compound: {
-      printf("\n");
-      for (auto e : *content.compound)
-        e.second.print(level + 1);
-      break;
-    }
-    case tag_type::tag_int_array: {
-      printf("\n");
-      break;
-    }
-    case tag_type::tag_long_array: {
-      printf("\n");
-      break;
-    }
-    default:
-      break;
-    }
-  }
 };
 
 } // namespace nbt

@@ -1,6 +1,7 @@
 #include "./VERSION"
 #include "./draw_png.h"
 #include "./helper.h"
+#include "./logger.h"
 #include "./settings.h"
 #include "./worldloader.h"
 #include <algorithm>
@@ -13,8 +14,8 @@ void printHelp(char *binary);
 void render(IsometricCanvas *canvas, const Terrain::Data &world);
 
 void printHelp(char *binary) {
-  printf(
-      "Usage: %s <options> WORLDPATH\n\n"
+  logger::info(
+      "Usage: {} <options> WORLDPATH\n\n"
       "  -from X Z           coordinates of the block to start rendering at\n"
       "  -to X Z             coordinates of the block to stop rendering at\n"
       "  -min/max VAL        minimum/maximum Y index of blocks to render\n"
@@ -29,7 +30,7 @@ void printHelp(char *binary) {
       "height)\n"
       "  -splits VAL         render with VAL threads\n"
       "  -marker X Z color   draw a marker at X Z of the desired color\n"
-      "  -padding VAL        padding to use around the image (default 5\n)",
+      "  -padding VAL        padding to use around the image (default 5)\n",
       binary);
 }
 
@@ -37,8 +38,8 @@ int main(int argc, char **argv) {
   Settings::WorldOptions options;
   Colors::Palette colors;
 
-  printf(VERSION " %dbit (" COMMENT ")\n",
-         8 * static_cast<int>(sizeof(size_t)));
+  logger::info(VERSION " {}bit (" COMMENT ")\n",
+               8 * static_cast<int>(sizeof(size_t)));
 
   // Always same random seed, as this is only used for block noise,
   // which should give the same result for the same input every time
@@ -107,6 +108,6 @@ int main(int argc, char **argv) {
   delete[] subCoords;
 
   PNG::Image(options.outFile, &finalCanvas).save();
-  printf("Job complete.\n");
+  logger::info("Job complete.\n");
   return 0;
 }

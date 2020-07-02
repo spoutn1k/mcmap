@@ -3,6 +3,7 @@
 
 #include "./helper.h"
 #include "./include/json.hpp"
+#include "./logger.h"
 #include <filesystem>
 #include <list>
 #include <map>

@@ -58,8 +58,8 @@ void Terrain::Data::load(const std::filesystem::path &regionDir) {
           "r." + std::to_string(rx) + "." + std::to_string(rz) + ".mca";
 
       if (!std::filesystem::exists(regionFile)) {
-        fprintf(stderr, "Region file %s does not exist, skipping ..\n",
-                regionFile.c_str());
+        logger::warn("Region file r.{}.{}.mca does not exist, skipping ..\n",
+                     rx, rz);
         continue;
       }
 
@@ -74,14 +74,14 @@ void Terrain::Data::loadRegion(const std::filesystem::path &regionFile,
   uint8_t regionHeader[REGION_HEADER_SIZE];
 
   if (!(regionHandle = fopen(regionFile.c_str(), "rb"))) {
-    printf("Error opening region file %s\n", regionFile.c_str());
+    logger::error("Error opening region file {}\n", regionFile.c_str());
     return;
   }
   // Then, we read the header (of size 4K) storing the chunks locations
 
   if (fread(regionHeader, sizeof(uint8_t), REGION_HEADER_SIZE, regionHandle) !=
       REGION_HEADER_SIZE) {
-    printf("Header too short in %s\n", regionFile.c_str());
+    logger::error("Header too short in {}\n", regionFile.c_str());
     fclose(regionHandle);
     return;
   }
@@ -185,13 +185,14 @@ bool decompressChunk(const uint32_t offset, FILE *regionHandle,
   uint8_t zData[COMPRESSED_BUFFER];
 
   if (0 != fseek(regionHandle, offset, SEEK_SET)) {
-    // printf("Error seeking to chunk\n");
+    logger::error("Error accessing chunk data in file: {}\n", strerror(errno));
     return false;
   }
 
   // Read the 5 bytes that give the size and type of data
   if (5 != fread(zData, sizeof(uint8_t), 5, regionHandle)) {
-    // printf("Error reading chunk size from region file\n");
+    logger::error("Error reading chunk size from region file: {}\n",
+                  strerror(errno));
     return false;
   }
 
@@ -199,7 +200,7 @@ bool decompressChunk(const uint32_t offset, FILE *regionHandle,
   // len--; // This dates from Zahl's, no idea of its purpose
 
   if (fread(zData, sizeof(uint8_t), *length, regionHandle) != *length) {
-    // printf("Not enough input for chunk\n");
+    logger::error("Not enough data for chunk: {}\n", strerror(errno));
     return false;
   }
 
@@ -215,7 +216,7 @@ bool decompressChunk(const uint32_t offset, FILE *regionHandle,
   inflateEnd(&zlibStream);
 
   if (status != Z_STREAM_END) {
-    printf("Error decompressing chunk: %s\n", zError(status));
+    logger::error("Error decompressing chunk: {}\n", zError(status));
     return false;
   }
 
@@ -236,7 +237,8 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
   NBT chunk = NBT::parse(chunkBuffer, length);
 
   if (!chunk.contains("Level") || !chunk["Level"].contains("Sections")) {
-    fprintf(stderr, "Chunk %d %d is in an invalid format\n", chunkX, chunkZ);
+    logger::warn("Chunk {} {} is in an unsupported format, skipping ..\n",
+                 chunkX, chunkZ);
     return;
   }
 
