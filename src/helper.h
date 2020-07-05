@@ -2,6 +2,7 @@
 #define HELPER_H_
 
 #include <algorithm>
+#include <chrono>
 #include <cstdio>
 #include <cstring>
 #include <ctime>
@@ -12,14 +13,11 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#define MAX(a, b) ((a) > (b) ? (a) : (b))
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-#define RIGHTSTRING(x, y) (strlen(x) >= (y) ? (x) + strlen(x) - (y) : (x))
-
 // Difference between MSVC++ and gcc/others
 #if defined(_WIN32) && !defined(__GNUC__)
 #include <windows.h>
 #define usleep(x) Sleep((x) / 1000);
+#define isatty(x) 0
 #else
 #include <unistd.h>
 #endif
@@ -36,12 +34,6 @@
 #define fseek64 fseeko64
 #endif
 
-// Differently named
-#if defined(_WIN32) && !defined(__GNUC__)
-#define snprintf _snprintf
-#define mkdir _mkdir
-#endif
-
 #define CHUNKSIZE 16
 #define REGIONSIZE 32
 #define MIN_TERRAIN_HEIGHT 0
@@ -55,7 +47,6 @@
 #define REGION(x) ((x) >> 5)
 
 uint8_t clamp(int32_t val);
-void printProgress(const size_t current, const size_t max);
 bool dirExists(const char *strFilename);
 bool isNumeric(char *str);
 
@@ -114,4 +105,5 @@ struct Coordinates {
 
 void splitCoords(const Coordinates &original, Coordinates *&subCoords,
                  const size_t count);
+
 #endif // HELPER_H_

@@ -10,7 +10,7 @@ DLDFLAGS=-lz -lpng -lstdc++fs
 PCFLAGS=-O3 -std=c++17 -c -Wall -pg -pedantic -DWITHPNG -D_FILE_OFFSET_BITS=64 -fopenmp
 PLDFLAGS=-lz -lpng -lstdc++fs -fopenmp -pg
 
-SOURCES := $(wildcard src/*.cpp)
+SOURCES := $(wildcard src/*.cpp) src/include/fmt/format.cpp
 
 OBJECTS=$(SOURCES:.cpp=.default.o)
 DOBJECTS=$(SOURCES:.cpp=.debug.o)

@@ -13,7 +13,7 @@ bool Colors::load(const std::filesystem::path &colorFile, Palette *colors) {
     data = json::parse(f);
   } catch (const nlohmann::detail::parse_error &err) {
     fclose(f);
-    fprintf(stderr, "Error parsing color file %s\n", colorFile.c_str());
+    logger::error("Error parsing color file {}\n", colorFile.c_str());
     return false;
   }
 
@@ -35,7 +35,7 @@ bool Colors::load(const std::filesystem::path &colorFile,
     data = json::parse(f);
   } catch (const nlohmann::detail::parse_error &err) {
     fclose(f);
-    fprintf(stderr, "Error parsing color file %s\n", colorFile.c_str());
+    logger::error("Error parsing color file {}\n", colorFile.c_str());
     return false;
   }
 
@@ -47,13 +47,13 @@ bool Colors::load(const std::filesystem::path &colorFile,
           it, fullList.at(it).get<Colors::Block>()));
       continue;
     } else {
-      fprintf(stderr, "No color for block %s\n", it.c_str());
+      logger::warn("No color for block {}\n", it);
       colors->insert(std::pair<string, Colors::Block>(it, Colors::Block()));
     }
   }
 
-  printf("Loaded %ld colors out of the %ld declared\n", colors->size(),
-         fullList.size());
+  logger::info("Loaded {} colors out of the {} declared\n", colors->size(),
+               fullList.size());
 
   fclose(f);
   return true;
@@ -69,7 +69,7 @@ void Colors::filter(const Palette &definitions,
       colors->insert(std::pair<string, Colors::Block>(it, definitions.at(it)));
       continue;
     } else {
-      fprintf(stderr, "No color for block %s\n", it.c_str());
+      logger::warn("No color for block {}\n", it);
       colors->insert(std::pair<string, Colors::Block>(it, Colors::Block()));
     }
   }
@@ -79,13 +79,13 @@ void Colors::filter(const Palette &definitions,
       colors->insert(std::pair<string, Colors::Block>(it, definitions.at(it)));
       continue;
     } else {
-      fprintf(stderr, "No color for block %s\n", it.c_str());
+      logger::warn("No color for block {}\n", it);
       colors->insert(std::pair<string, Colors::Block>(it, Colors::Block()));
     }
   }
 
-  printf("Loaded %ld colors out of the %ld declared\n", colors->size(),
-         definitions.size());
+  logger::info("Loaded {} colors out of the {} declared\n", colors->size(),
+               definitions.size());
 }
 
 #define LIST(C)                                                                \
@@ -122,7 +122,7 @@ void Colors::from_json(const json &data, Block &b) {
 
   // If the definition is an object and there is no color, replace it with air
   if (data.find("color") == data.end()) {
-    fprintf(stderr, "Wrong color format: no color attribute found\n");
+    logger::error("Wrong color format: no color attribute found\n");
     b = Block();
     return;
   }
@@ -137,9 +137,8 @@ void Colors::from_json(const json &data, Block &b) {
   if (Colors::stringToType.find(stype) == stringToType.end()) {
     auto pair = erroneous.find(stype);
     if (pair == erroneous.end()) {
-      fprintf(stderr,
-              "Block with type %s is either disabled or not implemented\n",
-              stype.c_str());
+      logger::warn("Block with type {} is either disabled or not implemented\n",
+                   stype);
       erroneous.insert(std::pair<string, int>(stype, 1));
     } else
       pair->second++;
