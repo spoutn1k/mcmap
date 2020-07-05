@@ -2,6 +2,7 @@
 #define HELPER_H_
 
 #include <algorithm>
+#include <chrono>
 #include <cstdio>
 #include <cstring>
 #include <ctime>
@@ -46,7 +47,6 @@
 #define REGION(x) ((x) >> 5)
 
 uint8_t clamp(int32_t val);
-void printProgress(const size_t current, const size_t max);
 bool dirExists(const char *strFilename);
 bool isNumeric(char *str);
 

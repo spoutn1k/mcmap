@@ -55,6 +55,13 @@ int main(int argc, char **argv) {
   const std::filesystem::path regionDir = options.regionDir();
   Colors::load(options.colorFile, &colors);
 
+  // Overwrite water if asked to
+  // TODO expand this to other blocks
+  if (options.hideWater)
+    colors["minecraft:water"] = Colors::Block();
+  if (options.hideBeacons)
+    colors["mcmap:beacon_beam"] = Colors::Block();
+
   // This is the canvas on which the final image will be rendered
   IsometricCanvas finalCanvas(coords, colors, options.padding);
 
@@ -82,13 +89,6 @@ int main(int argc, char **argv) {
       Colors::Palette localColors;
       Colors::filter(colors, world.cache, &localColors);
 
-      // Overwrite water if asked to
-      // TODO expand this to other blocks
-      if (options.hideWater)
-        localColors["minecraft:water"] = Colors::Block();
-      if (options.hideBeacons)
-        localColors["mcmap:beacon_beam"] = Colors::Block();
-
       // Draw the terrain fragment
       IsometricCanvas canvas(subCoords[i], localColors);
       canvas.shading = options.shading;
@@ -109,5 +109,6 @@ int main(int argc, char **argv) {
 
   PNG::Image(options.outFile, &finalCanvas).save();
   logger::info("Job complete.\n");
+
   return 0;
 }

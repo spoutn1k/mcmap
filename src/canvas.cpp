@@ -3,9 +3,6 @@
  */
 
 #include "./canvas.h"
-#ifdef CLOCK
-#include <ctime>
-#endif
 
 // End tag to use when in need of an irrelevant NBT value, pre-initialised for
 // performance
@@ -100,9 +97,14 @@ void IsometricCanvas::translate(size_t xCanvasPos, size_t zCanvasPos,
 }
 
 void IsometricCanvas::drawTerrain(const Terrain::Data &world) {
-  for (size_t xCanvasPos = 0; xCanvasPos < nXChunks; xCanvasPos++)
-    for (size_t zCanvasPos = 0; zCanvasPos < nZChunks; zCanvasPos++)
+  for (size_t xCanvasPos = 0; xCanvasPos < nXChunks; xCanvasPos++) {
+    for (size_t zCanvasPos = 0; zCanvasPos < nZChunks; zCanvasPos++) {
       drawChunk(world, xCanvasPos, zCanvasPos);
+      logger::printProgress("Rendering chunks",
+                            xCanvasPos * nZChunks + zCanvasPos,
+                            nZChunks * nXChunks);
+    }
+  }
 
   return;
 }

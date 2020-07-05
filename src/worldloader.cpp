@@ -64,6 +64,16 @@ void Terrain::Data::load(const std::filesystem::path &regionDir) {
       }
 
       loadRegion(regionFile, rx, rz);
+      // Printing the progress requires the coordinates to be re-mapped from 0,
+      // hence the awful pasta dish here.
+#define SIZEX (REGION(map.maxX) - REGION(map.minX) + 1)
+#define SIZEZ (REGION(map.maxZ) - REGION(map.minZ) + 1)
+      logger::printProgress("Loading world",
+                            (rx - REGION(map.minX)) * SIZEZ +
+                                (rz - REGION(map.minZ)),
+                            SIZEX * SIZEZ);
+#undef SIZEX
+#undef SIZEZ
     }
   }
 }

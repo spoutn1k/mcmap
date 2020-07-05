@@ -3,6 +3,7 @@
 
 #include "./include/fmt/color.h"
 #include "./include/fmt/core.h"
+#include <chrono>
 #include <unistd.h>
 
 namespace logger {
@@ -25,6 +26,9 @@ template <typename... Args>
 void error(const char *format, const Args &... args) {
   verror(format, fmt::make_format_args(args...));
 }
+
+void printProgress(const std::string label, const size_t current,
+                   const size_t max);
 
 } // namespace logger
 
