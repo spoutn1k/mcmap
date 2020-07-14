@@ -235,8 +235,8 @@ void IsometricCanvas::drawSection(const NBT &section, const int64_t xPos,
       section["BlockStates"].get<const std::vector<int64_t> *>();
 
   // This will be used by the section interpreter later
-  const uint64_t blockBitLength =
-      std::max(uint64_t(ceil(log2(sectionPalette->size()))), 4ul);
+  const uint32_t blockBitLength =
+      std::max(uint32_t(ceil(log2(sectionPalette->size()))), uint32_t(4));
 
   // We need the real position of the section for bounds checking
   translate(xPos, zPos, &worldChunkX, &worldChunkZ);
