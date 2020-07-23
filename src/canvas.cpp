@@ -74,24 +74,27 @@ size_t IsometricCanvas::getCroppedOffset() const {
 // Translate a chunk in the canvas to a chunk in the world
 void IsometricCanvas::translate(size_t xCanvasPos, size_t zCanvasPos,
                                 int64_t *xPos, int64_t *zPos) {
+  // This is due to a converion error on ARM32
+  int64_t offsetX = int64_t(xCanvasPos), offsetZ = int64_t(zCanvasPos);
+
   switch (map.orientation) {
   case NW:
-    *xPos = (map.minX >> 4) + xCanvasPos;
-    *zPos = (map.minZ >> 4) + zCanvasPos;
+    *xPos = (map.minX >> 4) + offsetX;
+    *zPos = (map.minZ >> 4) + offsetZ;
     break;
   case SW:
-    std::swap(xCanvasPos, zCanvasPos);
-    *xPos = (map.minX >> 4) + xCanvasPos;
-    *zPos = (map.maxZ >> 4) - zCanvasPos;
+    std::swap(offsetX, offsetZ);
+    *xPos = (map.minX >> 4) + offsetX;
+    *zPos = (map.maxZ >> 4) - offsetZ;
     break;
   case NE:
-    std::swap(xCanvasPos, zCanvasPos);
-    *xPos = (map.maxX >> 4) - xCanvasPos;
-    *zPos = (map.minZ >> 4) + zCanvasPos;
+    std::swap(offsetX, offsetZ);
+    *xPos = (map.maxX >> 4) - offsetX;
+    *zPos = (map.minZ >> 4) + offsetZ;
     break;
   case SE:
-    *xPos = (map.maxX >> 4) - xCanvasPos;
-    *zPos = (map.maxZ >> 4) - zCanvasPos;
+    *xPos = (map.maxX >> 4) - offsetX;
+    *zPos = (map.maxZ >> 4) - offsetZ;
     break;
   }
 }
