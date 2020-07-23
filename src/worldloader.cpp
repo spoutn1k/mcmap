@@ -207,7 +207,7 @@ bool decompressChunk(const uint32_t offset, FILE *regionHandle,
   }
 
   *length = _ntohl(zData);
-  // len--; // This dates from Zahl's, no idea of its purpose
+  (*length)--; // Sometimes the data is 1 byte smaller
 
   if (fread(zData, sizeof(uint8_t), *length, regionHandle) != *length) {
     logger::error("Not enough data for chunk: {}\n", strerror(errno));
