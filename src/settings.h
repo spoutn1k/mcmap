@@ -26,8 +26,7 @@ struct WorldOptions {
   uint16_t splits;
 
   // Image settings
-  int offsetY;
-  size_t padding;
+  uint16_t padding; // Should be enough
   bool hideWater, hideBeacons, shading;
 
   // Marker storage
@@ -35,6 +34,7 @@ struct WorldOptions {
   Colors::Marker markers[256];
 
   // Memory limits, legacy code for image splitting
+  int offsetY;
   uint64_t memlimit;
   bool memlimitSet, wholeworld;
 

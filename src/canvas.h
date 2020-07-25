@@ -20,7 +20,7 @@ struct IsometricCanvas {
   size_t sizeX, sizeZ; // The size of the 3D map
 
   size_t width, height; // Bitmap width and height
-  size_t padding;       // Padding inside the image
+  uint16_t padding;     // Padding inside the image
   uint8_t heightOffset; // Offset for block rendering
 
   uint8_t *bytesBuffer; // The buffer where pixels are written
@@ -43,7 +43,7 @@ struct IsometricCanvas {
   float *brightnessLookup;
 
   IsometricCanvas(const Terrain::Coordinates &coords,
-                  const Colors::Palette &colors, const size_t padding = 0)
+                  const Colors::Palette &colors, const uint16_t padding = 0)
       : map(coords) {
     // This is a legacy setting, changing how the map is drawn. It can be 2 or
     // 3; it means that a block is drawn with a 2 or 3 pixel offset over the
