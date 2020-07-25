@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
 #pragma omp parallel shared(finalCanvas)
   {
 #pragma omp for ordered schedule(static)
-    for (size_t i = 0; i < options.splits; i++) {
+    for (uint16_t i = 0; i < options.splits; i++) {
       // Load the minecraft terrain to render
       Terrain::Data world(subCoords[i]);
       world.load(regionDir);

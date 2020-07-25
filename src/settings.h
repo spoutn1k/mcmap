@@ -23,7 +23,7 @@ struct WorldOptions {
   // Map boundaries
   Dimension dim;
   Coordinates boundaries;
-  size_t splits;
+  uint16_t splits;
 
   // Image settings
   int offsetY;
