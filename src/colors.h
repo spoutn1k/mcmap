@@ -137,7 +137,7 @@ struct Marker {
     z = std::numeric_limits<int64_t>::max();
   }
 
-  Marker(size_t x, size_t z, string c) : x(x), z(z), color_name(c) {
+  Marker(int64_t x, int64_t z, string c) : x(x), z(z), color_name(c) {
     auto marker = markerColors.find(color_name);
     if (marker == markerColors.end()) {
       fprintf(stderr, "Invalid marker color: %s\n", color_name.c_str());

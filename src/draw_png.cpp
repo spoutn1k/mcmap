@@ -87,10 +87,10 @@ bool PNG::Image::save() {
   }
 
   uint8_t *srcLine = canvas->bytesBuffer + canvas->getCroppedOffset();
-  const size_t croppedHeight = canvas->getCroppedHeight();
+  const uint64_t croppedHeight = canvas->getCroppedHeight();
 
   logger::info("Writing to file...\n");
-  for (size_t y = 0; y < croppedHeight; ++y) {
+  for (uint64_t y = 0; y < croppedHeight; ++y) {
     png_write_row(pngPtr, (png_bytep)srcLine);
     srcLine += canvas->width * BYTESPERPIXEL;
   }

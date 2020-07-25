@@ -27,8 +27,8 @@ void error(const char *format, const Args &... args) {
   verror(format, fmt::make_format_args(args...));
 }
 
-void printProgress(const std::string label, const size_t current,
-                   const size_t max);
+void printProgress(const std::string label, const uint64_t current,
+                   const uint64_t max);
 
 } // namespace logger
 

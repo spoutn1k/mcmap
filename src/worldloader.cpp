@@ -25,7 +25,7 @@ void scanWorldDirectory(const std::filesystem::path &regionDir,
     regionZ = atoi(index.c_str());
 
     std::ifstream regionData(region.path());
-    for (size_t chunk = 0; chunk < REGIONSIZE * REGIONSIZE; chunk++) {
+    for (uint16_t chunk = 0; chunk < REGIONSIZE * REGIONSIZE; chunk++) {
       regionData.read(buffer, 4);
 
       if (*((uint32_t *)&buffer) == 0) {
