@@ -138,8 +138,7 @@ struct IsometricCanvas {
 
   // Drawing methods
   // Helpers for position lookup
-  void orientChunk(uint32_t canvasX, uint32_t canvasZ, int64_t *realX,
-                   int64_t *realZ);
+  void orientChunk(int32_t &x, int32_t &z);
   void orientSection(uint8_t &x, uint8_t &z);
   inline uint8_t *pixel(uint32_t x, uint32_t y) {
     return &bytesBuffer[(x + y * width) * BYTESPERPIXEL];

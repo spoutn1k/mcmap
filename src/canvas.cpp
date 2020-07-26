@@ -72,30 +72,30 @@ uint64_t IsometricCanvas::getCroppedOffset() const {
 //                                  |___/
 // The following methods are used to draw the map into the canvas' 2D buffer
 
-// Translate a chunk in the canvas to a chunk in the world
-void IsometricCanvas::orientChunk(uint32_t canvasX, uint32_t canvasZ,
-                                  int64_t *worldX, int64_t *worldZ) {
-  // This is due to a converion error on ARM32
-  int64_t offsetX = int64_t(canvasX), offsetZ = int64_t(canvasZ);
-
+// Translate a chunk in the canvas to a chunk in the world. The canvas has nxm
+// chunks, ordered from 0,0 which are used to count and render chunks in order,
+// but which world chunk is at 0,0 ? It also changes depending on the
+// orientation. This helpers does everything at once: input the canvas' x and y,
+// they come out as the real coordinates.
+void IsometricCanvas::orientChunk(int32_t &x, int32_t &z) {
   switch (map.orientation) {
   case NW:
-    *worldX = (map.minX >> 4) + offsetX;
-    *worldZ = (map.minZ >> 4) + offsetZ;
+    x = (map.minX >> 4) + x;
+    z = (map.minZ >> 4) + z;
     break;
   case SW:
-    std::swap(offsetX, offsetZ);
-    *worldX = (map.minX >> 4) + offsetX;
-    *worldZ = (map.maxZ >> 4) - offsetZ;
+    std::swap(x, z);
+    x = (map.minX >> 4) + x;
+    z = (map.maxZ >> 4) - z;
     break;
   case NE:
-    std::swap(offsetX, offsetZ);
-    *worldX = (map.maxX >> 4) - offsetX;
-    *worldZ = (map.minZ >> 4) + offsetZ;
+    std::swap(x, z);
+    x = (map.maxX >> 4) - x;
+    z = (map.minZ >> 4) + z;
     break;
   case SE:
-    *worldX = (map.maxX >> 4) - offsetX;
-    *worldZ = (map.maxZ >> 4) - offsetZ;
+    z = (map.maxX >> 4) - x;
+    z = (map.maxZ >> 4) - z;
     break;
   }
 }
@@ -118,8 +118,8 @@ void IsometricCanvas::renderTerrain(const Terrain::Data &world) {
 void IsometricCanvas::renderChunk(const Terrain::Data &terrain,
                                   const int64_t canvasX,
                                   const int64_t canvasZ) {
-  int64_t worldX = 0, worldZ = 0;
-  orientChunk(canvasX, canvasZ, &worldX, &worldZ);
+  int32_t worldX = canvasX, worldZ = canvasZ;
+  orientChunk(worldX, worldZ);
 
   const NBT &chunk = terrain.chunkAt(worldX, worldZ);
   const uint8_t height = terrain.heightAt(worldX, worldZ);
@@ -168,7 +168,8 @@ void IsometricCanvas::renderChunk(const Terrain::Data &terrain,
       renderBeamSection(canvasX, canvasZ, yPos);
 }
 
-// Section version of translate above
+// A bit like the above: where do we begin rendering in the 16x16 horizontal
+// plane ?
 inline void IsometricCanvas::orientSection(uint8_t &x, uint8_t &z) {
   switch (map.orientation) {
   case NW:
@@ -204,7 +205,7 @@ void IsometricCanvas::renderSection(const NBT &section, const int64_t xPos,
   uint8_t markerIndex = 0;
   bool beaconBeamColumn = false, markerColumn = false;
   uint16_t colorIndex = 0, index = 0, beaconIndex = 4095;
-  int64_t worldChunkX = 0, worldChunkZ = 0;
+  int32_t chunkX = xPos, chunkZ = zPos;
   Colors::Block *cache[256],
       fallback; // <- empty color to use in case no color is defined
 
@@ -220,7 +221,7 @@ void IsometricCanvas::renderSection(const NBT &section, const int64_t xPos,
       std::max(uint32_t(ceil(log2(sectionPalette->size()))), uint32_t(4));
 
   // We need the real position of the section for bounds checking
-  orientChunk(xPos, zPos, &worldChunkX, &worldChunkZ);
+  orientChunk(chunkX, chunkZ);
 
   // Preload the colors in the order they appear in the palette into an array
   // for cheaper access
@@ -246,10 +247,9 @@ void IsometricCanvas::renderSection(const NBT &section, const int64_t xPos,
       orientSection(xReal, zReal);
 
       // If we are oob, skip the line
-      if ((worldChunkX << 4) + xReal > map.maxX ||
-          (worldChunkX << 4) + xReal < map.minX ||
-          (worldChunkZ << 4) + zReal > map.maxZ ||
-          (worldChunkZ << 4) + zReal < map.minZ)
+      if ((chunkX << 4) + xReal > map.maxX ||
+          (chunkX << 4) + xReal < map.minX ||
+          (chunkZ << 4) + zReal > map.maxZ || (chunkZ << 4) + zReal < map.minZ)
         continue;
 
       for (uint8_t i = 0; i < numBeacons; i++)
