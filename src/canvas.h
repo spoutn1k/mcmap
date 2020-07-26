@@ -16,15 +16,15 @@
 struct IsometricCanvas {
   bool shading;
 
-  Coordinates map;     // The coordinates describing the 3D map
-  size_t sizeX, sizeZ; // The size of the 3D map
+  Coordinates map;       // The coordinates describing the 3D map
+  uint32_t sizeX, sizeZ; // The size of the 3D map
 
-  size_t width, height; // Bitmap width and height
-  uint16_t padding;     // Padding inside the image
-  uint8_t heightOffset; // Offset for block rendering
+  uint32_t width, height; // Bitmap width and height
+  uint16_t padding;       // Padding inside the image
+  uint8_t heightOffset;   // Offset for block rendering
 
   uint8_t *bytesBuffer; // The buffer where pixels are written
-  size_t size;          // The size of the buffer
+  uint64_t size;        // The size of the buffer
 
   uint64_t nXChunks, nZChunks;
 
@@ -120,50 +120,57 @@ struct IsometricCanvas {
   // Those getters return a value inferior to the actual underlying values
   // leaving out empty areas, to essentially 'crop' the canvas to fit perfectly
   // the image
-  size_t getCroppedWidth() const;
-  size_t getCroppedHeight() const;
-  size_t getCroppedSize() const {
+  uint32_t getCroppedWidth() const;
+  uint32_t getCroppedHeight() const;
+
+  uint64_t getCroppedSize() const {
     return getCroppedWidth() * getCroppedHeight();
   }
-  size_t getCroppedOffset() const;
-  size_t firstLine() const;
-  size_t lastLine() const;
+  uint64_t getCroppedOffset() const;
+
+  // Line indexes
+  uint32_t firstLine() const;
+  uint32_t lastLine() const;
 
   // Merging methods
   void merge(const IsometricCanvas &subCanvas);
-  size_t calcAnchor(const IsometricCanvas &subCanvas);
+  uint64_t calcAnchor(const IsometricCanvas &subCanvas);
 
   // Drawing methods
   // Helpers for position lookup
-  void translate(size_t x, size_t z, int64_t *worldX, int64_t *worldZ);
-  inline uint8_t *pixel(size_t x, size_t y) {
+  void orientChunk(uint32_t canvasX, uint32_t canvasZ, int64_t *realX,
+                   int64_t *realZ);
+  void orientSection(uint8_t &x, uint8_t &z);
+  inline uint8_t *pixel(uint32_t x, uint32_t y) {
     return &bytesBuffer[(x + y * width) * BYTESPERPIXEL];
   }
 
   // Drawing entrypoints
-  void drawTerrain(const Terrain::Data &);
-  void drawChunk(const Terrain::Data &, const int64_t, const int64_t);
-  void drawSection(const NBT &, const int64_t, const int64_t, const uint8_t,
-                   sectionInterpreter);
-  void drawChunk(const NBT &);
-  void drawBeams(const int64_t, const int64_t, const uint8_t);
-  void drawBlock(const size_t, const size_t, const NBT &);
-  inline void drawBlock(const size_t, const size_t, const size_t, const NBT &);
-  void drawBlock(Colors::Block *, const size_t, const size_t, const size_t,
-                 const NBT &);
+  void renderTerrain(const Terrain::Data &);
+  void renderChunk(const Terrain::Data &, const int64_t, const int64_t);
+  void renderSection(const NBT &, const int64_t, const int64_t, const uint8_t,
+                     sectionInterpreter);
+  // Draw a block from virtual coords in the canvas
+  void renderBlock(Colors::Block *, const uint32_t, const uint32_t,
+                   const uint32_t, const NBT &metadata);
+
+  // Empty section with only beams
+  void renderBeamSection(const int64_t, const int64_t, const uint8_t);
 
   // This obscure typedef allows to create a member function pointer array
   // (ouch) to render different block types without a switch case
-  typedef void (IsometricCanvas::*drawer)(const size_t, const size_t,
+  typedef void (IsometricCanvas::*drawer)(const uint32_t, const uint32_t,
                                           const NBT &, const Colors::Block *);
 
   // The default block type, hardcoded
-  void drawFull(const size_t, const size_t, const NBT &, const Colors::Block *);
+  void drawFull(const uint32_t, const uint32_t, const NBT &,
+                const Colors::Block *);
 
   // The other block types are loaded at compile-time from the `blocktypes.def`
   // file, with some macro manipulation
 #define DEFINETYPE(STRING, CALLBACK)                                           \
-  void CALLBACK(const size_t, const size_t, const NBT &, const Colors::Block *);
+  void CALLBACK(const uint32_t, const uint32_t, const NBT &,                   \
+                const Colors::Block *);
 #include "./blocktypes.def"
 #undef DEFINETYPE
 };
