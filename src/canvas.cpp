@@ -16,48 +16,49 @@ NBT empty;
 //                |_|   |_|            |___/
 // The following methods are related to the cropping mechanism.
 
-size_t IsometricCanvas::getCroppedWidth() const {
+uint32_t IsometricCanvas::getCroppedWidth() const {
   // Not implemented, returns the actual width. Might come back to this but it
   // is not as interesting as the height.
   return width;
 }
 
-size_t IsometricCanvas::firstLine() const {
+uint32_t IsometricCanvas::firstLine() const {
   // Tip: Return -7 for a freaky glichy look
   // return -7;
 
-  // We search for the first non-empty line
-  size_t line = 0;
+  // We search for the first non-empty line, return it as a line index (ie line
+  // n)
+  uint32_t line = 0;
 
-  for (size_t row = 0; row < height && !line; row++)
-    for (size_t pixel = 0; pixel < width && !line; pixel++)
+  for (uint32_t row = 0; row < height && !line; row++)
+    for (uint32_t pixel = 0; pixel < width && !line; pixel++)
       if (*(bytesBuffer + (pixel + row * width) * BYTESPERPIXEL))
         line = row;
 
   return line - (padding - 2);
 }
 
-size_t IsometricCanvas::lastLine() const {
+uint32_t IsometricCanvas::lastLine() const {
   // We search for the last non-empty line
-  size_t line = 0;
+  uint32_t line = 0;
 
-  for (size_t row = height - 1; row > 0 && !line; row--)
-    for (size_t pixel = 0; pixel < width && !line; pixel++)
+  for (uint32_t row = height - 1; row > 0 && !line; row--)
+    for (uint32_t pixel = 0; pixel < width && !line; pixel++)
       if (*(bytesBuffer + (pixel + row * width) * BYTESPERPIXEL))
         line = row;
 
   return line + (padding - 2);
 }
 
-size_t IsometricCanvas::getCroppedHeight() const {
-  size_t croppedHeight = lastLine() - firstLine();
+uint32_t IsometricCanvas::getCroppedHeight() const {
+  uint32_t croppedHeight = lastLine() - firstLine();
   if (croppedHeight == (padding - 2) * 2)
     return 0;
   else
     return croppedHeight + 1;
 }
 
-size_t IsometricCanvas::getCroppedOffset() const {
+uint64_t IsometricCanvas::getCroppedOffset() const {
   // The first line to render in the cropped view of the canvas, as an offset
   // from the beginning of the byte buffer
   return firstLine() * width * BYTESPERPIXEL;
@@ -71,37 +72,42 @@ size_t IsometricCanvas::getCroppedOffset() const {
 //                                  |___/
 // The following methods are used to draw the map into the canvas' 2D buffer
 
-// Translate a chunk in the canvas to a chunk in the world
-void IsometricCanvas::translate(size_t xCanvasPos, size_t zCanvasPos,
-                                int64_t *xPos, int64_t *zPos) {
+// Translate a chunk in the canvas to a chunk in the world. The canvas has nxm
+// chunks, ordered from 0,0 which are used to count and render chunks in order,
+// but which world chunk is at 0,0 ? It also changes depending on the
+// orientation. This helpers does everything at once: input the canvas' x and y,
+// they come out as the real coordinates.
+void IsometricCanvas::orientChunk(int32_t &x, int32_t &z) {
   switch (map.orientation) {
   case NW:
-    *xPos = (map.minX >> 4) + xCanvasPos;
-    *zPos = (map.minZ >> 4) + zCanvasPos;
+    x = (map.minX >> 4) + x;
+    z = (map.minZ >> 4) + z;
     break;
   case SW:
-    std::swap(xCanvasPos, zCanvasPos);
-    *xPos = (map.minX >> 4) + xCanvasPos;
-    *zPos = (map.maxZ >> 4) - zCanvasPos;
+    std::swap(x, z);
+    x = (map.minX >> 4) + x;
+    z = (map.maxZ >> 4) - z;
     break;
   case NE:
-    std::swap(xCanvasPos, zCanvasPos);
-    *xPos = (map.maxX >> 4) - xCanvasPos;
-    *zPos = (map.minZ >> 4) + zCanvasPos;
+    std::swap(x, z);
+    x = (map.maxX >> 4) - x;
+    z = (map.minZ >> 4) + z;
     break;
   case SE:
-    *xPos = (map.maxX >> 4) - xCanvasPos;
-    *zPos = (map.maxZ >> 4) - zCanvasPos;
+    z = (map.maxX >> 4) - x;
+    z = (map.maxZ >> 4) - z;
     break;
   }
 }
 
-void IsometricCanvas::drawTerrain(const Terrain::Data &world) {
-  for (size_t xCanvasPos = 0; xCanvasPos < nXChunks; xCanvasPos++) {
-    for (size_t zCanvasPos = 0; zCanvasPos < nZChunks; zCanvasPos++) {
-      drawChunk(world, xCanvasPos, zCanvasPos);
-      logger::printProgress("Rendering chunks",
-                            xCanvasPos * nZChunks + zCanvasPos,
+void IsometricCanvas::renderTerrain(const Terrain::Data &world) {
+  // world is supposed to have the SAME set of coordinates as the canvas
+  uint32_t chunkX, chunkZ;
+
+  for (chunkX = 0; chunkX < nXChunks; chunkX++) {
+    for (chunkZ = 0; chunkZ < nZChunks; chunkZ++) {
+      renderChunk(world, chunkX, chunkZ);
+      logger::printProgress("Rendering chunks", chunkX * nZChunks + chunkZ,
                             nZChunks * nXChunks);
     }
   }
@@ -109,13 +115,14 @@ void IsometricCanvas::drawTerrain(const Terrain::Data &world) {
   return;
 }
 
-void IsometricCanvas::drawChunk(const Terrain::Data &terrain,
-                                const int64_t xPos, const int64_t zPos) {
-  int64_t worldChunkX = 0, worldChunkZ = 0;
-  translate(xPos, zPos, &worldChunkX, &worldChunkZ);
+void IsometricCanvas::renderChunk(const Terrain::Data &terrain,
+                                  const int64_t canvasX,
+                                  const int64_t canvasZ) {
+  int32_t worldX = canvasX, worldZ = canvasZ;
+  orientChunk(worldX, worldZ);
 
-  const NBT &chunk = terrain.chunkAt(worldChunkX, worldChunkZ);
-  const uint8_t height = terrain.heightAt(worldChunkX, worldChunkZ);
+  const NBT &chunk = terrain.chunkAt(worldX, worldZ);
+  const uint8_t height = terrain.heightAt(worldX, worldZ);
 
   if (chunk.is_end()                          // Catch uninitialized chunks
       || !chunk.contains("DataVersion")       // Dataversion is required
@@ -142,8 +149,7 @@ void IsometricCanvas::drawChunk(const Terrain::Data &terrain,
   // Setup the markers
   localMarkers = 0;
   for (uint8_t i = 0; i < totalMarkers; i++) {
-    if (CHUNK((*markers)[i].x) == worldChunkX &&
-        CHUNK((*markers)[i].z) == worldChunkZ) {
+    if (CHUNK((*markers)[i].x) == worldX && CHUNK((*markers)[i].z) == worldZ) {
       chunkMarkers[localMarkers++] =
           (i << 8) + (((*markers)[i].x & 0x0f) << 4) + ((*markers)[i].z & 0x0f);
     }
@@ -153,18 +159,19 @@ void IsometricCanvas::drawChunk(const Terrain::Data &terrain,
   const uint8_t maxSection = std::min((map.maxY >> 4) + 1, (height >> 4));
 
   for (uint8_t yPos = minSection; yPos < maxSection; yPos++) {
-    drawSection(chunk["Level"]["Sections"][yPos], xPos, zPos, yPos,
-                interpreter);
+    renderSection(chunk["Level"]["Sections"][yPos], canvasX, canvasZ, yPos,
+                  interpreter);
   }
 
   if (numBeacons || localMarkers)
     for (uint8_t yPos = maxSection; yPos < 13; yPos++)
-      drawBeams(xPos, zPos, yPos);
+      renderBeamSection(canvasX, canvasZ, yPos);
 }
 
-// Section version of translate above
-inline void orient(uint8_t &x, uint8_t &z, Orientation o) {
-  switch (o) {
+// A bit like the above: where do we begin rendering in the 16x16 horizontal
+// plane ?
+inline void IsometricCanvas::orientSection(uint8_t &x, uint8_t &z) {
+  switch (map.orientation) {
   case NW:
     return;
   case NE:
@@ -182,34 +189,9 @@ inline void orient(uint8_t &x, uint8_t &z, Orientation o) {
   }
 }
 
-void IsometricCanvas::drawBeams(const int64_t xPos, const int64_t zPos,
-                                const uint8_t yPos) {
-  // Draw beacon beams in an empty section
-  uint8_t x, z, index;
-
-  for (uint8_t beam = 0; beam < numBeacons; beam++) {
-    x = beacons[beam] >> 4;
-    z = beacons[beam] & 0x0f;
-
-    for (uint8_t y = 0; y < 16; y++)
-      drawBlock(&beaconBeam, (xPos << 4) + x, (zPos << 4) + z, (yPos << 4) + y,
-                empty);
-  }
-
-  for (uint8_t marker = 0; marker < localMarkers; marker++) {
-    x = (chunkMarkers[marker] >> 4) & 0x0f;
-    z = chunkMarkers[marker] & 0x0f;
-    index = chunkMarkers[marker] >> 8;
-
-    for (uint8_t y = 0; y < 16; y++)
-      drawBlock(&(*markers)[index].color, (xPos << 4) + x, (zPos << 4) + z,
-                (yPos << 4) + y, empty);
-  }
-}
-
-void IsometricCanvas::drawSection(const NBT &section, const int64_t xPos,
-                                  const int64_t zPos, const uint8_t yPos,
-                                  sectionInterpreter interpreter) {
+void IsometricCanvas::renderSection(const NBT &section, const int64_t xPos,
+                                    const int64_t zPos, const uint8_t yPos,
+                                    sectionInterpreter interpreter) {
   // TODO Take care of this case in the chunk drawing
   if (!interpreter) {
     logger::error("Invalid section interpreter\n");
@@ -223,7 +205,7 @@ void IsometricCanvas::drawSection(const NBT &section, const int64_t xPos,
   uint8_t markerIndex = 0;
   bool beaconBeamColumn = false, markerColumn = false;
   uint16_t colorIndex = 0, index = 0, beaconIndex = 4095;
-  int64_t worldChunkX = 0, worldChunkZ = 0;
+  int32_t chunkX = xPos, chunkZ = zPos;
   Colors::Block *cache[256],
       fallback; // <- empty color to use in case no color is defined
 
@@ -235,11 +217,11 @@ void IsometricCanvas::drawSection(const NBT &section, const int64_t xPos,
       section["BlockStates"].get<const std::vector<int64_t> *>();
 
   // This will be used by the section interpreter later
-  const uint64_t blockBitLength =
-      std::max(uint64_t(ceil(log2(sectionPalette->size()))), 4ul);
+  const uint32_t blockBitLength =
+      std::max(uint32_t(ceil(log2(sectionPalette->size()))), uint32_t(4));
 
   // We need the real position of the section for bounds checking
-  translate(xPos, zPos, &worldChunkX, &worldChunkZ);
+  orientChunk(chunkX, chunkZ);
 
   // Preload the colors in the order they appear in the palette into an array
   // for cheaper access
@@ -262,13 +244,12 @@ void IsometricCanvas::drawSection(const NBT &section, const int64_t xPos,
     for (uint8_t z = 0; z < 16; z++) {
       // Orient the indexes for them to correspond to the orientation
       uint8_t xReal = x, zReal = z;
-      orient(xReal, zReal, map.orientation);
+      orientSection(xReal, zReal);
 
       // If we are oob, skip the line
-      if ((worldChunkX << 4) + xReal > map.maxX ||
-          (worldChunkX << 4) + xReal < map.minX ||
-          (worldChunkZ << 4) + zReal > map.maxZ ||
-          (worldChunkZ << 4) + zReal < map.minZ)
+      if ((chunkX << 4) + xReal > map.maxX ||
+          (chunkX << 4) + xReal < map.minX ||
+          (chunkZ << 4) + zReal > map.maxZ || (chunkZ << 4) + zReal < map.minZ)
         continue;
 
       for (uint8_t i = 0; i < numBeacons; i++)
@@ -284,12 +265,12 @@ void IsometricCanvas::drawSection(const NBT &section, const int64_t xPos,
       for (uint8_t y = 0; y < 16; y++) {
         // Render the beams, even if we are oob
         if (beaconBeamColumn)
-          drawBlock(&beaconBeam, (xPos << 4) + x, (zPos << 4) + z,
-                    (yPos << 4) + y, empty);
+          renderBlock(&beaconBeam, (xPos << 4) + x, (zPos << 4) + z,
+                      (yPos << 4) + y, empty);
 
         if (markerColumn)
-          drawBlock(&(*markers)[markerIndex].color, (xPos << 4) + x,
-                    (zPos << 4) + z, (yPos << 4) + y, empty);
+          renderBlock(&(*markers)[markerIndex].color, (xPos << 4) + x,
+                      (zPos << 4) + z, (yPos << 4) + y, empty);
 
         // Check that we do not step over the height limit
         if ((yPos << 4) + y < map.minY || (yPos << 4) + y > map.maxY)
@@ -308,8 +289,8 @@ void IsometricCanvas::drawSection(const NBT &section, const int64_t xPos,
 
         // Skip air. This does increase performance, but could be tweaked.
         if (index)
-          drawBlock(cache[index], (xPos << 4) + x, (zPos << 4) + z,
-                    (yPos << 4) + y, sectionPalette->operator[](index));
+          renderBlock(cache[index], (xPos << 4) + x, (zPos << 4) + z,
+                      (yPos << 4) + y, sectionPalette->operator[](index));
 
         // A beam can begin at every moment in a section
         if (index == beaconIndex) {
@@ -324,6 +305,31 @@ void IsometricCanvas::drawSection(const NBT &section, const int64_t xPos,
   }
 
   return;
+}
+
+void IsometricCanvas::renderBeamSection(const int64_t xPos, const int64_t zPos,
+                                        const uint8_t yPos) {
+  // Draw beacon beams in an empty section
+  uint8_t x, z, index;
+
+  for (uint8_t beam = 0; beam < numBeacons; beam++) {
+    x = beacons[beam] >> 4;
+    z = beacons[beam] & 0x0f;
+
+    for (uint8_t y = 0; y < 16; y++)
+      renderBlock(&beaconBeam, (xPos << 4) + x, (zPos << 4) + z,
+                  (yPos << 4) + y, empty);
+  }
+
+  for (uint8_t marker = 0; marker < localMarkers; marker++) {
+    x = (chunkMarkers[marker] >> 4) & 0x0f;
+    z = chunkMarkers[marker] & 0x0f;
+    index = chunkMarkers[marker] >> 8;
+
+    for (uint8_t y = 0; y < 16; y++)
+      renderBlock(&(*markers)[index].color, (xPos << 4) + x, (zPos << 4) + z,
+                  (yPos << 4) + y, empty);
+  }
 }
 
 // ____  _            _
@@ -341,12 +347,12 @@ IsometricCanvas::drawer blockRenderers[] = {
 #undef DEFINETYPE
 };
 
-inline void IsometricCanvas::drawBlock(Colors::Block *color, const size_t x,
-                                       const size_t z, const size_t y,
-                                       const NBT &metadata) {
-  const size_t bmpPosX = 2 * (sizeZ - 1) + (x - z) * 2 + padding;
-  const size_t bmpPosY = height - 2 + x + z - sizeX - sizeZ -
-                         (y - map.minY) * heightOffset - padding;
+inline void IsometricCanvas::renderBlock(Colors::Block *color, const uint32_t x,
+                                         const uint32_t z, const uint32_t y,
+                                         const NBT &metadata) {
+  const uint32_t bmpPosX = 2 * (sizeZ - 1) + (x - z) * 2 + padding;
+  const uint32_t bmpPosY = height - 2 + x + z - sizeX - sizeZ -
+                           (y - map.minY) * heightOffset - padding;
 
   if (bmpPosX > width - 1)
     throw std::range_error("Invalid x: " + std::to_string(bmpPosX) + "/" +
@@ -409,7 +415,7 @@ inline void addColor(uint8_t *const color, const uint8_t *const add) {
   color[2] = clamp(uint16_t(float(color[2]) * v1 + float(add[2]) * v2));
 }
 
-void IsometricCanvas::drawHead(const size_t x, const size_t y, const NBT &,
+void IsometricCanvas::drawHead(const uint32_t x, const uint32_t y, const NBT &,
                                const Colors::Block *block) {
   /* Small block centered
    * |    |
@@ -425,7 +431,7 @@ void IsometricCanvas::drawHead(const size_t x, const size_t y, const NBT &,
   memcpy(pos + CHANSPERPIXEL, &block->light, BYTESPERPIXEL);
 }
 
-void IsometricCanvas::drawThin(const size_t x, const size_t y, const NBT &,
+void IsometricCanvas::drawThin(const uint32_t x, const uint32_t y, const NBT &,
                                const Colors::Block *block) {
   /* Overwrite the block below's top layer
    * |    |
@@ -434,20 +440,19 @@ void IsometricCanvas::drawThin(const size_t x, const size_t y, const NBT &,
    * |XXXX|
    *   XX   */
   uint8_t *pos = pixel(x, y + 3);
-  for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
+  for (uint8_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
     memcpy(pos, &block->primary, BYTESPERPIXEL);
-  }
   pos = pixel(x + 1, y + 4);
   memcpy(pos, &block->dark, BYTESPERPIXEL);
   memcpy(pos + CHANSPERPIXEL, &block->light, BYTESPERPIXEL);
 }
 
-void IsometricCanvas::drawHidden(const size_t, const size_t, const NBT &,
+void IsometricCanvas::drawHidden(const uint32_t, const uint32_t, const NBT &,
                                  const Colors::Block *) {
   return;
 }
 
-void IsometricCanvas::drawTransparent(const size_t x, const size_t y,
+void IsometricCanvas::drawTransparent(const uint32_t x, const uint32_t y,
                                       const NBT &, const Colors::Block *block) {
   // Avoid the top and dark/light edges for a clearer look through
   uint8_t *pos = pixel(x, y + 1);
@@ -457,7 +462,7 @@ void IsometricCanvas::drawTransparent(const size_t x, const size_t y,
   }
 }
 
-void IsometricCanvas::drawTorch(const size_t x, const size_t y, const NBT &,
+void IsometricCanvas::drawTorch(const uint32_t x, const uint32_t y, const NBT &,
                                 const Colors::Block *block) {
   /* TODO Callback to handle the orientation
    * Print the secondary on top of two primary
@@ -470,7 +475,7 @@ void IsometricCanvas::drawTorch(const size_t x, const size_t y, const NBT &,
   memcpy(pixel(x + 2, y + 3), &block->primary, BYTESPERPIXEL);
 }
 
-void IsometricCanvas::drawPlant(const size_t x, const size_t y, const NBT &,
+void IsometricCanvas::drawPlant(const uint32_t x, const uint32_t y, const NBT &,
                                 const Colors::Block *block) {
   /* Print a plant-like block
    * TODO Make that nicer ?
@@ -486,7 +491,7 @@ void IsometricCanvas::drawPlant(const size_t x, const size_t y, const NBT &,
   memcpy(pixel(x + 1, y + 3), &block->primary, BYTESPERPIXEL);
 }
 
-void IsometricCanvas::drawUnderwaterPlant(const size_t x, const size_t y,
+void IsometricCanvas::drawUnderwaterPlant(const uint32_t x, const uint32_t y,
                                           const NBT &,
                                           const Colors::Block *block) {
   /* Print a plant-like block
@@ -499,7 +504,7 @@ void IsometricCanvas::drawUnderwaterPlant(const size_t x, const size_t y,
   drawTransparent(x, y, empty, &water);
 }
 
-void IsometricCanvas::drawFire(const size_t x, const size_t y, const NBT &,
+void IsometricCanvas::drawFire(const uint32_t x, const uint32_t y, const NBT &,
                                const Colors::Block *const color) {
   // This basically just leaves out a few pixels
   // Top row
@@ -507,7 +512,7 @@ void IsometricCanvas::drawFire(const size_t x, const size_t y, const NBT &,
   blend(pos, (uint8_t *)&color->light);
   blend(pos + CHANSPERPIXEL * 2, (uint8_t *)&color->dark);
   // Second and third row
-  for (size_t i = 1; i < 3; ++i) {
+  for (uint8_t i = 1; i < 3; ++i) {
     pos = pixel(x, y + i);
     blend(pos, (uint8_t *)&color->dark);
     blend(pos + (CHANSPERPIXEL * i), (uint8_t *)&color->primary);
@@ -518,7 +523,7 @@ void IsometricCanvas::drawFire(const size_t x, const size_t y, const NBT &,
   blend(pos + (CHANSPERPIXEL * 2), (uint8_t *)&color->light);
 }
 
-void IsometricCanvas::drawOre(const size_t x, const size_t y, const NBT &,
+void IsometricCanvas::drawOre(const uint32_t x, const uint32_t y, const NBT &,
                               const Colors::Block *color) {
   /* Print a vein with the secondary in the block
    * |PSPP|
@@ -540,12 +545,12 @@ void IsometricCanvas::drawOre(const size_t x, const size_t y, const NBT &,
       {&secondaryDark, &color->dark, &color->light, &color->light}};
 
   uint8_t *pos = pixel(x, y);
-  for (size_t j = 0; j < 4; ++j, pos = pixel(x, y + j))
-    for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
+  for (uint8_t j = 0; j < 4; ++j, pos = pixel(x, y + j))
+    for (uint8_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
       memcpy(pos, sprite[j][i], BYTESPERPIXEL);
 }
 
-void IsometricCanvas::drawGrown(const size_t x, const size_t y, const NBT &,
+void IsometricCanvas::drawGrown(const uint32_t x, const uint32_t y, const NBT &,
                                 const Colors::Block *color) {
   /* Print the secondary color on top
    * |SSSS|
@@ -570,12 +575,12 @@ void IsometricCanvas::drawGrown(const size_t x, const size_t y, const NBT &,
       {&color->dark, &color->dark, &color->light, &color->light}};
 
   uint8_t *pos = pixel(x, y);
-  for (size_t j = 0; j < 4; ++j, pos = pixel(x, y + j))
-    for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
+  for (uint8_t j = 0; j < 4; ++j, pos = pixel(x, y + j))
+    for (uint8_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
       memcpy(pos, sprite[j][i], BYTESPERPIXEL);
 }
 
-void IsometricCanvas::drawRod(const size_t x, const size_t y, const NBT &,
+void IsometricCanvas::drawRod(const uint32_t x, const uint32_t y, const NBT &,
                               const Colors::Block *const color) {
   /* A full fat rod
    * | PP |
@@ -587,13 +592,13 @@ void IsometricCanvas::drawRod(const size_t x, const size_t y, const NBT &,
   memcpy(pos + CHANSPERPIXEL, &color->primary, BYTESPERPIXEL);
 
   pos = pixel(x + 1, y + 1);
-  for (int i = 1; i < 4; i++, pos = pixel(x + 1, y + i)) {
+  for (uint8_t i = 1; i < 4; i++, pos = pixel(x + 1, y + i)) {
     memcpy(pos, &color->dark, BYTESPERPIXEL);
     memcpy(pos + CHANSPERPIXEL, &color->light, BYTESPERPIXEL);
   }
 }
 
-void IsometricCanvas::drawBeam(const size_t x, const size_t y, const NBT &,
+void IsometricCanvas::drawBeam(const uint32_t x, const uint32_t y, const NBT &,
                                const Colors::Block *const color) {
   /* No top to make it look more continuous
    * |    |
@@ -601,13 +606,13 @@ void IsometricCanvas::drawBeam(const size_t x, const size_t y, const NBT &,
    * | DL |
    * | DL | */
   uint8_t *pos = pixel(x + 1, y + 1);
-  for (int i = 1; i < 4; i++, pos = pixel(x + 1, y + i)) {
+  for (uint8_t i = 1; i < 4; i++, pos = pixel(x + 1, y + i)) {
     blend(pos, (uint8_t *)&color->dark);
     blend(pos + CHANSPERPIXEL, (uint8_t *)&color->light);
   }
 }
 
-void IsometricCanvas::drawSlab(const size_t x, const size_t y,
+void IsometricCanvas::drawSlab(const uint32_t x, const uint32_t y,
                                const NBT &metadata,
                                const Colors::Block *color) {
   /* This one has a hack to make it look like a gradual step up:
@@ -650,32 +655,19 @@ void IsometricCanvas::drawSlab(const size_t x, const size_t y,
   }
 
   uint8_t *pos = pixel(x, y + (top ? 0 : 1));
-  for (size_t j = 0; j < 3; ++j, pos = pixel(x, y + j + (top ? 0 : 1)))
-    for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
+  for (uint8_t j = 0; j < 3; ++j, pos = pixel(x, y + j + (top ? 0 : 1)))
+    for (uint8_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
       memcpy(pos, (*target)[j][i], BYTESPERPIXEL);
 }
 
-void IsometricCanvas::drawWire(const size_t x, const size_t y, const NBT &,
+void IsometricCanvas::drawWire(const uint32_t x, const uint32_t y, const NBT &,
                                const Colors::Block *color) {
   uint8_t *pos = pixel(x + 1, y + 3);
   memcpy(pos, &color->primary, BYTESPERPIXEL);
   memcpy(pos + CHANSPERPIXEL, &color->primary, BYTESPERPIXEL);
 }
 
-/*
-        void setUpStep(const size_t x, const size_t y, const uint8_t *
-   const color, const uint8_t * const light, const uint8_t * const dark) {
-   uint8_t *pos = pixel(x, y); for (size_t i = 0; i < 4; ++i, pos +=
-   CHANSPERPIXEL) { memcpy(pos, color, BYTESPERPIXEL);
-                }
-                pos = pixel(x, y+1);
-                for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL) {
-                        memcpy(pos, color, BYTESPERPIXEL);
-                }
-        }
-*/
-
-void IsometricCanvas::drawLog(const size_t x, const size_t y,
+void IsometricCanvas::drawLog(const uint32_t x, const uint32_t y,
                               const NBT &metadata, const Colors::Block *color) {
 
   string axis = "y";
@@ -725,12 +717,12 @@ void IsometricCanvas::drawLog(const size_t x, const size_t y,
   }
 
   uint8_t *pos = pixel(x, y);
-  for (size_t j = 0; j < 4; ++j, pos = pixel(x, y + j))
-    for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
+  for (uint8_t j = 0; j < 4; ++j, pos = pixel(x, y + j))
+    for (uint8_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
       memcpy(pos, (*target)[j][i], BYTESPERPIXEL);
 }
 
-void IsometricCanvas::drawFull(const size_t x, const size_t y, const NBT &,
+void IsometricCanvas::drawFull(const uint32_t x, const uint32_t y, const NBT &,
                                const Colors::Block *color) {
   // Sets pixels around x,y where A is the anchor
   // T = given color, D = darker, L = lighter
@@ -749,12 +741,12 @@ void IsometricCanvas::drawFull(const size_t x, const size_t y, const NBT &,
   uint8_t *pos = pixel(x, y);
 
   if (color->primary.ALPHA == 255) {
-    for (size_t j = 0; j < 4; ++j, pos = pixel(x, y + j))
-      for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
+    for (uint8_t j = 0; j < 4; ++j, pos = pixel(x, y + j))
+      for (uint8_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
         memcpy(pos, sprite[j][i], BYTESPERPIXEL);
   } else {
-    for (size_t j = 0; j < 4; ++j, pos = pixel(x, y + j))
-      for (size_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
+    for (uint8_t j = 0; j < 4; ++j, pos = pixel(x, y + j))
+      for (uint8_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
         blend(pos, (uint8_t *)sprite[j][i]);
   }
 }
@@ -767,14 +759,14 @@ void IsometricCanvas::drawFull(const size_t x, const size_t y, const NBT &,
 //                 |___/         |___/
 // This is the canvas merging code.
 
-size_t IsometricCanvas::calcAnchor(const IsometricCanvas &subCanvas) {
+uint64_t IsometricCanvas::calcAnchor(const IsometricCanvas &subCanvas) {
   // Determine where in the canvas' 2D matrix is the subcanvas supposed to
   // go: the anchor is the bottom left pixel in the canvas where the
   // sub-canvas must be superimposed
-  size_t anchorX = 0, anchorY = height;
-  const size_t minOffset =
+  uint32_t anchorX = 0, anchorY = height;
+  const uint64_t minOffset =
       subCanvas.map.minX - map.minX + subCanvas.map.minZ - map.minZ;
-  const size_t maxOffset =
+  const uint64_t maxOffset =
       map.maxX - subCanvas.map.maxX + map.maxZ - subCanvas.map.maxZ;
 
   switch (map.orientation) {
@@ -811,10 +803,10 @@ size_t IsometricCanvas::calcAnchor(const IsometricCanvas &subCanvas) {
   return (anchorX + width * anchorY) * BYTESPERPIXEL;
 }
 
-void overLay(uint8_t *const dest, const uint8_t *const source,
-             const size_t width) {
+void overlay(uint8_t *const dest, const uint8_t *const source,
+             const uint32_t width) {
   // Render a sub-canvas above the canvas' content
-  for (size_t pixel = 0; pixel < width; pixel++) {
+  for (uint32_t pixel = 0; pixel < width; pixel++) {
     const uint8_t *data = source + pixel * BYTESPERPIXEL;
     // If the subCanvas is empty here, skip
     if (!data[3])
@@ -832,12 +824,12 @@ void overLay(uint8_t *const dest, const uint8_t *const source,
   }
 }
 
-void underLay(uint8_t *const dest, const uint8_t *const source,
-              const size_t width) {
+void underlay(uint8_t *const dest, const uint8_t *const source,
+              const uint32_t width) {
   // Render a sub-canvas under the canvas' content
   uint8_t tmpPixel[4];
 
-  for (size_t pixel = 0; pixel < width; pixel++) {
+  for (uint32_t pixel = 0; pixel < width; pixel++) {
     const uint8_t *data = source + pixel * BYTESPERPIXEL;
     // If the subCanvas is empty here, or the canvas already has a pixel
     if (!data[3] || (dest + pixel * BYTESPERPIXEL)[3] == 0xff)
@@ -860,7 +852,8 @@ void IsometricCanvas::merge(const IsometricCanvas &subCanvas) {
   // main canvas.
   //
   // This routine is supposed to be called multiple times with ORDERED
-  // subcanvasses
+  // subcanvasses (leftmost/rightmost first, then the one next to it, then ..
+  // etc. Easy as slices are made in only one direction)
   if (subCanvas.width > width || subCanvas.height > height) {
     logger::error("Cannot merge a canvas of bigger dimensions\n");
     return;
@@ -870,11 +863,11 @@ void IsometricCanvas::merge(const IsometricCanvas &subCanvas) {
   // go: the anchor is the bottom left pixel in the canvas where the
   // sub-canvas must be superimposed, translated as an offset from the
   // beginning of the buffer
-  const size_t anchor = calcAnchor(subCanvas);
+  const uint64_t anchor = calcAnchor(subCanvas);
 
   // For every line of the subCanvas, we create a pointer to its
   // beginning, and a pointer to where in the canvas it should be copied
-  for (size_t line = 1; line < subCanvas.height + 1; line++) {
+  for (uint32_t line = 1; line < subCanvas.height + 1; line++) {
     uint8_t *subLine = subCanvas.bytesBuffer + subCanvas.size -
                        line * subCanvas.width * BYTESPERPIXEL;
     uint8_t *position = bytesBuffer + anchor - line * width * BYTESPERPIXEL;
@@ -882,9 +875,9 @@ void IsometricCanvas::merge(const IsometricCanvas &subCanvas) {
     // Then import the line over or under the existing data, depending on
     // the orientation
     if (map.orientation == NW || map.orientation == SW)
-      overLay(position, subLine, subCanvas.width);
+      overlay(position, subLine, subCanvas.width);
     else
-      underLay(position, subLine, subCanvas.width);
+      underlay(position, subLine, subCanvas.width);
   }
 
 #ifdef CLOCK

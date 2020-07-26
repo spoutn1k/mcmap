@@ -32,8 +32,8 @@ void verror(const char *format, fmt::format_args args) {
 
 static auto last = std::chrono::high_resolution_clock::now();
 
-void printProgress(const std::string label, const size_t current,
-                   const size_t max) {
+void printProgress(const std::string label, const uint64_t current,
+                   const uint64_t max) {
 #define PROGRESS(X) fmt::print(stderr, label + " [{:.{}f}%]\r", X, 2)
   // Keep user updated but don't spam the console
   if (!(prettyErr && prettyOut))
@@ -49,9 +49,9 @@ void printProgress(const std::string label, const size_t current,
     return;
   }
 
-  size_t ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                  std::chrono::high_resolution_clock::now() - last)
-                  .count();
+  uint32_t ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::high_resolution_clock::now() - last)
+                    .count();
   // logger::info("{}/{} - {} - {}\n", current, max, ms, ms > 250);
   if (ms > 250) {
     last = std::chrono::high_resolution_clock::now();

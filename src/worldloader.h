@@ -33,7 +33,7 @@ struct Data {
 
   // The internal list of chunks, of size chunkLen
   ChunkList chunks;
-  size_t chunkLen;
+  uint64_t chunkLen;
 
   // An array of bytes, one for each chunk
   // the first 4 bits are the highest section number,
@@ -54,7 +54,7 @@ struct Data {
     map.maxZ = CHUNK(coords.maxZ);
 
     chunkLen =
-        size_t(map.maxX - map.minX + 1) * size_t(map.maxZ - map.minZ + 1);
+        uint64_t(map.maxX - map.minX + 1) * uint64_t(map.maxZ - map.minZ + 1);
 
     chunks = new Terrain::Chunk[chunkLen];
     heightMap = new uint8_t[chunkLen];
@@ -80,7 +80,7 @@ struct Data {
   uint8_t importHeight(vector<NBT> *);
   void inflateChunk(vector<NBT> *);
 
-  size_t chunkIndex(int64_t x, int64_t z) const {
+  uint64_t chunkIndex(int64_t x, int64_t z) const {
     return (x - map.minX) + (z - map.minZ) * (map.maxX - map.minX + 1);
   }
 

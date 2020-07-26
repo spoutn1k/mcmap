@@ -38,10 +38,10 @@ bool isNumeric(char *str) {
 }
 
 void splitCoords(const Coordinates &original, Coordinates *&subCoords,
-                 const size_t count) {
+                 const uint16_t count) {
   // Split the coordinates of the entire terrain in `count` terrain fragments
 
-  for (size_t index = 0; index < count; index++) {
+  for (uint16_t index = 0; index < count; index++) {
     // Initialization with the original's values
     subCoords[index] = Coordinates(original);
 

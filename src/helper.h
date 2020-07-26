@@ -104,6 +104,6 @@ struct Coordinates {
 };
 
 void splitCoords(const Coordinates &original, Coordinates *&subCoords,
-                 const size_t count);
+                 const uint16_t count);
 
 #endif // HELPER_H_
