@@ -48,7 +48,7 @@
 
 uint8_t clamp(int32_t val);
 bool dirExists(const char *strFilename);
-bool isNumeric(char *str);
+bool isNumeric(const char *str);
 
 static inline uint32_t _ntohl(uint8_t *val) {
   return (uint32_t(val[0]) << 24) + (uint32_t(val[1]) << 16) +

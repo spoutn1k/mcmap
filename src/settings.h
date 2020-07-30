@@ -6,6 +6,7 @@
 #include "./worldloader.h"
 #include <cstdint>
 #include <filesystem>
+#include <string>
 #define UNDEFINED 0x7FFFFFFF
 
 namespace Settings {
@@ -14,6 +15,7 @@ enum Dimension {
   OVERWORLD,
   NETHER,
   END,
+  CUSTOM,
 };
 
 struct WorldOptions {
@@ -22,6 +24,7 @@ struct WorldOptions {
 
   // Map boundaries
   Dimension dim;
+  std::string customDim;
   Coordinates boundaries;
   uint16_t splits;
 
@@ -61,11 +64,38 @@ struct WorldOptions {
   }
 
   std::filesystem::path regionDir() {
+    size_t sepIndex;
+    std::string ns, id;
     switch (dim) {
     case NETHER:
       return std::filesystem::path(saveName) /= "DIM-1/region";
     case END:
       return std::filesystem::path(saveName) /= "DIM1/region";
+    case CUSTOM:
+      sepIndex = customDim.find_first_of(":/");
+      if (sepIndex == std::string::npos) {
+        if (customDim.substr(0, 3) == "DIM")
+          return (std::filesystem::path(saveName) /= customDim) /= "region";
+        else if (customDim == "0")
+          break;
+        else if (isNumeric(customDim.c_str()))
+          return (std::filesystem::path(saveName) /= ("DIM" + customDim)) /= "region";
+        ns = "minecraft";
+        id = customDim;
+      } else {
+        ns = customDim.substr(0, sepIndex);
+        id = customDim.substr(sepIndex + 1);
+      }
+      if (ns == "minecraft") {
+        if (id == "overworld") 
+          break;
+        else if (id == "the_nether")
+          return std::filesystem::path(saveName) /= "DIM-1/region";
+        else if (id == "the_end")
+          return std::filesystem::path(saveName) /= "DIM1/region";
+      }
+      return (((std::filesystem::path(saveName) /= "dimensions") /= ns) /= id) /= "region";
+      break;
     default:
       break;
     }

@@ -61,6 +61,13 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
       opts->dim = Dimension::NETHER;
     } else if (strcmp(option, "-end") == 0) {
       opts->dim = Dimension::END;
+    } else if (strcmp(option, "-dimension") == 0 || strcmp(option, "-dim") == 0) {
+      if (!MOREARGS(1)) {
+        logger::error("Error: {} needs a dimension name or number\n", option);
+        return false;
+      }
+      opts->dim = Dimension::CUSTOM;
+      opts->customDim = NEXTARG;
     } else if (strcmp(option, "-file") == 0) {
       if (!MOREARGS(1)) {
         logger::error("Error: {} needs one argument\n", option);

@@ -24,7 +24,7 @@ bool dirExists(const char *strFilename) {
   return false;
 }
 
-bool isNumeric(char *str) {
+bool isNumeric(const char *str) {
   if (str[0] == '-' && str[1] != '\0') {
     ++str;
   }
