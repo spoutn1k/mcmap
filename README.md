@@ -34,7 +34,6 @@ This project is under __heavy__ development, but compatible with newer versions 
 |`-nether`      |render the nether|
 |`-end`          |render the end|
 |`-dim[ension] [namespace:]id` |render a dimension by namespaced ID|
-|`-dim[ension] [DIM]#` |render a dimension by numeric ID|
 |`-splits`       |number of sub-terrains to render; if threading is available, every sub-terrain is rendered in a thread|
 |`-padding`      |padding around the final image, in pixels (default: 5)|
 

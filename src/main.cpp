@@ -24,7 +24,7 @@ void printHelp(char *binary) {
       "  -nw -ne -se -sw     the orientation of the map\n"
       "  -nether             render the nether\n"
       "  -end                render the end\n"
-      "  -dim[ension] NAME   render a dimension by number or namespaced ID\n"
+      "  -dim[ension] NAME   render a dimension by namespaced ID\n"
       "  -nowater            do not render water\n"
       "  -nobeacons          do not render beacon beams\n"
       "  -shading            toggle shading (brightens blocks depending on "
