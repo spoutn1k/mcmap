@@ -11,11 +11,36 @@
 
 namespace Settings {
 
-enum Dimension {
-  OVERWORLD,
-  NETHER,
-  END,
-  CUSTOM,
+struct Dimension {
+  string ns, id;
+
+  Dimension(string ns, string id) : ns(ns), id(id){};
+  Dimension(string _id) : ns("minecraft") {
+    size_t sep = _id.find_first_of(':');
+
+    if (sep == std::string::npos) {
+      // If there is no ':', this is just an id
+      id = _id;
+    } else {
+      // If not, add each part separately
+      ns = _id.substr(0, sep);
+      id = _id.substr(sep + 1);
+    }
+  };
+
+  std::filesystem::path regionDir(std::filesystem::path savePath) {
+    if (id == "overworld")
+      return savePath /= std::filesystem::path("region");
+    else if (id == "the_nether")
+      return savePath /= std::filesystem::path("DIM-1/region");
+    else if (id == "the_end")
+      return savePath /= std::filesystem::path("DIM1/region");
+    else
+      return savePath /= std::filesystem::path(
+                 fmt::format("dimensions/{}/{}/region", ns, id));
+  };
+
+  string to_string() { return fmt::format("{}:{}", ns, id); };
 };
 
 struct WorldOptions {
@@ -41,13 +66,12 @@ struct WorldOptions {
   uint64_t memlimit;
   bool memlimitSet, wholeworld;
 
-  WorldOptions() {
+  WorldOptions() : dim("overworld") {
     saveName = "";
     outFile = "output.png";
     colorFile = "colors.json";
 
     splits = 1;
-    dim = OVERWORLD;
     boundaries.setUndefined();
     boundaries.minY = 0;
     boundaries.maxY = 255;
@@ -63,44 +87,7 @@ struct WorldOptions {
     memlimitSet = false;
   }
 
-  std::filesystem::path regionDir() {
-    size_t sepIndex;
-    std::string ns, id;
-    switch (dim) {
-    case NETHER:
-      return std::filesystem::path(saveName) /= "DIM-1/region";
-    case END:
-      return std::filesystem::path(saveName) /= "DIM1/region";
-    case CUSTOM:
-      sepIndex = customDim.find_first_of(":/");
-      if (sepIndex == std::string::npos) {
-        if (customDim.substr(0, 3) == "DIM")
-          return (std::filesystem::path(saveName) /= customDim) /= "region";
-        else if (customDim == "0")
-          break;
-        else if (isNumeric(customDim.c_str()))
-          return (std::filesystem::path(saveName) /= ("DIM" + customDim)) /= "region";
-        ns = "minecraft";
-        id = customDim;
-      } else {
-        ns = customDim.substr(0, sepIndex);
-        id = customDim.substr(sepIndex + 1);
-      }
-      if (ns == "minecraft") {
-        if (id == "overworld") 
-          break;
-        else if (id == "the_nether")
-          return std::filesystem::path(saveName) /= "DIM-1/region";
-        else if (id == "the_end")
-          return std::filesystem::path(saveName) /= "DIM1/region";
-      }
-      return (((std::filesystem::path(saveName) /= "dimensions") /= ns) /= id) /= "region";
-      break;
-    default:
-      break;
-    }
-    return std::filesystem::path(saveName) /= "region";
-  }
+  std::filesystem::path regionDir() { return dim.regionDir(saveName); }
 };
 
 bool parseArgs(int argc, char **argv, Settings::WorldOptions *opts);
