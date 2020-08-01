@@ -94,7 +94,7 @@ void IsometricCanvas::orientChunk(int32_t &x, int32_t &z) {
     z = (map.minZ >> 4) + z;
     break;
   case SE:
-    z = (map.maxX >> 4) - x;
+    x = (map.maxX >> 4) - x;
     z = (map.maxZ >> 4) - z;
     break;
   }
