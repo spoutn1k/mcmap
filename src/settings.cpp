@@ -58,9 +58,16 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
     } else if (strcmp(option, "-shading") == 0) {
       opts->shading = true;
     } else if (strcmp(option, "-nether") == 0) {
-      opts->dim = Dimension::NETHER;
+      opts->dim = Dimension("the_nether");
     } else if (strcmp(option, "-end") == 0) {
-      opts->dim = Dimension::END;
+      opts->dim = Dimension("the_end");
+    } else if (strcmp(option, "-dimension") == 0 ||
+               strcmp(option, "-dim") == 0) {
+      if (!MOREARGS(1)) {
+        logger::error("Error: {} needs a dimension name or number\n", option);
+        return false;
+      }
+      opts->dim = Dimension(NEXTARG);
     } else if (strcmp(option, "-file") == 0) {
       if (!MOREARGS(1)) {
         logger::error("Error: {} needs one argument\n", option);
@@ -106,6 +113,18 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
         return false;
       }
     }
+  }
+
+  // Check if the given save posesses the required dimension, must be done now
+  // as the world path can be given after the dimension name, which messes up
+  // regionDir()
+  // TODO Check permissions and make ISPATH a real function
+  if (!ISPATH(opts->regionDir())) {
+    logger::error("Cannot render dimension '{}' of world '{}': file '{}' does "
+                  "not exist\n",
+                  opts->dim.to_string(), opts->saveName.c_str(),
+                  opts->regionDir().c_str());
+    return false;
   }
 
   // Scan the region directory and map the existing terrain in this set of

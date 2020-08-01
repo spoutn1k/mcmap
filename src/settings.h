@@ -6,14 +6,41 @@
 #include "./worldloader.h"
 #include <cstdint>
 #include <filesystem>
+#include <string>
 #define UNDEFINED 0x7FFFFFFF
 
 namespace Settings {
 
-enum Dimension {
-  OVERWORLD,
-  NETHER,
-  END,
+struct Dimension {
+  string ns, id;
+
+  Dimension(string ns, string id) : ns(ns), id(id){};
+  Dimension(string _id) : ns("minecraft") {
+    size_t sep = _id.find_first_of(':');
+
+    if (sep == std::string::npos) {
+      // If there is no ':', this is just an id
+      id = _id;
+    } else {
+      // If not, add each part separately
+      ns = _id.substr(0, sep);
+      id = _id.substr(sep + 1);
+    }
+  };
+
+  std::filesystem::path regionDir(std::filesystem::path savePath) {
+    if (id == "overworld")
+      return savePath /= std::filesystem::path("region");
+    else if (id == "the_nether")
+      return savePath /= std::filesystem::path("DIM-1/region");
+    else if (id == "the_end")
+      return savePath /= std::filesystem::path("DIM1/region");
+    else
+      return savePath /= std::filesystem::path(
+                 fmt::format("dimensions/{}/{}/region", ns, id));
+  };
+
+  string to_string() { return fmt::format("{}:{}", ns, id); };
 };
 
 struct WorldOptions {
@@ -22,6 +49,7 @@ struct WorldOptions {
 
   // Map boundaries
   Dimension dim;
+  std::string customDim;
   Coordinates boundaries;
   uint16_t splits;
 
@@ -38,13 +66,12 @@ struct WorldOptions {
   uint64_t memlimit;
   bool memlimitSet, wholeworld;
 
-  WorldOptions() {
+  WorldOptions() : dim("overworld") {
     saveName = "";
     outFile = "output.png";
     colorFile = "colors.json";
 
     splits = 1;
-    dim = OVERWORLD;
     boundaries.setUndefined();
     boundaries.minY = 0;
     boundaries.maxY = 255;
@@ -60,17 +87,7 @@ struct WorldOptions {
     memlimitSet = false;
   }
 
-  std::filesystem::path regionDir() {
-    switch (dim) {
-    case NETHER:
-      return std::filesystem::path(saveName) /= "DIM-1/region";
-    case END:
-      return std::filesystem::path(saveName) /= "DIM1/region";
-    default:
-      break;
-    }
-    return std::filesystem::path(saveName) /= "region";
-  }
+  std::filesystem::path regionDir() { return dim.regionDir(saveName); }
 };
 
 bool parseArgs(int argc, char **argv, Settings::WorldOptions *opts);
