@@ -1,25 +1,30 @@
 #include "colors.h"
 
 std::map<string, int> erroneous;
+std::vector<uint8_t> defaultColors =
+#include "colors.bson"
+    ;
 
 bool Colors::load(const std::filesystem::path &colorFile, Palette *colors) {
-  if (!std::filesystem::exists(colorFile))
-    throw std::runtime_error("Color file not found");
+  json colors_j = json::from_bson(defaultColors), overriden;
 
-  FILE *f = fopen(colorFile.c_str(), "r");
-  json data;
+  if (!std::filesystem::exists(colorFile)) {
+    logger::error("Could not open color file {}\n", colorFile.c_str());
+  } else {
+    FILE *f = fopen(colorFile.c_str(), "r");
 
-  try {
-    data = json::parse(f);
-  } catch (const nlohmann::detail::parse_error &err) {
+    try {
+      overriden = json::parse(f);
+      colors_j.update(overriden);
+    } catch (const nlohmann::detail::parse_error &err) {
+      logger::error("Error parsing color file {}\n", colorFile.c_str());
+    }
+
     fclose(f);
-    logger::error("Error parsing color file {}\n", colorFile.c_str());
-    return false;
   }
 
-  *colors = data.get<Colors::Palette>();
+  *colors = colors_j.get<Colors::Palette>();
 
-  fclose(f);
   return true;
 }
 
