@@ -52,7 +52,7 @@ uint32_t IsometricCanvas::lastLine() const {
 
 uint32_t IsometricCanvas::getCroppedHeight() const {
   uint32_t croppedHeight = lastLine() - firstLine();
-  if (croppedHeight == (padding - 2) * 2)
+  if (croppedHeight == (int64_t(padding) - 2) * 2)
     return 0;
   else
     return croppedHeight + 1;
@@ -125,12 +125,8 @@ void IsometricCanvas::renderChunk(const Terrain::Data &terrain,
   const uint8_t minHeight = terrain.minHeight(worldX, worldZ),
                 maxHeight = terrain.maxHeight(worldX, worldZ);
 
-  if (minHeight == maxHeight                  // If there is nothing to render
-      || chunk.is_end()                       // Catch uninitialized chunks
-      || !chunk.contains("DataVersion")       // Dataversion is required
-      || !chunk.contains("Level")             // Level data is required
-      || !chunk["Level"].contains("Sections") // No sections mean no blocks
-  )
+  // If there is nothing to render
+  if (minHeight >= maxHeight || chunk.is_end())
     return;
 
   // This value is primordial: it states which version of minecraft the chunk

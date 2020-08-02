@@ -150,8 +150,6 @@ struct Marker {
 
 typedef map<string, Colors::Block> Palette;
 bool load(const std::filesystem::path &, Palette *);
-bool load(const std::filesystem::path &, const std::vector<string> &filter,
-          Palette *);
 void filter(const Palette &, const std::vector<string> &filter, Palette *);
 
 void to_json(json &j, const Block &b);

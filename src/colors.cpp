@@ -23,42 +23,6 @@ bool Colors::load(const std::filesystem::path &colorFile, Palette *colors) {
   return true;
 }
 
-bool Colors::load(const std::filesystem::path &colorFile,
-                  const std::vector<string> &filter, Palette *colors) {
-  if (!std::filesystem::exists(colorFile))
-    throw std::runtime_error("Color file not found");
-
-  FILE *f = fopen(colorFile.c_str(), "r");
-  json data;
-
-  try {
-    data = json::parse(f);
-  } catch (const nlohmann::detail::parse_error &err) {
-    fclose(f);
-    logger::error("Error parsing color file {}\n", colorFile.c_str());
-    return false;
-  }
-
-  const std::map<string, json> fullList = data.get<map<string, json>>();
-
-  for (auto it : filter) {
-    if (fullList.find(it) != fullList.end()) {
-      colors->insert(std::pair<string, Colors::Block>(
-          it, fullList.at(it).get<Colors::Block>()));
-      continue;
-    } else {
-      logger::warn("No color for block {}\n", it);
-      colors->insert(std::pair<string, Colors::Block>(it, Colors::Block()));
-    }
-  }
-
-  logger::info("Loaded {} colors out of the {} declared\n", colors->size(),
-               fullList.size());
-
-  fclose(f);
-  return true;
-}
-
 void Colors::filter(const Palette &definitions,
                     const std::vector<string> &filter, Palette *colors) {
 

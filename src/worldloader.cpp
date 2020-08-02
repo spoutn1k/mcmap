@@ -236,6 +236,17 @@ bool decompressChunk(const uint32_t offset, FILE *regionHandle,
   return true;
 }
 
+bool assertChunk(const NBT &chunk) {
+  if (chunk.is_end()                          // Catch uninitialized chunks
+      || !chunk.contains("DataVersion")       // Dataversion is required
+      || !chunk.contains("Level")             // Level data is required
+      || !chunk["Level"].contains("Sections") // No sections mean no blocks
+  )
+    return false;
+
+  return true;
+}
+
 void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
                               const int chunkX, const int chunkZ) {
   uint64_t length, chunkPos = chunkIndex(chunkX, chunkZ);
@@ -248,11 +259,8 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
 
   NBT chunk = NBT::parse(chunkBuffer, length);
 
-  if (!chunk.contains("Level") || !chunk["Level"].contains("Sections")) {
-    logger::debug("Chunk {} {} is in an unsupported format, skipping ..\n",
-                  chunkX, chunkZ);
+  if (!assertChunk(chunk))
     return;
-  }
 
   chunks[chunkPos] = std::move(chunk);
   vector<NBT> *sections =
