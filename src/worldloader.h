@@ -36,18 +36,18 @@ struct Data {
   uint64_t chunkLen;
 
   // An array of bytes, one for each chunk
-  // the first 4 bits are the highest section number,
+  // the first 8 bits are the highest block to render,
   // the latter the lowest section number
-  uint8_t *heightMap;
+  uint16_t *heightMap;
 
-  // The extrema. The first 4 bits indicate the index of the highest section,
-  // the last 4 the index of the lowest
-  uint8_t heightBounds;
+  // The global version of the values above. The first 8 bits indicate the
+  // highest block to render, the last 8 the lowest block
+  uint16_t heightBounds;
 
   vector<string> cache;
 
   // Default constructor
-  explicit Data(const Terrain::Coordinates &coords) {
+  explicit Data(const Terrain::Coordinates &coords) : heightBounds(0) {
     map.minX = CHUNK(coords.minX);
     map.minZ = CHUNK(coords.minZ);
     map.maxX = CHUNK(coords.maxX);
@@ -57,9 +57,7 @@ struct Data {
         uint64_t(map.maxX - map.minX + 1) * uint64_t(map.maxZ - map.minZ + 1);
 
     chunks = new Terrain::Chunk[chunkLen];
-    heightMap = new uint8_t[chunkLen];
-
-    heightBounds = 0x00;
+    heightMap = new uint16_t[chunkLen];
   }
 
   ~Data() {
@@ -77,7 +75,7 @@ struct Data {
   // Chunk analysis methods - using the list of sections
   void stripChunk(vector<NBT> *);
   void cacheColors(vector<NBT> *);
-  uint8_t importHeight(vector<NBT> *);
+  uint16_t importHeight(vector<NBT> *);
   void inflateChunk(vector<NBT> *);
 
   uint64_t chunkIndex(int64_t x, int64_t z) const {
@@ -88,19 +86,15 @@ struct Data {
     return chunks[chunkIndex(xPos, zPos)];
   }
 
-  uint8_t maxHeight() const { return heightBounds & 0xf0; }
-  uint8_t minHeight() const { return (heightBounds & 0x0f) << 4; }
+  uint8_t maxHeight() const { return heightBounds >> 8; }
+  uint8_t minHeight() const { return heightBounds & 0xff; }
 
   uint8_t maxHeight(const int64_t x, const int64_t z) const {
-    return heightMap[chunkIndex(CHUNK(x), CHUNK(z))] & 0xf0;
+    return heightMap[chunkIndex(x, z)] >> 8;
   }
 
   uint8_t minHeight(const int64_t x, const int64_t z) const {
-    return (heightMap[chunkIndex(CHUNK(x), CHUNK(z))] & 0x0f) << 4;
-  }
-
-  uint8_t heightAt(int64_t xPos, int64_t zPos) const {
-    return heightMap[chunkIndex(xPos, zPos)];
+    return heightMap[chunkIndex(x, z)] & 0xff;
   }
 };
 

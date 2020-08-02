@@ -122,9 +122,11 @@ void IsometricCanvas::renderChunk(const Terrain::Data &terrain,
   orientChunk(worldX, worldZ);
 
   const NBT &chunk = terrain.chunkAt(worldX, worldZ);
-  const uint8_t height = terrain.heightAt(worldX, worldZ);
+  const uint8_t minHeight = terrain.minHeight(worldX, worldZ),
+                maxHeight = terrain.maxHeight(worldX, worldZ);
 
-  if (chunk.is_end()                          // Catch uninitialized chunks
+  if (minHeight == maxHeight                  // If there is nothing to render
+      || chunk.is_end()                       // Catch uninitialized chunks
       || !chunk.contains("DataVersion")       // Dataversion is required
       || !chunk.contains("Level")             // Level data is required
       || !chunk["Level"].contains("Sections") // No sections mean no blocks
@@ -155,10 +157,10 @@ void IsometricCanvas::renderChunk(const Terrain::Data &terrain,
     }
   }
 
-  const uint8_t minSection = std::max((map.minY >> 4), (height & 0x0f));
-  const uint8_t maxSection = std::min((map.maxY >> 4) + 1, (height >> 4));
+  const uint8_t minSection = std::max(map.minY, minHeight) >> 4;
+  const uint8_t maxSection = std::min(map.maxY, maxHeight) >> 4;
 
-  for (uint8_t yPos = minSection; yPos < maxSection; yPos++) {
+  for (uint8_t yPos = minSection; yPos < maxSection + 1; yPos++) {
     renderSection(chunk["Level"]["Sections"][yPos], canvasX, canvasZ, yPos,
                   interpreter);
   }

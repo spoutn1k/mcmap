@@ -178,16 +178,15 @@ void Terrain::Data::cacheColors(vector<NBT> *sections) {
   }
 }
 
-uint8_t Terrain::Data::importHeight(vector<NBT> *sections) {
-  // If there are sections in the chunk
-  const uint8_t chunkMin = *sections->front()["Y"].get<int8_t *>();
-  const uint8_t chunkHeight = (*sections->back()["Y"].get<int8_t *>() + 1) << 4;
+uint16_t Terrain::Data::importHeight(vector<NBT> *sections) {
+  const uint8_t chunkMin = *sections->front()["Y"].get<int8_t *>() << 4;
+  const uint8_t chunkMax = ((*sections->back()["Y"].get<int8_t *>()) << 4) + 15;
 
   // If the chunk's height is the highest found, record it
-  if (chunkHeight > (heightBounds & 0xf0))
-    heightBounds = chunkHeight | (heightBounds & 0x0f);
+  if (chunkMax > maxHeight())
+    heightBounds = (chunkMax << 8) | heightBounds;
 
-  return chunkHeight | chunkMin;
+  return (chunkMax << 8) | chunkMin;
 }
 
 bool decompressChunk(const uint32_t offset, FILE *regionHandle,

@@ -76,8 +76,8 @@ struct IsometricCanvas {
     // length on both the horizontal axis times 2.
     width = (sizeX + sizeZ + this->padding) * 2;
 
-    height = sizeX + sizeZ + ((13 << 4) - map.minY) * heightOffset +
-             this->padding * 2;
+    height =
+        sizeX + sizeZ + (256 - map.minY) * heightOffset + this->padding * 2;
 
     size = uint64_t(width * BYTESPERPIXEL) * uint64_t(height);
     bytesBuffer = new uint8_t[size];
