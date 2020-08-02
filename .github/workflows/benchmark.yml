@@ -12,7 +12,7 @@ jobs:
       with:
         name: results.log
         path: time.log
-    - name: Upload resulting image
+    - name: Upload results
       uses: actions/upload-artifact@v1
       with:
         name: images.tgz
