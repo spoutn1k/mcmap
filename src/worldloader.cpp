@@ -43,11 +43,14 @@ void scanWorldDirectory(const std::filesystem::path &regionDir,
     }
   }
 
-  // Convert chunk indexes to blocks
+  // Convert region indexes to blocks
   savedWorld->minX = savedWorld->minX << 4;
   savedWorld->minZ = savedWorld->minZ << 4;
   savedWorld->maxX = ((savedWorld->maxX + 1) << 4) - 1;
   savedWorld->maxZ = ((savedWorld->maxZ + 1) << 4) - 1;
+
+  logger::debug("World spans from {}.{} to {}.{}\n", savedWorld->minX,
+                savedWorld->minZ, savedWorld->maxX, savedWorld->maxZ);
 }
 
 void Terrain::Data::load(const std::filesystem::path &regionDir) {
@@ -58,8 +61,8 @@ void Terrain::Data::load(const std::filesystem::path &regionDir) {
           "r." + std::to_string(rx) + "." + std::to_string(rz) + ".mca";
 
       if (!std::filesystem::exists(regionFile)) {
-        logger::warn("Region file r.{}.{}.mca does not exist, skipping ..\n",
-                     rx, rz);
+        logger::debug("Region file r.{}.{}.mca does not exist, skipping ..\n",
+                      rx, rz);
         continue;
       }
 
@@ -194,13 +197,13 @@ bool decompressChunk(const uint32_t offset, FILE *regionHandle,
   uint8_t zData[COMPRESSED_BUFFER];
 
   if (0 != fseek(regionHandle, offset, SEEK_SET)) {
-    logger::error("Error accessing chunk data in file: {}\n", strerror(errno));
+    logger::debug("Error accessing chunk data in file: {}\n", strerror(errno));
     return false;
   }
 
   // Read the 5 bytes that give the size and type of data
   if (5 != fread(zData, sizeof(uint8_t), 5, regionHandle)) {
-    logger::error("Error reading chunk size from region file: {}\n",
+    logger::debug("Error reading chunk size from region file: {}\n",
                   strerror(errno));
     return false;
   }
@@ -209,7 +212,7 @@ bool decompressChunk(const uint32_t offset, FILE *regionHandle,
   (*length)--; // Sometimes the data is 1 byte smaller
 
   if (fread(zData, sizeof(uint8_t), *length, regionHandle) != *length) {
-    logger::error("Not enough data for chunk: {}\n", strerror(errno));
+    logger::debug("Not enough data for chunk: {}\n", strerror(errno));
     return false;
   }
 
@@ -225,7 +228,7 @@ bool decompressChunk(const uint32_t offset, FILE *regionHandle,
   inflateEnd(&zlibStream);
 
   if (status != Z_STREAM_END) {
-    logger::error("Error decompressing chunk: {}\n", zError(status));
+    logger::debug("Error decompressing chunk: {}\n", zError(status));
     return false;
   }
 
@@ -246,8 +249,8 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
   NBT chunk = NBT::parse(chunkBuffer, length);
 
   if (!chunk.contains("Level") || !chunk["Level"].contains("Sections")) {
-    logger::warn("Chunk {} {} is in an unsupported format, skipping ..\n",
-                 chunkX, chunkZ);
+    logger::debug("Chunk {} {} is in an unsupported format, skipping ..\n",
+                  chunkX, chunkZ);
     return;
   }
 

@@ -1,4 +1,5 @@
 #include "./settings.h"
+#include "logger.h"
 
 #define ISPATH(p) (!(p).empty() && std::filesystem::exists((p)))
 
@@ -105,6 +106,8 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
       opts->offsetY = 3;
     } else if (strcmp(option, "-help") == 0 || strcmp(option, "-h") == 0) {
       return false;
+    } else if (strcmp(option, "-verbose") == 0 || strcmp(option, "-v") == 0) {
+      logger::setDebug();
     } else {
       opts->saveName = std::filesystem::path(option);
       if (!ISPATH(opts->saveName)) {

@@ -1,5 +1,7 @@
 #include "logger.h"
 
+int level = logger::levels::INFO;
+
 // On linux, check wether the output is pretty-printable or not. If not, skip
 // color codes and progress bars on stdout. On windows, this is aliased to
 // false.
@@ -30,6 +32,19 @@ void verror(const char *format, fmt::format_args args) {
   fmt::vprint(stderr, format, args);
 }
 
+void vdebug(const char *format, fmt::format_args args) {
+  fmt::text_style deb =
+      (prettyErr ? fmt::emphasis::bold | fg(fmt::color::cadet_blue)
+                 : fmt::text_style());
+
+  if (level == DEBUG) {
+    fmt::print(stderr, deb, "[Debug] ");
+    fmt::vprint(stderr, format, args);
+  }
+}
+
+void setDebug() { level = DEBUG; }
+
 static auto last = std::chrono::high_resolution_clock::now();
 
 void printProgress(const std::string label, const uint64_t current,
@@ -45,14 +60,14 @@ void printProgress(const std::string label, const uint64_t current,
   }
 
   if (current == max - 1) { // End
-    PROGRESS(100.0);
+    // Erase the indicator
+    fmt::print(stderr, std::string(label.length() + 10, ' ') + "\r");
     return;
   }
 
   uint32_t ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                     std::chrono::high_resolution_clock::now() - last)
                     .count();
-  // logger::info("{}/{} - {} - {}\n", current, max, ms, ms > 250);
   if (ms > 250) {
     last = std::chrono::high_resolution_clock::now();
     float proc = (float(current) / float(max)) * 100.0f;

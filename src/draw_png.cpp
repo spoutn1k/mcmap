@@ -3,6 +3,7 @@
  */
 
 #include "draw_png.h"
+#include "logger.h"
 #include <cstdio>
 
 #ifndef Z_BEST_SPEED
@@ -15,12 +16,12 @@ bool PNG::Image::create() {
                  height = canvas->getCroppedHeight();
 
   if (!(width && height)) {
-    logger::error("Nothing to output: canvas is empty\n");
+    logger::warn("Nothing to output: canvas is empty !\n");
     return false;
   }
 
-  logger::info("Image dimensions are {}x{}, 32bpp, {}MiB\n", width, height,
-               float(canvas->getCroppedSize() / float(1024 * 1024)));
+  logger::debug("Image dimensions are {}x{}, 32bpp, {}MiB\n", width, height,
+                float(canvas->getCroppedSize() / float(1024 * 1024)));
 
   fseeko(imageHandle, 0, SEEK_SET);
 

@@ -31,7 +31,9 @@ void printHelp(char *binary) {
       "height)\n"
       "  -splits VAL         render with VAL threads\n"
       "  -marker X Z color   draw a marker at X Z of the desired color\n"
-      "  -padding VAL        padding to use around the image (default 5)\n",
+      "  -padding VAL        padding to use around the image (default 5)\n"
+      "  -h[elp]             display an option summary\n"
+      "  -v[erbose]          toggle debug mode\n",
       binary);
 }
 

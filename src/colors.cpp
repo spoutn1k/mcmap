@@ -84,8 +84,8 @@ void Colors::filter(const Palette &definitions,
     }
   }
 
-  logger::info("Loaded {} colors out of the {} declared\n", colors->size(),
-               definitions.size());
+  logger::debug("Loaded {} colors out of the {} declared\n", colors->size(),
+                definitions.size());
 }
 
 #define LIST(C)                                                                \
