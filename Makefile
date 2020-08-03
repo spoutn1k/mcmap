@@ -1,11 +1,7 @@
-# if you don't want png support, remove "-DWITHPNG", "-lpng" and "draw_png.cpp" below
 CC=g++
 
 CFLAGS=-O3 -std=c++17 -c -Wall -fomit-frame-pointer -pedantic -DWITHPNG -D_FILE_OFFSET_BITS=64 -fopenmp -Isrc/include
 LDFLAGS=-lz -lpng -lstdc++fs -fopenmp
-
-DCFLAGS=-g -O0 -std=c++17 -c -Wall -D_DEBUG -DWITHPNG -D_FILE_OFFSET_BITS=64
-DLDFLAGS=-lz -lpng -lstdc++fs
 
 PCFLAGS=-O3 -std=c++17 -c -Wall -pg -pedantic -DWITHPNG -D_FILE_OFFSET_BITS=64 -fopenmp
 PLDFLAGS=-lz -lpng -lstdc++fs -fopenmp -pg
@@ -18,29 +14,32 @@ POBJECTS=$(SOURCES:.cpp=.profiling.o)
 
 EXECUTABLE=mcmap
 
-all: $(OBJECTS)
+JCOLORS=src/colors.json
+BCOLORS=src/colors.bson
+
+all: $(BCOLORS) $(OBJECTS)
 	$(CC) $(OBJECTS) $(LDFLAGS) -o $(EXECUTABLE)
 
-debug: $(DOBJECTS)
-	$(CC) $(DOBJECTS) $(DLDFLAGS) -o $(EXECUTABLE)
-
-profile: $(POBJECTS)
+profile: $(BCOLORS) $(POBJECTS)
 	$(CC) $(POBJECTS) $(PLDFLAGS) -o $(EXECUTABLE)
+
+$(BCOLORS): $(JCOLORS)
+	make -C scripts json2bson
+	./scripts/json2bson $(JCOLORS) > $@
 
 analyse:
 	gprof $(EXECUTABLE) gmon.out | less -S
 
 clean:
-	find src -name "*.o" -exec rm {} \;
+	find src -name *o -exec rm {} \;
+	make -C scripts clean
 
 realClean: clean
-	rm -f mcmap output.png defaultcolors.txt
+	rm -fr mcmap output.png $(BCOLORS)
+	make -C scripts realClean
 
-%.default.o: %.cpp
+%.default.o: %.cpp $(BCOLORS)
 	$(CC) $(CFLAGS) $< -o $@
-
-%.debug.o: %.cpp
-	$(CC) $(DCFLAGS) $< -o $@
 
 %.profiling.o: %.cpp
 	$(CC) $(PCFLAGS) $< -o $@
