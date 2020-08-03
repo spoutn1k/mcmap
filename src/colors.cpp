@@ -8,19 +8,21 @@ std::vector<uint8_t> defaultColors =
 bool Colors::load(const std::filesystem::path &colorFile, Palette *colors) {
   json colors_j = json::from_bson(defaultColors), overriden;
 
-  if (!std::filesystem::exists(colorFile)) {
-    logger::error("Could not open color file {}\n", colorFile.c_str());
-  } else {
-    FILE *f = fopen(colorFile.c_str(), "r");
+  if (!colorFile.empty()) {
+    if (!std::filesystem::exists(colorFile)) {
+      logger::error("Could not open color file {}\n", colorFile.c_str());
+    } else {
+      FILE *f = fopen(colorFile.c_str(), "r");
 
-    try {
-      overriden = json::parse(f);
-      colors_j.update(overriden);
-    } catch (const nlohmann::detail::parse_error &err) {
-      logger::error("Error parsing color file {}\n", colorFile.c_str());
+      try {
+        overriden = json::parse(f);
+        colors_j.update(overriden);
+      } catch (const nlohmann::detail::parse_error &err) {
+        logger::error("Error parsing color file {}\n", colorFile.c_str());
+      }
+
+      fclose(f);
     }
-
-    fclose(f);
   }
 
   *colors = colors_j.get<Colors::Palette>();

@@ -66,10 +66,8 @@ struct WorldOptions {
   uint64_t memlimit;
   bool memlimitSet, wholeworld;
 
-  WorldOptions() : dim("overworld") {
-    saveName = "";
+  WorldOptions() : saveName(""), colorFile(""), dim("overworld") {
     outFile = "output.png";
-    colorFile = "colors.json";
 
     splits = 1;
     boundaries.setUndefined();
