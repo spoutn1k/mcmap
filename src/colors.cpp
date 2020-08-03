@@ -60,7 +60,7 @@ void Colors::filter(const Palette &definitions,
 }
 
 #define LIST(C)                                                                \
-  { (C).R, (C).G, (C).B, (C).ALPHA, (C).NOISE, (C).BRIGHTNESS }
+  { (C).R, (C).G, (C).B, (C).ALPHA }
 void Colors::to_json(json &j, const Block &b) {
   if (b.type == Colors::BlockTypes::FULL) {
     j = json(LIST(b.primary));
@@ -80,6 +80,7 @@ void Colors::to_json(json &j, const Block &b) {
     };
   }
 }
+#undef LIST
 
 void Colors::from_json(const json &data, Block &b) {
   string stype;
