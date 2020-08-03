@@ -86,6 +86,8 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
                       opts->colorFile.c_str());
         return false;
       }
+    } else if (strcmp(option, "-dumpcolors") == 0) {
+      opts->mode = Settings::DUMPCOLORS;
     } else if (strcmp(option, "-marker") == 0) {
       if (!MOREARGS(3) || !(isNumeric(POLLARG(1)) && isNumeric(POLLARG(2)))) {
         logger::error("Error: {} needs three arguments: x z color\n", option);
@@ -118,50 +120,53 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
     }
   }
 
-  // Check if the given save posesses the required dimension, must be done now
-  // as the world path can be given after the dimension name, which messes up
-  // regionDir()
-  // TODO Check permissions and make ISPATH a real function
-  if (!ISPATH(opts->regionDir())) {
-    logger::error("Cannot render dimension '{}' of world '{}': file '{}' does "
-                  "not exist\n",
-                  opts->dim.to_string(), opts->saveName.c_str(),
-                  opts->regionDir().c_str());
-    return false;
-  }
+  if (opts->mode == RENDER) {
+    // Check if the given save posesses the required dimension, must be done now
+    // as the world path can be given after the dimension name, which messes up
+    // regionDir()
+    // TODO Check permissions and make ISPATH a real function
+    if (!ISPATH(opts->regionDir())) {
+      logger::error(
+          "Cannot render dimension '{}' of world '{}': file '{}' does "
+          "not exist\n",
+          opts->dim.to_string(), opts->saveName.c_str(),
+          opts->regionDir().c_str());
+      return false;
+    }
 
-  // Scan the region directory and map the existing terrain in this set of
-  // coordinates
-  Coordinates existingWorld;
-  scanWorldDirectory(opts->regionDir(), &existingWorld);
+    // Scan the region directory and map the existing terrain in this set of
+    // coordinates
+    Coordinates existingWorld;
+    scanWorldDirectory(opts->regionDir(), &existingWorld);
 
-  if (opts->boundaries.isUndefined()) {
-    // No boundaries were defined, import the whole existing world
-    // No overwriting to preserve potential min/max data
-    opts->boundaries.minX = existingWorld.minX;
-    opts->boundaries.minZ = existingWorld.minZ;
-    opts->boundaries.maxX = existingWorld.maxX;
-    opts->boundaries.maxZ = existingWorld.maxZ;
-  } else {
-    // Restrict the map to draw to the existing terrain
-    opts->boundaries.crop(existingWorld);
-  }
+    if (opts->boundaries.isUndefined()) {
+      // No boundaries were defined, import the whole existing world
+      // No overwriting to preserve potential min/max data
+      opts->boundaries.minX = existingWorld.minX;
+      opts->boundaries.minZ = existingWorld.minZ;
+      opts->boundaries.maxX = existingWorld.maxX;
+      opts->boundaries.maxZ = existingWorld.maxZ;
+    } else {
+      // Restrict the map to draw to the existing terrain
+      opts->boundaries.crop(existingWorld);
+    }
 
-  if (opts->boundaries.maxX < opts->boundaries.minX ||
-      opts->boundaries.maxZ < opts->boundaries.minZ) {
-    logger::error("Nothing to render: -from X Z has to be <= -to X Z\n");
-    return false;
-  }
+    if (opts->boundaries.maxX < opts->boundaries.minX ||
+        opts->boundaries.maxZ < opts->boundaries.minZ) {
+      logger::error("Nothing to render: -from X Z has to be <= -to X Z\n");
+      return false;
+    }
 
-  if (opts->boundaries.maxX - opts->boundaries.minX < 0) {
-    logger::error("Nothing to render: -min Y has to be < -max Y\n");
-    return false;
-  }
+    if (opts->boundaries.maxX - opts->boundaries.minX < 0) {
+      logger::error("Nothing to render: -min Y has to be < -max Y\n");
+      return false;
+    }
 
-  int64_t length = opts->boundaries.maxX - opts->boundaries.minX + 1;
-  if (opts->splits > length) {
-    logger::error("Cannot split terrain in more than {} units.\n", length);
-    return false;
+    int64_t length = opts->boundaries.maxX - opts->boundaries.minX + 1;
+    if (opts->splits > length) {
+      logger::error("Cannot split terrain in more than {} units.\n", length);
+      return false;
+    }
   }
 
   return true;
