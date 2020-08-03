@@ -2,23 +2,12 @@
 #define COLORS_
 
 #include "./helper.h"
-#include "./include/json.hpp"
 #include "./logger.h"
 #include <filesystem>
+#include <json.hpp>
 #include <list>
 #include <map>
 #include <string>
-
-// Byte order see below. Colors aligned to word boundaries for some speedup
-// Brightness is precalculated to speed up calculations later
-// Colors are stored twice since BMP and PNG need them in different order
-// Noise is supposed to look normal when -noise 10 is given
-
-// First 256 lines correspond to individual block IDs
-// ie colors[0] contains color inforamtions for air
-//
-// Following 256 lines store variant information
-// lines colors[256] to color[263] stores stone variants
 
 using nlohmann::json;
 using std::list;
@@ -127,6 +116,8 @@ struct Block {
   }
 };
 
+typedef map<string, Colors::Block> Palette;
+
 struct Marker {
   int64_t x, z;
   string color_name;
@@ -148,7 +139,6 @@ struct Marker {
   };
 };
 
-typedef map<string, Colors::Block> Palette;
 bool load(const std::filesystem::path &, Palette *);
 void filter(const Palette &, const std::vector<string> &filter, Palette *);
 

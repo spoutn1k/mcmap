@@ -1,9 +1,9 @@
 #ifndef LOGGER_H_
 #define LOGGER_H_
 
-#include "./include/fmt/color.h"
-#include "./include/fmt/core.h"
 #include <chrono>
+#include <fmt/color.h>
+#include <fmt/core.h>
 #include <unistd.h>
 
 namespace logger {
