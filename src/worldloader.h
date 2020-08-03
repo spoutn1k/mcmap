@@ -3,13 +3,12 @@
 
 #include "./colors.h"
 #include "./helper.h"
-#include "./include/nbt/nbt.hpp"
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <nbt/nbt.hpp>
 #include <stdint.h>
 #include <string>
-#include <utility>
 #include <vector>
 #include <zlib.h>
 

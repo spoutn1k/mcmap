@@ -38,6 +38,7 @@ This project is under __heavy__ development, but compatible with newer versions 
 |`-padding`      |padding around the final image, in pixels (default: 5)|
 |`-h[elp]`      |display an option summary|
 |`-v[erbose]`   |toggle debug mode|
+|`-dumpcolors`  |dump a json with all defined colors|
 
 *Note: Currently you need both -from and -to to define bounds.*
 

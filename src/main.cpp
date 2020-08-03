@@ -34,15 +34,12 @@ void printHelp(char *binary) {
       "  -padding VAL        padding to use around the image (default 5)\n"
       "  -h[elp]             display an option summary\n"
       "  -v[erbose]          toggle debug mode\n",
-      binary);
+      "  -dumpcolors         dump a json with all defined colors\n", binary);
 }
 
 int main(int argc, char **argv) {
   Settings::WorldOptions options;
   Colors::Palette colors;
-
-  logger::info(VERSION " {}bit (" COMMENT ")\n",
-               8 * static_cast<int>(sizeof(size_t)));
 
   // Always same random seed, as this is only used for block noise,
   // which should give the same result for the same input every time
@@ -53,10 +50,19 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  Colors::load(options.colorFile, &colors);
+
+  if (options.mode == Settings::DUMPCOLORS) {
+    logger::info("{}", json(colors).dump());
+    return 0;
+  } else {
+    logger::info(VERSION " {}bit (" COMMENT ")\n",
+                 8 * static_cast<int>(sizeof(size_t)));
+  }
+
   // Get the relevant options from the options parsed
   Terrain::Coordinates coords = options.boundaries;
   const std::filesystem::path regionDir = options.regionDir();
-  Colors::load(options.colorFile, &colors);
 
   // Overwrite water if asked to
   // TODO expand this to other blocks

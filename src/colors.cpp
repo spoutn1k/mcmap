@@ -1,25 +1,32 @@
 #include "colors.h"
 
 std::map<string, int> erroneous;
+std::vector<uint8_t> defaultColors =
+#include "colors.bson"
+    ;
 
 bool Colors::load(const std::filesystem::path &colorFile, Palette *colors) {
-  if (!std::filesystem::exists(colorFile))
-    throw std::runtime_error("Color file not found");
+  json colors_j = json::from_bson(defaultColors), overriden;
 
-  FILE *f = fopen(colorFile.c_str(), "r");
-  json data;
+  if (!colorFile.empty()) {
+    if (!std::filesystem::exists(colorFile)) {
+      logger::error("Could not open color file {}\n", colorFile.c_str());
+    } else {
+      FILE *f = fopen(colorFile.c_str(), "r");
 
-  try {
-    data = json::parse(f);
-  } catch (const nlohmann::detail::parse_error &err) {
-    fclose(f);
-    logger::error("Error parsing color file {}\n", colorFile.c_str());
-    return false;
+      try {
+        overriden = json::parse(f);
+        colors_j.update(overriden);
+      } catch (const nlohmann::detail::parse_error &err) {
+        logger::error("Error parsing color file {}\n", colorFile.c_str());
+      }
+
+      fclose(f);
+    }
   }
 
-  *colors = data.get<Colors::Palette>();
+  *colors = colors_j.get<Colors::Palette>();
 
-  fclose(f);
   return true;
 }
 
@@ -53,7 +60,7 @@ void Colors::filter(const Palette &definitions,
 }
 
 #define LIST(C)                                                                \
-  { (C).R, (C).G, (C).B, (C).ALPHA, (C).NOISE, (C).BRIGHTNESS }
+  { (C).R, (C).G, (C).B, (C).ALPHA }
 void Colors::to_json(json &j, const Block &b) {
   if (b.type == Colors::BlockTypes::FULL) {
     j = json(LIST(b.primary));
@@ -73,6 +80,7 @@ void Colors::to_json(json &j, const Block &b) {
     };
   }
 }
+#undef LIST
 
 void Colors::from_json(const json &data, Block &b) {
   string stype;

@@ -43,7 +43,12 @@ struct Dimension {
   string to_string() { return fmt::format("{}:{}", ns, id); };
 };
 
+enum actions { RENDER, DUMPCOLORS };
+
 struct WorldOptions {
+  // Execution mode
+  int mode;
+
   // Files to use
   std::filesystem::path saveName, outFile, colorFile;
 
@@ -66,10 +71,8 @@ struct WorldOptions {
   uint64_t memlimit;
   bool memlimitSet, wholeworld;
 
-  WorldOptions() : dim("overworld") {
-    saveName = "";
+  WorldOptions() : mode(RENDER), saveName(""), colorFile(""), dim("overworld") {
     outFile = "output.png";
-    colorFile = "colors.json";
 
     splits = 1;
     boundaries.setUndefined();
