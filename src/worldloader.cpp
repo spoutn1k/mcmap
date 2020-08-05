@@ -87,14 +87,15 @@ void Terrain::Data::loadRegion(const std::filesystem::path &regionFile,
   uint8_t regionHeader[REGION_HEADER_SIZE];
 
   if (!(regionHandle = fopen(regionFile.c_str(), "rb"))) {
-    logger::error("Error opening region file {}\n", regionFile.c_str());
+    logger::error("Opening region file {} failed: {}\n", regionFile.c_str(),
+                  strerror(errno));
     return;
   }
   // Then, we read the header (of size 4K) storing the chunks locations
 
   if (fread(regionHeader, sizeof(uint8_t), REGION_HEADER_SIZE, regionHandle) !=
       REGION_HEADER_SIZE) {
-    logger::error("Header too short in {}\n", regionFile.c_str());
+    logger::error("Region header too short in {}\n", regionFile.c_str());
     fclose(regionHandle);
     return;
   }
@@ -113,7 +114,7 @@ void Terrain::Data::loadRegion(const std::filesystem::path &regionFile,
     // Get the location of the data from the header
     const uint32_t offset = (_ntohl(regionHeader + it * 4) >> 8) * 4096;
 
-    loadChunk(offset, regionHandle, chunkX, chunkZ);
+    loadChunk(offset, regionHandle, chunkX, chunkZ, regionFile);
   }
 
   fclose(regionHandle);
@@ -193,18 +194,20 @@ uint16_t Terrain::Data::importHeight(vector<NBT> *sections) {
 }
 
 bool decompressChunk(const uint32_t offset, FILE *regionHandle,
-                     uint8_t *chunkBuffer, uint64_t *length) {
+                     uint8_t *chunkBuffer, uint64_t *length,
+                     const std::filesystem::path &filename) {
   uint8_t zData[COMPRESSED_BUFFER];
 
   if (0 != fseek(regionHandle, offset, SEEK_SET)) {
-    logger::debug("Error accessing chunk data in file: {}\n", strerror(errno));
+    logger::debug("Accessing chunk data in file {} failed: {}\n",
+                  filename.string(), strerror(errno));
     return false;
   }
 
   // Read the 5 bytes that give the size and type of data
   if (5 != fread(zData, sizeof(uint8_t), 5, regionHandle)) {
-    logger::debug("Error reading chunk size from region file: {}\n",
-                  strerror(errno));
+    logger::debug("Reading chunk size from region file {} failed: {}\n",
+                  filename.string(), strerror(errno));
     return false;
   }
 
@@ -228,7 +231,7 @@ bool decompressChunk(const uint32_t offset, FILE *regionHandle,
   inflateEnd(&zlibStream);
 
   if (status != Z_STREAM_END) {
-    logger::debug("Error decompressing chunk: {}\n", zError(status));
+    logger::debug("Decompressing chunk data failed: {}\n", zError(status));
     return false;
   }
 
@@ -248,13 +251,15 @@ bool assertChunk(const NBT &chunk) {
 }
 
 void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
-                              const int chunkX, const int chunkZ) {
+                              const int chunkX, const int chunkZ,
+                              const std::filesystem::path &filename) {
   uint64_t length, chunkPos = chunkIndex(chunkX, chunkZ);
 
   // Buffers for chunk read from MCA files and decompression.
   uint8_t chunkBuffer[DECOMPRESSED_BUFFER];
 
-  if (!offset || !decompressChunk(offset, regionHandle, chunkBuffer, &length))
+  if (!offset ||
+      !decompressChunk(offset, regionHandle, chunkBuffer, &length, filename))
     return;
 
   NBT chunk = NBT::parse(chunkBuffer, length);

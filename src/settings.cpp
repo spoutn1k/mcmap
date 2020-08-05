@@ -12,21 +12,21 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
     const char *option = NEXTARG;
     if (strcmp(option, "-from") == 0) {
       if (!MOREARGS(2) || !isNumeric(POLLARG(1)) || !isNumeric(POLLARG(2))) {
-        logger::error("Error: {} needs two integer arguments\n", option);
+        logger::error("{} needs two integer arguments\n", option);
         return false;
       }
       opts->boundaries.minX = atoi(NEXTARG);
       opts->boundaries.minZ = atoi(NEXTARG);
     } else if (strcmp(option, "-to") == 0) {
       if (!MOREARGS(2) || !isNumeric(POLLARG(1)) || !isNumeric(POLLARG(2))) {
-        logger::error("Error: {} needs two integer arguments\n", option);
+        logger::error("{} needs two integer arguments\n", option);
         return false;
       }
       opts->boundaries.maxX = atoi(NEXTARG);
       opts->boundaries.maxZ = atoi(NEXTARG);
     } else if (strcmp(option, "-max") == 0) {
       if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
-        logger::error("Error: {} needs an integer argument\n", option);
+        logger::error("{} needs an integer argument\n", option);
         return false;
       }
       const int height = atoi(NEXTARG);
@@ -34,7 +34,7 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
           (height > MAX_TERRAIN_HEIGHT ? MAX_TERRAIN_HEIGHT : height);
     } else if (strcmp(option, "-min") == 0) {
       if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
-        logger::error("Error: {} needs an integer argument\n", option);
+        logger::error("{} needs an integer argument\n", option);
         return false;
       }
       const int height = atoi(NEXTARG);
@@ -42,13 +42,13 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
           (height < MIN_TERRAIN_HEIGHT ? MIN_TERRAIN_HEIGHT : height);
     } else if (strcmp(option, "-splits") == 0) {
       if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
-        logger::error("Error: {} needs an integer argument\n", option);
+        logger::error("{} needs an integer argument\n", option);
         return false;
       }
       opts->splits = atoi(NEXTARG);
     } else if (strcmp(option, "-padding") == 0) {
       if (!MOREARGS(1) || !isNumeric(POLLARG(1)) || atoi(POLLARG(1)) < 0) {
-        logger::error("Error: {} needs an positive integer argument\n", option);
+        logger::error("{} needs an positive integer argument\n", option);
         return false;
       }
       opts->padding = atoi(NEXTARG);
@@ -65,32 +65,31 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
     } else if (strcmp(option, "-dimension") == 0 ||
                strcmp(option, "-dim") == 0) {
       if (!MOREARGS(1)) {
-        logger::error("Error: {} needs a dimension name or number\n", option);
+        logger::error("{} needs a dimension name or number\n", option);
         return false;
       }
       opts->dim = Dimension(NEXTARG);
     } else if (strcmp(option, "-file") == 0) {
       if (!MOREARGS(1)) {
-        logger::error("Error: {} needs one argument\n", option);
+        logger::error("{} needs one argument\n", option);
         return false;
       }
       opts->outFile = NEXTARG;
     } else if (strcmp(option, "-colors") == 0) {
       if (!MOREARGS(1)) {
-        logger::error("Error: {} needs one argument\n", option);
+        logger::error("{} needs one argument\n", option);
         return false;
       }
       opts->colorFile = NEXTARG;
       if (!ISPATH(opts->colorFile)) {
-        logger::error("Error: File {} does not exist\n",
-                      opts->colorFile.c_str());
+        logger::error("File {} does not exist\n", opts->colorFile.c_str());
         return false;
       }
     } else if (strcmp(option, "-dumpcolors") == 0) {
       opts->mode = Settings::DUMPCOLORS;
     } else if (strcmp(option, "-marker") == 0) {
       if (!MOREARGS(3) || !(isNumeric(POLLARG(1)) && isNumeric(POLLARG(2)))) {
-        logger::error("Error: {} needs three arguments: x z color\n", option);
+        logger::error("{} needs three arguments: x z color\n", option);
         return false;
       }
       int x = atoi(NEXTARG), z = atoi(NEXTARG);

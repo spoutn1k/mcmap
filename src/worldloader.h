@@ -69,7 +69,7 @@ struct Data {
   void loadRegion(const std::filesystem::path &regionFile, const int regionX,
                   const int regionZ);
   void loadChunk(const uint32_t offset, FILE *regionHandle, const int chunkX,
-                 const int chunkZ);
+                 const int chunkZ, const std::filesystem::path &filename);
 
   // Chunk analysis methods - using the list of sections
   void stripChunk(vector<NBT> *);

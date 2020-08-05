@@ -18,7 +18,8 @@ bool Colors::load(const std::filesystem::path &colorFile, Palette *colors) {
         overriden = json::parse(f);
         colors_j.update(overriden);
       } catch (const nlohmann::detail::parse_error &err) {
-        logger::error("Error parsing color file {}\n", colorFile.c_str());
+        logger::error("Parsing color file {} failed: {}\n", colorFile.c_str(),
+                      err.what());
       }
 
       fclose(f);

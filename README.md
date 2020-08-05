@@ -1,8 +1,8 @@
 # `mcmap` - Isometric map visualizer
 
-![](https://img.shields.io/badge/version-1.16rc1-success)
+![](https://img.shields.io/badge/version-1.16.2pre1-success)
 
-*Original project by Simon Rettberg. All credits to him for the idea and vision.*
+*Original project by Simon Rettberg. All the credit goes to him for the idea and vision.*
 
 `mcmap` is a tool allowing you to create isometric renders of your Minecraft save file.
 
@@ -25,7 +25,7 @@ This project is under __heavy__ development, but compatible with newer versions 
 |`-to X Z`       |sets the coordinates of the block to end rendering at|
 |`-min/max VAL`  |minimum/maximum Y index (height) of blocks to render|
 |`-file NAME`    |sets the output filename to 'NAME'; default is `./output.png`|
-|`-colors NAME`    |sets the color file to 'NAME'; default is `./colors.json`|
+|`-colors NAME`    |sets the custom color file to 'NAME'|
 |`-nw` `-ne` `-se` `-sw` |controls which direction will point to the top corner; North-West is default|
 |`-marker x z color`      |draw a marker at `x` `z` of color `color` in `red`,`green`,`blue` or `white`; can be used up to 256 times |
 |`-nowater`      |do not render water|
@@ -43,8 +43,6 @@ This project is under __heavy__ development, but compatible with newer versions 
 *Note: Currently you need both -from and -to to define bounds.*
 
 #### Tips
-
-`mcmap` needs a color file to run. It will try to load `./colors.json` by default, but you can use the `-colors` option to specify which file to use.
 
 When passing only a level, `mcmap` will try to guess the size of the existing terrain, but the Minecraft storage format does not make is easy. The best results are achieved using `-from x z -to X Z` to define an area to render.
 
@@ -65,11 +63,13 @@ Most of the code uses `std::filesystem` and from my understanding should be cros
 
 ## Color file format
 
-The accepted format is a `json` file, with a specific structure. The root contains a list of all the defined [block IDs](https://minecraft.gamepedia.com/Java_Edition_data_values#Blocks), with the namespace prefix, such as `namespace:block`.
+`mcmap` supports changing the colors of blocks. To do so, prepare a custom color file, and pass it as an argument using the `-colors` argument.
+The accepted format is a `json` file, with a specific structure.
+The root contains a list of [block IDs](https://minecraft.gamepedia.com/Java_Edition_data_values#Blocks) to modify, with the namespace prefix, such as `namespace:block`.
 
 #### Simple block
 
-To define a color for a simple, regular block, a list of json values following the format: 
+To define a color for a simple, regular block, provide an entry with the following format:
 
 ```
 "namespace:block": [RED, GREEN, BLUE, ALPHA]
@@ -88,10 +88,11 @@ Examples:
 
 #### Complex block
 
-Some blocks are better looking when drawn in a specific way. To specify that a block has to be drawn differently, you have to provide a `json` structure with the fields:
+Some blocks are better looking when drawn in a specific way.
+To specify that a block has to be drawn differently, you have to provide a `json` structure with the fields:
 
 ```
-{
+"namespace:block": {
     "type":     <BlockType>,
     "color":    [RED, GREEN, BLUE, ALPHA],
     "accent":   [RED, GREEN, BLUE, ALPHA] (Optional)
