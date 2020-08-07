@@ -364,10 +364,8 @@ void IsometricCanvas::renderSection(const NBT &section, const int64_t xPos,
           continue;
         }
 
-        // Skip air. This does increase performance, but could be tweaked.
-        if (index)
-          renderBlock(cache[index], (xPos << 4) + x, (zPos << 4) + z,
-                      (yPos << 4) + y, sectionPalette->operator[](index));
+        renderBlock(cache[index], (xPos << 4) + x, (zPos << 4) + z,
+                    (yPos << 4) + y, sectionPalette->operator[](index));
 
         // A beam can begin at every moment in a section
         if (index == beaconIndex) {
@@ -427,6 +425,10 @@ IsometricCanvas::drawer blockRenderers[] = {
 inline void IsometricCanvas::renderBlock(Colors::Block *color, uint32_t x,
                                          uint32_t z, const uint32_t y,
                                          const NBT &metadata) {
+  // If there is nothing to render, skip it
+  if (color->primary.transparent())
+    return;
+
   // Remove the offset from the first chunk, if it exists. The coordinates x and
   // z are from a section, so go from 16*n to 16*n+15. If the canvas is not
   // aligned to a chunk, we will get offset coordinates - this fixes it
@@ -500,9 +502,6 @@ inline void IsometricCanvas::renderBlock(Colors::Block *color, uint32_t x,
   if (bmpPosY > height - 1)
     throw std::range_error("Invalid y: " + std::to_string(bmpPosY) + "/" +
                            std::to_string(height));
-
-  if (color->primary.empty())
-    return;
 
   // Pointer to the color to use, and local color copy if changes are due
   Colors::Block localColor, *colorPtr = color;

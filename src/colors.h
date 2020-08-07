@@ -86,6 +86,7 @@ struct Color {
   }
 
   bool empty() const { return !(R || G || B || ALPHA); }
+  bool transparent() const { return !ALPHA; }
 
   uint8_t brightness() const {
     return (uint8_t)sqrt(double(R) * double(R) * .2126 +
