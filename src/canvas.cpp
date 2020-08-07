@@ -17,7 +17,7 @@ NBT empty;
 IsometricCanvas::IsometricCanvas(const Terrain::Coordinates &coords,
                                  const Colors::Palette &colors,
                                  const uint16_t padding)
-    : map(coords) {
+    : map(coords), padding(padding) {
   // This is a legacy setting, changing how the map is drawn. It can be 2 or
   // 3; it means that a block is drawn with a 2 or 3 pixel offset over the
   // block under it. This changes the orientation of the map: but it totally
@@ -25,21 +25,19 @@ IsometricCanvas::IsometricCanvas(const Terrain::Coordinates &coords,
   // made easily, I set it to 3 for now.
   heightOffset = 3;
 
-  // Minimal padding; as a block is drawn as a square of 4*4, and that on the
-  // edge half of it is covered, the blocks on the edges stick out by 2
-  // pixels on each side. We add a padding of 2 on the entire image to balance
-  // that.
-  this->padding = 2 + padding;
-
   nXChunks = CHUNK(map.maxX) - CHUNK(map.minX) + 1;
   nZChunks = CHUNK(map.maxZ) - CHUNK(map.minZ) + 1;
 
-  sizeX = nXChunks << 4;
-  sizeZ = nZChunks << 4;
+  sizeX = map.maxX - map.minX + 1;
+  sizeZ = map.maxZ - map.minZ + 1;
+
+  offsetX = map.minX & 0x0f;
+  offsetZ = map.minZ & 0x0f;
 
   if (map.orientation == NE || map.orientation == SW) {
     std::swap(nXChunks, nZChunks);
     std::swap(sizeX, sizeZ);
+    std::swap(offsetX, offsetZ);
   }
 
   // The isometrical view of the terrain implies that the width of each chunk
@@ -49,9 +47,13 @@ IsometricCanvas::IsometricCanvas(const Terrain::Coordinates &coords,
   // length on both the horizontal axis times 2.
   width = (sizeX + sizeZ + this->padding) * 2;
 
-  height = sizeX + sizeZ + (256 - map.minY) * heightOffset + this->padding * 2;
+  height =
+      sizeX + sizeZ + (256 - map.minY) * heightOffset + this->padding * 2 + 1;
 
-  size = uint64_t(width * BYTESPERPIXEL) * uint64_t(height);
+  logger::debug(
+      "Constructed canvas for map {}, of size {} {}, with offset {} {}\n",
+      map.to_string(), height, width, offsetX, offsetZ);
+  size = uint64_t(width * height * BYTESPERPIXEL);
   bytesBuffer = new uint8_t[size];
   memset(bytesBuffer, 0, size);
 
@@ -108,7 +110,8 @@ uint32_t IsometricCanvas::firstLine() const {
       if (*(bytesBuffer + (pixel + row * width) * BYTESPERPIXEL))
         line = row;
 
-  return line - (padding - 2);
+  // Return the value plus padding, to ensure the space before
+  return line - padding;
 }
 
 uint32_t IsometricCanvas::lastLine() const {
@@ -120,15 +123,18 @@ uint32_t IsometricCanvas::lastLine() const {
       if (*(bytesBuffer + (pixel + row * width) * BYTESPERPIXEL))
         line = row;
 
-  return line + (padding - 2);
+  // Return the value plus padding, to ensure the space after
+  return line + padding;
 }
 
 uint32_t IsometricCanvas::getCroppedHeight() const {
   uint32_t croppedHeight = lastLine() - firstLine();
-  if (croppedHeight == (int64_t(padding) - 2) * 2)
+
+  // If the two values are just the padding hardcoded
+  if (croppedHeight == int64_t(padding) * 2)
     return 0;
-  else
-    return croppedHeight + 1;
+
+  return croppedHeight + 1;
 }
 
 uint64_t IsometricCanvas::getCroppedOffset() const {
@@ -418,12 +424,74 @@ IsometricCanvas::drawer blockRenderers[] = {
 #undef DEFINETYPE
 };
 
-inline void IsometricCanvas::renderBlock(Colors::Block *color, const uint32_t x,
-                                         const uint32_t z, const uint32_t y,
+inline void IsometricCanvas::renderBlock(Colors::Block *color, uint32_t x,
+                                         uint32_t z, const uint32_t y,
                                          const NBT &metadata) {
-  const uint32_t bmpPosX = 2 * (sizeZ - 1) + (x - z) * 2 + padding;
-  const uint32_t bmpPosY = height - 2 + x + z - sizeX - sizeZ -
-                           (y - map.minY) * heightOffset - padding;
+  // Remove the offset from the first chunk, if it exists. The coordinates x and
+  // z are from a section, so go from 16*n to 16*n+15. If the canvas is not
+  // aligned to a chunk, we will get offset coordinates - this fixes it
+  x = x - offsetX;
+  z = z - offsetZ;
+
+  // Calculate where in the canvas a block is supposed to go.
+  // The canvas is a virtual terrain to order the rendering. The block x0 yY z0
+  // is always on top, so it is 'easier' to calculate where to put it. Methods
+  // before determine the real coordinates, so at this point those are "canvas"
+  // coordinates
+  //
+  // The rendering is done by chunk, section and block column inside of those
+  // sections. On the horizontal plane, the general order is the following for
+  // both chunk and inside sections:
+  //    0
+  //   1 2
+  //  3 4 5
+  // .......
+  // This makes sure that blocks are overwritten naturally when going up, as 0
+  // represents the whole column.
+
+  // The following methods translate coordinates to position in the image, from
+  // 3D to 2D. The position is a tuple where (0, 0) represent THE TOP LEFT
+  // pixel. The max width is `width`, and 0 means on the left, and the maximum
+  // height is `height`, on the top. Thus, moving left or up is a
+  // subtraction, which looks weird later.
+
+  // First, the horizontal position.
+
+  const uint32_t bmpPosX = // The formula is:
+      2 * (sizeZ - 1)      // From the middle of the image
+      + (x - z) * 2 // Calc the offset (greater x on the right, z to the left)
+      + padding;    // Add padding by moving to the right
+
+  // To get the height of a pixel, we have to look at how a flat layer
+  // articulates:
+  //
+  //       0000
+  //    1111  2222
+  // 3333  4444  5555
+  // 33 6666  7777 55
+  // 33 66 8888 77 55
+  // 33 66 8888 77 55
+  //    66 8888 77
+  //       8888
+  //
+  // The block 0 is higher up than the block 8, and the median is 3-4-5. Blocks'
+  // height depends on their coordinates.
+
+  const uint32_t bmpPosY = // The formula for the base is:
+      height               // Starting from the bottom -1,
+      - 2                  // Remove the rest of the height of a block,
+      - padding            // Remove the padding (Adding space to the bottom),
+
+      // We add x and z for the depth, so that the final block is on the bottom
+      + x +
+      z
+      // Remove both sizes to cancel out the line before. Essentially, 0 0 will
+      // be up -sizeX -sizeZ, and the last block will be on the bottom
+      // calculated just before.
+      - sizeX -
+      sizeZ
+      // Finally move that position up y blocks
+      - (y - map.minY) * heightOffset;
 
   if (bmpPosX > width - 1)
     throw std::range_error("Invalid x: " + std::to_string(bmpPosX) + "/" +

@@ -16,8 +16,9 @@
 struct IsometricCanvas {
   bool shading;
 
-  Coordinates map;       // The coordinates describing the 3D map
-  uint32_t sizeX, sizeZ; // The size of the 3D map
+  Coordinates map;          // The coordinates describing the 3D map
+  uint32_t sizeX, sizeZ;    // The size of the 3D map
+  uint8_t offsetX, offsetZ; // Offset of the first block in the first chunk
 
   uint32_t width, height; // Bitmap width and height
   uint16_t padding;       // Padding inside the image
