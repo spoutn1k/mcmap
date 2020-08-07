@@ -4,6 +4,11 @@
 #define S_ISDIR(m) (((m)&S_IFMT) == S_IFDIR)
 #endif
 
+uint32_t _ntohl(uint8_t *val) {
+  return (uint32_t(val[0]) << 24) + (uint32_t(val[1]) << 16) +
+         (uint32_t(val[2]) << 8) + (uint32_t(val[3]));
+}
+
 uint8_t clamp(int32_t val) {
   if (val < 0) {
     return 0;
@@ -12,16 +17,6 @@ uint8_t clamp(int32_t val) {
     return 255;
   }
   return (uint8_t)val;
-}
-
-bool dirExists(const char *strFilename) {
-  struct stat stFileInfo;
-  int ret;
-  ret = stat(strFilename, &stFileInfo);
-  if (ret == 0) {
-    return S_ISDIR(stFileInfo.st_mode);
-  }
-  return false;
 }
 
 bool isNumeric(const char *str) {

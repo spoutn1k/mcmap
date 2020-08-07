@@ -10,7 +10,22 @@
 #define Z_BEST_SPEED 6
 #endif
 
-bool PNG::Image::create() {
+namespace PNG {
+
+Image::Image(const std::filesystem::path file, const IsometricCanvas *pixels)
+    : canvas(pixels) {
+  imageHandle = nullptr;
+  imageHandle = fopen(file.c_str(), "wb");
+
+  if (imageHandle == nullptr) {
+    throw(std::runtime_error("Error opening '" + file.string() +
+                             "' for writing: " + string(strerror(errno))));
+  }
+
+  ready = create();
+}
+
+bool Image::create() {
 
   const uint32_t width = canvas->getCroppedWidth(),
                  height = canvas->getCroppedHeight();
@@ -76,7 +91,7 @@ bool PNG::Image::create() {
   return true;
 }
 
-bool PNG::Image::save() {
+bool Image::save() {
   if (!ready)
     return false;
 
@@ -101,3 +116,5 @@ bool PNG::Image::save() {
   png_destroy_write_struct(&pngPtr, &pngInfoPtr);
   return true;
 }
+
+} // namespace PNG

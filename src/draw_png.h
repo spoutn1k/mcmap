@@ -37,18 +37,7 @@ struct Image {
 
   bool ready = false;
 
-  Image(const std::filesystem::path file, const IsometricCanvas *pixels)
-      : canvas(pixels) {
-    imageHandle = nullptr;
-    imageHandle = fopen(file.c_str(), "wb");
-
-    if (imageHandle == nullptr) {
-      throw(std::runtime_error("Error opening '" + file.string() +
-                               "' for writing: " + string(strerror(errno))));
-    }
-
-    ready = create();
-  }
+  Image(const std::filesystem::path file, const IsometricCanvas *pixels);
 
   ~Image() {
     if (imageHandle)
