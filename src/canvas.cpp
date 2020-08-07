@@ -110,7 +110,7 @@ uint32_t IsometricCanvas::firstLine() const {
       if (*(bytesBuffer + (pixel + row * width) * BYTESPERPIXEL))
         line = row;
 
-  return line - (padding - 2);
+  return line - padding;
 }
 
 uint32_t IsometricCanvas::lastLine() const {
@@ -122,12 +122,12 @@ uint32_t IsometricCanvas::lastLine() const {
       if (*(bytesBuffer + (pixel + row * width) * BYTESPERPIXEL))
         line = row;
 
-  return line + (padding - 2);
+  return line + padding;
 }
 
 uint32_t IsometricCanvas::getCroppedHeight() const {
   uint32_t croppedHeight = lastLine() - firstLine();
-  if (croppedHeight == (int64_t(padding) - 2) * 2)
+  if (croppedHeight == int64_t(padding) * 2)
     return 0;
   else
     return croppedHeight + 1;

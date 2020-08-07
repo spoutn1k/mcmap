@@ -27,7 +27,8 @@ Image::Image(const std::filesystem::path file, const IsometricCanvas *pixels)
 
 bool Image::create() {
 
-  const uint32_t width = canvas->width, height = canvas->height;
+  const uint32_t width = canvas->getCroppedWidth(),
+                 height = canvas->getCroppedHeight();
 
   if (!(width && height)) {
     logger::warn("Nothing to output: canvas is empty !\n");
@@ -101,8 +102,8 @@ bool Image::save() {
     return false;
   }
 
-  uint8_t *srcLine = canvas->bytesBuffer;
-  const uint64_t croppedHeight = canvas->height;
+  uint8_t *srcLine = canvas->bytesBuffer + canvas->getCroppedOffset();
+  const uint64_t croppedHeight = canvas->getCroppedHeight();
 
   logger::info("Writing to file...\n");
   for (uint64_t y = 0; y < croppedHeight; ++y) {
