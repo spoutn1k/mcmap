@@ -17,7 +17,7 @@ NBT empty;
 IsometricCanvas::IsometricCanvas(const Terrain::Coordinates &coords,
                                  const Colors::Palette &colors,
                                  const uint16_t padding)
-    : map(coords) {
+    : map(coords), padding(padding) {
   // This is a legacy setting, changing how the map is drawn. It can be 2 or
   // 3; it means that a block is drawn with a 2 or 3 pixel offset over the
   // block under it. This changes the orientation of the map: but it totally
@@ -25,21 +25,19 @@ IsometricCanvas::IsometricCanvas(const Terrain::Coordinates &coords,
   // made easily, I set it to 3 for now.
   heightOffset = 3;
 
-  // Minimal padding; as a block is drawn as a square of 4*4, and that on the
-  // edge half of it is covered, the blocks on the edges stick out by 2
-  // pixels on each side. We add a padding of 2 on the entire image to balance
-  // that.
-  this->padding = 2 + padding;
-
   nXChunks = CHUNK(map.maxX) - CHUNK(map.minX) + 1;
   nZChunks = CHUNK(map.maxZ) - CHUNK(map.minZ) + 1;
 
-  sizeX = nXChunks << 4;
-  sizeZ = nZChunks << 4;
+  sizeX = map.maxX - map.minX + 1;
+  sizeZ = map.maxZ - map.minZ + 1;
+
+  offsetX = map.minX & 0x0f;
+  offsetZ = map.minZ & 0x0f;
 
   if (map.orientation == NE || map.orientation == SW) {
     std::swap(nXChunks, nZChunks);
     std::swap(sizeX, sizeZ);
+    std::swap(offsetX, offsetZ);
   }
 
   // The isometrical view of the terrain implies that the width of each chunk
@@ -49,9 +47,13 @@ IsometricCanvas::IsometricCanvas(const Terrain::Coordinates &coords,
   // length on both the horizontal axis times 2.
   width = (sizeX + sizeZ + this->padding) * 2;
 
-  height = sizeX + sizeZ + (256 - map.minY) * heightOffset + this->padding * 2;
+  height =
+      sizeX + sizeZ + (256 - map.minY) * heightOffset + this->padding * 2 + 1;
 
-  size = uint64_t(width * BYTESPERPIXEL) * uint64_t(height);
+  logger::debug(
+      "Constructed canvas for map {}, of size {} {}, with offset {} {}\n",
+      map.to_string(), height, width, offsetX, offsetZ);
+  size = uint64_t(width * height * BYTESPERPIXEL);
   bytesBuffer = new uint8_t[size];
   memset(bytesBuffer, 0, size);
 
@@ -421,9 +423,11 @@ IsometricCanvas::drawer blockRenderers[] = {
 inline void IsometricCanvas::renderBlock(Colors::Block *color, const uint32_t x,
                                          const uint32_t z, const uint32_t y,
                                          const NBT &metadata) {
-  const uint32_t bmpPosX = 2 * (sizeZ - 1) + (x - z) * 2 + padding;
-  const uint32_t bmpPosY = height - 2 + x + z - sizeX - sizeZ -
-                           (y - map.minY) * heightOffset - padding;
+
+  const uint32_t bmpPosX =
+      2 * (sizeZ - 1) + ((x - offsetX) - (z - offsetZ)) * 2 + padding;
+  const uint32_t bmpPosY = height - 2 + (x - offsetX) + (z - offsetZ) - sizeX -
+                           sizeZ - (y - map.minY) * heightOffset - padding;
 
   if (bmpPosX > width - 1)
     throw std::range_error("Invalid x: " + std::to_string(bmpPosX) + "/" +
@@ -456,6 +460,8 @@ inline void IsometricCanvas::renderBlock(Colors::Block *color, const uint32_t x,
     colorPtr = &localColor;
   }
 
+  if ((bmpPosY * width + bmpPosX + 1) * BYTESPERPIXEL > size)
+    logger::error("Error on block {} {}\n", x, z);
   // Then call the function registered with the block's type
   (this->*blockRenderers[color->type])(bmpPosX, bmpPosY, metadata, colorPtr);
 }
