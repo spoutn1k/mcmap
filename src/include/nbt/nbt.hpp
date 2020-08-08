@@ -906,14 +906,17 @@ public:
   ArithmeticType get() const {
     switch (get_type()) {
     case tag_type::tag_byte:
+      return static_cast<ArithmeticType>(*get_ptr<const tag_byte_t *>());
     case tag_type::tag_short:
+      return static_cast<ArithmeticType>(*get_ptr<const tag_short_t *>());
     case tag_type::tag_int:
+      return static_cast<ArithmeticType>(*get_ptr<const tag_int_t *>());
     case tag_type::tag_long:
+      return static_cast<ArithmeticType>(*get_ptr<const tag_long_t *>());
     case tag_type::tag_float:
-    case tag_type::tag_double: {
-      return static_cast<ArithmeticType>(*get_ptr<const ArithmeticType *>());
-      break;
-    }
+      return static_cast<ArithmeticType>(*get_ptr<const tag_float_t *>());
+    case tag_type::tag_double:
+      return static_cast<ArithmeticType>(*get_ptr<const tag_double_t *>());
 
     default:
       throw(std::invalid_argument("Not available for " +
@@ -923,9 +926,13 @@ public:
 
   template <typename StringType,
             typename std::enable_if<
-                std::is_same<StringType, std::string>::value, int>::type = 0>
+                std::is_same<StringType, tag_string_t>::value, int>::type = 0>
   StringType get() const {
-    return static_cast<StringType>(*get_ptr<const std::string *>());
+    if (get_type() == tag_type::tag_string)
+      return static_cast<StringType>(*get_ptr<const tag_string_t *>());
+
+    throw(
+        std::invalid_argument("Not available for " + std::string(type_name())));
   }
 };
 

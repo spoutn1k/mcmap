@@ -14,20 +14,12 @@ void to_json(json &j, const NBT &nbt) {
 
   switch (nbt.get_type()) {
   case tag_type::tag_byte:
-    j = json({{nbt.get_name(), nbt.get<int8_t>()}});
-    break;
   case tag_type::tag_short:
-    j = json({{nbt.get_name(), nbt.get<short>()}});
-    break;
   case tag_type::tag_int:
-    j = json({{nbt.get_name(), nbt.get<int>()}});
-    break;
   case tag_type::tag_long:
     j = json({{nbt.get_name(), nbt.get<long>()}});
     break;
   case tag_type::tag_float:
-    j = json({{nbt.get_name(), nbt.get<float>()}});
-    break;
   case tag_type::tag_double:
     j = json({{nbt.get_name(), nbt.get<double>()}});
     break;
