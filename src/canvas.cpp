@@ -224,7 +224,7 @@ void IsometricCanvas::renderChunk(const Terrain::Data &terrain,
   // This value is primordial: it states which version of minecraft the chunk
   // was created under, and we use it to know which interpreter to use later
   // in the sections
-  const int dataVersion = *chunk["DataVersion"].get<const int *>();
+  const int dataVersion = chunk["DataVersion"].get<int>();
 
   // Set the interpreter according to the type of chunk encountered
   sectionInterpreter interpreter = NULL;
@@ -316,7 +316,7 @@ void IsometricCanvas::renderSection(const NBT &section, const int64_t xPos,
   // Preload the colors in the order they appear in the palette into an array
   // for cheaper access
   for (auto &color : *sectionPalette) {
-    const string namespacedId = *color["Name"].get<const string *>();
+    const string namespacedId = color["Name"].get<string>();
     auto defined = palette.find(namespacedId);
 
     if (defined == palette.end()) {
@@ -792,7 +792,7 @@ void IsometricCanvas::drawSlab(const uint32_t x, const uint32_t y,
 
   if (metadata.contains("Properties") &&
       metadata["Properties"].contains("type")) {
-    type = *metadata["Properties"]["type"].get<const string *>();
+    type = metadata["Properties"]["type"].get<string>();
 
     // Draw a full block if it is a double slab
     if (type == "double") {
@@ -853,7 +853,7 @@ void IsometricCanvas::drawLog(const uint32_t x, const uint32_t y,
 
   if (metadata.contains("Properties") &&
       metadata["Properties"].contains("axis")) {
-    axis = *metadata["Properties"]["axis"].get<const string *>();
+    axis = metadata["Properties"]["axis"].get<string>();
 
     if (axis == "x") {
       if (map.orientation == NW || map.orientation == SE)

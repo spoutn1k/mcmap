@@ -132,7 +132,7 @@ void Terrain::Data::inflateChunk(vector<NBT> *sections) {
 
   // First of all, pad the beginning of the array if the lowest sections are
   // empty. This index is important and will be used later
-  int8_t index = *(sections->front()["Y"].get<int8_t *>());
+  int8_t index = sections->front()["Y"].get<int8_t>();
 
   // We use `tag_end` to avoid initalizing too much stuff
   for (int i = index - 1; i > -1; i--)
@@ -144,7 +144,7 @@ void Terrain::Data::inflateChunk(vector<NBT> *sections) {
   vector<NBT>::iterator it = sections->begin() + index, next = it + 1;
 
   while (it != sections->end() && next != sections->end()) {
-    uint8_t diff = *(next->operator[]("Y").get<int8_t *>()) - index - 1;
+    uint8_t diff = next->operator[]("Y").get<int8_t>() - index - 1;
 
     if (diff) {
       while (diff--) {
@@ -161,7 +161,7 @@ void Terrain::Data::inflateChunk(vector<NBT> *sections) {
 
 void Terrain::Data::stripChunk(vector<NBT> *sections) {
   // Some chunks have a -1 section, we'll pop that real quick
-  if (!sections->empty() && *sections->front()["Y"].get<int8_t *>() == -1) {
+  if (!sections->empty() && sections->front()["Y"].get<int8_t>() == -1) {
     sections->erase(sections->begin());
   }
 
@@ -178,13 +178,13 @@ void Terrain::Data::cacheColors(vector<NBT> *sections) {
       continue;
 
     for (auto block : *section["Palette"].get<vector<NBT> *>())
-      cache.push_back(*block["Name"].get<string *>());
+      cache.push_back(block["Name"].get<string>());
   }
 }
 
 uint16_t Terrain::Data::importHeight(vector<NBT> *sections) {
-  const uint8_t chunkMin = *sections->front()["Y"].get<int8_t *>() << 4;
-  const uint8_t chunkMax = ((*sections->back()["Y"].get<int8_t *>()) << 4) + 15;
+  const uint8_t chunkMin = sections->front()["Y"].get<int8_t>() << 4;
+  const uint8_t chunkMax = (sections->back()["Y"].get<int8_t>() << 4) + 15;
 
   // If the chunk's height is the highest found, record it
   if (chunkMax > maxHeight())
