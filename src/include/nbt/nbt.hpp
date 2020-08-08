@@ -1,9 +1,12 @@
 #pragma once
+#include <stdexcept>
+#include <type_traits>
 #ifndef NBT_HPP_
 #define NBT_HPP_
 
 #include "./iterators.hpp"
 #include "./tag_types.hpp"
+#include <fmt/core.h>
 #include <map>
 #include <stdint.h>
 #include <string>
@@ -895,6 +898,34 @@ public:
                                     int>::type = 0>
   constexpr auto get() const noexcept -> decltype(get_ptr<PointerType>()) {
     return get_ptr<PointerType>();
+  }
+
+  template <typename ArithmeticType,
+            typename std::enable_if<std::is_arithmetic<ArithmeticType>::value,
+                                    int>::type = 0>
+  ArithmeticType get() const {
+    switch (get_type()) {
+    case tag_type::tag_byte:
+    case tag_type::tag_short:
+    case tag_type::tag_int:
+    case tag_type::tag_long:
+    case tag_type::tag_float:
+    case tag_type::tag_double: {
+      return static_cast<ArithmeticType>(*get_ptr<const ArithmeticType *>());
+      break;
+    }
+
+    default:
+      throw(std::invalid_argument("Not available for " +
+                                  std::string(type_name())));
+    }
+  }
+
+  template <typename StringType,
+            typename std::enable_if<
+                std::is_same<StringType, std::string>::value, int>::type = 0>
+  StringType get() const {
+    return static_cast<StringType>(*get_ptr<const std::string *>());
   }
 };
 
