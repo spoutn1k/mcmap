@@ -31,8 +31,24 @@ IsometricCanvas::IsometricCanvas(const Terrain::Coordinates &coords,
   sizeX = map.maxX - map.minX + 1;
   sizeZ = map.maxZ - map.minZ + 1;
 
-  offsetX = map.minX & 0x0f;
-  offsetZ = map.minZ & 0x0f;
+  switch (map.orientation) {
+  case NW:
+    offsetX = map.minX & 0x0f;
+    offsetZ = map.minZ & 0x0f;
+    break;
+  case NE:
+    offsetX = 15 - (map.maxX & 0x0f);
+    offsetZ = map.minZ & 0x0f;
+    break;
+  case SW:
+    offsetX = map.minX & 0x0f;
+    offsetZ = 15 - (map.maxZ & 0x0f);
+    break;
+  case SE:
+    offsetX = 15 - (map.maxX & 0x0f);
+    offsetZ = 15 - (map.maxZ & 0x0f);
+    break;
+  }
 
   if (map.orientation == NE || map.orientation == SW) {
     std::swap(nXChunks, nZChunks);
@@ -50,9 +66,6 @@ IsometricCanvas::IsometricCanvas(const Terrain::Coordinates &coords,
   height =
       sizeX + sizeZ + (256 - map.minY) * heightOffset + this->padding * 2 + 1;
 
-  logger::debug(
-      "Constructed canvas for map {}, of size {} {}, with offset {} {}\n",
-      map.to_string(), height, width, offsetX, offsetZ);
   size = uint64_t(width * height * BYTESPERPIXEL);
   bytesBuffer = new uint8_t[size];
   memset(bytesBuffer, 0, size);
@@ -101,8 +114,8 @@ uint32_t IsometricCanvas::firstLine() const {
   // Tip: Return -7 for a freaky glichy look
   // return -7;
 
-  // We search for the first non-empty line, return it as a line index (ie line
-  // n)
+  // We search for the first non-empty line, return it as a line index (ie
+  // line n)
   uint32_t line = 0;
 
   for (uint32_t row = 0; row < height && !line; row++)
@@ -152,10 +165,10 @@ uint64_t IsometricCanvas::getCroppedOffset() const {
 // The following methods are used to draw the map into the canvas' 2D buffer
 
 // Translate a chunk in the canvas to a chunk in the world. The canvas has nxm
-// chunks, ordered from 0,0 which are used to count and render chunks in order,
-// but which world chunk is at 0,0 ? It also changes depending on the
-// orientation. This helpers does everything at once: input the canvas' x and y,
-// they come out as the real coordinates.
+// chunks, ordered from 0,0 which are used to count and render chunks in
+// order, but which world chunk is at 0,0 ? It also changes depending on the
+// orientation. This helpers does everything at once: input the canvas' x and
+// y, they come out as the real coordinates.
 void IsometricCanvas::orientChunk(int32_t &x, int32_t &z) {
   switch (map.orientation) {
   case NW:
@@ -209,8 +222,8 @@ void IsometricCanvas::renderChunk(const Terrain::Data &terrain,
     return;
 
   // This value is primordial: it states which version of minecraft the chunk
-  // was created under, and we use it to know which interpreter to use later in
-  // the sections
+  // was created under, and we use it to know which interpreter to use later
+  // in the sections
   const int dataVersion = *chunk["DataVersion"].get<const int *>();
 
   // Set the interpreter according to the type of chunk encountered
@@ -429,17 +442,17 @@ inline void IsometricCanvas::renderBlock(Colors::Block *color, uint32_t x,
   if (color->primary.transparent())
     return;
 
-  // Remove the offset from the first chunk, if it exists. The coordinates x and
-  // z are from a section, so go from 16*n to 16*n+15. If the canvas is not
-  // aligned to a chunk, we will get offset coordinates - this fixes it
+  // Remove the offset from the first chunk, if it exists. The coordinates x
+  // and z are from a section, so go from 16*n to 16*n+15. If the canvas is
+  // not aligned to a chunk, we will get offset coordinates - this fixes it
   x = x - offsetX;
   z = z - offsetZ;
 
   // Calculate where in the canvas a block is supposed to go.
-  // The canvas is a virtual terrain to order the rendering. The block x0 yY z0
-  // is always on top, so it is 'easier' to calculate where to put it. Methods
-  // before determine the real coordinates, so at this point those are "canvas"
-  // coordinates
+  // The canvas is a virtual terrain to order the rendering. The block x0 yY
+  // z0 is always on top, so it is 'easier' to calculate where to put it.
+  // Methods before determine the real coordinates, so at this point those are
+  // "canvas" coordinates
   //
   // The rendering is done by chunk, section and block column inside of those
   // sections. On the horizontal plane, the general order is the following for
@@ -451,10 +464,10 @@ inline void IsometricCanvas::renderBlock(Colors::Block *color, uint32_t x,
   // This makes sure that blocks are overwritten naturally when going up, as 0
   // represents the whole column.
 
-  // The following methods translate coordinates to position in the image, from
-  // 3D to 2D. The position is a tuple where (0, 0) represent THE TOP LEFT
-  // pixel. The max width is `width`, and 0 means on the left, and the maximum
-  // height is `height`, on the top. Thus, moving left or up is a
+  // The following methods translate coordinates to position in the image,
+  // from 3D to 2D. The position is a tuple where (0, 0) represent THE TOP
+  // LEFT pixel. The max width is `width`, and 0 means on the left, and the
+  // maximum height is `height`, on the top. Thus, moving left or up is a
   // subtraction, which looks weird later.
 
   // First, the horizontal position.
@@ -476,19 +489,20 @@ inline void IsometricCanvas::renderBlock(Colors::Block *color, uint32_t x,
   //    66 8888 77
   //       8888
   //
-  // The block 0 is higher up than the block 8, and the median is 3-4-5. Blocks'
-  // height depends on their coordinates.
+  // The block 0 is higher up than the block 8, and the median is 3-4-5.
+  // Blocks' height depends on their coordinates.
 
   const uint32_t bmpPosY = // The formula for the base is:
       height               // Starting from the bottom -1,
       - 2                  // Remove the rest of the height of a block,
       - padding            // Remove the padding (Adding space to the bottom),
 
-      // We add x and z for the depth, so that the final block is on the bottom
+      // We add x and z for the depth, so that the final block is on the
+      // bottom
       + x +
       z
-      // Remove both sizes to cancel out the line before. Essentially, 0 0 will
-      // be up -sizeX -sizeZ, and the last block will be on the bottom
+      // Remove both sizes to cancel out the line before. Essentially, 0 0
+      // will be up -sizeX -sizeZ, and the last block will be on the bottom
       // calculated just before.
       - sizeX -
       sizeZ
