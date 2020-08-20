@@ -12,10 +12,16 @@ This project is under __heavy__ development, but compatible with newer versions 
 
 ## Usage
 
-### __Linux / MacOS__
+### Basic invocation
+
 ```
-./mcmap <options> ~/.minecraft/saves/<your save>
+./mcmap <options> path/to/<your save>
 ```
+
+The standard save path is different between OSes:
+- On Linux, it is `$HOME/.minecraft/saves`;
+- On macOS, under `~/Library/Application\ Support/minecraft/saves`;
+- On Windows, somewhere else. (Please create an issue/PR if you know).
 
 ### Options
 
@@ -140,27 +146,37 @@ Examples:
 }
 ```
 
-## Installation
+## Compilation
 
-`mcmap` depends on the `PNG` and `zlib` libraries. Development was made using `gcc` version 10, and can be compiled with `gcc` 8 or later.
+`mcmap` depends on the `PNG` and `zlib` libraries. Development was made using `gcc` version 10, and can be compiled with `gcc` 8 or later or `clang` 10 or later.
 
-#### Ubuntu
+#### Linux
+
+Getting the libraries depends on your distribution:
+
+- Ubuntu: `apt update && apt install git make g++ libpng-dev`;
+- Archlinux: `pacman -S --needed git gcc make libpng`.
+
+Then get the code and compile:
 ```
-apt update && apt install git make g++ libpng-dev
 git clone http://github.com/spoutn1k/mcmap
 cd mcmap && make -j
 ```
 
-#### Archlinux
+#### macOS
+
+In an Apple environment, you need to install `brew` to get the libraries. 
+You also need a developer toolkit recent enough, with the version of `g++ --version` superior to 10. 
 ```
-pacman -S --needed git gcc make libpng #needed means don't reinstall if it is installed
+brew install libpng libomp
 git clone http://github.com/spoutn1k/mcmap
-cd mcmap && make -j
+cd mcmap
+OS=MACOS make
 ```
 
 #### Windows
 
-Download and set up [Ubuntu on windows](https://ubuntu.com/tutorials/tutorial-ubuntu-on-windows#1-overview) then follow the Ubuntu steps.
+Download and set up [Ubuntu on windows](https://ubuntu.com/tutorials/tutorial-ubuntu-on-windows#1-overview) then the steps are the same as Linux/Ubuntu.
 
 ## Troubleshooting
 
