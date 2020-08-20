@@ -1,17 +1,19 @@
-CC=g++
 SHUSH=--no-print-directory
 
-CFLAGS=-O3 -std=c++17 -c -Wall -fomit-frame-pointer -pedantic -DWITHPNG -D_FILE_OFFSET_BITS=64 -fopenmp -Isrc/include
-LDFLAGS=-lz -lpng -lstdc++fs -fopenmp
+CFLAGS=-O3 -std=c++17 -c -Wall -fomit-frame-pointer -pedantic -D_FILE_OFFSET_BITS=64 -Isrc/include
+LDFLAGS=-s -lz -lpng -lomp
 
-PCFLAGS=-O3 -std=c++17 -c -Wall -pg -pedantic -DWITHPNG -D_FILE_OFFSET_BITS=64 -fopenmp
-PLDFLAGS=-lz -lpng -lstdc++fs -fopenmp -pg
+ifeq ($(OS), MACOS)
+# Make sure the openMP directives are pre-processed by Clang
+CFLAGS+=-Xpreprocessor -fopenmp
+else
+# We assume linux
+CFLAGS+=-fopenmp
+LDFLAGS+=-lstdc++fs
+endif
 
 SOURCES := $(wildcard src/*.cpp) src/include/fmt/format.cpp
-
 OBJECTS=$(SOURCES:.cpp=.default.o)
-DOBJECTS=$(SOURCES:.cpp=.debug.o)
-POBJECTS=$(SOURCES:.cpp=.profiling.o)
 
 EXECUTABLE=mcmap
 
@@ -24,19 +26,11 @@ BCOLORS=src/colors.bson
 all:
 	@ $(MAKE) $(SHUSH) $(BCOLORS)
 	@ $(MAKE) $(SHUSH) $(OBJECTS)
-	$(CC) $(OBJECTS) $(LDFLAGS) -o $(EXECUTABLE)
-
-profile:
-	@ $(MAKE) $(SHUSH) $(BCOLORS)
-	@ $(MAKE) $(SHUSH) $(POBJECTS)
-	$(CC) $(POBJECTS) $(PLDFLAGS) -o $(EXECUTABLE)
+	$(CXX) $(OBJECTS) $(LDFLAGS) -o $(EXECUTABLE)
 
 $(BCOLORS): $(JCOLORS)
 	$(MAKE) -C scripts json2bson
 	./scripts/json2bson $(JCOLORS) > $@
-
-analyse:
-	gprof $(EXECUTABLE) gmon.out | less -S
 
 clean:
 	find src -name *o -exec rm {} \;
@@ -47,7 +41,4 @@ realClean: clean
 	$(MAKE) -C scripts $@
 
 %.default.o: %.cpp
-	$(CC) $(CFLAGS) $< -o $@
-
-%.profiling.o: %.cpp
-	$(CC) $(PCFLAGS) $< -o $@
+	$(CXX) $(CFLAGS) $< -o $@
