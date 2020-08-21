@@ -1,24 +1,40 @@
+# Variables check and initialization
 ifeq ($(shell env | grep OS),)
 	export OS=LINUX
 endif
 
-SHUSH=--no-print-directory
-
-CFLAGS=-O3 -std=c++17 -c -Wall -fomit-frame-pointer -pedantic -D_FILE_OFFSET_BITS=64 -Isrc/include
-LDFLAGS=-s -lz -lpng
-
-# Resolve OpenMP values
-ifeq ($(OS), MACOS)
-# Make sure the OpenMP directives are pre-processed by Clang
-# Cause g++ is clang that makes sense thanks tim apple
-	CFLAGS += -Xpreprocessor -fopenmp
-	LDFLAGS += -lomp
-else
-	# We assume linux with the actual Gnu gcc
-	CFLAGS += -fopenmp
-	LDFLAGS += -lgomp -lstdc++fs
+ifeq ($(shell env | grep OPENMP),)
+	export OPENMP=TRUE
 endif
 
+SHUSH=--no-print-directory
+
+# Common flags for all platforms
+CFLAGS=-O3 -std=c++17 -c -Wall -fomit-frame-pointer -pedantic -D_FILE_OFFSET_BITS=64 -Isrc/include
+LDFLAGS=-lz -lpng
+
+ifeq ($(OS), LINUX)
+	# Fix some issues on older compilers
+	LDFLAGS += -s -lstdc++fs
+endif
+
+# Resolve OpenMP values
+ifeq ($(OPENMP), TRUE)
+	ifeq ($(OS), MACOS)
+	# Make sure the OpenMP directives are pre-processed by Clang
+	# Cause g++ is clang that makes sense thanks tim apple
+		CFLAGS += -Xpreprocessor -fopenmp
+		LDFLAGS += -lomp
+	else
+		# We assume linux with the actual Gnu gcc
+		CFLAGS += -fopenmp
+		LDFLAGS += -lgomp
+	endif
+else
+	CFLAGS += -DDISABLE_OMP
+endif
+
+# Files to use
 SOURCES := $(wildcard src/*.cpp) src/include/fmt/format.cpp
 OBJECTS=$(SOURCES:.cpp=.default.o)
 
