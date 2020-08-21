@@ -1,3 +1,7 @@
+ifeq ($(shell env | grep OS),)
+	export OS=LINUX
+endif
+
 SHUSH=--no-print-directory
 
 CFLAGS=-O3 -std=c++17 -c -Wall -fomit-frame-pointer -pedantic -D_FILE_OFFSET_BITS=64 -Isrc/include
@@ -7,12 +11,12 @@ LDFLAGS=-s -lz -lpng
 ifeq ($(OS), MACOS)
 # Make sure the OpenMP directives are pre-processed by Clang
 # Cause g++ is clang that makes sense thanks tim apple
-CFLAGS+=-Xpreprocessor -fopenmp
-LDFLAGS+=-lomp
+	CFLAGS += -Xpreprocessor -fopenmp
+	LDFLAGS += -lomp
 else
-# We assume linux with the actual Gnu gcc
-CFLAGS+=-fopenmp
-LDFLAGS+=-lgomp -lstdc++fs
+	# We assume linux with the actual Gnu gcc
+	CFLAGS += -fopenmp
+	LDFLAGS += -lgomp -lstdc++fs
 endif
 
 SOURCES := $(wildcard src/*.cpp) src/include/fmt/format.cpp
