@@ -19,7 +19,11 @@
 
     "minecraft:torch": { "type": "Torch", "color": [161, 129, 77, 255], "accent": [245, 220, 50, 255] },
     "minecraft:wall_torch": { "type": "Torch", "color": [161, 129, 77, 255], "accent": [245, 220, 50, 255] },
+    "minecraft:soul_torch": { "type": "Torch", "color": [161, 129, 77, 255], "accent": [45, 166, 152, 255] },
+    "minecraft:soul_wall_torch": { "type": "Torch", "color": [161, 129, 77, 255], "accent": [45, 166, 152, 255] },
+
     "minecraft:lantern": { "type": "Head", "color": [151, 138, 84, 255] },
+    "minecraft:soul_lantern": { "type": "Head", "color": [118, 203, 208, 255] },
 
     "minecraft:spawner": [26, 41, 52, 255],
     "minecraft:chest": [125, 91, 38, 255],
@@ -50,6 +54,7 @@
     "minecraft:smithing_table": [44, 45, 54, 255],
 
     "minecraft:campfire": { "type": "Slab", "color": [156, 127, 78, 255] },
+    "minecraft:soul_campfire": { "type": "Slab", "color": [156, 127, 78, 255] },
 
     "minecraft:ladder": { "type": "Plant", "color": [181, 140, 64, 32] },
 
@@ -80,6 +85,7 @@
     "minecraft:diamond_block": [100, 240, 227, 255],
     "minecraft:emerald_block": [81, 217, 117, 255],
     "minecraft:redstone_block": [171, 25, 6, 255],
+    "minecraft:netherite_block": [71, 67, 70, 255],
 
     "minecraft:bedrock": [84, 84, 84, 255],
 
@@ -536,6 +542,8 @@
     "minecraft:nether_brick_wall": { "type": "Rod", "color": [54, 24, 30, 254, 7] },
     "minecraft:nether_brick_fence": { "type": "Rod", "color": [54, 24, 30, 254, 7] },
     "minecraft:nether_brick_stairs": [54, 24, 30, 255],
+    "minecraft:cracked_nether_bricks": [43, 21, 25, 255],
+    "minecraft:chiseled_nether_bricks": [50, 25, 30, 255],
 
     "minecraft:red_nether_bricks": [85, 24, 30, 255],
     "minecraft:red_nether_brick_slab": { "type": "Slab", "color": [85, 24, 30, 255] },
@@ -580,7 +588,19 @@
     "minecraft:stripped_warped_stem": { "type": "Log", "color": [58, 152, 149, 255], "accent": [53, 129, 125, 255] },
     "minecraft:warped_hyphae": [75, 40, 66, 255],
     "minecraft:stripped_warped_hyphae": [58, 152, 149, 255],
+
     "minecraft:warped_planks": [41, 101, 95, 255],
+    "minecraft:warped_button": { "type": "Hide", "color": [41, 101, 95, 255] },
+    "minecraft:warped_pressure_plate": { "type": "Thin", "color": [41, 101, 95, 255] },
+    "minecraft:warped_fence": { "type": "Rod", "color": [41, 101, 95, 255] },
+    "minecraft:warped_fence_gate": [41, 101, 95, 255],
+    "minecraft:warped_sign": [41, 101, 95, 255],
+    "minecraft:warped_wall_sign": [41, 101, 95, 255],
+    "minecraft:warped_slab": { "type": "Slab", "color": [41, 101, 95, 255] },
+    "minecraft:warped_stairs": { "type": "Full", "color": [41, 101, 95, 255] },
+    "minecraft:warped_door": [45, 125, 119, 255],
+    "minecraft:warped_trapdoor": [54, 125, 120, 255],
+
     "minecraft:warped_wart_block": [15, 150, 127, 255],
     "minecraft:warped_fungus": { "type": "Head", "color": [20, 180, 133, 255] },
     "minecraft:warped_roots": { "type": "Plant", "color": [22, 126, 134, 255] },
@@ -590,15 +610,30 @@
 
     "minecraft:crimson_nylium": { "type": "Grown", "color": [110, 53, 51, 255], "accent": [125, 24, 24, 255] },
     "minecraft:crimson_stem": { "type": "Log", "color": [79, 37, 50, 255], "accent": [115, 55, 79, 255] },
-    "minecraft:strpped_crimson_stem": { "type": "Log", "color": [138, 58, 91, 255], "accent": [122, 56, 83, 255] },
+    "minecraft:stripped_crimson_stem": { "type": "Log", "color": [138, 58, 91, 255], "accent": [122, 56, 83, 255] },
     "minecraft:crimson_hyphae": [79, 37, 50, 255],
     "minecraft:stripped_crimson_hyphae": [138, 58, 91, 255],
+
     "minecraft:crimson_planks": [97, 43, 66, 255],
+    "minecraft:crimson_button": { "type": "Hide", "color": [97, 43, 66, 255] },
+    "minecraft:crimson_fence": { "type": "Rod", "color": [97, 43, 66, 255] },
+    "minecraft:crimson_fence_gate": [97, 43, 66, 255],
+    "minecraft:crimson_pressure_plate": { "type": "Thin", "color": [97, 43, 66, 255] },
+    "minecraft:crimson_sign": [97, 43, 66, 255],
+    "minecraft:crimson_wall_sign": [97, 43, 66, 255],
+    "minecraft:crimson_slab": { "type": "Slab", "color": [97, 43, 66, 255] },
+    "minecraft:crimson_stairs": { "type": "Full", "color": [97, 43, 66, 255] },
+    "minecraft:crimson_door": [122, 57, 83, 255],
+    "minecraft:crimson_trapdoor": [107, 51, 74, 255],
+
     "minecraft:nether_wart_block": [117, 26, 42, 255],
     "minecraft:crimson_fungus": { "type": "Head", "color": [197, 52, 57, 255] },
     "minecraft:crimson_roots": { "type": "Plant", "color": [173, 16, 28, 255] },
     "minecraft:weeping_vines": { "type": "Plant", "color": [130, 5, 44, 255] },
     "minecraft:weeping_vines_plant": { "type": "Plant", "color": [130, 5, 44, 255] },
+
+    "minecraft:lodestone": { "type": "Log", "color": [121, 121, 124, 255], "accent": [147, 150, 154, 255] },
+    "minecraft:respawn_anchor": { "type": "Log", "color": [70, 52, 85, 255], "accent": [86, 32, 164, 255] },
 
     "minecraft:end_portal": [18, 16, 27, 127],
     "minecraft:end_portal_frame": [89, 117, 96, 255, 6],
