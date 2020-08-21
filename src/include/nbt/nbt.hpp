@@ -13,12 +13,11 @@
 #include <utility>
 #include <vector>
 
-#define NTOHUS(ptr) (uint16_t(((ptr)[0] << 8) + (ptr)[1]))
-#define NTOHS(ptr) (int16_t(((ptr)[0] << 8) + (ptr)[1]))
-#define NTOHI(ptr)                                                             \
+#define _NTOHS(ptr) (int16_t(((ptr)[0] << 8) + (ptr)[1]))
+#define _NTOHI(ptr)                                                            \
   ((uint32_t((ptr)[0]) << 24) + (uint32_t((ptr)[1]) << 16) +                   \
    (uint32_t((ptr)[2]) << 8) + uint32_t((ptr)[3]))
-#define NTOHL(ptr)                                                             \
+#define _NTOHL(ptr)                                                            \
   ((uint64_t((ptr)[0]) << 56) + (uint64_t((ptr)[1]) << 48) +                   \
    (uint64_t((ptr)[2]) << 40) + (uint64_t((ptr)[3]) << 32) +                   \
    (uint64_t((ptr)[4]) << 24) + (uint64_t((ptr)[5]) << 16) +                   \
@@ -147,42 +146,42 @@ public:
 
     case tag_type::tag_short: {
       assertSize(data, end, 2);
-      content.short_n = NTOHS(data);
+      content.short_n = _NTOHS(data);
       data += 2;
       break;
     }
 
     case tag_type::tag_int: {
       assertSize(data, end, 4);
-      content.int_n = NTOHI(data);
+      content.int_n = _NTOHI(data);
       data += 4;
       break;
     }
 
     case tag_type::tag_long: {
       assertSize(data, end, 8);
-      content.long_n = NTOHL(data);
+      content.long_n = _NTOHL(data);
       data += 8;
       break;
     }
 
     case tag_type::tag_float: {
       assertSize(data, end, 4);
-      content.int_n = float(NTOHI(data));
+      content.int_n = float(_NTOHI(data));
       data += 4;
       break;
     }
 
     case tag_type::tag_double: {
       assertSize(data, end, 8);
-      content.long_n = double(NTOHL(data));
+      content.long_n = double(_NTOHL(data));
       data += 8;
       break;
     }
 
     case tag_type::tag_byte_array: {
       assertSize(data, end, 4);
-      uint32_t len = NTOHI(data);
+      uint32_t len = _NTOHI(data);
       content = tag_content(tag_type::tag_byte_array);
 
       assertSize(data + 4, end, len);
@@ -195,7 +194,7 @@ public:
 
     case tag_type::tag_string: {
       assertSize(data, end, 4);
-      uint16_t len = NTOHS(data);
+      uint16_t len = _NTOHS(data);
 
       assertSize(data + 2, end, len);
       content = tag_string_t((char *)(data + 2), len);
@@ -209,7 +208,7 @@ public:
       tag_type chid_type = tag_type(data[0]);
 
       assertSize(data + 1, end, 4);
-      uint32_t len = NTOHI(data + 1);
+      uint32_t len = _NTOHI(data + 1);
 
       data += 5;
       content = tag_content(tag_type::tag_list);
@@ -231,12 +230,12 @@ public:
 
     case tag_type::tag_int_array: {
       assertSize(data, end, 4);
-      uint32_t len = NTOHI(data);
+      uint32_t len = _NTOHI(data);
       content = tag_content(tag_type::tag_int_array);
 
       assertSize(data + 4, end, 4 * len);
       for (size_t i = 0; i < len; i++)
-        content.int_array->push_back(NTOHI(data + 4 * (i + 1)));
+        content.int_array->push_back(_NTOHI(data + 4 * (i + 1)));
 
       data += (len * 4 + 4);
       break;
@@ -244,12 +243,12 @@ public:
 
     case tag_type::tag_long_array: {
       assertSize(data, end, 4);
-      uint32_t len = NTOHI(data);
+      uint32_t len = _NTOHI(data);
       content = tag_content(tag_type::tag_long_array);
 
       assertSize(data + 4, end, 8 * len);
       for (size_t i = 0; i < len; i++)
-        content.long_array->push_back(NTOHL(data + i * 8 + 4));
+        content.long_array->push_back(_NTOHL(data + i * 8 + 4));
 
       data += (len * 8 + 4);
       break;
@@ -727,7 +726,7 @@ private:
       return;
 
     assertSize(data + 1, end, 2);
-    uint16_t len = NTOHS(data + 1);
+    uint16_t len = _NTOHS(data + 1);
 
     assertSize(data + 3, end, len);
     name = std::string((char *)(data + 3), len);
