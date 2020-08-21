@@ -15,7 +15,7 @@ This project is under __heavy__ development, but compatible with newer versions 
 ### Basic invocation
 
 ```
-./mcmap <options> path/to/<your save>
+mcmap <options> path/to/<your save>
 ```
 
 The standard save path is different between OSes:
@@ -56,16 +56,9 @@ If rendering large areas, working in threded mode can greatly speed up the proce
 
 ### __Windows__
 
-Native Windows is currently unsupported, although the program works using [Ubuntu on windows](https://ubuntu.com/tutorials/tutorial-ubuntu-on-windows#1-overview) to get a linux terminal and launch it from there. Once in a terminal, the following steps are needed:
-```
-apt update && apt install git make g++ libpng-dev
-git clone http://github.com/spoutn1k/mcmap
-cd mcmap && make -j
-```
+Native Windows is currently unsupported, although the program works using [Ubuntu on windows](https://ubuntu.com/tutorials/tutorial-ubuntu-on-windows#1-overview) to get a linux terminal and launch it from there, as on a linux platform.
 
-Once this step is done, the program is compiled. Use it with the above options, the path to the root of `C:\\` being `/mnt/c/`.
-
-Most of the code uses `std::filesystem` and from my understanding should be cross-platform. I have no experience nor interest in making a Windows GUI, but it should be pretty straightforward.
+Most of the code uses `std::filesystem` to access files and from my understanding should be cross-platform. I have no experience nor interest in making a Windows GUI, but it should be pretty straightforward.
 
 ## Color file format
 
