@@ -29,7 +29,9 @@ void printHelp(char *binary) {
       "  -nobeacons          do not render beacon beams\n"
       "  -shading            toggle shading (brightens blocks depending on "
       "height)\n"
+#ifndef DISABLE_OMP
       "  -splits VAL         render with VAL threads\n"
+#endif
       "  -marker X Z color   draw a marker at X Z of the desired color\n"
       "  -padding VAL        padding to use around the image (default 5)\n"
       "  -h[elp]             display an option summary\n"
@@ -82,9 +84,13 @@ int main(int argc, char **argv) {
   Terrain::Coordinates *subCoords = new Terrain::Coordinates[options.splits];
   splitCoords(coords, subCoords, options.splits);
 
+#ifndef DISABLE_OMP
 #pragma omp parallel shared(finalCanvas)
+#endif
   {
+#ifndef DISABLE_OMP
 #pragma omp for ordered schedule(static)
+#endif
     for (uint16_t i = 0; i < options.splits; i++) {
       // Load the minecraft terrain to render
       Terrain::Data world(subCoords[i]);
@@ -105,7 +111,9 @@ int main(int argc, char **argv) {
       canvas.setMarkers(options.totalMarkers, &options.markers);
       canvas.renderTerrain(world);
 
+#ifndef DISABLE_OMP
 #pragma omp ordered
+#endif
       {
         // Merge the terrain fragment into the final canvas. The ordered
         // directive in the pragma is primordial, as the merging algorithm

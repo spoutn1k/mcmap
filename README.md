@@ -12,10 +12,16 @@ This project is under __heavy__ development, but compatible with newer versions 
 
 ## Usage
 
-### __Linux / MacOS__
+### Basic invocation
+
 ```
-./mcmap <options> ~/.minecraft/saves/<your save>
+mcmap <options> path/to/<your save>
 ```
+
+The standard save path is different between OSes:
+- On Linux, it is `$HOME/.minecraft/saves`;
+- On macOS, under `~/Library/Application\ Support/minecraft/saves`;
+- On Windows, somewhere else. (Please create an issue/PR if you know).
 
 ### Options
 
@@ -50,16 +56,9 @@ If rendering large areas, working in threded mode can greatly speed up the proce
 
 ### __Windows__
 
-Native Windows is currently unsupported, although the program works using [Ubuntu on windows](https://ubuntu.com/tutorials/tutorial-ubuntu-on-windows#1-overview) to get a linux terminal and launch it from there. Once in a terminal, the following steps are needed:
-```
-apt update && apt install git make g++ libpng-dev
-git clone http://github.com/spoutn1k/mcmap
-cd mcmap && make -j
-```
+Native Windows is currently unsupported, although the program works using [Ubuntu on windows](https://ubuntu.com/tutorials/tutorial-ubuntu-on-windows#1-overview) to get a linux terminal and launch it from there, as on a linux platform.
 
-Once this step is done, the program is compiled. Use it with the above options, the path to the root of `C:\\` being `/mnt/c/`.
-
-Most of the code uses `std::filesystem` and from my understanding should be cross-platform. I have no experience nor interest in making a Windows GUI, but it should be pretty straightforward.
+Most of the code uses `std::filesystem` to access files and from my understanding should be cross-platform. I have no experience nor interest in making a Windows GUI, but it should be pretty straightforward.
 
 ## Color file format
 
@@ -140,30 +139,44 @@ Examples:
 }
 ```
 
-## Installation
+## Compilation
 
-`mcmap` depends on the `PNG` and `zlib` libraries. Development was made using `gcc` version 10, and can be compiled with `gcc` 8 or later.
+`mcmap` depends on the `PNG` and `zlib` libraries. Development was made using `gcc` version 10, and can be compiled with `gcc` 8 or later or `clang` 10 or later.
 
-#### Ubuntu
+#### Linux
+
+Getting the libraries depends on your distribution:
+
+- Ubuntu: `apt update && apt install git make g++ libpng-dev`;
+- Archlinux: `pacman -S --needed git gcc make libpng`.
+
+Then get the code and compile:
 ```
-apt update && apt install git make g++ libpng-dev
 git clone http://github.com/spoutn1k/mcmap
 cd mcmap && make -j
 ```
 
-#### Archlinux
+#### macOS
+
+In an Apple environment, you need to install `brew` to get the libraries. 
+You also need a developer toolkit recent enough, with the version of `g++ --version` superior to 10. 
 ```
-pacman -S --needed git gcc make libpng #needed means don't reinstall if it is installed
+brew install libpng libomp
 git clone http://github.com/spoutn1k/mcmap
-cd mcmap && make -j
+cd mcmap
+OS=MACOS make
 ```
 
 #### Windows
 
-Download and set up [Ubuntu on windows](https://ubuntu.com/tutorials/tutorial-ubuntu-on-windows#1-overview) then follow the Ubuntu steps.
+Download and set up [Ubuntu on windows](https://ubuntu.com/tutorials/tutorial-ubuntu-on-windows#1-overview) then the steps are the same as Linux/Ubuntu.
 
 ## Troubleshooting
 
 ### Compilation fails with error message about filesystem
 
 This is recurrent on older Ubuntu installs, make sure your `gcc` version is up to date.
+
+### Compilation fails complaining about OMP something
+
+Try compiling with `OPENMP=NOTHXM8 make`. This disables the underlying threading code, so you won't be able to use the `splits` option.
