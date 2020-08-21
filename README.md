@@ -176,3 +176,7 @@ Download and set up [Ubuntu on windows](https://ubuntu.com/tutorials/tutorial-ub
 ### Compilation fails with error message about filesystem
 
 This is recurrent on older Ubuntu installs, make sure your `gcc` version is up to date.
+
+### Compilation fails complaining about OMP something
+
+Try compiling with `OPENMP=NOTHXM8 make`. This disables the underlying threading code, so you won't be able to use the `splits` option.
