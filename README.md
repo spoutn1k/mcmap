@@ -21,7 +21,7 @@ mcmap <options> path/to/<your save>
 The standard save path is different between OSes:
 - On Linux, it is `$HOME/.minecraft/saves`;
 - On macOS, under `~/Library/Application\ Support/minecraft/saves`;
-- On Windows, somewhere else. (Please create an issue/PR if you know).
+- On Windows, it is `%appdata%/.minecraft/saves`.
 
 ### Options
 
