@@ -21,7 +21,13 @@ mcmap <options> path/to/<your save>
 The standard save path is different between OSes:
 - On Linux, it is `$HOME/.minecraft/saves`;
 - On macOS, under `~/Library/Application\ Support/minecraft/saves`;
-- On Windows, it is `%appdata%/.minecraft/saves`.
+- On Windows, the standard path is `%AppData%\.minecraft\saves`. However as only [Ubuntu on Windows](https://ubuntu.com/tutorials/tutorial-ubuntu-on-windows#1-overview) is supported, the path to access the save folder is the following: `/mnt/c/<Your user>/AppData/Roaming/.minecraft/saves`.
+
+#### Windows
+
+Native Windows is currently unsupported, but the program works using [Ubuntu on windows](https://ubuntu.com/tutorials/tutorial-ubuntu-on-windows#1-overview) to get a linux terminal and launch it from there, as on a linux platform.
+
+Most of the code uses `std::filesystem` to access files and from my understanding should be cross-platform. I have no experience nor interest in making a Windows GUI, but it should be pretty straightforward, as it [has been done before](https://www.minecraftforum.net/forums/mapping-and-modding-java-edition/minecraft-tools/1260568-minemapper-dynamic-mapping-for-windows). If anyone has the sources to that old viewer, sharing them to update them would be greatly appreciated.
 
 ### Options
 
@@ -52,13 +58,7 @@ The standard save path is different between OSes:
 
 When passing only a level, `mcmap` will try to guess the size of the existing terrain, but the Minecraft storage format does not make is easy. The best results are achieved using `-from x z -to X Z` to define an area to render.
 
-If rendering large areas, working in threded mode can greatly speed up the process. Try using `-splits` with the number of cores your CPU has for the best performance.
-
-### __Windows__
-
-Native Windows is currently unsupported, although the program works using [Ubuntu on windows](https://ubuntu.com/tutorials/tutorial-ubuntu-on-windows#1-overview) to get a linux terminal and launch it from there, as on a linux platform.
-
-Most of the code uses `std::filesystem` to access files and from my understanding should be cross-platform. I have no experience nor interest in making a Windows GUI, but it should be pretty straightforward.
+If rendering large areas, working in threaded mode can greatly speed up the process. Try using `-splits` with the number of cores your CPU has for the best performance.
 
 ## Color file format
 
