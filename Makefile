@@ -1,9 +1,9 @@
 # Variables check and initialization
-ifeq ($(shell env | grep OS),)
+ifeq ($(shell env | grep ^OS=),)
 	export OS=LINUX
 endif
 
-ifeq ($(shell env | grep OPENMP),)
+ifeq ($(shell env | grep ^OPENMP=),)
 	export OPENMP=TRUE
 endif
 
