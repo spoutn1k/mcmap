@@ -575,6 +575,9 @@ inline void addColor(uint8_t *const color, const uint8_t *const add) {
 #define DARK_ &color->dark
 #define LIGHT &color->light
 #define PRIME &color->primary
+#define ALTER &color->secondary
+#define ALT_D &secondaryDark
+#define ALT_L &secondaryLight
 
 void IsometricCanvas::drawHead(const uint32_t x, const uint32_t y, const NBT &,
                                const Colors::Block *block) {
@@ -699,11 +702,10 @@ void IsometricCanvas::drawOre(const uint32_t x, const uint32_t y, const NBT &,
   secondaryLight.modColor(sub - 15);
   secondaryDark.modColor(sub - 25);
 
-  const Colors::Color *sprite[4][4] = {
-      {&color->primary, &color->secondary, &color->primary, &color->primary},
-      {&color->dark, &color->dark, &secondaryLight, &color->light},
-      {&color->dark, &secondaryDark, &color->light, &secondaryLight},
-      {&secondaryDark, &color->dark, &color->light, &color->light}};
+  const Colors::Color *sprite[4][4] = {{PRIME, ALTER, PRIME, PRIME},
+                                       {DARK_, DARK_, ALT_L, LIGHT},
+                                       {DARK_, ALT_D, LIGHT, ALT_L},
+                                       {ALT_D, DARK_, LIGHT, LIGHT}};
 
   uint8_t *pos = pixel(x, y);
   for (uint8_t j = 0; j < 4; ++j, pos = pixel(x, y + j))
@@ -728,12 +730,10 @@ void IsometricCanvas::drawGrown(const uint32_t x, const uint32_t y, const NBT &,
   secondaryLight.modColor(sub - 15);
   secondaryDark.modColor(sub - 25);
 
-  const Colors::Color *sprite[4][4] = {
-      {&color->secondary, &color->secondary, &color->secondary,
-       &color->secondary},
-      {&color->dark, &secondaryDark, &secondaryLight, &color->light},
-      {&color->dark, &color->dark, &color->light, &color->light},
-      {&color->dark, &color->dark, &color->light, &color->light}};
+  const Colors::Color *sprite[4][4] = {{ALTER, ALTER, ALTER, ALTER},
+                                       {DARK_, ALT_D, ALT_L, LIGHT},
+                                       {DARK_, DARK_, LIGHT, LIGHT},
+                                       {DARK_, DARK_, LIGHT, LIGHT}};
 
   uint8_t *pos = pixel(x, y);
   for (uint8_t j = 0; j < 4; ++j, pos = pixel(x, y + j))
@@ -787,15 +787,13 @@ void IsometricCanvas::drawSlab(const uint32_t x, const uint32_t y,
   bool top = false;
   string type;
 
-  const Colors::Color *spriteTop[3][4] = {
-      {&color->primary, &color->primary, &color->primary, &color->primary},
-      {&color->dark, &color->dark, &color->light, &color->light},
-      {&color->dark, &color->dark, &color->light, &color->light}};
+  const Colors::Color *spriteTop[3][4] = {{PRIME, PRIME, PRIME, PRIME},
+                                          {DARK_, DARK_, LIGHT, LIGHT},
+                                          {DARK_, DARK_, LIGHT, LIGHT}};
 
-  const Colors::Color *spriteBottom[3][4] = {
-      {&color->primary, &color->primary, &color->primary, &color->primary},
-      {&color->dark, &color->primary, &color->primary, &color->light},
-      {&color->dark, &color->dark, &color->light, &color->light}};
+  const Colors::Color *spriteBottom[3][4] = {{PRIME, PRIME, PRIME, PRIME},
+                                             {DARK_, PRIME, PRIME, LIGHT},
+                                             {DARK_, DARK_, LIGHT, LIGHT}};
 
   const Colors::Color *(*target)[3][4] = &spriteBottom;
 
@@ -839,24 +837,20 @@ void IsometricCanvas::drawLog(const uint32_t x, const uint32_t y,
   secondaryLight.modColor(sub - 15);
   secondaryDark.modColor(sub - 25);
 
-  const Colors::Color *spriteY[4][4] = {
-      {&color->secondary, &color->secondary, &color->secondary,
-       &color->secondary},
-      {&color->dark, &color->dark, &color->light, &color->light},
-      {&color->dark, &color->dark, &color->light, &color->light},
-      {&color->dark, &color->dark, &color->light, &color->light}};
+  const Colors::Color *spriteY[4][4] = {{ALTER, ALTER, ALTER, ALTER},
+                                        {DARK_, DARK_, LIGHT, LIGHT},
+                                        {DARK_, DARK_, LIGHT, LIGHT},
+                                        {DARK_, DARK_, LIGHT, LIGHT}};
 
-  const Colors::Color *spriteX[4][4] = {
-      {&color->primary, &color->primary, &color->primary, &color->primary},
-      {&secondaryDark, &secondaryDark, &color->light, &color->light},
-      {&secondaryDark, &secondaryDark, &color->light, &color->light},
-      {&secondaryDark, &secondaryDark, &color->light, &color->light}};
+  const Colors::Color *spriteX[4][4] = {{PRIME, PRIME, PRIME, PRIME},
+                                        {ALT_D, ALT_D, LIGHT, LIGHT},
+                                        {ALT_D, ALT_D, LIGHT, LIGHT},
+                                        {ALT_D, ALT_D, LIGHT, LIGHT}};
 
-  const Colors::Color *spriteZ[4][4] = {
-      {&color->primary, &color->primary, &color->primary, &color->primary},
-      {&color->dark, &color->dark, &secondaryLight, &secondaryLight},
-      {&color->dark, &color->dark, &secondaryLight, &secondaryLight},
-      {&color->dark, &color->dark, &secondaryLight, &secondaryLight}};
+  const Colors::Color *spriteZ[4][4] = {{PRIME, PRIME, PRIME, PRIME},
+                                        {DARK_, DARK_, ALT_L, ALT_L},
+                                        {DARK_, DARK_, ALT_L, ALT_L},
+                                        {DARK_, DARK_, ALT_L, ALT_L}};
 
   const Colors::Color *(*target)[4][4] = &spriteY;
 
@@ -982,11 +976,10 @@ void IsometricCanvas::drawFull(const uint32_t x, const uint32_t y, const NBT &,
   // D D L L
   // D D L L
 
-  const Colors::Color *sprite[4][4] = {
-      {&color->primary, &color->primary, &color->primary, &color->primary},
-      {&color->dark, &color->dark, &color->light, &color->light},
-      {&color->dark, &color->dark, &color->light, &color->light},
-      {&color->dark, &color->dark, &color->light, &color->light}};
+  const Colors::Color *sprite[4][4] = {{PRIME, PRIME, PRIME, PRIME},
+                                       {DARK_, DARK_, LIGHT, LIGHT},
+                                       {DARK_, DARK_, LIGHT, LIGHT},
+                                       {DARK_, DARK_, LIGHT, LIGHT}};
 
   // Top row
   uint8_t *pos = pixel(x, y);
