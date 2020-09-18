@@ -81,6 +81,10 @@ IsometricCanvas::IsometricCanvas(const Terrain::Coordinates &coords,
   if (waterColor != colors.end())
     water = waterColor->second;
 
+  auto airColor = colors.find("minecraft:air");
+  if (airColor != colors.end())
+    air = airColor->second;
+
   // Set to true to use shading later on
   shading = false;
   // Precompute the shading profile. The values are arbitrary, and will go
@@ -567,6 +571,11 @@ inline void addColor(uint8_t *const color, const uint8_t *const add) {
   color[2] = clamp(uint16_t(float(color[2]) * v1 + float(add[2]) * v2));
 }
 
+#define FILL_ &fill->primary
+#define DARK_ &color->dark
+#define LIGHT &color->light
+#define PRIME &color->primary
+
 void IsometricCanvas::drawHead(const uint32_t x, const uint32_t y, const NBT &,
                                const Colors::Block *block) {
   /* Small block centered
@@ -872,6 +881,96 @@ void IsometricCanvas::drawLog(const uint32_t x, const uint32_t y,
   for (uint8_t j = 0; j < 4; ++j, pos = pixel(x, y + j))
     for (uint8_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
       memcpy(pos, (*target)[j][i], BYTESPERPIXEL);
+}
+
+void IsometricCanvas::drawStair(const uint32_t x, const uint32_t y,
+                                const NBT &metadata,
+                                const Colors::Block *color) {
+
+  string facing = "north", half = "bottom", waterlogged = "false",
+         shape = "straight";
+  Colors::Block *fill = &air;
+
+  if (metadata.contains("Properties")) {
+    if (metadata["Properties"].contains("facing"))
+      facing = metadata["Properties"]["facing"].get<string>();
+
+    if (metadata["Properties"].contains("half"))
+      half = metadata["Properties"]["half"].get<string>();
+
+    if (metadata["Properties"].contains("waterlogged"))
+      waterlogged = metadata["Properties"]["waterlogged"].get<string>();
+
+    if (metadata["Properties"].contains("shape"))
+      shape = metadata["Properties"]["shape"].get<string>();
+  }
+
+  if (waterlogged == "true")
+    fill = &water;
+
+  const Colors::Color *spriteNorth[4][4] = {{FILL_, FILL_, PRIME, PRIME},
+                                            {PRIME, PRIME, DARK_, DARK_},
+                                            {DARK_, PRIME, PRIME, LIGHT},
+                                            {DARK_, DARK_, DARK_, LIGHT}};
+
+  const Colors::Color *spriteWest[4][4] = {{PRIME, PRIME, FILL_, FILL_},
+                                           {LIGHT, LIGHT, PRIME, PRIME},
+                                           {DARK_, PRIME, PRIME, LIGHT},
+                                           {DARK_, LIGHT, LIGHT, LIGHT}};
+
+  const Colors::Color *spriteSouth[4][4] = {{PRIME, PRIME, FILL_, FILL_},
+                                            {DARK_, DARK_, PRIME, PRIME},
+                                            {DARK_, DARK_, LIGHT, LIGHT},
+                                            {DARK_, DARK_, LIGHT, LIGHT}};
+
+  const Colors::Color *spriteEast[4][4] = {{FILL_, FILL_, PRIME, PRIME},
+                                           {PRIME, PRIME, LIGHT, LIGHT},
+                                           {DARK_, DARK_, LIGHT, LIGHT},
+                                           {DARK_, DARK_, LIGHT, LIGHT}};
+
+  const Colors::Color *spriteNorthWest[4][4] = {{PRIME, PRIME, PRIME, PRIME},
+                                                {LIGHT, LIGHT, DARK_, DARK_},
+                                                {PRIME, PRIME, PRIME, PRIME},
+                                                {DARK_, DARK_, LIGHT, LIGHT}};
+
+  const Colors::Color *spriteSouthEast[4][4] = {{PRIME, PRIME, PRIME, PRIME},
+                                                {DARK_, DARK_, LIGHT, LIGHT},
+                                                {DARK_, DARK_, LIGHT, LIGHT},
+                                                {DARK_, DARK_, LIGHT, LIGHT}};
+
+#define spriteNorthEast spriteEast
+#define spriteSouthWest spriteSouth
+
+  const void *straight[4] = {&spriteNorth, &spriteWest, &spriteSouth,
+                             &spriteEast};
+  const void *inner[4] = {&spriteNorthEast, &spriteNorthWest, &spriteSouthWest,
+                          &spriteSouthEast};
+  const Colors::Color *(*target)[4][4] = &spriteNorth;
+
+#undef spriteNorthEast
+#undef spriteSouthWest
+
+  std::map<std::string, int> directions = {
+      {"north", 0}, {"west", 1}, {"south", 2}, {"east", 3}};
+
+  int reference = (directions[facing] + 4 - map.orientation) % 4;
+
+  if (shape == "straight") {
+    target = (const Colors::Color *(*)[4][4])straight[reference];
+  } else if (shape == "inner_right") {
+    target = (const Colors::Color *(*)[4][4])inner[reference];
+  } else if (shape == "inner_left") {
+    reference = (reference + 1) % 4;
+    target = (const Colors::Color *(*)[4][4])inner[reference];
+  }
+
+  if (half == "top")
+    target = &spriteSouthEast;
+
+  uint8_t *pos = pixel(x, y);
+  for (uint8_t j = 0; j < 4; ++j, pos = pixel(x, y + j))
+    for (uint8_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
+      blend(pos, (uint8_t *)(*target)[j][i]);
 }
 
 void IsometricCanvas::drawFull(const uint32_t x, const uint32_t y, const NBT &,

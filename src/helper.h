@@ -52,10 +52,10 @@ bool isNumeric(const char *str);
 uint32_t _ntohl(uint8_t *val);
 
 enum Orientation {
-  NW,
+  NW = 0,
   SW,
-  NE,
   SE,
+  NE,
 };
 
 // A simple coordinates structure
