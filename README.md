@@ -1,6 +1,6 @@
 # `mcmap` - Isometric map visualizer
 
-![](https://img.shields.io/badge/version-1.16.2pre1-success)
+![](https://img.shields.io/badge/version-1.16.3-success)
 
 *Original project by Simon Rettberg. All the credit goes to him for the idea and vision.*
 
@@ -107,7 +107,7 @@ The available available block types are:
 |`Clear`|This block is optimized for transparent block in large quantities, such as glass and water. The top of the block is not rendered, making for a smooth surface when blending blocks together.|No|
 |`Thin`|Will color only the top of the block underneath. Used for snow, rails, pressure plates.|No|
 |`Slab`|Half block.|No|
-|`Stair`|__Not implemented yet__, renders like a full block.|No|
+|`Stair`|Renders a stair block.|No|
 |`Rod`|A slimmer block, used for fences and walls.|No|
 |`Wire`|Small dot on the floor, used for tripwire and redstone.|No|
 |`Head`|Smaller block, also used for pots, pickles, and mushrooms.|No|
@@ -173,9 +173,12 @@ Download and set up [Ubuntu on windows](https://ubuntu.com/tutorials/tutorial-ub
 
 ## Troubleshooting
 
-### Compilation fails with error message about filesystem
+### Compilation fails
 
-This is recurrent on older Ubuntu installs, make sure your `gcc` version is up to date.
+Check `g++ --version`. Supported versions are at least 8.0.0.
+If your version is not up to date, install a more recent one using your package manager.
+You will have access to the new version using `g++-Y` with Y being the version number.
+Compile using `CXX=g++-Y make`.
 
 ### Compilation fails complaining about OMP something
 
