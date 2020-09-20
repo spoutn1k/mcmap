@@ -29,8 +29,8 @@ struct IsometricCanvas {
 
   uint64_t nXChunks, nZChunks;
 
-  Colors::Palette palette;         // The colors to use when drawing
-  Colors::Block water, beaconBeam; // Cached colors for easy access
+  Colors::Palette palette;              // The colors to use when drawing
+  Colors::Block air, water, beaconBeam; // Cached colors for easy access
 
   // Those arrays are chunk-based values, that get overwritten at every new
   // chunk

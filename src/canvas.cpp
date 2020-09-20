@@ -81,6 +81,10 @@ IsometricCanvas::IsometricCanvas(const Terrain::Coordinates &coords,
   if (waterColor != colors.end())
     water = waterColor->second;
 
+  auto airColor = colors.find("minecraft:air");
+  if (airColor != colors.end())
+    air = airColor->second;
+
   // Set to true to use shading later on
   shading = false;
   // Precompute the shading profile. The values are arbitrary, and will go
@@ -567,6 +571,14 @@ inline void addColor(uint8_t *const color, const uint8_t *const add) {
   color[2] = clamp(uint16_t(float(color[2]) * v1 + float(add[2]) * v2));
 }
 
+#define FILL_ &fill->primary
+#define DARK_ &color->dark
+#define LIGHT &color->light
+#define PRIME &color->primary
+#define ALTER &color->secondary
+#define ALT_D &secondaryDark
+#define ALT_L &secondaryLight
+
 void IsometricCanvas::drawHead(const uint32_t x, const uint32_t y, const NBT &,
                                const Colors::Block *block) {
   /* Small block centered
@@ -690,11 +702,10 @@ void IsometricCanvas::drawOre(const uint32_t x, const uint32_t y, const NBT &,
   secondaryLight.modColor(sub - 15);
   secondaryDark.modColor(sub - 25);
 
-  const Colors::Color *sprite[4][4] = {
-      {&color->primary, &color->secondary, &color->primary, &color->primary},
-      {&color->dark, &color->dark, &secondaryLight, &color->light},
-      {&color->dark, &secondaryDark, &color->light, &secondaryLight},
-      {&secondaryDark, &color->dark, &color->light, &color->light}};
+  const Colors::Color *sprite[4][4] = {{PRIME, ALTER, PRIME, PRIME},
+                                       {DARK_, DARK_, ALT_L, LIGHT},
+                                       {DARK_, ALT_D, LIGHT, ALT_L},
+                                       {ALT_D, DARK_, LIGHT, LIGHT}};
 
   uint8_t *pos = pixel(x, y);
   for (uint8_t j = 0; j < 4; ++j, pos = pixel(x, y + j))
@@ -719,12 +730,10 @@ void IsometricCanvas::drawGrown(const uint32_t x, const uint32_t y, const NBT &,
   secondaryLight.modColor(sub - 15);
   secondaryDark.modColor(sub - 25);
 
-  const Colors::Color *sprite[4][4] = {
-      {&color->secondary, &color->secondary, &color->secondary,
-       &color->secondary},
-      {&color->dark, &secondaryDark, &secondaryLight, &color->light},
-      {&color->dark, &color->dark, &color->light, &color->light},
-      {&color->dark, &color->dark, &color->light, &color->light}};
+  const Colors::Color *sprite[4][4] = {{ALTER, ALTER, ALTER, ALTER},
+                                       {DARK_, ALT_D, ALT_L, LIGHT},
+                                       {DARK_, DARK_, LIGHT, LIGHT},
+                                       {DARK_, DARK_, LIGHT, LIGHT}};
 
   uint8_t *pos = pixel(x, y);
   for (uint8_t j = 0; j < 4; ++j, pos = pixel(x, y + j))
@@ -778,15 +787,13 @@ void IsometricCanvas::drawSlab(const uint32_t x, const uint32_t y,
   bool top = false;
   string type;
 
-  const Colors::Color *spriteTop[3][4] = {
-      {&color->primary, &color->primary, &color->primary, &color->primary},
-      {&color->dark, &color->dark, &color->light, &color->light},
-      {&color->dark, &color->dark, &color->light, &color->light}};
+  const Colors::Color *spriteTop[3][4] = {{PRIME, PRIME, PRIME, PRIME},
+                                          {DARK_, DARK_, LIGHT, LIGHT},
+                                          {DARK_, DARK_, LIGHT, LIGHT}};
 
-  const Colors::Color *spriteBottom[3][4] = {
-      {&color->primary, &color->primary, &color->primary, &color->primary},
-      {&color->dark, &color->primary, &color->primary, &color->light},
-      {&color->dark, &color->dark, &color->light, &color->light}};
+  const Colors::Color *spriteBottom[3][4] = {{PRIME, PRIME, PRIME, PRIME},
+                                             {DARK_, PRIME, PRIME, LIGHT},
+                                             {DARK_, DARK_, LIGHT, LIGHT}};
 
   const Colors::Color *(*target)[3][4] = &spriteBottom;
 
@@ -830,24 +837,20 @@ void IsometricCanvas::drawLog(const uint32_t x, const uint32_t y,
   secondaryLight.modColor(sub - 15);
   secondaryDark.modColor(sub - 25);
 
-  const Colors::Color *spriteY[4][4] = {
-      {&color->secondary, &color->secondary, &color->secondary,
-       &color->secondary},
-      {&color->dark, &color->dark, &color->light, &color->light},
-      {&color->dark, &color->dark, &color->light, &color->light},
-      {&color->dark, &color->dark, &color->light, &color->light}};
+  const Colors::Color *spriteY[4][4] = {{ALTER, ALTER, ALTER, ALTER},
+                                        {DARK_, DARK_, LIGHT, LIGHT},
+                                        {DARK_, DARK_, LIGHT, LIGHT},
+                                        {DARK_, DARK_, LIGHT, LIGHT}};
 
-  const Colors::Color *spriteX[4][4] = {
-      {&color->primary, &color->primary, &color->primary, &color->primary},
-      {&secondaryDark, &secondaryDark, &color->light, &color->light},
-      {&secondaryDark, &secondaryDark, &color->light, &color->light},
-      {&secondaryDark, &secondaryDark, &color->light, &color->light}};
+  const Colors::Color *spriteX[4][4] = {{PRIME, PRIME, PRIME, PRIME},
+                                        {ALT_D, ALT_D, LIGHT, LIGHT},
+                                        {ALT_D, ALT_D, LIGHT, LIGHT},
+                                        {ALT_D, ALT_D, LIGHT, LIGHT}};
 
-  const Colors::Color *spriteZ[4][4] = {
-      {&color->primary, &color->primary, &color->primary, &color->primary},
-      {&color->dark, &color->dark, &secondaryLight, &secondaryLight},
-      {&color->dark, &color->dark, &secondaryLight, &secondaryLight},
-      {&color->dark, &color->dark, &secondaryLight, &secondaryLight}};
+  const Colors::Color *spriteZ[4][4] = {{PRIME, PRIME, PRIME, PRIME},
+                                        {DARK_, DARK_, ALT_L, ALT_L},
+                                        {DARK_, DARK_, ALT_L, ALT_L},
+                                        {DARK_, DARK_, ALT_L, ALT_L}};
 
   const Colors::Color *(*target)[4][4] = &spriteY;
 
@@ -874,6 +877,96 @@ void IsometricCanvas::drawLog(const uint32_t x, const uint32_t y,
       memcpy(pos, (*target)[j][i], BYTESPERPIXEL);
 }
 
+void IsometricCanvas::drawStair(const uint32_t x, const uint32_t y,
+                                const NBT &metadata,
+                                const Colors::Block *color) {
+
+  string facing = "north", half = "bottom", waterlogged = "false",
+         shape = "straight";
+  Colors::Block *fill = &air;
+
+  if (metadata.contains("Properties")) {
+    if (metadata["Properties"].contains("facing"))
+      facing = metadata["Properties"]["facing"].get<string>();
+
+    if (metadata["Properties"].contains("half"))
+      half = metadata["Properties"]["half"].get<string>();
+
+    if (metadata["Properties"].contains("waterlogged"))
+      waterlogged = metadata["Properties"]["waterlogged"].get<string>();
+
+    if (metadata["Properties"].contains("shape"))
+      shape = metadata["Properties"]["shape"].get<string>();
+  }
+
+  if (waterlogged == "true")
+    fill = &water;
+
+  const Colors::Color *spriteNorth[4][4] = {{FILL_, FILL_, PRIME, PRIME},
+                                            {PRIME, PRIME, DARK_, DARK_},
+                                            {DARK_, PRIME, PRIME, LIGHT},
+                                            {DARK_, DARK_, DARK_, LIGHT}};
+
+  const Colors::Color *spriteWest[4][4] = {{PRIME, PRIME, FILL_, FILL_},
+                                           {LIGHT, LIGHT, PRIME, PRIME},
+                                           {DARK_, PRIME, PRIME, LIGHT},
+                                           {DARK_, LIGHT, LIGHT, LIGHT}};
+
+  const Colors::Color *spriteSouth[4][4] = {{PRIME, PRIME, FILL_, FILL_},
+                                            {DARK_, DARK_, PRIME, PRIME},
+                                            {DARK_, DARK_, LIGHT, LIGHT},
+                                            {DARK_, DARK_, LIGHT, LIGHT}};
+
+  const Colors::Color *spriteEast[4][4] = {{FILL_, FILL_, PRIME, PRIME},
+                                           {PRIME, PRIME, LIGHT, LIGHT},
+                                           {DARK_, DARK_, LIGHT, LIGHT},
+                                           {DARK_, DARK_, LIGHT, LIGHT}};
+
+  const Colors::Color *spriteNorthWest[4][4] = {{PRIME, PRIME, PRIME, PRIME},
+                                                {LIGHT, LIGHT, DARK_, DARK_},
+                                                {PRIME, PRIME, PRIME, PRIME},
+                                                {DARK_, DARK_, LIGHT, LIGHT}};
+
+  const Colors::Color *spriteSouthEast[4][4] = {{PRIME, PRIME, PRIME, PRIME},
+                                                {DARK_, DARK_, LIGHT, LIGHT},
+                                                {DARK_, DARK_, LIGHT, LIGHT},
+                                                {DARK_, DARK_, LIGHT, LIGHT}};
+
+#define spriteNorthEast spriteEast
+#define spriteSouthWest spriteSouth
+
+  const void *straight[4] = {&spriteNorth, &spriteWest, &spriteSouth,
+                             &spriteEast};
+  const void *inner[4] = {&spriteNorthEast, &spriteNorthWest, &spriteSouthWest,
+                          &spriteSouthEast};
+  const Colors::Color *(*target)[4][4] = &spriteNorth;
+
+#undef spriteNorthEast
+#undef spriteSouthWest
+
+  std::map<std::string, int> directions = {
+      {"north", 0}, {"west", 1}, {"south", 2}, {"east", 3}};
+
+  int reference = (directions[facing] + 4 - map.orientation) % 4;
+
+  if (shape == "straight") {
+    target = (const Colors::Color *(*)[4][4])straight[reference];
+  } else if (shape == "inner_right") {
+    target = (const Colors::Color *(*)[4][4])inner[reference];
+  } else if (shape == "inner_left") {
+    reference = (reference + 1) % 4;
+    target = (const Colors::Color *(*)[4][4])inner[reference];
+  }
+
+  if (half == "top")
+    target = &spriteSouthEast;
+
+  uint8_t *pos = pixel(x, y);
+  for (uint8_t j = 0; j < 4; ++j, pos = pixel(x, y + j))
+    for (uint8_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
+      blend(pos, (uint8_t *)(*target)[j][i]);
+}
+
 void IsometricCanvas::drawFull(const uint32_t x, const uint32_t y, const NBT &,
                                const Colors::Block *color) {
   // Sets pixels around x,y where A is the anchor
@@ -883,11 +976,10 @@ void IsometricCanvas::drawFull(const uint32_t x, const uint32_t y, const NBT &,
   // D D L L
   // D D L L
 
-  const Colors::Color *sprite[4][4] = {
-      {&color->primary, &color->primary, &color->primary, &color->primary},
-      {&color->dark, &color->dark, &color->light, &color->light},
-      {&color->dark, &color->dark, &color->light, &color->light},
-      {&color->dark, &color->dark, &color->light, &color->light}};
+  const Colors::Color *sprite[4][4] = {{PRIME, PRIME, PRIME, PRIME},
+                                       {DARK_, DARK_, LIGHT, LIGHT},
+                                       {DARK_, DARK_, LIGHT, LIGHT},
+                                       {DARK_, DARK_, LIGHT, LIGHT}};
 
   // Top row
   uint8_t *pos = pixel(x, y);

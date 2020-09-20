@@ -93,34 +93,34 @@
 
     "minecraft:stone": [123, 123, 123, 255, 16],
     "minecraft:stone_slab": { "type": "Slab", "color": [123, 123, 123, 255, 16] },
-    "minecraft:stone_stairs": [123, 123, 123, 255, 16],
+    "minecraft:stone_stairs": { "type": "Stair", "color": [123, 123, 123, 255, 16] },
 
     "minecraft:granite": [139, 93, 75, 255],
     "minecraft:granite_slab": { "type": "Slab", "color": [139, 93, 75, 255] },
-    "minecraft:granite_stairs": [139, 93, 75, 255],
+    "minecraft:granite_stairs": { "type": "Stair", "color": [139, 93, 75, 255] },
     "minecraft:granite_wall": { "type": "Rod", "color": [139, 93, 75, 255] },
 
     "minecraft:polished_granite": [208, 128, 128, 255],
     "minecraft:polished_granite_slab": { "type": "Slab", "color": [208, 128, 128, 255] },
-    "minecraft:polished_granite_stairs": [208, 128, 128, 255],
+    "minecraft:polished_granite_stairs": { "type": "Stair", "color": [208, 128, 128, 255] },
 
     "minecraft:diorite": [191, 191, 191, 255],
     "minecraft:diorite_slab": { "type": "Slab", "color": [191, 191, 191, 255] },
-    "minecraft:diorite_stairs": [191, 191, 191, 255],
+    "minecraft:diorite_stairs": { "type": "Stair", "color": [191, 191, 191, 255] },
     "minecraft:diorite_wall": { "type": "Rod", "color": [191, 191, 191, 255] },
 
     "minecraft:polished_diorite": [228, 228, 228, 255],
     "minecraft:polished_diorite_slab": { "type": "Slab", "color": [228, 228, 228, 255] },
-    "minecraft:polished_diorite_stairs": [228, 228, 228, 255],
+    "minecraft:polished_diorite_stairs": { "type": "Stair", "color": [228, 228, 228, 255] },
 
     "minecraft:andesite": [137, 137, 137, 255],
     "minecraft:andesite_slab": { "type": "Slab", "color": [137, 137, 137, 255] },
-    "minecraft:andesite_stairs": [137, 137, 137, 255],
+    "minecraft:andesite_stairs": { "type": "Stair", "color": [137, 137, 137, 255] },
     "minecraft:andesite_wall": { "type": "Rod", "color": [137, 137, 137, 255] },
 
     "minecraft:polished_andesite": [160, 160, 160, 255],
     "minecraft:polished_andesite_slab": { "type": "Slab", "color": [160, 160, 160, 255] },
-    "minecraft:polished_andesite_stairs": [160, 160, 160, 255],
+    "minecraft:polished_andesite_stairs": { "type": "Stair", "color": [160, 160, 160, 255] },
 
     "minecraft:smooth_stone": [164, 164, 164, 255],
     "minecraft:smooth_stone_slab": { "type": "Slab", "color": [164, 164, 164, 255] },
@@ -128,21 +128,21 @@
     "minecraft:cobblestone": [115, 115, 115, 255, 24],
     "minecraft:cobblestone_slab": { "type": "Slab", "color": [115, 115, 115, 255, 16] },
     "minecraft:cobblestone_wall": { "type": "Rod", "color": [115, 115, 115, 255, 16] },
-    "minecraft:cobblestone_stairs": [115, 115, 115, 255, 16],
+    "minecraft:cobblestone_stairs": { "type": "Stair", "color": [115, 115, 115, 255, 16] },
 
     "minecraft:mossy_cobblestone": [90, 108, 90, 255, 27],
     "minecraft:mossy_cobblestone_slab": { "type": "Slab", "color": [90, 108, 90, 255, 27] },
     "minecraft:mossy_cobblestone_wall": { "type": "Rod", "color": [90, 108, 90, 255, 27] },
-    "minecraft:mossy_cobblestone_stairs": [90, 108, 90, 255, 27],
+    "minecraft:mossy_cobblestone_stairs": { "type": "Stair", "color": [90, 108, 90, 255, 27] },
 
     "minecraft:stone_bricks": [115, 115, 115, 255],
     "minecraft:stone_brick_slab": { "type": "Slab", "color": [115, 115, 115, 255] },
     "minecraft:stone_brick_wall": { "type": "Rod", "color": [115, 115, 115, 255] },
-    "minecraft:stone_brick_stairs": [115, 115, 115, 255],
+    "minecraft:stone_brick_stairs": { "type": "Stair", "color": [115, 115, 115, 255] },
 
     "minecraft:mossy_stone_bricks": [90, 108, 90, 255, 27],
     "minecraft:mossy_stone_brick_slab": { "type": "Slab", "color": [90, 108, 90, 255, 27] },
-    "minecraft:mossy_stone_brick_stairs": [90, 108, 90, 255, 27],
+    "minecraft:mossy_stone_brick_stairs": { "type": "Stair", "color": [90, 108, 90, 255, 27] },
     "minecraft:mossy_stone_brick_wall": { "type": "Rod", "color": [90, 108, 90, 255, 27] },
 
     "minecraft:cracked_stone_bricks": [130, 130, 130, 255, 7],
@@ -157,14 +157,14 @@
 
     "minecraft:clay": [151, 157, 169, 255],
     "minecraft:bricks": [170, 86, 62, 255],
-    "minecraft:brick_stairs": [170, 86, 62, 255],
+    "minecraft:brick_stairs": { "type": "Stair", "color": [170, 86, 62, 255] },
     "minecraft:brick_slab": { "type": "Slab", "color": [170, 86, 62, 254] },
     "minecraft:brick_wall": { "type": "Rod", "color": [170, 86, 62, 255] },
 
     "minecraft:sand": [211, 196, 151, 255],
     "minecraft:sandstone": [219, 210, 167, 255],
     "minecraft:sandstone_slab": { "type": "Slab", "color": [219, 210, 167, 255] },
-    "minecraft:sandstone_stairs": [219, 210, 167, 255],
+    "minecraft:sandstone_stairs": { "type": "Stair", "color": [219, 210, 167, 255] },
     "minecraft:sandstone_wall": { "type": "Rod", "color": [219, 210, 167, 255] },
     "minecraft:chiseled_sandstone": [219, 210, 167, 255],
 
@@ -173,12 +173,12 @@
 
     "minecraft:smooth_sandstone": [219, 210, 167, 255],
     "minecraft:smooth_sandstone_slab": { "type": "Slab", "color": [219, 210, 167, 255] },
-    "minecraft:smooth_sandstone_stairs": [219, 210, 167, 255],
+    "minecraft:smooth_sandstone_stairs": { "type": "Stair", "color": [219, 210, 167, 255] },
 
     "minecraft:red_sand": [187, 101, 32, 255],
     "minecraft:red_sandstone": [175, 94, 29, 255],
     "minecraft:red_sandstone_slab": { "type": "Slab", "color": [175, 94, 29, 255] },
-    "minecraft:red_sandstone_stairs": [175, 94, 29, 255],
+    "minecraft:red_sandstone_stairs": { "type": "Stair", "color": [175, 94, 29, 255] },
     "minecraft:red_sandstone_wall": { "type": "Rod", "color": [175, 94, 29, 255] },
     "minecraft:chiseled_red_sandstone": [175, 94, 29, 255],
 
@@ -187,7 +187,7 @@
 
     "minecraft:smooth_red_sandstone": [175, 94, 29, 255],
     "minecraft:smooth_red_sandstone_slab": { "type": "Slab", "color": [175, 94, 29, 255] },
-    "minecraft:smooth_red_sandstone_stairs": [175, 94, 29, 255],
+    "minecraft:smooth_red_sandstone_stairs": { "type": "Stair", "color": [175, 94, 29, 255] },
 
     "minecraft:command_block": [196, 139, 102, 255],
     "minecraft:repeating_command_block": [203, 163, 136, 255],
@@ -299,12 +299,12 @@
     "minecraft:acacia_slab": { "type": "Slab", "color": [171, 92, 51, 255] },
     "minecraft:dark_oak_slab": { "type": "Slab", "color": [71, 46, 22, 255] },
 
-    "minecraft:oak_stairs": [161, 129, 77, 255],
-    "minecraft:spruce_stairs": [119, 89, 51, 255],
-    "minecraft:birch_stairs": [195, 179, 123, 255, 3],
-    "minecraft:jungle_stairs": [166, 120, 86, 255],
-    "minecraft:acacia_stairs": [171, 92, 51, 255],
-    "minecraft:dark_oak_stairs": [71, 46, 22, 255],
+    "minecraft:oak_stairs": { "type": "Stair", "color": [161, 129, 77, 255] },
+    "minecraft:spruce_stairs": { "type": "Stair", "color": [119, 89, 51, 255] },
+    "minecraft:birch_stairs": { "type": "Stair", "color": [195, 179, 123, 255, 3] },
+    "minecraft:jungle_stairs": { "type": "Stair", "color": [166, 120, 86, 255] },
+    "minecraft:acacia_stairs": { "type": "Stair", "color": [171, 92, 51, 255] },
+    "minecraft:dark_oak_stairs": { "type": "Stair", "color": [71, 46, 22, 255] },
 
     "minecraft:oak_trapdoor": [161, 129, 77, 255],
     "minecraft:spruce_trapdoor": [119, 89, 51, 255],
@@ -367,7 +367,7 @@
 
     "minecraft:quartz_block": [237, 231, 225, 255],
     "minecraft:quartz_slab": { "type": "Slab", "color": [237, 231, 225, 255] },
-    "minecraft:quartz_stairs": [237, 231, 225, 255],
+    "minecraft:quartz_stairs": { "type": "Stair", "color": [237, 231, 225, 255] },
 
     "minecraft:chiseled_quartz_block": [232, 227, 219, 255],
 
@@ -377,7 +377,7 @@
 
     "minecraft:smooth_quartz": [237, 230, 224, 255],
     "minecraft:smooth_quartz_slab": { "type": "Slab", "color": [237, 230, 224, 255] },
-    "minecraft:smooth_quartz_stairs": [237, 230, 224, 255],
+    "minecraft:smooth_quartz_stairs": { "type": "Stair", "color": [237, 230, 224, 255] },
 
     "minecraft:grass": { "type": "Plant", "color": [66, 101, 57, 254] },
     "minecraft:tall_grass": { "type": "Plant", "color": [66, 101, 57, 254] },
@@ -457,14 +457,14 @@
     "minecraft:prismarine": [77, 151, 128, 255],
     "minecraft:prismarine_slab": { "type": "Slab", "color": [77, 151, 128, 255] },
     "minecraft:prismarine_wall": { "type": "Rod", "color": [77, 151, 128, 255] },
-    "minecraft:prismarine_stairs": [77, 151, 128, 255],
+    "minecraft:prismarine_stairs": { "type": "Stair", "color": [77, 151, 128, 255] },
 
     "minecraft:prismarine_bricks": [89, 159, 143, 255],
     "minecraft:prismarine_brick_slab": { "type": "Slab", "color": [89, 159, 143, 255] },
-    "minecraft:prismarine_brick_stairs": [89, 159, 143, 255],
+    "minecraft:prismarine_brick_stairs": { "type": "Stair", "color": [89, 159, 143, 255] },
 
     "minecraft:dark_prismarine": [53, 95, 79, 255],
-    "minecraft:dark_prismarine_stairs": [53, 95, 79, 255],
+    "minecraft:dark_prismarine_stairs": { "type": "Stair", "color": [53, 95, 79, 255] },
     "minecraft:dark_prismarine_slab": { "type": "Slab", "color": [53, 95, 79, 255] },
 
     "minecraft:turtle_egg": { "type": "Head", "color": [239, 223, 168, 254] },
@@ -541,13 +541,13 @@
     "minecraft:nether_brick_slab": { "type": "Slab", "color": [54, 24, 30, 254, 7] },
     "minecraft:nether_brick_wall": { "type": "Rod", "color": [54, 24, 30, 254, 7] },
     "minecraft:nether_brick_fence": { "type": "Rod", "color": [54, 24, 30, 254, 7] },
-    "minecraft:nether_brick_stairs": [54, 24, 30, 255],
+    "minecraft:nether_brick_stairs": { "type": "Stair", "color": [54, 24, 30, 255] },
     "minecraft:cracked_nether_bricks": [43, 21, 25, 255],
     "minecraft:chiseled_nether_bricks": [50, 25, 30, 255],
 
     "minecraft:red_nether_bricks": [85, 24, 30, 255],
     "minecraft:red_nether_brick_slab": { "type": "Slab", "color": [85, 24, 30, 255] },
-    "minecraft:red_nether_brick_stairs": [85, 24, 30, 255],
+    "minecraft:red_nether_brick_stairs": { "type": "Stair", "color": [85, 24, 30, 255] },
     "minecraft:red_nether_brick_wall": { "type": "Rod", "color": [85, 24, 30, 255] },
 
     "minecraft:nether_wart": [112, 8, 28, 254],
@@ -561,20 +561,20 @@
     "minecraft:chain": { "type": "Torch", "color": [60, 67, 83, 255], "accent": [60, 67, 83, 255] },
 
     "minecraft:blackstone": [45, 40, 47, 255],
-    "minecraft:blackstone_stairs": [45, 40, 47, 255],
+    "minecraft:blackstone_stairs": { "type": "Stair", "color": [45, 40, 47, 255] },
     "minecraft:blackstone_slab": { "type": "Slab", "color": [45, 40, 47, 255] },
     "minecraft:blackstone_wall": { "type": "Rod", "color": [45, 40, 47, 255] },
 
     "minecraft:polished_blackstone": [58, 53, 63, 255],
     "minecraft:polished_blackstone_slab": { "type": "Slab", "color": [58, 53, 63, 255] },
-    "minecraft:polished_blackstone_stairs": [58, 53, 63, 255],
+    "minecraft:polished_blackstone_stairs": { "type": "Stair", "color": [58, 53, 63, 255] },
     "minecraft:polished_blackstone_wall": { "type": "Rod", "color": [58, 53, 63, 255] },
     "minecraft:polished_blackstone_button": { "type": "Hide", "color": [0, 0, 0, 0] },
     "minecraft:polished_blackstone_pressure_plate": { "type": "Thin", "color": [58, 53, 63, 255] },
 
     "minecraft:polished_blackstone_bricks": [51, 47, 56, 255],
     "minecraft:polished_blackstone_brick_slab": { "type": "Slab", "color": [51, 47, 56, 255] },
-    "minecraft:polished_blackstone_brick_stairs": [51, 47, 56, 255],
+    "minecraft:polished_blackstone_brick_stairs": { "type": "Stair", "color": [51, 47, 56, 255] },
     "minecraft:polished_blackstone_brick_wall": { "type": "Rod", "color": [51, 47, 56, 255] },
 
     "minecraft:cracked_polished_blackstone_bricks": [49, 44, 52, 255],
@@ -597,7 +597,7 @@
     "minecraft:warped_sign": [41, 101, 95, 255],
     "minecraft:warped_wall_sign": [41, 101, 95, 255],
     "minecraft:warped_slab": { "type": "Slab", "color": [41, 101, 95, 255] },
-    "minecraft:warped_stairs": { "type": "Full", "color": [41, 101, 95, 255] },
+    "minecraft:warped_stairs": { "type": "Stair", "color": [41, 101, 95, 255] },
     "minecraft:warped_door": [45, 125, 119, 255],
     "minecraft:warped_trapdoor": [54, 125, 120, 255],
 
@@ -622,7 +622,7 @@
     "minecraft:crimson_sign": [97, 43, 66, 255],
     "minecraft:crimson_wall_sign": [97, 43, 66, 255],
     "minecraft:crimson_slab": { "type": "Slab", "color": [97, 43, 66, 255] },
-    "minecraft:crimson_stairs": { "type": "Full", "color": [97, 43, 66, 255] },
+    "minecraft:crimson_stairs": { "type": "Stair", "color": [97, 43, 66, 255] },
     "minecraft:crimson_door": [122, 57, 83, 255],
     "minecraft:crimson_trapdoor": [107, 51, 74, 255],
 
@@ -646,14 +646,14 @@
 
     "minecraft:purpur_block": [174, 131, 174, 255],
     "minecraft:purpur_pillar": { "type": "Log", "color": [175, 134, 175, 255], "accent": [173, 130, 172, 255] },
-    "minecraft:purpur_stairs": [174, 131, 174, 255],
+    "minecraft:purpur_stairs": { "type": "Stair", "color": [174, 131, 174, 255] },
     "minecraft:purpur_slab": { "type": "Slab", "color": [174, 131, 174, 255] },
 
     "minecraft:end_stone": [220, 224, 160, 255],
 
     "minecraft:end_stone_bricks": [223, 230, 167, 255],
     "minecraft:end_stone_brick_slab": { "type": "Slab", "color": [223, 230, 167, 255] },
-    "minecraft:end_stone_brick_stairs": [223, 230, 167, 255],
+    "minecraft:end_stone_brick_stairs": { "type": "Stair", "color": [223, 230, 167, 255] },
     "minecraft:end_stone_brick_wall": { "type": "Rod", "color": [223, 230, 167, 255] },
 
     "minecraft:glass": [255, 255, 255, 40],
