@@ -741,22 +741,34 @@ void IsometricCanvas::drawGrown(const uint32_t x, const uint32_t y, const NBT &,
       memcpy(pos, sprite[j][i], BYTESPERPIXEL);
 }
 
-void IsometricCanvas::drawRod(const uint32_t x, const uint32_t y, const NBT &,
+void IsometricCanvas::drawRod(const uint32_t x, const uint32_t y,
+                              const NBT &metadata,
                               const Colors::Block *const color) {
   /* A full fat rod
    * | PP |
    * | DL |
    * | DL |
    * | DL | */
-  uint8_t *pos = pixel(x + 1, y);
-  memcpy(pos, &color->primary, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL, &color->primary, BYTESPERPIXEL);
 
-  pos = pixel(x + 1, y + 1);
-  for (uint8_t i = 1; i < 4; i++, pos = pixel(x + 1, y + i)) {
-    memcpy(pos, &color->dark, BYTESPERPIXEL);
-    memcpy(pos + CHANSPERPIXEL, &color->light, BYTESPERPIXEL);
-  }
+  Colors::Block *fill = &air;
+  std::string waterlogged = "false";
+
+  if (metadata.contains("Properties"))
+    if (metadata["Properties"].contains("waterlogged"))
+      waterlogged = metadata["Properties"]["waterlogged"].get<string>();
+
+  if (waterlogged == "true")
+    fill = &water;
+
+  const Colors::Color *sprite[4][4] = {{FILL_, PRIME, PRIME, FILL_},
+                                       {FILL_, DARK_, LIGHT, FILL_},
+                                       {FILL_, DARK_, LIGHT, FILL_},
+                                       {FILL_, DARK_, LIGHT, FILL_}};
+
+  uint8_t *pos = pixel(x, y);
+  for (uint8_t j = 0; j < 4; ++j, pos = pixel(x, y + j))
+    for (uint8_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
+      blend(pos, (uint8_t *)sprite[j][i]);
 }
 
 void IsometricCanvas::drawBeam(const uint32_t x, const uint32_t y, const NBT &,
@@ -784,39 +796,45 @@ void IsometricCanvas::drawSlab(const uint32_t x, const uint32_t y,
    * |DPPL|    |DDLL|
    * |DDLL|    |    | */
 
-  bool top = false;
-  string type;
+  Colors::Block *fill = &air;
+  std::string waterlogged = "false", type = "bottom";
 
-  const Colors::Color *spriteTop[3][4] = {{PRIME, PRIME, PRIME, PRIME},
+  if (metadata.contains("Properties")) {
+    if (metadata["Properties"].contains("waterlogged"))
+      waterlogged = metadata["Properties"]["waterlogged"].get<string>();
+
+    if (metadata["Properties"].contains("type"))
+      type = metadata["Properties"]["type"].get<string>();
+  }
+
+  // Draw a full block if it is a double slab
+  if (type == "double") {
+    drawFull(x, y, metadata, color);
+    return;
+  }
+
+  if (waterlogged == "true")
+    fill = &water;
+
+  const Colors::Color *spriteTop[4][4] = {{PRIME, PRIME, PRIME, PRIME},
                                           {DARK_, DARK_, LIGHT, LIGHT},
-                                          {DARK_, DARK_, LIGHT, LIGHT}};
+                                          {DARK_, DARK_, LIGHT, LIGHT},
+                                          {FILL_, FILL_, FILL_, FILL_}};
 
-  const Colors::Color *spriteBottom[3][4] = {{PRIME, PRIME, PRIME, PRIME},
+  const Colors::Color *spriteBottom[4][4] = {{FILL_, FILL_, FILL_, FILL_},
+                                             {PRIME, PRIME, PRIME, PRIME},
                                              {DARK_, PRIME, PRIME, LIGHT},
                                              {DARK_, DARK_, LIGHT, LIGHT}};
 
-  const Colors::Color *(*target)[3][4] = &spriteBottom;
+  const Colors::Color *(*target)[4][4] = &spriteBottom;
 
-  if (metadata.contains("Properties") &&
-      metadata["Properties"].contains("type")) {
-    type = metadata["Properties"]["type"].get<string>();
+  if (type == "top")
+    target = &spriteTop;
 
-    // Draw a full block if it is a double slab
-    if (type == "double") {
-      drawFull(x, y, metadata, color);
-      return;
-    }
-
-    if (type == "top") {
-      top = true;
-      target = &spriteTop;
-    }
-  }
-
-  uint8_t *pos = pixel(x, y + (top ? 0 : 1));
-  for (uint8_t j = 0; j < 3; ++j, pos = pixel(x, y + j + (top ? 0 : 1)))
+  uint8_t *pos = pixel(x, y);
+  for (uint8_t j = 0; j < 4; ++j, pos = pixel(x, y + j))
     for (uint8_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
-      memcpy(pos, (*target)[j][i], BYTESPERPIXEL);
+      blend(pos, (uint8_t *)(*target)[j][i]);
 }
 
 void IsometricCanvas::drawWire(const uint32_t x, const uint32_t y, const NBT &,
