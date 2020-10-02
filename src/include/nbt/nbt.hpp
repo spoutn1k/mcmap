@@ -366,6 +366,24 @@ public:
         std::string(type_name())));
   }
 
+  std::pair<tag_compound_t::iterator, bool>
+  insert(const tag_compound_t::value_type &value) {
+    if (is_compound())
+      return content.compound->insert(value);
+    throw(std::domain_error(
+        "Cannot use operator[] with a string argument on tag of type " +
+        std::string(type_name())));
+  }
+
+  std::pair<tag_compound_t::iterator, bool>
+  insert(tag_compound_t::value_type &&value) {
+    if (is_compound())
+      return content.compound->insert(value);
+    throw(std::domain_error(
+        "Cannot use operator[] with a string argument on tag of type " +
+        std::string(type_name())));
+  }
+
   template <typename T> reference operator[](T *key) {
     if (is_end()) {
       type = tag_type::tag_compound;
