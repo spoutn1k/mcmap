@@ -1,5 +1,4 @@
 #include "./block_drawers.h"
-#include "logger.h"
 
 #define FILL_ &fill->primary
 #define DARK_ &color->dark
@@ -73,7 +72,7 @@ void drawTorch(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
 }
 
 void drawPlant(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
-               const NBT &, const Colors::Block *color) {
+               const NBT &metadata, const Colors::Block *color) {
   /* Print a plant-like block
    * TODO Make that nicer ?
    * |    |
@@ -82,28 +81,32 @@ void drawPlant(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
    * | X  | */
   Colors::Block *fill = &canvas->air;
 
-  const Colors::Color *sprite[4][4] = {{FILL_, FILL_, FILL_, FILL_},
-                                       {FILL_, PRIME, FILL_, PRIME},
+  if (metadata.contains("UnderWater"))
+    if (metadata["UnderWater"].get<string>() == "true")
+      fill = &canvas->water;
+
+  const Colors::Color *sprite[3][4] = {{FILL_, PRIME, FILL_, PRIME},
                                        {FILL_, FILL_, PRIME, FILL_},
                                        {FILL_, PRIME, FILL_, FILL_}};
 
   uint8_t *pos = canvas->pixel(x, y);
-  for (uint8_t j = 0; j < 4; ++j, pos = canvas->pixel(x, y + j))
+  for (uint8_t j = 0; j < 3; ++j, pos = canvas->pixel(x, y + j))
     for (uint8_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
       blend(pos, (uint8_t *)sprite[j][i]);
 }
 
 void drawUnderwaterPlant(IsometricCanvas *canvas, const uint32_t x,
-                         const uint32_t y, const NBT &,
+                         const uint32_t y, const NBT &metadata,
                          const Colors::Block *block) {
   /* Print a plant-like block
    * |    |
    * |WXWX|
    * |WWXW|
    * |WXWW| */
+  nbt::NBT tweaked(metadata);
+  tweaked.insert({"UnderWater", nbt::NBT("true")});
 
-  drawPlant(canvas, x, y, empty, block);
-  drawTransparent(canvas, x, y, empty, &canvas->water);
+  drawPlant(canvas, x, y, tweaked, block);
 }
 
 void drawFire(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
