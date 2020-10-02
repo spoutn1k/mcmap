@@ -60,7 +60,8 @@ public:
   NBT(const tag_type type) : type(type), content(type){};
   NBT(std::nullptr_t = nullptr) : NBT(tag_type::tag_end){};
 
-  NBT(const int8_t byte) : type(tag_type::tag_byte), content(byte){};
+  NBT(const tag_byte_t byte) : type(tag_type::tag_byte), content(byte){};
+  NBT(const tag_string_t str) : type(tag_type::tag_string), content(str){};
   NBT(const NBT &other) : type(other.type), name(other.name) {
     switch (type) {
     case tag_type::tag_byte: {
