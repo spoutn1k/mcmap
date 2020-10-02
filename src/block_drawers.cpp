@@ -1,4 +1,5 @@
 #include "./block_drawers.h"
+#include "logger.h"
 
 #define FILL_ &fill->primary
 #define DARK_ &color->dark
@@ -72,19 +73,24 @@ void drawTorch(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
 }
 
 void drawPlant(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
-               const NBT &, const Colors::Block *block) {
+               const NBT &, const Colors::Block *color) {
   /* Print a plant-like block
    * TODO Make that nicer ?
    * |    |
    * | X X|
    * |  X |
    * | X  | */
-  uint8_t *pos = canvas->pixel(x, y + 1);
-  memcpy(pos + (CHANSPERPIXEL), &block->primary, BYTESPERPIXEL);
-  memcpy(pos + (CHANSPERPIXEL * 3), &block->primary, BYTESPERPIXEL);
+  Colors::Block *fill = &canvas->air;
 
-  memcpy(canvas->pixel(x + 2, y + 2), &block->primary, BYTESPERPIXEL);
-  memcpy(canvas->pixel(x + 1, y + 3), &block->primary, BYTESPERPIXEL);
+  const Colors::Color *sprite[4][4] = {{FILL_, FILL_, FILL_, FILL_},
+                                       {FILL_, PRIME, FILL_, PRIME},
+                                       {FILL_, FILL_, PRIME, FILL_},
+                                       {FILL_, PRIME, FILL_, FILL_}};
+
+  uint8_t *pos = canvas->pixel(x, y);
+  for (uint8_t j = 0; j < 4; ++j, pos = canvas->pixel(x, y + j))
+    for (uint8_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
+      blend(pos, (uint8_t *)sprite[j][i]);
 }
 
 void drawUnderwaterPlant(IsometricCanvas *canvas, const uint32_t x,
