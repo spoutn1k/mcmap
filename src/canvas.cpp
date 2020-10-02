@@ -521,6 +521,7 @@ inline void IsometricCanvas::renderBlock(Colors::Block *color, uint32_t x,
 
   // Pointer to the color to use, and local color copy if changes are due
   Colors::Block localColor, *colorPtr = color;
+
   if (shading) {
     // Make a local copy of the color
     localColor = *colorPtr;
@@ -541,14 +542,6 @@ inline void IsometricCanvas::renderBlock(Colors::Block *color, uint32_t x,
 
   // Then call the function registered with the block's type
   blockRenderers[color->type](this, bmpPosX, bmpPosY, metadata, colorPtr);
-}
-
-inline void addColor(uint8_t *const color, const uint8_t *const add) {
-  const float v2 = (float(add[PALPHA]) / 255.0f);
-  const float v1 = (1.0f - (v2 * .2f));
-  color[0] = clamp(uint16_t(float(color[0]) * v1 + float(add[0]) * v2));
-  color[1] = clamp(uint16_t(float(color[1]) * v1 + float(add[1]) * v2));
-  color[2] = clamp(uint16_t(float(color[2]) * v1 + float(add[2]) * v2));
 }
 
 // __  __                _
