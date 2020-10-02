@@ -379,7 +379,8 @@ public:
   std::pair<tag_compound_t::iterator, bool>
   insert(tag_compound_t::value_type &&value) {
     if (is_compound())
-      return content.compound->insert(value);
+      return content.compound->insert(
+          std::forward<tag_compound_t::value_type>(value));
     throw(std::domain_error(
         "Cannot use operator[] with a string argument on tag of type " +
         std::string(type_name())));

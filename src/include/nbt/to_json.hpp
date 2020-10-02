@@ -62,7 +62,7 @@ void to_json(json &j, const NBT &nbt) {
     j = json({});
     break;
   }
-};
+}
 
 } // namespace nbt
 
