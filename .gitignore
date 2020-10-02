@@ -6,3 +6,6 @@ mcmap
 .ycm_extra_conf.py
 src/colors.bson
 scripts/json2bson
+scripts/extractChunk
+scripts/nbt2json
+scripts/regionReader
