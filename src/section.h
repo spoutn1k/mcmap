@@ -16,7 +16,7 @@ struct Section {
 
   void pickColors(const Colors::Palette &);
 
-  inline bool empty() const { return palette.size() == 1; }
+  inline bool empty() const { return palette.size() < 2; }
 
   Section &operator=(Section &&other) {
     beaconIndex = other.beaconIndex;

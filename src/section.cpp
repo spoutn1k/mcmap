@@ -4,6 +4,11 @@ const Colors::Block _void;
 
 Section::Section(const nbt::NBT &raw_section, const int dataVersion,
                  const Colors::Palette &defined) {
+  if (!raw_section.contains("Palette") ||
+      !raw_section.contains("BlockStates")) {
+    return;
+  }
+
   palette = *raw_section["Palette"].get<const std::vector<NBT> *>();
 
   const uint32_t blockBitLength =
