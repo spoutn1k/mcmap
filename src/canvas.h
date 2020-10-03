@@ -2,6 +2,7 @@
 #define CANVAS_H_
 
 #include "./helper.h"
+#include "./section.h"
 #include "./worldloader.h"
 #include <stdint.h>
 
@@ -42,6 +43,8 @@ struct IsometricCanvas {
   Colors::Marker (*markers)[256];
 
   float *brightnessLookup;
+
+  Section sections[16];
 
   IsometricCanvas(const Terrain::Coordinates &coords,
                   const Colors::Palette &colors, const uint16_t padding = 0);
@@ -84,10 +87,9 @@ struct IsometricCanvas {
   // Drawing entrypoints
   void renderTerrain(const Terrain::Data &);
   void renderChunk(const Terrain::Data &, const int64_t, const int64_t);
-  void renderSection(const NBT &, const int64_t, const int64_t, const uint8_t,
-                     sectionInterpreter);
+  void renderSection(const int64_t, const int64_t, const uint8_t);
   // Draw a block from virtual coords in the canvas
-  void renderBlock(Colors::Block *, const uint32_t, const uint32_t,
+  void renderBlock(const Colors::Block *, const uint32_t, const uint32_t,
                    const uint32_t, const NBT &metadata);
 
   // Empty section with only beams

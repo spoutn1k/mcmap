@@ -226,13 +226,6 @@ void IsometricCanvas::renderChunk(const Terrain::Data &terrain,
   // in the sections
   const int dataVersion = chunk["DataVersion"].get<int>();
 
-  // Set the interpreter according to the type of chunk encountered
-  sectionInterpreter interpreter = NULL;
-  if (dataVersion < 2534)
-    interpreter = blockAtPre116;
-  else
-    interpreter = blockAtPost116;
-
   // Reset the beacons
   numBeacons = 0;
 
@@ -249,8 +242,9 @@ void IsometricCanvas::renderChunk(const Terrain::Data &terrain,
   const uint8_t maxSection = std::min(map.maxY, maxHeight) >> 4;
 
   for (uint8_t yPos = minSection; yPos < maxSection + 1; yPos++) {
-    renderSection(chunk["Level"]["Sections"][yPos], canvasX, canvasZ, yPos,
-                  interpreter);
+    sections[yPos] =
+        Section(chunk["Level"]["Sections"][yPos], dataVersion, palette);
+    renderSection(canvasX, canvasZ, yPos);
   }
 
   if (numBeacons || localMarkers)
@@ -279,55 +273,17 @@ inline void IsometricCanvas::orientSection(uint8_t &x, uint8_t &z) {
   }
 }
 
-void IsometricCanvas::renderSection(const NBT &section, const int64_t xPos,
-                                    const int64_t zPos, const uint8_t yPos,
-                                    sectionInterpreter interpreter) {
-  // TODO Take care of this case in the chunk drawing
-  if (!interpreter) {
-    logger::error("Invalid section interpreter\n");
-    return;
-  }
-
+void IsometricCanvas::renderSection(const int64_t xPos, const int64_t zPos,
+                                    const uint8_t yPos) {
+  const Section &section = sections[yPos];
   // Return if the section is undrawable
-  if (section.is_end() || !section.contains("Palette"))
+  if (section.empty())
     return;
 
-  uint8_t markerIndex = 0;
-  bool beaconBeamColumn = false, markerColumn = false;
-  uint16_t colorIndex = 0, index = 0, beaconIndex = 4095;
   int32_t chunkX = xPos, chunkZ = zPos;
-  Colors::Block *cache[256],
-      fallback; // <- empty color to use in case no color is defined
-
-  // Pre-fetch the vectors from the section: the block palette
-  const std::vector<NBT> *sectionPalette =
-      section["Palette"].get<const std::vector<NBT> *>();
-  // The raw block indexes
-  const std::vector<int64_t> *blockStates =
-      section["BlockStates"].get<const std::vector<int64_t> *>();
-
-  // This will be used by the section interpreter later
-  const uint32_t blockBitLength =
-      std::max(uint32_t(ceil(log2(sectionPalette->size()))), uint32_t(4));
 
   // We need the real position of the section for bounds checking
   orientChunk(chunkX, chunkZ);
-
-  // Preload the colors in the order they appear in the palette into an array
-  // for cheaper access
-  for (auto &color : *sectionPalette) {
-    const string namespacedId = color["Name"].get<string>();
-    auto defined = palette.find(namespacedId);
-
-    if (defined == palette.end()) {
-      logger::error("Color of block {} not found\n", namespacedId);
-      cache[colorIndex++] = &fallback;
-    } else {
-      cache[colorIndex++] = &defined->second;
-      if (namespacedId == "minecraft:beacon")
-        beaconIndex = colorIndex - 1;
-    }
-  }
 
   // Main drawing loop, for every block of the section
   for (uint8_t x = 0; x < 16; x++) {
@@ -342,53 +298,11 @@ void IsometricCanvas::renderSection(const NBT &section, const int64_t xPos,
           (chunkZ << 4) + zReal > map.maxZ || (chunkZ << 4) + zReal < map.minZ)
         continue;
 
-      for (uint8_t i = 0; i < numBeacons; i++)
-        if (beacons[i] == (x << 4) + z)
-          beaconBeamColumn = true;
-
-      for (uint8_t i = 0; i < localMarkers; i++)
-        if ((chunkMarkers[i] & 0xff) == (x << 4) + z) {
-          markerColumn = true;
-          markerIndex = chunkMarkers[i] >> 8;
-        }
-
       for (uint8_t y = 0; y < 16; y++) {
-        // Render the beams, even if we are oob
-        if (beaconBeamColumn)
-          renderBlock(&beaconBeam, (xPos << 4) + x, (zPos << 4) + z,
-                      (yPos << 4) + y, nbt::NBT());
-
-        if (markerColumn)
-          renderBlock(&(*markers)[markerIndex].color, (xPos << 4) + x,
-                      (zPos << 4) + z, (yPos << 4) + y, nbt::NBT());
-
-        // Check that we do not step over the height limit
-        if ((yPos << 4) + y < map.minY || (yPos << 4) + y > map.maxY)
-          continue;
-
-        // This is the block index as it is stored internally in the section
-        // data: we use a function pointer to call the right interpreter, as
-        // there were changes in the history of minecraft
-        index = interpreter(blockBitLength, blockStates, xReal, zReal, y);
-
-        if (index >= colorIndex) {
-          logger::error("Cache error in chunk {} {}: {}/{}\n", xPos, zPos,
-                        index, colorIndex);
-          continue;
-        }
-
-        renderBlock(cache[index], (xPos << 4) + x, (zPos << 4) + z,
-                    (yPos << 4) + y, sectionPalette->operator[](index));
-
-        // A beam can begin at every moment in a section
-        if (index == beaconIndex) {
-          beacons[numBeacons++] = (x << 4) + z;
-          beaconBeamColumn = true;
-        }
+        uint8_t index = section.blocks[y * 256 + zReal * 16 + xReal];
+        renderBlock(section.colors[index], (xPos << 4) + x, (zPos << 4) + z,
+                    (yPos << 4) + y, section.palette[index]);
       }
-
-      markerColumn = beaconBeamColumn = false;
-      markerIndex = 0;
     }
   }
 
@@ -437,7 +351,7 @@ drawer blockRenderers[] = {
 #undef DEFINETYPE
 };
 
-inline void IsometricCanvas::renderBlock(Colors::Block *color, uint32_t x,
+inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
                                          uint32_t z, const uint32_t y,
                                          const NBT &metadata) {
   // If there is nothing to render, skip it
@@ -520,7 +434,8 @@ inline void IsometricCanvas::renderBlock(Colors::Block *color, uint32_t x,
                            std::to_string(height));
 
   // Pointer to the color to use, and local color copy if changes are due
-  Colors::Block localColor, *colorPtr = color;
+  Colors::Block localColor;
+  const Colors::Block *colorPtr = color;
 
   if (shading) {
     // Make a local copy of the color
