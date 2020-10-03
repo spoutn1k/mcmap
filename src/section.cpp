@@ -45,3 +45,15 @@ void Section::pickColors(const Colors::Palette &all) {
     }
   }
 }
+
+void Section::detectBeacons(uint64_t beams[4], const Colors::Block *color) {
+  colors[max_colors++] = color;
+  for (uint16_t i = 0; i < 4096; i++) {
+    if (blocks[i] == beaconIndex) {
+      // Set beams in buffer
+      for (uint8_t y = i / 256; y < 16; y++) {
+        blocks[(y * 256) + (i % 256)] = max_colors - 1;
+      }
+    }
+  }
+}

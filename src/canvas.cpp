@@ -241,15 +241,16 @@ void IsometricCanvas::renderChunk(const Terrain::Data &terrain,
   const uint8_t minSection = std::max(map.minY, minHeight) >> 4;
   const uint8_t maxSection = std::min(map.maxY, maxHeight) >> 4;
 
+  uint64_t beacons[4];
   for (uint8_t yPos = minSection; yPos < maxSection + 1; yPos++) {
     sections[yPos] =
         Section(chunk["Level"]["Sections"][yPos], dataVersion, palette);
-    renderSection(canvasX, canvasZ, yPos);
+    sections[yPos].detectBeacons(beacons, &beaconBeam);
   }
 
-  if (numBeacons || localMarkers)
-    for (uint8_t yPos = maxSection; yPos < 13; yPos++)
-      renderBeamSection(canvasX, canvasZ, yPos);
+  for (uint8_t yPos = minSection; yPos < maxSection + 1; yPos++) {
+    renderSection(canvasX, canvasZ, yPos);
+  }
 }
 
 // A bit like the above: where do we begin rendering in the 16x16 horizontal
@@ -279,7 +280,7 @@ void IsometricCanvas::renderSection(const int64_t xPos, const int64_t zPos,
   // Return if the section is undrawable
   if (section.empty())
     return;
-
+  uint8_t index;
   int32_t chunkX = xPos, chunkZ = zPos;
 
   // We need the real position of the section for bounds checking
@@ -299,7 +300,7 @@ void IsometricCanvas::renderSection(const int64_t xPos, const int64_t zPos,
         continue;
 
       for (uint8_t y = 0; y < 16; y++) {
-        uint8_t index = section.blocks[y * 256 + zReal * 16 + xReal];
+        index = section.blocks[y * 256 + zReal * 16 + xReal];
         renderBlock(section.colors[index], (xPos << 4) + x, (zPos << 4) + z,
                     (yPos << 4) + y, section.palette[index]);
       }
@@ -307,31 +308,6 @@ void IsometricCanvas::renderSection(const int64_t xPos, const int64_t zPos,
   }
 
   return;
-}
-
-void IsometricCanvas::renderBeamSection(const int64_t xPos, const int64_t zPos,
-                                        const uint8_t yPos) {
-  // Draw beacon beams in an empty section
-  uint8_t x, z, index;
-
-  for (uint8_t beam = 0; beam < numBeacons; beam++) {
-    x = beacons[beam] >> 4;
-    z = beacons[beam] & 0x0f;
-
-    for (uint8_t y = 0; y < 16; y++)
-      renderBlock(&beaconBeam, (xPos << 4) + x, (zPos << 4) + z,
-                  (yPos << 4) + y, nbt::NBT());
-  }
-
-  for (uint8_t marker = 0; marker < localMarkers; marker++) {
-    x = (chunkMarkers[marker] >> 4) & 0x0f;
-    z = chunkMarkers[marker] & 0x0f;
-    index = chunkMarkers[marker] >> 8;
-
-    for (uint8_t y = 0; y < 16; y++)
-      renderBlock(&(*markers)[index].color, (xPos << 4) + x, (zPos << 4) + z,
-                  (yPos << 4) + y, nbt::NBT());
-  }
 }
 
 // ____  _            _

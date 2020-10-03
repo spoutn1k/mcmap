@@ -15,10 +15,12 @@ struct Section {
   };
 
   void pickColors(const Colors::Palette &);
+  void detectBeacons(uint64_t[4], const Colors::Block *color);
 
   inline bool empty() const { return palette.size() < 2; }
 
   Section &operator=(Section &&other) {
+    max_colors = other.max_colors;
     beaconIndex = other.beaconIndex;
     memmove(blocks, other.blocks, 4096);
     memmove(colors, other.colors, 256 * sizeof(Colors::Block *));
