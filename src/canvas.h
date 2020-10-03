@@ -92,23 +92,6 @@ struct IsometricCanvas {
 
   // Empty section with only beams
   void renderBeamSection(const int64_t, const int64_t, const uint8_t);
-
-  // This obscure typedef allows to create a member function pointer array
-  // (ouch) to render different block types without a switch case
-  typedef void (IsometricCanvas::*drawer)(const uint32_t, const uint32_t,
-                                          const NBT &, const Colors::Block *);
-
-  // The default block type, hardcoded
-  void drawFull(const uint32_t, const uint32_t, const NBT &,
-                const Colors::Block *);
-
-  // The other block types are loaded at compile-time from the `blocktypes.def`
-  // file, with some macro manipulation
-#define DEFINETYPE(STRING, CALLBACK)                                           \
-  void CALLBACK(const uint32_t, const uint32_t, const NBT &,                   \
-                const Colors::Block *);
-#include "./blocktypes.def"
-#undef DEFINETYPE
 };
 
 #endif
