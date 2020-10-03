@@ -20,6 +20,32 @@ using std::string;
 #define PALPHA 3
 #define PNOISE 4
 
+inline void blend(uint8_t *const destination, const uint8_t *const source) {
+  if (!source[PALPHA])
+    return;
+
+  if (destination[PALPHA] == 0 || source[PALPHA] == 255) {
+    memcpy(destination, source, 4);
+    return;
+  }
+#define BLEND(ca, aa, cb)                                                      \
+  uint8_t(((size_t(ca) * size_t(aa)) + (size_t(255 - aa) * size_t(cb))) / 255)
+  destination[0] = BLEND(source[0], source[PALPHA], destination[0]);
+  destination[1] = BLEND(source[1], source[PALPHA], destination[1]);
+  destination[2] = BLEND(source[2], source[PALPHA], destination[2]);
+  destination[PALPHA] +=
+      (size_t(source[PALPHA]) * size_t(255 - destination[PALPHA])) / 255;
+#undef BLEND
+}
+
+inline void addColor(uint8_t *const color, const uint8_t *const add) {
+  const float v2 = (float(add[PALPHA]) / 255.0f);
+  const float v1 = (1.0f - (v2 * .2f));
+  color[0] = clamp(uint16_t(float(color[0]) * v1 + float(add[0]) * v2));
+  color[1] = clamp(uint16_t(float(color[1]) * v1 + float(add[1]) * v2));
+  color[2] = clamp(uint16_t(float(color[2]) * v1 + float(add[2]) * v2));
+}
+
 namespace Colors {
 
 enum BlockTypes {
@@ -74,11 +100,21 @@ struct Color {
 
   bool empty() const { return !(R || G || B || ALPHA); }
   bool transparent() const { return !ALPHA; }
+  bool opaque() const { return ALPHA == 255; }
 
   uint8_t brightness() const {
     return (uint8_t)sqrt(double(R) * double(R) * .2126 +
                          double(G) * double(G) * .7152 +
                          double(B) * double(B) * .0722);
+  }
+
+  Color operator+(const Color &other) const {
+    Color mix(*this);
+
+    if (!mix.opaque())
+      addColor((uint8_t *)&mix, (uint8_t *)&other);
+
+    return mix;
   }
 };
 
@@ -101,6 +137,15 @@ struct Block {
     type = bt;
     light.modColor(-17);
     dark.modColor(-27);
+  }
+
+  Block operator+(const Block &other) const {
+    Block mix;
+    mix.type = this->type;
+    mix.primary = this->primary + other.primary;
+    mix.secondary = this->secondary + other.secondary;
+
+    return mix;
   }
 };
 
@@ -137,31 +182,5 @@ void to_json(json &j, const Palette &p);
 void from_json(const json &j, Palette &p);
 
 } // namespace Colors
-
-inline void blend(uint8_t *const destination, const uint8_t *const source) {
-  if (!source[PALPHA])
-    return;
-
-  if (destination[PALPHA] == 0 || source[PALPHA] == 255) {
-    memcpy(destination, source, 4);
-    return;
-  }
-#define BLEND(ca, aa, cb)                                                      \
-  uint8_t(((size_t(ca) * size_t(aa)) + (size_t(255 - aa) * size_t(cb))) / 255)
-  destination[0] = BLEND(source[0], source[PALPHA], destination[0]);
-  destination[1] = BLEND(source[1], source[PALPHA], destination[1]);
-  destination[2] = BLEND(source[2], source[PALPHA], destination[2]);
-  destination[PALPHA] +=
-      (size_t(source[PALPHA]) * size_t(255 - destination[PALPHA])) / 255;
-#undef BLEND
-}
-
-inline void addColor(uint8_t *const color, const uint8_t *const add) {
-  const float v2 = (float(add[PALPHA]) / 255.0f);
-  const float v1 = (1.0f - (v2 * .2f));
-  color[0] = clamp(uint16_t(float(color[0]) * v1 + float(add[0]) * v2));
-  color[1] = clamp(uint16_t(float(color[1]) * v1 + float(add[1]) * v2));
-  color[2] = clamp(uint16_t(float(color[2]) * v1 + float(add[2]) * v2));
-}
 
 #endif // COLORS_H_
