@@ -70,10 +70,10 @@ const std::unordered_map<Colors::BlockTypes, string> typeToString = {
 };
 
 const std::map<string, list<int>> markerColors = {
-    {"white", {250, 250, 250, 70}},
-    {"red", {250, 0, 0, 70}},
-    {"green", {0, 250, 0, 70}},
-    {"blue", {0, 0, 250, 70}},
+    {"white", {250, 250, 250, 100}},
+    {"red", {250, 0, 0, 100}},
+    {"green", {0, 250, 0, 100}},
+    {"blue", {0, 0, 250, 100}},
 };
 
 struct Color {
