@@ -3,6 +3,7 @@
  */
 
 #include "./canvas.h"
+#include <bitset>
 
 //   ____                _                   _
 //  / ___|___  _ __  ___| |_ _ __ _   _  ___| |_ ___  _ __ ___
@@ -226,31 +227,31 @@ void IsometricCanvas::renderChunk(const Terrain::Data &terrain,
   // in the sections
   const int dataVersion = chunk["DataVersion"].get<int>();
 
-  // Reset the beacons
-  numBeacons = 0;
-
   // Setup the markers
-  localMarkers = 0;
   for (uint8_t i = 0; i < totalMarkers; i++) {
     if (CHUNK((*markers)[i].x) == worldX && CHUNK((*markers)[i].z) == worldZ) {
-      chunkMarkers[localMarkers++] =
-          (i << 8) + (((*markers)[i].x & 0x0f) << 4) + ((*markers)[i].z & 0x0f);
+      beams[beams_n++] = new Beam((*markers)[i].x & 0x0f,
+                                  (*markers)[i].z & 0x0f, &markers[i]->color);
     }
   }
 
   const uint8_t minSection = std::max(map.minY, minHeight) >> 4;
   const uint8_t maxSection = std::min(map.maxY, maxHeight) >> 4;
 
-  uint64_t beacons[4];
   for (uint8_t yPos = minSection; yPos < maxSection + 1; yPos++) {
     sections[yPos] =
         Section(chunk["Level"]["Sections"][yPos], dataVersion, palette);
-    sections[yPos].detectBeacons(beacons, &beaconBeam);
   }
 
   for (uint8_t yPos = minSection; yPos < maxSection + 1; yPos++) {
     renderSection(canvasX, canvasZ, yPos);
   }
+
+  for (uint8_t i = 0; i < beams_n; i++) {
+    free(beams[i]);
+    beams[i] = nullptr;
+  }
+  beams_n = 0;
 }
 
 // A bit like the above: where do we begin rendering in the 16x16 horizontal
@@ -277,9 +278,14 @@ inline void IsometricCanvas::orientSection(uint8_t &x, uint8_t &z) {
 void IsometricCanvas::renderSection(const int64_t xPos, const int64_t zPos,
                                     const uint8_t yPos) {
   const Section &section = sections[yPos];
+
+  bool beamColumn = false;
+  uint8_t currentBeam = 0;
+
   // Return if the section is undrawable
   if (section.empty())
     return;
+
   uint8_t index;
   int32_t chunkX = xPos, chunkZ = zPos;
 
@@ -299,8 +305,21 @@ void IsometricCanvas::renderSection(const int64_t xPos, const int64_t zPos,
           (chunkZ << 4) + zReal > map.maxZ || (chunkZ << 4) + zReal < map.minZ)
         continue;
 
+      for (uint8_t index = 0; index < beams_n; index++) {
+        if (beams[index]->column(xReal, zReal)) {
+          currentBeam = index;
+          beamColumn = true;
+        } else
+          beamColumn = false;
+      }
+
       for (uint8_t y = 0; y < 16; y++) {
+        if (beamColumn)
+          renderBlock(beams[currentBeam]->color, (xPos << 4) + x,
+                      (zPos << 4) + z, (yPos << 4) + y, nbt::NBT());
+
         index = section.blocks[y * 256 + zReal * 16 + xReal];
+
         renderBlock(section.colors[index], (xPos << 4) + x, (zPos << 4) + z,
                     (yPos << 4) + y, section.palette[index]);
       }

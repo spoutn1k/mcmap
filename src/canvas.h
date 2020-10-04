@@ -10,6 +10,24 @@
 #define BYTESPERCHAN 1
 #define BYTESPERPIXEL 4
 
+struct Beam {
+  uint8_t position;
+  const Colors::Block *color;
+
+  Beam(uint8_t x, uint8_t z, const Colors::Block *c)
+      : position((x << 4) + z), color(c) {
+    logger::debug("Rendering chunk beam with coordinates {} {} ({})\n", x, z,
+                  position);
+  };
+
+  inline uint8_t x() const { return position >> 4; }
+  inline uint8_t z() const { return position & 0x0f; }
+
+  inline bool column(uint8_t x, uint8_t z) const {
+    return position == ((x << 4) + z);
+  }
+};
+
 // Isometric canvas
 // This structure holds the final bitmap data, a 2D array of pixels. It is
 // created with a set of 3D coordinates, and translate every block drawn into a
@@ -45,6 +63,9 @@ struct IsometricCanvas {
   float *brightnessLookup;
 
   Section sections[16];
+
+  uint8_t beams_n = 0;
+  Beam *beams[256];
 
   IsometricCanvas(const Terrain::Coordinates &coords,
                   const Colors::Palette &colors, const uint16_t padding = 0);

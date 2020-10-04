@@ -1,5 +1,6 @@
 #include "./colors.h"
 #include "./worldloader.h"
+#include <bitset>
 #include <nbt/nbt.hpp>
 
 struct Section {
@@ -15,7 +16,6 @@ struct Section {
   };
 
   void pickColors(const Colors::Palette &);
-  void detectBeacons(uint64_t[4], const Colors::Block *color);
 
   inline bool empty() const { return palette.size() < 2; }
 
