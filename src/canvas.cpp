@@ -246,9 +246,10 @@ void IsometricCanvas::renderChunk(const Terrain::Data &terrain,
     renderSection(canvasX, canvasZ, yPos);
   }
 
-  for (uint8_t yPos = maxSection + 1; yPos < (map.maxY >> 4) + 1; yPos++) {
-    renderBeamSection(canvasX, canvasZ, yPos);
-  }
+  if (beamNo)
+    for (uint8_t yPos = maxSection + 1; yPos < 16; yPos++) {
+      renderBeamSection(canvasX, canvasZ, yPos);
+    }
 
   beamNo = 0;
 }
