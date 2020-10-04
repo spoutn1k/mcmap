@@ -14,6 +14,7 @@ struct Beam {
   uint8_t position;
   const Colors::Block *color;
 
+  Beam() : position(0), color(nullptr){};
   Beam(uint8_t x, uint8_t z, const Colors::Block *c)
       : position((x << 4) + z), color(c){};
 
@@ -22,6 +23,12 @@ struct Beam {
 
   inline bool column(uint8_t x, uint8_t z) const {
     return position == ((x << 4) + z);
+  }
+
+  Beam &operator=(Beam &&other) {
+    position = other.position;
+    color = other.color;
+    return *this;
   }
 };
 
@@ -45,24 +52,21 @@ struct IsometricCanvas {
 
   uint64_t nXChunks, nZChunks;
 
-  Colors::Palette palette;              // The colors to use when drawing
-  Colors::Block air, water, beaconBeam; // Cached colors for easy access
+  Colors::Palette palette;  // The colors to use when drawing
+  Colors::Block air, water, // fire, earth. Teh four nations lived in harmoiny
+      beaconBeam;           // Cached colors for easy access
 
-  // Those arrays are chunk-based values, that get overwritten at every new
-  // chunk
-  uint8_t numBeacons = 0, beacons[256];
-  uint8_t localMarkers = 0, totalMarkers = 0;
-  // Markers inside the chunk:
-  // 8 bits for the index inside markers, 4 bits for x, 4 bits for z
-  uint16_t chunkMarkers[256];
+  // TODO bye bye
+  uint8_t totalMarkers = 0;
   Colors::Marker (*markers)[256];
 
   float *brightnessLookup;
 
   Section sections[16];
 
-  uint8_t beams_n = 0;
-  Beam *beams[256];
+  // Beams in the chunk being rendered
+  uint8_t beamNo = 0;
+  Beam beams[256];
 
   IsometricCanvas(const Terrain::Coordinates &coords,
                   const Colors::Palette &colors, const uint16_t padding = 0);

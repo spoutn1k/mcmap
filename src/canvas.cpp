@@ -229,8 +229,8 @@ void IsometricCanvas::renderChunk(const Terrain::Data &terrain,
   // Setup the markers
   for (uint8_t i = 0; i < totalMarkers; i++) {
     if (CHUNK((*markers)[i].x) == worldX && CHUNK((*markers)[i].z) == worldZ) {
-      beams[beams_n++] = new Beam((*markers)[i].x & 0x0f,
-                                  (*markers)[i].z & 0x0f, &markers[i]->color);
+      beams[beamNo++] = Beam((*markers)[i].x & 0x0f, (*markers)[i].z & 0x0f,
+                             &markers[i]->color);
     }
   }
 
@@ -250,11 +250,7 @@ void IsometricCanvas::renderChunk(const Terrain::Data &terrain,
     renderBeamSection(canvasX, canvasZ, yPos);
   }
 
-  for (uint8_t i = 0; i < beams_n; i++) {
-    free(beams[i]);
-    beams[i] = nullptr;
-  }
-  beams_n = 0;
+  beamNo = 0;
 }
 
 // A bit like the above: where do we begin rendering in the 16x16 horizontal
@@ -286,7 +282,7 @@ void IsometricCanvas::renderSection(const int64_t xPos, const int64_t zPos,
   uint8_t currentBeam = 0;
 
   // Return if the section is undrawable
-  if (section.empty() && !beams_n)
+  if (section.empty() && !beamNo)
     return;
 
   uint8_t block_index;
@@ -308,8 +304,8 @@ void IsometricCanvas::renderSection(const int64_t xPos, const int64_t zPos,
           (chunkZ << 4) + zReal > map.maxZ || (chunkZ << 4) + zReal < map.minZ)
         continue;
 
-      for (uint8_t index = 0; index < beams_n; index++) {
-        if (beams[index]->column(xReal, zReal)) {
+      for (uint8_t index = 0; index < beamNo; index++) {
+        if (beams[index].column(xReal, zReal)) {
           currentBeam = index;
           beamColumn = true;
           break;
@@ -322,7 +318,7 @@ void IsometricCanvas::renderSection(const int64_t xPos, const int64_t zPos,
       for (uint8_t y = 0; y < maxY; y++) {
 
         if (beamColumn)
-          renderBlock(beams[currentBeam]->color, (xPos << 4) + x,
+          renderBlock(beams[currentBeam].color, (xPos << 4) + x,
                       (zPos << 4) + z, (yPos << 4) + y, nbt::NBT());
 
         block_index = section.blocks[y * 256 + zReal * 16 + xReal];
@@ -332,9 +328,9 @@ void IsometricCanvas::renderSection(const int64_t xPos, const int64_t zPos,
                     section.palette[block_index]);
 
         if (block_index == section.beaconIndex) {
-          beams[beams_n++] = new Beam(xReal, zReal, &beaconBeam);
+          beams[beamNo++] = Beam(xReal, zReal, &beaconBeam);
           beamColumn = true;
-          currentBeam = beams_n - 1;
+          currentBeam = beamNo - 1;
         }
       }
     }
@@ -366,8 +362,8 @@ void IsometricCanvas::renderBeamSection(const int64_t xPos, const int64_t zPos,
           (chunkZ << 4) + zReal > map.maxZ || (chunkZ << 4) + zReal < map.minZ)
         continue;
 
-      for (uint8_t index = 0; index < beams_n; index++) {
-        if (beams[index]->column(xReal, zReal)) {
+      for (uint8_t index = 0; index < beamNo; index++) {
+        if (beams[index].column(xReal, zReal)) {
           currentBeam = index;
           beamColumn = true;
           break;
@@ -377,7 +373,7 @@ void IsometricCanvas::renderBeamSection(const int64_t xPos, const int64_t zPos,
 
       for (uint8_t y = 0; y < 16; y++) {
         if (beamColumn)
-          renderBlock(beams[currentBeam]->color, (xPos << 4) + x,
+          renderBlock(beams[currentBeam].color, (xPos << 4) + x,
                       (zPos << 4) + z, (yPos << 4) + y, nbt::NBT());
       }
     }
