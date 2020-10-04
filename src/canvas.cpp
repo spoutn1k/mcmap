@@ -318,7 +318,9 @@ void IsometricCanvas::renderSection(const int64_t xPos, const int64_t zPos,
         }
       }
 
-      for (uint8_t y = 0; y < 16; y++) {
+      uint8_t maxY = std::min(16, map.maxY - (yPos << 4) + 1);
+      for (uint8_t y = 0; y < maxY; y++) {
+
         if (beamColumn)
           renderBlock(beams[currentBeam]->color, (xPos << 4) + x,
                       (zPos << 4) + z, (yPos << 4) + y, nbt::NBT());
