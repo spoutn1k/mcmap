@@ -3,7 +3,6 @@
  */
 
 #include "./canvas.h"
-#include <bitset>
 
 //   ____                _                   _
 //  / ___|___  _ __  ___| |_ _ __ _   _  ___| |_ ___  _ __ ___
@@ -313,8 +312,10 @@ void IsometricCanvas::renderSection(const int64_t xPos, const int64_t zPos,
         if (beams[index]->column(xReal, zReal)) {
           currentBeam = index;
           beamColumn = true;
-        } else
+          break;
+        } else {
           beamColumn = false;
+        }
       }
 
       for (uint8_t y = 0; y < 16; y++) {
@@ -327,6 +328,12 @@ void IsometricCanvas::renderSection(const int64_t xPos, const int64_t zPos,
         renderBlock(section.colors[block_index], (xPos << 4) + x,
                     (zPos << 4) + z, (yPos << 4) + y,
                     section.palette[block_index]);
+
+        if (block_index == section.beaconIndex) {
+          beams[beams_n++] = new Beam(xReal, zReal, &beaconBeam);
+          beamColumn = true;
+          currentBeam = beams_n - 1;
+        }
       }
     }
   }
@@ -361,6 +368,7 @@ void IsometricCanvas::renderBeamSection(const int64_t xPos, const int64_t zPos,
         if (beams[index]->column(xReal, zReal)) {
           currentBeam = index;
           beamColumn = true;
+          break;
         } else
           beamColumn = false;
       }

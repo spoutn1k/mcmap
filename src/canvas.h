@@ -15,10 +15,7 @@ struct Beam {
   const Colors::Block *color;
 
   Beam(uint8_t x, uint8_t z, const Colors::Block *c)
-      : position((x << 4) + z), color(c) {
-    logger::debug("Rendering chunk beam with coordinates {} {} ({})\n", x, z,
-                  position);
-  };
+      : position((x << 4) + z), color(c){};
 
   inline uint8_t x() const { return position >> 4; }
   inline uint8_t z() const { return position & 0x0f; }
