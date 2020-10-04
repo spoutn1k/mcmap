@@ -1,6 +1,5 @@
 #include "./colors.h"
 #include "./worldloader.h"
-#include <bitset>
 #include <nbt/nbt.hpp>
 
 struct Section {
@@ -11,13 +10,6 @@ struct Section {
 
   Section() : max_colors(0), beaconIndex(std::numeric_limits<uint8_t>::max()){};
   Section(const nbt::NBT &, const int, const Colors::Palette &);
-  Section(Section &&other) : palette(std::move(other.palette)) {
-    memmove(blocks, other.blocks, 4096);
-  };
-
-  void pickColors(const Colors::Palette &);
-
-  inline bool empty() const { return palette.size() < 2; }
 
   Section &operator=(Section &&other) {
     max_colors = other.max_colors;
@@ -27,4 +19,8 @@ struct Section {
     palette = std::move(other.palette);
     return *this;
   }
+
+  void pickColors(const Colors::Palette &);
+
+  inline bool empty() const { return max_colors < 2; }
 };

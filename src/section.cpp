@@ -7,6 +7,7 @@ Section::Section(const nbt::NBT &raw_section, const int dataVersion,
     : Section() {
   if (!raw_section.contains("Palette") ||
       !raw_section.contains("BlockStates")) {
+    colors[max_colors++] = &_void;
     return;
   }
 

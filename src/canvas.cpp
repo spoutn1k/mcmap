@@ -247,6 +247,10 @@ void IsometricCanvas::renderChunk(const Terrain::Data &terrain,
     renderSection(canvasX, canvasZ, yPos);
   }
 
+  for (uint8_t yPos = maxSection + 1; yPos < (map.maxY >> 4) + 1; yPos++) {
+    renderBeamSection(canvasX, canvasZ, yPos);
+  }
+
   for (uint8_t i = 0; i < beams_n; i++) {
     free(beams[i]);
     beams[i] = nullptr;
@@ -283,10 +287,10 @@ void IsometricCanvas::renderSection(const int64_t xPos, const int64_t zPos,
   uint8_t currentBeam = 0;
 
   // Return if the section is undrawable
-  if (section.empty())
+  if (section.empty() && !beams_n)
     return;
 
-  uint8_t index;
+  uint8_t block_index;
   int32_t chunkX = xPos, chunkZ = zPos;
 
   // We need the real position of the section for bounds checking
@@ -318,10 +322,53 @@ void IsometricCanvas::renderSection(const int64_t xPos, const int64_t zPos,
           renderBlock(beams[currentBeam]->color, (xPos << 4) + x,
                       (zPos << 4) + z, (yPos << 4) + y, nbt::NBT());
 
-        index = section.blocks[y * 256 + zReal * 16 + xReal];
+        block_index = section.blocks[y * 256 + zReal * 16 + xReal];
 
-        renderBlock(section.colors[index], (xPos << 4) + x, (zPos << 4) + z,
-                    (yPos << 4) + y, section.palette[index]);
+        renderBlock(section.colors[block_index], (xPos << 4) + x,
+                    (zPos << 4) + z, (yPos << 4) + y,
+                    section.palette[block_index]);
+      }
+    }
+  }
+
+  return;
+}
+
+void IsometricCanvas::renderBeamSection(const int64_t xPos, const int64_t zPos,
+                                        const uint8_t yPos) {
+  bool beamColumn = false;
+  uint8_t currentBeam = 0;
+
+  int32_t chunkX = xPos, chunkZ = zPos;
+
+  // We need the real position of the section for bounds checking
+  orientChunk(chunkX, chunkZ);
+
+  // Main drawing loop, for every block of the section
+  for (uint8_t x = 0; x < 16; x++) {
+    for (uint8_t z = 0; z < 16; z++) {
+      // Orient the indexes for them to correspond to the orientation
+      uint8_t xReal = x, zReal = z;
+      orientSection(xReal, zReal);
+
+      // If we are oob, skip the line
+      if ((chunkX << 4) + xReal > map.maxX ||
+          (chunkX << 4) + xReal < map.minX ||
+          (chunkZ << 4) + zReal > map.maxZ || (chunkZ << 4) + zReal < map.minZ)
+        continue;
+
+      for (uint8_t index = 0; index < beams_n; index++) {
+        if (beams[index]->column(xReal, zReal)) {
+          currentBeam = index;
+          beamColumn = true;
+        } else
+          beamColumn = false;
+      }
+
+      for (uint8_t y = 0; y < 16; y++) {
+        if (beamColumn)
+          renderBlock(beams[currentBeam]->color, (xPos << 4) + x,
+                      (zPos << 4) + z, (yPos << 4) + y, nbt::NBT());
       }
     }
   }
