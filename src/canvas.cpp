@@ -230,8 +230,8 @@ void IsometricCanvas::renderChunk(const Terrain::Data &terrain) {
     }
   }
 
-  const uint8_t minSection = std::max(map.minY, minHeight) >> 4;
-  const uint8_t maxSection = std::min(map.maxY, maxHeight) >> 4;
+  minSection = std::max(map.minY, minHeight) >> 4;
+  maxSection = std::min(map.maxY, maxHeight) >> 4;
 
   for (yPos = minSection; yPos < maxSection + 1; yPos++) {
     sections[yPos] =
@@ -506,6 +506,9 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
 
 const Colors::Block *IsometricCanvas::nextBlock() {
   uint8_t sectionY = yPos + (y == 15 ? 1 : 0);
+
+  if (sectionY > maxSection)
+    return &air;
 
   uint16_t index =
       sections[sectionY]

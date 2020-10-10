@@ -67,7 +67,7 @@ struct IsometricCanvas {
   // In-chunk variables
   uint32_t chunkX;
   uint32_t chunkZ;
-  int8_t yPos;
+  int8_t yPos, minSection, maxSection;
 
   // Beams in the chunk being rendered
   uint8_t beamNo = 0;
