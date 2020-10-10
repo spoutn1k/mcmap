@@ -355,12 +355,12 @@
     "minecraft:acacia_sapling": { "type": "Plant", "color": [54, 135, 40, 180] },
     "minecraft:dark_oak_sapling": { "type": "Plant", "color": [44, 84, 44, 160] },
 
-    "minecraft:oak_leaves": [54, 135, 40, 180, 12],
-    "minecraft:spruce_leaves": [44, 84, 44, 160, 20],
-    "minecraft:birch_leaves": [85, 124, 60, 170, 11],
-    "minecraft:jungle_leaves": [44, 135, 50, 175, 11],
-    "minecraft:acacia_leaves": [54, 135, 40, 180],
-    "minecraft:dark_oak_leaves": [44, 84, 44, 160],
+    "minecraft:oak_leaves": { "type": "Clear", "color": [54, 135, 40, 180, 12] },
+    "minecraft:spruce_leaves": { "type": "Clear", "color": [44, 84, 44, 160, 20] },
+    "minecraft:birch_leaves": { "type": "Clear", "color": [85, 124, 60, 170, 11] },
+    "minecraft:jungle_leaves": { "type": "Clear", "color": [44, 135, 50, 175, 11] },
+    "minecraft:acacia_leaves": { "type": "Clear", "color": [54, 135, 40, 180] },
+    "minecraft:dark_oak_leaves": { "type": "Clear", "color": [44, 84, 44, 160] },
 
     "minecraft:sponge": [224, 240, 48, 255],
     "minecraft:wet_sponge": [224, 240, 48, 255],
