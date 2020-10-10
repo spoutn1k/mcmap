@@ -5,7 +5,7 @@ ifneq ($(OS), MACOS)
 LDFLAGS+=-lstdc++fs
 endif
 
-all: json2bson nbt2json regionReader extractChunk
+all: json2bson nbt2json regionReader extractChunk profile
 
 json2bson: ./json2bson.default.o ../src/include/fmt/format.default.o
 	$(CXX) $^ $(LDFLAGS) -o $@
@@ -18,6 +18,9 @@ regionReader: ./regionReader.default.o ../src/include/fmt/format.default.o
 
 extractChunk: ./extractChunk.default.o ../src/include/fmt/format.default.o
 	$(CXX) $^ $(LDFLAGS) -lz -o $@
+
+profile: ./profile.c
+	$(CC) $^ -o $@
 
 %.default.o: %.cpp
 	$(CXX) $(CFLAGS) $< -o $@
