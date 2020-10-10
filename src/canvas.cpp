@@ -4,10 +4,6 @@
 
 #include "./canvas.h"
 
-// End tag to use when in need of an irrelevant NBT value, pre-initialised for
-// performance
-NBT empty;
-
 //   ____                _                   _
 //  / ___|___  _ __  ___| |_ _ __ _   _  ___| |_ ___  _ __ ___
 // | |   / _ \| '_ \/ __| __| '__| | | |/ __| __/ _ \| '__/ __|
@@ -198,11 +194,9 @@ void IsometricCanvas::orientChunk(int32_t &x, int32_t &z) {
 
 void IsometricCanvas::renderTerrain(const Terrain::Data &world) {
   // world is supposed to have the SAME set of coordinates as the canvas
-  uint32_t chunkX, chunkZ;
-
   for (chunkX = 0; chunkX < nXChunks; chunkX++) {
     for (chunkZ = 0; chunkZ < nZChunks; chunkZ++) {
-      renderChunk(world, chunkX, chunkZ);
+      renderChunk(world);
       logger::printProgress("Rendering chunks", chunkX * nZChunks + chunkZ,
                             nZChunks * nXChunks);
     }
@@ -211,10 +205,8 @@ void IsometricCanvas::renderTerrain(const Terrain::Data &world) {
   return;
 }
 
-void IsometricCanvas::renderChunk(const Terrain::Data &terrain,
-                                  const int64_t canvasX,
-                                  const int64_t canvasZ) {
-  int32_t worldX = canvasX, worldZ = canvasZ;
+void IsometricCanvas::renderChunk(const Terrain::Data &terrain) {
+  int32_t worldX = chunkX, worldZ = chunkZ;
   orientChunk(worldX, worldZ);
 
   const NBT &chunk = terrain.chunkAt(worldX, worldZ);
@@ -230,36 +222,32 @@ void IsometricCanvas::renderChunk(const Terrain::Data &terrain,
   // in the sections
   const int dataVersion = chunk["DataVersion"].get<int>();
 
-  // Set the interpreter according to the type of chunk encountered
-  sectionInterpreter interpreter = NULL;
-  if (dataVersion < 2534)
-    interpreter = blockAtPre116;
-  else
-    interpreter = blockAtPost116;
-
-  // Reset the beacons
-  numBeacons = 0;
-
   // Setup the markers
-  localMarkers = 0;
   for (uint8_t i = 0; i < totalMarkers; i++) {
     if (CHUNK((*markers)[i].x) == worldX && CHUNK((*markers)[i].z) == worldZ) {
-      chunkMarkers[localMarkers++] =
-          (i << 8) + (((*markers)[i].x & 0x0f) << 4) + ((*markers)[i].z & 0x0f);
+      beams[beamNo++] = Beam((*markers)[i].x & 0x0f, (*markers)[i].z & 0x0f,
+                             &markers[i]->color);
     }
   }
 
-  const uint8_t minSection = std::max(map.minY, minHeight) >> 4;
-  const uint8_t maxSection = std::min(map.maxY, maxHeight) >> 4;
+  minSection = std::max(map.minY, minHeight) >> 4;
+  maxSection = std::min(map.maxY, maxHeight) >> 4;
 
-  for (uint8_t yPos = minSection; yPos < maxSection + 1; yPos++) {
-    renderSection(chunk["Level"]["Sections"][yPos], canvasX, canvasZ, yPos,
-                  interpreter);
+  for (yPos = minSection; yPos < maxSection + 1; yPos++) {
+    sections[yPos] =
+        Section(chunk["Level"]["Sections"][yPos], dataVersion, palette);
   }
 
-  if (numBeacons || localMarkers)
-    for (uint8_t yPos = maxSection; yPos < 13; yPos++)
-      renderBeamSection(canvasX, canvasZ, yPos);
+  for (yPos = minSection; yPos < maxSection + 1; yPos++) {
+    renderSection();
+  }
+
+  if (beamNo)
+    for (yPos = maxSection + 1; yPos < 16; yPos++) {
+      renderBeamSection(chunkX, chunkZ, yPos);
+    }
+
+  beamNo = 0;
 }
 
 // A bit like the above: where do we begin rendering in the 16x16 horizontal
@@ -283,55 +271,80 @@ inline void IsometricCanvas::orientSection(uint8_t &x, uint8_t &z) {
   }
 }
 
-void IsometricCanvas::renderSection(const NBT &section, const int64_t xPos,
-                                    const int64_t zPos, const uint8_t yPos,
-                                    sectionInterpreter interpreter) {
-  // TODO Take care of this case in the chunk drawing
-  if (!interpreter) {
-    logger::error("Invalid section interpreter\n");
-    return;
-  }
+void IsometricCanvas::renderSection() {
+  const Section &section = sections[yPos];
+
+  bool beamColumn = false;
+  uint8_t currentBeam = 0;
 
   // Return if the section is undrawable
-  if (section.is_end() || !section.contains("Palette"))
+  if (section.empty() && !beamNo)
     return;
 
-  uint8_t markerIndex = 0;
-  bool beaconBeamColumn = false, markerColumn = false;
-  uint16_t colorIndex = 0, index = 0, beaconIndex = 4095;
+  uint8_t block_index;
+  int32_t worldX = chunkX, worldZ = chunkZ;
+
+  // We need the real position of the section for bounds checking
+  orientChunk(worldX, worldZ);
+
+  // Main drawing loop, for every block of the section
+  for (uint8_t x = 0; x < 16; x++) {
+    for (uint8_t z = 0; z < 16; z++) {
+      // Orient the indexes for them to correspond to the orientation
+      orientedX = x, orientedZ = z;
+      orientSection(orientedX, orientedZ);
+
+      // If we are oob, skip the line
+      if ((worldX << 4) + orientedX > map.maxX ||
+          (worldX << 4) + orientedX < map.minX ||
+          (worldZ << 4) + orientedZ > map.maxZ ||
+          (worldZ << 4) + orientedZ < map.minZ)
+        continue;
+
+      for (uint8_t index = 0; index < beamNo; index++) {
+        if (beams[index].column(orientedX, orientedZ)) {
+          currentBeam = index;
+          beamColumn = true;
+          break;
+        } else {
+          beamColumn = false;
+        }
+      }
+
+      uint8_t maxY = std::min(16, map.maxY - (yPos << 4) + 1);
+      for (y = 0; y < maxY; y++) {
+
+        if (beamColumn)
+          renderBlock(beams[currentBeam].color, (chunkX << 4) + x,
+                      (chunkZ << 4) + z, (yPos << 4) + y, nbt::NBT());
+
+        block_index = section.blocks[y * 256 + orientedZ * 16 + orientedX];
+
+        renderBlock(section.colors[block_index], (chunkX << 4) + x,
+                    (chunkZ << 4) + z, (yPos << 4) + y,
+                    section.palette[block_index]);
+
+        if (block_index == section.beaconIndex) {
+          beams[beamNo++] = Beam(orientedX, orientedZ, &beaconBeam);
+          beamColumn = true;
+          currentBeam = beamNo - 1;
+        }
+      }
+    }
+  }
+
+  return;
+}
+
+void IsometricCanvas::renderBeamSection(const int64_t xPos, const int64_t zPos,
+                                        const uint8_t yPos) {
+  bool beamColumn = false;
+  uint8_t currentBeam = 0;
+
   int32_t chunkX = xPos, chunkZ = zPos;
-  Colors::Block *cache[256],
-      fallback; // <- empty color to use in case no color is defined
-
-  // Pre-fetch the vectors from the section: the block palette
-  const std::vector<NBT> *sectionPalette =
-      section["Palette"].get<const std::vector<NBT> *>();
-  // The raw block indexes
-  const std::vector<int64_t> *blockStates =
-      section["BlockStates"].get<const std::vector<int64_t> *>();
-
-  // This will be used by the section interpreter later
-  const uint32_t blockBitLength =
-      std::max(uint32_t(ceil(log2(sectionPalette->size()))), uint32_t(4));
 
   // We need the real position of the section for bounds checking
   orientChunk(chunkX, chunkZ);
-
-  // Preload the colors in the order they appear in the palette into an array
-  // for cheaper access
-  for (auto &color : *sectionPalette) {
-    const string namespacedId = color["Name"].get<string>();
-    auto defined = palette.find(namespacedId);
-
-    if (defined == palette.end()) {
-      logger::error("Color of block {} not found\n", namespacedId);
-      cache[colorIndex++] = &fallback;
-    } else {
-      cache[colorIndex++] = &defined->second;
-      if (namespacedId == "minecraft:beacon")
-        beaconIndex = colorIndex - 1;
-    }
-  }
 
   // Main drawing loop, for every block of the section
   for (uint8_t x = 0; x < 16; x++) {
@@ -346,82 +359,24 @@ void IsometricCanvas::renderSection(const NBT &section, const int64_t xPos,
           (chunkZ << 4) + zReal > map.maxZ || (chunkZ << 4) + zReal < map.minZ)
         continue;
 
-      for (uint8_t i = 0; i < numBeacons; i++)
-        if (beacons[i] == (x << 4) + z)
-          beaconBeamColumn = true;
-
-      for (uint8_t i = 0; i < localMarkers; i++)
-        if ((chunkMarkers[i] & 0xff) == (x << 4) + z) {
-          markerColumn = true;
-          markerIndex = chunkMarkers[i] >> 8;
-        }
-
-      for (uint8_t y = 0; y < 16; y++) {
-        // Render the beams, even if we are oob
-        if (beaconBeamColumn)
-          renderBlock(&beaconBeam, (xPos << 4) + x, (zPos << 4) + z,
-                      (yPos << 4) + y, empty);
-
-        if (markerColumn)
-          renderBlock(&(*markers)[markerIndex].color, (xPos << 4) + x,
-                      (zPos << 4) + z, (yPos << 4) + y, empty);
-
-        // Check that we do not step over the height limit
-        if ((yPos << 4) + y < map.minY || (yPos << 4) + y > map.maxY)
-          continue;
-
-        // This is the block index as it is stored internally in the section
-        // data: we use a function pointer to call the right interpreter, as
-        // there were changes in the history of minecraft
-        index = interpreter(blockBitLength, blockStates, xReal, zReal, y);
-
-        if (index >= colorIndex) {
-          logger::error("Cache error in chunk {} {}: {}/{}\n", xPos, zPos,
-                        index, colorIndex);
-          continue;
-        }
-
-        renderBlock(cache[index], (xPos << 4) + x, (zPos << 4) + z,
-                    (yPos << 4) + y, sectionPalette->operator[](index));
-
-        // A beam can begin at every moment in a section
-        if (index == beaconIndex) {
-          beacons[numBeacons++] = (x << 4) + z;
-          beaconBeamColumn = true;
-        }
+      for (uint8_t index = 0; index < beamNo; index++) {
+        if (beams[index].column(xReal, zReal)) {
+          currentBeam = index;
+          beamColumn = true;
+          break;
+        } else
+          beamColumn = false;
       }
 
-      markerColumn = beaconBeamColumn = false;
-      markerIndex = 0;
+      for (uint8_t y = 0; y < 16; y++) {
+        if (beamColumn)
+          renderBlock(beams[currentBeam].color, (xPos << 4) + x,
+                      (zPos << 4) + z, (yPos << 4) + y, nbt::NBT());
+      }
     }
   }
 
   return;
-}
-
-void IsometricCanvas::renderBeamSection(const int64_t xPos, const int64_t zPos,
-                                        const uint8_t yPos) {
-  // Draw beacon beams in an empty section
-  uint8_t x, z, index;
-
-  for (uint8_t beam = 0; beam < numBeacons; beam++) {
-    x = beacons[beam] >> 4;
-    z = beacons[beam] & 0x0f;
-
-    for (uint8_t y = 0; y < 16; y++)
-      renderBlock(&beaconBeam, (xPos << 4) + x, (zPos << 4) + z,
-                  (yPos << 4) + y, empty);
-  }
-
-  for (uint8_t marker = 0; marker < localMarkers; marker++) {
-    x = (chunkMarkers[marker] >> 4) & 0x0f;
-    z = chunkMarkers[marker] & 0x0f;
-    index = chunkMarkers[marker] >> 8;
-
-    for (uint8_t y = 0; y < 16; y++)
-      renderBlock(&(*markers)[index].color, (xPos << 4) + x, (zPos << 4) + z,
-                  (yPos << 4) + y, empty);
-  }
 }
 
 // ____  _            _
@@ -432,14 +387,16 @@ void IsometricCanvas::renderBeamSection(const int64_t xPos, const int64_t zPos,
 //
 // Functions to render individual types of blocks
 
-IsometricCanvas::drawer blockRenderers[] = {
-    &IsometricCanvas::drawFull,
-#define DEFINETYPE(STRING, CALLBACK) &IsometricCanvas::CALLBACK,
+#include "./block_drawers.h"
+
+drawer blockRenderers[] = {
+    &drawFull,
+#define DEFINETYPE(STRING, CALLBACK) &CALLBACK,
 #include "./blocktypes.def"
 #undef DEFINETYPE
 };
 
-inline void IsometricCanvas::renderBlock(Colors::Block *color, uint32_t x,
+inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
                                          uint32_t z, const uint32_t y,
                                          const NBT &metadata) {
   // If there is nothing to render, skip it
@@ -522,7 +479,9 @@ inline void IsometricCanvas::renderBlock(Colors::Block *color, uint32_t x,
                            std::to_string(height));
 
   // Pointer to the color to use, and local color copy if changes are due
-  Colors::Block localColor, *colorPtr = color;
+  Colors::Block localColor;
+  const Colors::Block *colorPtr = color;
+
   if (shading) {
     // Make a local copy of the color
     localColor = *colorPtr;
@@ -542,475 +501,20 @@ inline void IsometricCanvas::renderBlock(Colors::Block *color, uint32_t x,
   }
 
   // Then call the function registered with the block's type
-  (this->*blockRenderers[color->type])(bmpPosX, bmpPosY, metadata, colorPtr);
+  blockRenderers[color->type](this, bmpPosX, bmpPosY, metadata, colorPtr);
 }
 
-inline void blend(uint8_t *const destination, const uint8_t *const source) {
-  if (!source[PALPHA])
-    return;
+const Colors::Block *IsometricCanvas::nextBlock() {
+  uint8_t sectionY = yPos + (y == 15 ? 1 : 0);
 
-  if (destination[PALPHA] == 0 || source[PALPHA] == 255) {
-    memcpy(destination, source, BYTESPERPIXEL);
-    return;
-  }
-#define BLEND(ca, aa, cb)                                                      \
-  uint8_t(((size_t(ca) * size_t(aa)) + (size_t(255 - aa) * size_t(cb))) / 255)
-  destination[0] = BLEND(source[0], source[PALPHA], destination[0]);
-  destination[1] = BLEND(source[1], source[PALPHA], destination[1]);
-  destination[2] = BLEND(source[2], source[PALPHA], destination[2]);
-  destination[PALPHA] +=
-      (size_t(source[PALPHA]) * size_t(255 - destination[PALPHA])) / 255;
-#undef BLEND
-}
+  if (sectionY > maxSection)
+    return &air;
 
-inline void addColor(uint8_t *const color, const uint8_t *const add) {
-  const float v2 = (float(add[PALPHA]) / 255.0f);
-  const float v1 = (1.0f - (v2 * .2f));
-  color[0] = clamp(uint16_t(float(color[0]) * v1 + float(add[0]) * v2));
-  color[1] = clamp(uint16_t(float(color[1]) * v1 + float(add[1]) * v2));
-  color[2] = clamp(uint16_t(float(color[2]) * v1 + float(add[2]) * v2));
-}
+  uint16_t index =
+      sections[sectionY]
+          .blocks[((y + 1) % 16) * 256 + orientedZ * 16 + orientedX];
 
-#define FILL_ &fill->primary
-#define DARK_ &color->dark
-#define LIGHT &color->light
-#define PRIME &color->primary
-#define ALTER &color->secondary
-#define ALT_D &secondaryDark
-#define ALT_L &secondaryLight
-
-void IsometricCanvas::drawHead(const uint32_t x, const uint32_t y, const NBT &,
-                               const Colors::Block *block) {
-  /* Small block centered
-   * |    |
-   * |    |
-   * | PP |
-   * | DL | */
-  uint8_t *pos = pixel(x + 1, y + 2);
-  memcpy(pos, &block->primary, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL, &block->primary, BYTESPERPIXEL);
-
-  pos = pixel(x + 1, y + 3);
-  memcpy(pos, &block->dark, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL, &block->light, BYTESPERPIXEL);
-}
-
-void IsometricCanvas::drawThin(const uint32_t x, const uint32_t y, const NBT &,
-                               const Colors::Block *block) {
-  /* Overwrite the block below's top layer
-   * |    |
-   * |    |
-   * |    |
-   * |XXXX|
-   *   XX   */
-  uint8_t *pos = pixel(x, y + 3);
-  for (uint8_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
-    memcpy(pos, &block->primary, BYTESPERPIXEL);
-  pos = pixel(x + 1, y + 4);
-  memcpy(pos, &block->dark, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL, &block->light, BYTESPERPIXEL);
-}
-
-void IsometricCanvas::drawHidden(const uint32_t, const uint32_t, const NBT &,
-                                 const Colors::Block *) {
-  return;
-}
-
-void IsometricCanvas::drawTransparent(const uint32_t x, const uint32_t y,
-                                      const NBT &, const Colors::Block *block) {
-  // Avoid the top and dark/light edges for a clearer look through
-  uint8_t *pos = pixel(x, y + 1);
-  for (uint8_t j = 1; j < 4; j++, pos = pixel(x, y + j)) {
-    for (uint8_t i = 0; i < 4; i++)
-      blend(pos + i * CHANSPERPIXEL, (uint8_t *)&block->primary);
-  }
-}
-
-void IsometricCanvas::drawTorch(const uint32_t x, const uint32_t y, const NBT &,
-                                const Colors::Block *block) {
-  /* TODO Callback to handle the orientation
-   * Print the secondary on top of two primary
-   * |    |
-   * |  S |
-   * |  P |
-   * |  P | */
-  memcpy(pixel(x + 2, y + 1), &block->secondary, BYTESPERPIXEL);
-  memcpy(pixel(x + 2, y + 2), &block->primary, BYTESPERPIXEL);
-  memcpy(pixel(x + 2, y + 3), &block->primary, BYTESPERPIXEL);
-}
-
-void IsometricCanvas::drawPlant(const uint32_t x, const uint32_t y, const NBT &,
-                                const Colors::Block *block) {
-  /* Print a plant-like block
-   * TODO Make that nicer ?
-   * |    |
-   * | X X|
-   * |  X |
-   * | X  | */
-  uint8_t *pos = pixel(x, y + 1);
-  memcpy(pos + (CHANSPERPIXEL), &block->primary, BYTESPERPIXEL);
-  memcpy(pos + (CHANSPERPIXEL * 3), &block->primary, BYTESPERPIXEL);
-
-  memcpy(pixel(x + 2, y + 2), &block->primary, BYTESPERPIXEL);
-  memcpy(pixel(x + 1, y + 3), &block->primary, BYTESPERPIXEL);
-}
-
-void IsometricCanvas::drawUnderwaterPlant(const uint32_t x, const uint32_t y,
-                                          const NBT &,
-                                          const Colors::Block *block) {
-  /* Print a plant-like block
-   * |    |
-   * |WXWX|
-   * |WWXW|
-   * |WXWW| */
-
-  drawPlant(x, y, empty, block);
-  drawTransparent(x, y, empty, &water);
-}
-
-void IsometricCanvas::drawFire(const uint32_t x, const uint32_t y, const NBT &,
-                               const Colors::Block *const color) {
-  // This basically just leaves out a few pixels
-  // Top row
-  uint8_t *pos = pixel(x, y);
-  blend(pos, (uint8_t *)&color->light);
-  blend(pos + CHANSPERPIXEL * 2, (uint8_t *)&color->dark);
-  // Second and third row
-  for (uint8_t i = 1; i < 3; ++i) {
-    pos = pixel(x, y + i);
-    blend(pos, (uint8_t *)&color->dark);
-    blend(pos + (CHANSPERPIXEL * i), (uint8_t *)&color->primary);
-    blend(pos + (CHANSPERPIXEL * 3), (uint8_t *)&color->light);
-  }
-  // Last row
-  pos = pixel(x, y + 3);
-  blend(pos + (CHANSPERPIXEL * 2), (uint8_t *)&color->light);
-}
-
-void IsometricCanvas::drawOre(const uint32_t x, const uint32_t y, const NBT &,
-                              const Colors::Block *color) {
-  /* Print a vein with the secondary in the block
-   * |PSPP|
-   * |DDSL|
-   * |DSLS|
-   * |SDLL| */
-
-  int sub = (float(color->primary.BRIGHTNESS) / 323.0f + .21f);
-
-  Colors::Color secondaryLight(color->secondary);
-  Colors::Color secondaryDark(color->secondary);
-  secondaryLight.modColor(sub - 15);
-  secondaryDark.modColor(sub - 25);
-
-  const Colors::Color *sprite[4][4] = {{PRIME, ALTER, PRIME, PRIME},
-                                       {DARK_, DARK_, ALT_L, LIGHT},
-                                       {DARK_, ALT_D, LIGHT, ALT_L},
-                                       {ALT_D, DARK_, LIGHT, LIGHT}};
-
-  uint8_t *pos = pixel(x, y);
-  for (uint8_t j = 0; j < 4; ++j, pos = pixel(x, y + j))
-    for (uint8_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
-      memcpy(pos, sprite[j][i], BYTESPERPIXEL);
-}
-
-void IsometricCanvas::drawGrown(const uint32_t x, const uint32_t y, const NBT &,
-                                const Colors::Block *color) {
-  /* Print the secondary color on top
-   * |SSSS|
-   * |DSSL|
-   * |DDLL|
-   * |DDLL| */
-
-  // First determine how much the color has to be lightened up or darkened
-  // The brighter the color, the stronger the impact
-  int sub = (float(color->primary.BRIGHTNESS) / 323.0f + .21f);
-
-  Colors::Color secondaryLight(color->secondary);
-  Colors::Color secondaryDark(color->secondary);
-  secondaryLight.modColor(sub - 15);
-  secondaryDark.modColor(sub - 25);
-
-  const Colors::Color *sprite[4][4] = {{ALTER, ALTER, ALTER, ALTER},
-                                       {DARK_, ALT_D, ALT_L, LIGHT},
-                                       {DARK_, DARK_, LIGHT, LIGHT},
-                                       {DARK_, DARK_, LIGHT, LIGHT}};
-
-  uint8_t *pos = pixel(x, y);
-  for (uint8_t j = 0; j < 4; ++j, pos = pixel(x, y + j))
-    for (uint8_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
-      memcpy(pos, sprite[j][i], BYTESPERPIXEL);
-}
-
-void IsometricCanvas::drawRod(const uint32_t x, const uint32_t y,
-                              const NBT &metadata,
-                              const Colors::Block *const color) {
-  /* A full fat rod
-   * | PP |
-   * | DL |
-   * | DL |
-   * | DL | */
-
-  Colors::Block *fill = &air;
-  std::string waterlogged = "false";
-
-  if (metadata.contains("Properties"))
-    if (metadata["Properties"].contains("waterlogged"))
-      waterlogged = metadata["Properties"]["waterlogged"].get<string>();
-
-  if (waterlogged == "true")
-    fill = &water;
-
-  const Colors::Color *sprite[4][4] = {{FILL_, PRIME, PRIME, FILL_},
-                                       {FILL_, DARK_, LIGHT, FILL_},
-                                       {FILL_, DARK_, LIGHT, FILL_},
-                                       {FILL_, DARK_, LIGHT, FILL_}};
-
-  uint8_t *pos = pixel(x, y);
-  for (uint8_t j = 0; j < 4; ++j, pos = pixel(x, y + j))
-    for (uint8_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
-      blend(pos, (uint8_t *)sprite[j][i]);
-}
-
-void IsometricCanvas::drawBeam(const uint32_t x, const uint32_t y, const NBT &,
-                               const Colors::Block *const color) {
-  /* No top to make it look more continuous
-   * |    |
-   * | DL |
-   * | DL |
-   * | DL | */
-  uint8_t *pos = pixel(x + 1, y + 1);
-  for (uint8_t i = 1; i < 4; i++, pos = pixel(x + 1, y + i)) {
-    blend(pos, (uint8_t *)&color->dark);
-    blend(pos + CHANSPERPIXEL, (uint8_t *)&color->light);
-  }
-}
-
-void IsometricCanvas::drawSlab(const uint32_t x, const uint32_t y,
-                               const NBT &metadata,
-                               const Colors::Block *color) {
-  /* This one has a hack to make it look like a gradual step up:
-   * The second layer has primary colors to make the height difference
-   * less obvious.
-   * |    |    |PPPP|
-   * |PPPP| or |DDLL| or full
-   * |DPPL|    |DDLL|
-   * |DDLL|    |    | */
-
-  Colors::Block *fill = &air;
-  std::string waterlogged = "false", type = "bottom";
-
-  if (metadata.contains("Properties")) {
-    if (metadata["Properties"].contains("waterlogged"))
-      waterlogged = metadata["Properties"]["waterlogged"].get<string>();
-
-    if (metadata["Properties"].contains("type"))
-      type = metadata["Properties"]["type"].get<string>();
-  }
-
-  // Draw a full block if it is a double slab
-  if (type == "double") {
-    drawFull(x, y, metadata, color);
-    return;
-  }
-
-  if (waterlogged == "true")
-    fill = &water;
-
-  const Colors::Color *spriteTop[4][4] = {{PRIME, PRIME, PRIME, PRIME},
-                                          {DARK_, DARK_, LIGHT, LIGHT},
-                                          {DARK_, DARK_, LIGHT, LIGHT},
-                                          {FILL_, FILL_, FILL_, FILL_}};
-
-  const Colors::Color *spriteBottom[4][4] = {{FILL_, FILL_, FILL_, FILL_},
-                                             {PRIME, PRIME, PRIME, PRIME},
-                                             {DARK_, PRIME, PRIME, LIGHT},
-                                             {DARK_, DARK_, LIGHT, LIGHT}};
-
-  const Colors::Color *(*target)[4][4] = &spriteBottom;
-
-  if (type == "top")
-    target = &spriteTop;
-
-  uint8_t *pos = pixel(x, y);
-  for (uint8_t j = 0; j < 4; ++j, pos = pixel(x, y + j))
-    for (uint8_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
-      blend(pos, (uint8_t *)(*target)[j][i]);
-}
-
-void IsometricCanvas::drawWire(const uint32_t x, const uint32_t y, const NBT &,
-                               const Colors::Block *color) {
-  uint8_t *pos = pixel(x + 1, y + 3);
-  memcpy(pos, &color->primary, BYTESPERPIXEL);
-  memcpy(pos + CHANSPERPIXEL, &color->primary, BYTESPERPIXEL);
-}
-
-void IsometricCanvas::drawLog(const uint32_t x, const uint32_t y,
-                              const NBT &metadata, const Colors::Block *color) {
-
-  string axis = "y";
-  int sub = (float(color->primary.BRIGHTNESS) / 323.0f + .21f);
-
-  Colors::Color secondaryLight(color->secondary);
-  Colors::Color secondaryDark(color->secondary);
-  secondaryLight.modColor(sub - 15);
-  secondaryDark.modColor(sub - 25);
-
-  const Colors::Color *spriteY[4][4] = {{ALTER, ALTER, ALTER, ALTER},
-                                        {DARK_, DARK_, LIGHT, LIGHT},
-                                        {DARK_, DARK_, LIGHT, LIGHT},
-                                        {DARK_, DARK_, LIGHT, LIGHT}};
-
-  const Colors::Color *spriteX[4][4] = {{PRIME, PRIME, PRIME, PRIME},
-                                        {ALT_D, ALT_D, LIGHT, LIGHT},
-                                        {ALT_D, ALT_D, LIGHT, LIGHT},
-                                        {ALT_D, ALT_D, LIGHT, LIGHT}};
-
-  const Colors::Color *spriteZ[4][4] = {{PRIME, PRIME, PRIME, PRIME},
-                                        {DARK_, DARK_, ALT_L, ALT_L},
-                                        {DARK_, DARK_, ALT_L, ALT_L},
-                                        {DARK_, DARK_, ALT_L, ALT_L}};
-
-  const Colors::Color *(*target)[4][4] = &spriteY;
-
-  if (metadata.contains("Properties") &&
-      metadata["Properties"].contains("axis")) {
-    axis = metadata["Properties"]["axis"].get<string>();
-
-    if (axis == "x") {
-      if (map.orientation == NW || map.orientation == SE)
-        target = &spriteZ;
-      else
-        target = &spriteX;
-    } else if (axis == "z") {
-      if (map.orientation == NW || map.orientation == SE)
-        target = &spriteX;
-      else
-        target = &spriteZ;
-    }
-  }
-
-  uint8_t *pos = pixel(x, y);
-  for (uint8_t j = 0; j < 4; ++j, pos = pixel(x, y + j))
-    for (uint8_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
-      memcpy(pos, (*target)[j][i], BYTESPERPIXEL);
-}
-
-void IsometricCanvas::drawStair(const uint32_t x, const uint32_t y,
-                                const NBT &metadata,
-                                const Colors::Block *color) {
-
-  string facing = "north", half = "bottom", waterlogged = "false",
-         shape = "straight";
-  Colors::Block *fill = &air;
-
-  if (metadata.contains("Properties")) {
-    if (metadata["Properties"].contains("facing"))
-      facing = metadata["Properties"]["facing"].get<string>();
-
-    if (metadata["Properties"].contains("half"))
-      half = metadata["Properties"]["half"].get<string>();
-
-    if (metadata["Properties"].contains("waterlogged"))
-      waterlogged = metadata["Properties"]["waterlogged"].get<string>();
-
-    if (metadata["Properties"].contains("shape"))
-      shape = metadata["Properties"]["shape"].get<string>();
-  }
-
-  if (waterlogged == "true")
-    fill = &water;
-
-  const Colors::Color *spriteNorth[4][4] = {{FILL_, FILL_, PRIME, PRIME},
-                                            {PRIME, PRIME, DARK_, DARK_},
-                                            {DARK_, PRIME, PRIME, LIGHT},
-                                            {DARK_, DARK_, DARK_, LIGHT}};
-
-  const Colors::Color *spriteWest[4][4] = {{PRIME, PRIME, FILL_, FILL_},
-                                           {LIGHT, LIGHT, PRIME, PRIME},
-                                           {DARK_, PRIME, PRIME, LIGHT},
-                                           {DARK_, LIGHT, LIGHT, LIGHT}};
-
-  const Colors::Color *spriteSouth[4][4] = {{PRIME, PRIME, FILL_, FILL_},
-                                            {DARK_, DARK_, PRIME, PRIME},
-                                            {DARK_, DARK_, LIGHT, LIGHT},
-                                            {DARK_, DARK_, LIGHT, LIGHT}};
-
-  const Colors::Color *spriteEast[4][4] = {{FILL_, FILL_, PRIME, PRIME},
-                                           {PRIME, PRIME, LIGHT, LIGHT},
-                                           {DARK_, DARK_, LIGHT, LIGHT},
-                                           {DARK_, DARK_, LIGHT, LIGHT}};
-
-  const Colors::Color *spriteNorthWest[4][4] = {{PRIME, PRIME, PRIME, PRIME},
-                                                {LIGHT, LIGHT, DARK_, DARK_},
-                                                {PRIME, PRIME, PRIME, PRIME},
-                                                {DARK_, DARK_, LIGHT, LIGHT}};
-
-  const Colors::Color *spriteSouthEast[4][4] = {{PRIME, PRIME, PRIME, PRIME},
-                                                {DARK_, DARK_, LIGHT, LIGHT},
-                                                {DARK_, DARK_, LIGHT, LIGHT},
-                                                {DARK_, DARK_, LIGHT, LIGHT}};
-
-#define spriteNorthEast spriteEast
-#define spriteSouthWest spriteSouth
-
-  const void *straight[4] = {&spriteNorth, &spriteWest, &spriteSouth,
-                             &spriteEast};
-  const void *inner[4] = {&spriteNorthEast, &spriteNorthWest, &spriteSouthWest,
-                          &spriteSouthEast};
-  const Colors::Color *(*target)[4][4] = &spriteNorth;
-
-#undef spriteNorthEast
-#undef spriteSouthWest
-
-  std::map<std::string, int> directions = {
-      {"north", 0}, {"west", 1}, {"south", 2}, {"east", 3}};
-
-  int reference = (directions[facing] + 4 - map.orientation) % 4;
-
-  if (shape == "straight") {
-    target = (const Colors::Color *(*)[4][4])straight[reference];
-  } else if (shape == "inner_right") {
-    target = (const Colors::Color *(*)[4][4])inner[reference];
-  } else if (shape == "inner_left") {
-    reference = (reference + 1) % 4;
-    target = (const Colors::Color *(*)[4][4])inner[reference];
-  }
-
-  if (half == "top")
-    target = &spriteSouthEast;
-
-  uint8_t *pos = pixel(x, y);
-  for (uint8_t j = 0; j < 4; ++j, pos = pixel(x, y + j))
-    for (uint8_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
-      blend(pos, (uint8_t *)(*target)[j][i]);
-}
-
-void IsometricCanvas::drawFull(const uint32_t x, const uint32_t y, const NBT &,
-                               const Colors::Block *color) {
-  // Sets pixels around x,y where A is the anchor
-  // T = given color, D = darker, L = lighter
-  // A T T T
-  // D D L L
-  // D D L L
-  // D D L L
-
-  const Colors::Color *sprite[4][4] = {{PRIME, PRIME, PRIME, PRIME},
-                                       {DARK_, DARK_, LIGHT, LIGHT},
-                                       {DARK_, DARK_, LIGHT, LIGHT},
-                                       {DARK_, DARK_, LIGHT, LIGHT}};
-
-  // Top row
-  uint8_t *pos = pixel(x, y);
-
-  if (color->primary.ALPHA == 255) {
-    for (uint8_t j = 0; j < 4; ++j, pos = pixel(x, y + j))
-      for (uint8_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
-        memcpy(pos, sprite[j][i], BYTESPERPIXEL);
-  } else {
-    for (uint8_t j = 0; j < 4; ++j, pos = pixel(x, y + j))
-      for (uint8_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
-        blend(pos, (uint8_t *)sprite[j][i]);
-  }
+  return sections[sectionY].colors[index];
 }
 
 // __  __                _

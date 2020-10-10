@@ -2,12 +2,35 @@
 #define CANVAS_H_
 
 #include "./helper.h"
+#include "./section.h"
 #include "./worldloader.h"
 #include <stdint.h>
 
 #define CHANSPERPIXEL 4
 #define BYTESPERCHAN 1
 #define BYTESPERPIXEL 4
+
+struct Beam {
+  uint8_t position;
+  const Colors::Block *color;
+
+  Beam() : position(0), color(nullptr){};
+  Beam(uint8_t x, uint8_t z, const Colors::Block *c)
+      : position((x << 4) + z), color(c){};
+
+  inline uint8_t x() const { return position >> 4; }
+  inline uint8_t z() const { return position & 0x0f; }
+
+  inline bool column(uint8_t x, uint8_t z) const {
+    return position == ((x << 4) + z);
+  }
+
+  Beam &operator=(Beam &&other) {
+    position = other.position;
+    color = other.color;
+    return *this;
+  }
+};
 
 // Isometric canvas
 // This structure holds the final bitmap data, a 2D array of pixels. It is
@@ -27,21 +50,30 @@ struct IsometricCanvas {
   uint8_t *bytesBuffer; // The buffer where pixels are written
   uint64_t size;        // The size of the buffer
 
-  uint64_t nXChunks, nZChunks;
+  uint32_t nXChunks, nZChunks;
 
-  Colors::Palette palette;              // The colors to use when drawing
-  Colors::Block air, water, beaconBeam; // Cached colors for easy access
+  Colors::Palette palette;  // The colors to use when drawing
+  Colors::Block air, water, // fire, earth. Teh four nations lived in harmoiny
+      beaconBeam;           // Cached colors for easy access
 
-  // Those arrays are chunk-based values, that get overwritten at every new
-  // chunk
-  uint8_t numBeacons = 0, beacons[256];
-  uint8_t localMarkers = 0, totalMarkers = 0;
-  // Markers inside the chunk:
-  // 8 bits for the index inside markers, 4 bits for x, 4 bits for z
-  uint16_t chunkMarkers[256];
+  // TODO bye bye
+  uint8_t totalMarkers = 0;
   Colors::Marker (*markers)[256];
 
   float *brightnessLookup;
+
+  Section sections[16];
+
+  // In-chunk variables
+  uint32_t chunkX;
+  uint32_t chunkZ;
+  int8_t yPos, minSection, maxSection;
+
+  // Beams in the chunk being rendered
+  uint8_t beamNo = 0;
+  Beam beams[256];
+
+  uint8_t orientedX, orientedZ, y;
 
   IsometricCanvas(const Terrain::Coordinates &coords,
                   const Colors::Palette &colors, const uint16_t padding = 0);
@@ -83,32 +115,16 @@ struct IsometricCanvas {
 
   // Drawing entrypoints
   void renderTerrain(const Terrain::Data &);
-  void renderChunk(const Terrain::Data &, const int64_t, const int64_t);
-  void renderSection(const NBT &, const int64_t, const int64_t, const uint8_t,
-                     sectionInterpreter);
+  void renderChunk(const Terrain::Data &);
+  void renderSection();
   // Draw a block from virtual coords in the canvas
-  void renderBlock(Colors::Block *, const uint32_t, const uint32_t,
+  void renderBlock(const Colors::Block *, const uint32_t, const uint32_t,
                    const uint32_t, const NBT &metadata);
 
   // Empty section with only beams
   void renderBeamSection(const int64_t, const int64_t, const uint8_t);
 
-  // This obscure typedef allows to create a member function pointer array
-  // (ouch) to render different block types without a switch case
-  typedef void (IsometricCanvas::*drawer)(const uint32_t, const uint32_t,
-                                          const NBT &, const Colors::Block *);
-
-  // The default block type, hardcoded
-  void drawFull(const uint32_t, const uint32_t, const NBT &,
-                const Colors::Block *);
-
-  // The other block types are loaded at compile-time from the `blocktypes.def`
-  // file, with some macro manipulation
-#define DEFINETYPE(STRING, CALLBACK)                                           \
-  void CALLBACK(const uint32_t, const uint32_t, const NBT &,                   \
-                const Colors::Block *);
-#include "./blocktypes.def"
-#undef DEFINETYPE
+  const Colors::Block *nextBlock();
 };
 
 #endif
