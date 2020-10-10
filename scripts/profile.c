@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
@@ -8,6 +9,11 @@
 #define BILLION 1000000000L
 
 int main(int argc, char **argv) {
+  if (argc < 3) {
+    fprintf(stderr, "Usage: %s <output.tsv> <program to profile>\n", argv[0]);
+    return 1;
+  }
+
   FILE *statusFile, *proFile;
   char procFile[80], buffer[1024];
   long size, peak, real, max;
@@ -18,19 +24,28 @@ int main(int argc, char **argv) {
   pid_t pid = fork();
 
   if (!pid)
-    execvp(argv[1], argv + 1);
+    execvp(argv[2], argv + 2);
 
   delay.tv_sec = 0;
   delay.tv_nsec = .001 * BILLION;
 
   snprintf(procFile, 80, "/proc/%ld/status", (long)pid);
-  proFile = fopen("/tmp/memProfile.tsv", "w");
+
+  if (!(proFile = fopen(argv[1], "w"))) {
+    fprintf(stderr, "Error opening %s: %s\n", argv[1], strerror(errno));
+    return 1;
+  }
+
   fprintf(proFile, "Time (s)\tVirtual Memory (kB)\tVirtual Peak (kB)\tReal "
                    "Memory (kB)\tReal Peak (kB)\n");
 
   while (!waitpid(pid, NULL, WNOHANG)) {
     clock_gettime(CLOCK_REALTIME, &now);
-    statusFile = fopen(procFile, "r");
+
+    if (!(statusFile = fopen(procFile, "r"))) {
+      fprintf(stderr, "Error opening %s: %s\n", procFile, strerror(errno));
+      return 1;
+    }
 
     while (fscanf(statusFile, " %1023s", buffer) == 1) {
       if (strcmp(buffer, "VmRSS:") == 0)
