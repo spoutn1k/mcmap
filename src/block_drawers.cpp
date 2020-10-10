@@ -49,13 +49,22 @@ void drawHidden(IsometricCanvas *, const uint32_t, const uint32_t, const NBT &,
 
 void drawTransparent(IsometricCanvas *canvas, const uint32_t x,
                      const uint32_t y, const NBT &,
-                     const Colors::Block *block) {
+                     const Colors::Block *color) {
+  uint8_t top = 0;
+
+  if (*canvas->nextBlock() == *color)
+    top = 1;
+
+  const Colors::Color *sprite[4][4] = {{PRIME, PRIME, PRIME, PRIME},
+                                       {DARK_, DARK_, LIGHT, LIGHT},
+                                       {DARK_, DARK_, LIGHT, LIGHT},
+                                       {DARK_, DARK_, LIGHT, LIGHT}};
+
   // Avoid the top and dark/light edges for a clearer look through
-  uint8_t *pos = canvas->pixel(x, y + 1);
-  for (uint8_t j = 1; j < 4; j++, pos = canvas->pixel(x, y + j)) {
-    for (uint8_t i = 0; i < 4; i++)
-      blend(pos + i * CHANSPERPIXEL, (uint8_t *)&block->primary);
-  }
+  uint8_t *pos = canvas->pixel(x, y + top);
+  for (uint8_t j = top; j < 4; ++j, pos = canvas->pixel(x, y + j))
+    for (uint8_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
+      blend(pos, (uint8_t *)sprite[j][i]);
 }
 
 void drawTorch(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
