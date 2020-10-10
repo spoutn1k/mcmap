@@ -116,6 +116,10 @@ struct Color {
 
     return mix;
   }
+
+  bool operator==(const Color &other) const {
+    return R == other.R && B == other.B && G == other.G;
+  }
 };
 
 struct Block {
@@ -146,6 +150,10 @@ struct Block {
     mix.secondary = this->secondary + other.secondary;
 
     return mix;
+  }
+
+  bool operator==(const Block &other) const {
+    return (primary == other.primary);
   }
 };
 

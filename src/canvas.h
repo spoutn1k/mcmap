@@ -50,7 +50,7 @@ struct IsometricCanvas {
   uint8_t *bytesBuffer; // The buffer where pixels are written
   uint64_t size;        // The size of the buffer
 
-  uint64_t nXChunks, nZChunks;
+  uint32_t nXChunks, nZChunks;
 
   Colors::Palette palette;  // The colors to use when drawing
   Colors::Block air, water, // fire, earth. Teh four nations lived in harmoiny
@@ -64,9 +64,16 @@ struct IsometricCanvas {
 
   Section sections[16];
 
+  // In-chunk variables
+  uint32_t chunkX;
+  uint32_t chunkZ;
+  int8_t yPos;
+
   // Beams in the chunk being rendered
   uint8_t beamNo = 0;
   Beam beams[256];
+
+  uint8_t orientedX, orientedZ, y;
 
   IsometricCanvas(const Terrain::Coordinates &coords,
                   const Colors::Palette &colors, const uint16_t padding = 0);
@@ -108,14 +115,16 @@ struct IsometricCanvas {
 
   // Drawing entrypoints
   void renderTerrain(const Terrain::Data &);
-  void renderChunk(const Terrain::Data &, const int64_t, const int64_t);
-  void renderSection(const int64_t, const int64_t, const uint8_t);
+  void renderChunk(const Terrain::Data &);
+  void renderSection();
   // Draw a block from virtual coords in the canvas
   void renderBlock(const Colors::Block *, const uint32_t, const uint32_t,
                    const uint32_t, const NBT &metadata);
 
   // Empty section with only beams
   void renderBeamSection(const int64_t, const int64_t, const uint8_t);
+
+  const Colors::Block *nextBlock();
 };
 
 #endif

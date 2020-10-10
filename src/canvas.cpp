@@ -194,11 +194,9 @@ void IsometricCanvas::orientChunk(int32_t &x, int32_t &z) {
 
 void IsometricCanvas::renderTerrain(const Terrain::Data &world) {
   // world is supposed to have the SAME set of coordinates as the canvas
-  uint32_t chunkX, chunkZ;
-
   for (chunkX = 0; chunkX < nXChunks; chunkX++) {
     for (chunkZ = 0; chunkZ < nZChunks; chunkZ++) {
-      renderChunk(world, chunkX, chunkZ);
+      renderChunk(world);
       logger::printProgress("Rendering chunks", chunkX * nZChunks + chunkZ,
                             nZChunks * nXChunks);
     }
@@ -207,10 +205,8 @@ void IsometricCanvas::renderTerrain(const Terrain::Data &world) {
   return;
 }
 
-void IsometricCanvas::renderChunk(const Terrain::Data &terrain,
-                                  const int64_t canvasX,
-                                  const int64_t canvasZ) {
-  int32_t worldX = canvasX, worldZ = canvasZ;
+void IsometricCanvas::renderChunk(const Terrain::Data &terrain) {
+  int32_t worldX = chunkX, worldZ = chunkZ;
   orientChunk(worldX, worldZ);
 
   const NBT &chunk = terrain.chunkAt(worldX, worldZ);
@@ -237,18 +233,18 @@ void IsometricCanvas::renderChunk(const Terrain::Data &terrain,
   const uint8_t minSection = std::max(map.minY, minHeight) >> 4;
   const uint8_t maxSection = std::min(map.maxY, maxHeight) >> 4;
 
-  for (uint8_t yPos = minSection; yPos < maxSection + 1; yPos++) {
+  for (yPos = minSection; yPos < maxSection + 1; yPos++) {
     sections[yPos] =
         Section(chunk["Level"]["Sections"][yPos], dataVersion, palette);
   }
 
-  for (uint8_t yPos = minSection; yPos < maxSection + 1; yPos++) {
-    renderSection(canvasX, canvasZ, yPos);
+  for (yPos = minSection; yPos < maxSection + 1; yPos++) {
+    renderSection();
   }
 
   if (beamNo)
-    for (uint8_t yPos = maxSection + 1; yPos < 16; yPos++) {
-      renderBeamSection(canvasX, canvasZ, yPos);
+    for (yPos = maxSection + 1; yPos < 16; yPos++) {
+      renderBeamSection(chunkX, chunkZ, yPos);
     }
 
   beamNo = 0;
@@ -275,8 +271,7 @@ inline void IsometricCanvas::orientSection(uint8_t &x, uint8_t &z) {
   }
 }
 
-void IsometricCanvas::renderSection(const int64_t xPos, const int64_t zPos,
-                                    const uint8_t yPos) {
+void IsometricCanvas::renderSection() {
   const Section &section = sections[yPos];
 
   bool beamColumn = false;
@@ -287,26 +282,27 @@ void IsometricCanvas::renderSection(const int64_t xPos, const int64_t zPos,
     return;
 
   uint8_t block_index;
-  int32_t chunkX = xPos, chunkZ = zPos;
+  int32_t worldX = chunkX, worldZ = chunkZ;
 
   // We need the real position of the section for bounds checking
-  orientChunk(chunkX, chunkZ);
+  orientChunk(worldX, worldZ);
 
   // Main drawing loop, for every block of the section
   for (uint8_t x = 0; x < 16; x++) {
     for (uint8_t z = 0; z < 16; z++) {
       // Orient the indexes for them to correspond to the orientation
-      uint8_t xReal = x, zReal = z;
-      orientSection(xReal, zReal);
+      orientedX = x, orientedZ = z;
+      orientSection(orientedX, orientedZ);
 
       // If we are oob, skip the line
-      if ((chunkX << 4) + xReal > map.maxX ||
-          (chunkX << 4) + xReal < map.minX ||
-          (chunkZ << 4) + zReal > map.maxZ || (chunkZ << 4) + zReal < map.minZ)
+      if ((worldX << 4) + orientedX > map.maxX ||
+          (worldX << 4) + orientedX < map.minX ||
+          (worldZ << 4) + orientedZ > map.maxZ ||
+          (worldZ << 4) + orientedZ < map.minZ)
         continue;
 
       for (uint8_t index = 0; index < beamNo; index++) {
-        if (beams[index].column(xReal, zReal)) {
+        if (beams[index].column(orientedX, orientedZ)) {
           currentBeam = index;
           beamColumn = true;
           break;
@@ -316,20 +312,20 @@ void IsometricCanvas::renderSection(const int64_t xPos, const int64_t zPos,
       }
 
       uint8_t maxY = std::min(16, map.maxY - (yPos << 4) + 1);
-      for (uint8_t y = 0; y < maxY; y++) {
+      for (y = 0; y < maxY; y++) {
 
         if (beamColumn)
-          renderBlock(beams[currentBeam].color, (xPos << 4) + x,
-                      (zPos << 4) + z, (yPos << 4) + y, nbt::NBT());
+          renderBlock(beams[currentBeam].color, (chunkX << 4) + x,
+                      (chunkZ << 4) + z, (yPos << 4) + y, nbt::NBT());
 
-        block_index = section.blocks[y * 256 + zReal * 16 + xReal];
+        block_index = section.blocks[y * 256 + orientedZ * 16 + orientedX];
 
-        renderBlock(section.colors[block_index], (xPos << 4) + x,
-                    (zPos << 4) + z, (yPos << 4) + y,
+        renderBlock(section.colors[block_index], (chunkX << 4) + x,
+                    (chunkZ << 4) + z, (yPos << 4) + y,
                     section.palette[block_index]);
 
         if (block_index == section.beaconIndex) {
-          beams[beamNo++] = Beam(xReal, zReal, &beaconBeam);
+          beams[beamNo++] = Beam(orientedX, orientedZ, &beaconBeam);
           beamColumn = true;
           currentBeam = beamNo - 1;
         }
@@ -506,6 +502,16 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
 
   // Then call the function registered with the block's type
   blockRenderers[color->type](this, bmpPosX, bmpPosY, metadata, colorPtr);
+}
+
+const Colors::Block *IsometricCanvas::nextBlock() {
+  uint8_t sectionY = yPos + (y == 15 ? 1 : 0);
+
+  uint16_t index =
+      sections[sectionY]
+          .blocks[((y + 1) % 16) * 256 + orientedZ * 16 + orientedX];
+
+  return sections[sectionY].colors[index];
 }
 
 // __  __                _
