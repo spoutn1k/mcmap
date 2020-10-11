@@ -114,8 +114,8 @@ struct IsometricCanvas {
   }
 
   // Drawing entrypoints
-  void renderTerrain(const Terrain::Data &);
-  void renderChunk(const Terrain::Data &);
+  void renderTerrain(Terrain::Data &);
+  void renderChunk(Terrain::Data &);
   void renderSection();
   // Draw a block from virtual coords in the canvas
   void renderBlock(const Colors::Block *, const uint32_t, const uint32_t,

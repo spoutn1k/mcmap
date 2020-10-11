@@ -192,7 +192,7 @@ void IsometricCanvas::orientChunk(int32_t &x, int32_t &z) {
   }
 }
 
-void IsometricCanvas::renderTerrain(const Terrain::Data &world) {
+void IsometricCanvas::renderTerrain(Terrain::Data &world) {
   // world is supposed to have the SAME set of coordinates as the canvas
   for (chunkX = 0; chunkX < nXChunks; chunkX++) {
     for (chunkZ = 0; chunkZ < nZChunks; chunkZ++) {
@@ -205,11 +205,11 @@ void IsometricCanvas::renderTerrain(const Terrain::Data &world) {
   return;
 }
 
-void IsometricCanvas::renderChunk(const Terrain::Data &terrain) {
+void IsometricCanvas::renderChunk(Terrain::Data &terrain) {
   int32_t worldX = chunkX, worldZ = chunkZ;
   orientChunk(worldX, worldZ);
 
-  const NBT &chunk = terrain.chunkAt(worldX, worldZ);
+  NBT &chunk = terrain.chunkAt(worldX, worldZ);
   const uint8_t minHeight = terrain.minHeight(worldX, worldZ),
                 maxHeight = terrain.maxHeight(worldX, worldZ);
 
@@ -248,6 +248,8 @@ void IsometricCanvas::renderChunk(const Terrain::Data &terrain) {
     }
 
   beamNo = 0;
+
+  chunk.erase("Level");
 }
 
 // A bit like the above: where do we begin rendering in the 16x16 horizontal

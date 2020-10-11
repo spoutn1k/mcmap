@@ -100,13 +100,8 @@ int main(int argc, char **argv) {
       subCoords[i].minY = std::max(subCoords[i].minY, world.minHeight());
       subCoords[i].maxY = std::min(subCoords[i].maxY, world.maxHeight());
 
-      // Pre-cache the colors used in the part of the world loaded to squeeze a
-      // few milliseconds of color lookup
-      Colors::Palette localColors;
-      Colors::filter(colors, world.cache, &localColors);
-
       // Draw the terrain fragment
-      IsometricCanvas canvas(subCoords[i], localColors);
+      IsometricCanvas canvas(subCoords[i], colors);
       canvas.shading = options.shading;
       canvas.setMarkers(options.totalMarkers, &options.markers);
       canvas.renderTerrain(world);

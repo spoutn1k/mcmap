@@ -45,6 +45,9 @@ struct Data {
 
   vector<string> cache;
 
+  std::filesystem::path regionDir;
+  Chunk empty;
+
   // Default constructor
   explicit Data(const Terrain::Coordinates &coords) : heightBounds(0) {
     map.minX = CHUNK(coords.minX);
@@ -81,12 +84,10 @@ struct Data {
     return (x - map.minX) + (z - map.minZ) * (map.maxX - map.minX + 1);
   }
 
-  const NBT &chunkAt(int64_t xPos, int64_t zPos) const {
-    return chunks[chunkIndex(xPos, zPos)];
-  }
+  NBT &chunkAt(int64_t xPos, int64_t zPos);
 
-  uint8_t maxHeight() const { return heightBounds >> 8; }
-  uint8_t minHeight() const { return heightBounds & 0xff; }
+  uint8_t maxHeight() const { return 255; }
+  uint8_t minHeight() const { return 0; }
 
   uint8_t maxHeight(const int64_t x, const int64_t z) const {
     return heightMap[chunkIndex(x, z)] >> 8;
