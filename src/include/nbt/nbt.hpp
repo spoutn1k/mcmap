@@ -371,9 +371,8 @@ public:
   insert(const tag_compound_t::value_type &value) {
     if (is_compound())
       return content.compound->insert(value);
-    throw(std::domain_error(
-        "Cannot use operator[] with a string argument on tag of type " +
-        std::string(type_name())));
+    throw(std::domain_error("Cannot use insert on tag of type " +
+                            std::string(type_name())));
   }
 
   std::pair<tag_compound_t::iterator, bool>
@@ -381,8 +380,15 @@ public:
     if (is_compound())
       return content.compound->insert(
           std::forward<tag_compound_t::value_type>(value));
+    throw(std::domain_error("Cannot use insert on tag of type " +
+                            std::string(type_name())));
+  }
+
+  size_type erase(const key_type &key) {
+    if (is_compound())
+      return content.compound->erase(key);
     throw(std::domain_error(
-        "Cannot use operator[] with a string argument on tag of type " +
+        "Cannot use erase with a string argument on tag of type " +
         std::string(type_name())));
   }
 
