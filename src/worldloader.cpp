@@ -250,6 +250,17 @@ bool assertChunk(const NBT &chunk) {
   return true;
 }
 
+void filterLevel(NBT &level) {
+  // Erase unused NBT tags to save memory
+  std::vector<std::string> blacklist = {
+      "Entities",          "Structures",  "TileEntities",
+      "TileTicks",         "LiquidTicks", "Lights",
+      "LiquidsToBeTicked", "ToBeTicked",  "PostProcessing"};
+
+  for (auto key : blacklist)
+    level.erase(key);
+}
+
 void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
                               const int chunkX, const int chunkZ,
                               const std::filesystem::path &filename) {
@@ -266,6 +277,8 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
 
   if (!assertChunk(chunk))
     return;
+
+  filterLevel(chunk["Level"]);
 
   chunks[chunkPos] = std::move(chunk);
   vector<NBT> *sections =
