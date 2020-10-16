@@ -16,7 +16,7 @@ int main(int argc, char **argv) {
 
   FILE *statusFile, *proFile;
   char procFile[80], buffer[1024];
-  long size, peak, real, max;
+  long vSize, vPeak, vMax = 0, rSize, rPeak, rMax = 0;
 
   struct timespec delay, begin, now;
 
@@ -49,24 +49,29 @@ int main(int argc, char **argv) {
 
     while (fscanf(statusFile, " %1023s", buffer) == 1) {
       if (strcmp(buffer, "VmRSS:") == 0)
-        fscanf(statusFile, " %ld", &real);
+        fscanf(statusFile, " %ld", &rSize);
       if (strcmp(buffer, "VmHWM:") == 0)
-        fscanf(statusFile, " %ld", &max);
+        fscanf(statusFile, " %ld", &rPeak);
       if (strcmp(buffer, "VmSize:") == 0)
-        fscanf(statusFile, " %ld", &size);
+        fscanf(statusFile, " %ld", &vSize);
       if (strcmp(buffer, "VmPeak:") == 0)
-        fscanf(statusFile, " %ld", &peak);
+        fscanf(statusFile, " %ld", &vPeak);
     }
 
     fprintf(proFile, "%lf\t%ld\t%ld\t%ld\t%ld\n",
             now.tv_sec - begin.tv_sec +
                 ((double)(now.tv_nsec - begin.tv_nsec)) / BILLION,
-            size, peak, real, max);
+            vSize, vPeak, rSize, rPeak);
 
     fclose(statusFile);
+
+    rMax = (rMax < rPeak ? rPeak : rMax);
+    vMax = (vMax < vPeak ? vPeak : vMax);
 
     nanosleep(&delay, NULL);
   }
 
   fclose(proFile);
+
+  printf("\nVirtual Peak (kB)\tReal Peak (kB)\n%ld\t%ld\n", vMax, rMax);
 }

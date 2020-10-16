@@ -1,7 +1,7 @@
 #include <filesystem>
 #include <fmt/core.h>
 
-#define BUFFERSIZE 2000000
+#define BUFFERSIZE 4096
 #define REGIONSIZE 32
 #define HEADER_SIZE REGIONSIZE *REGIONSIZE * 4
 
@@ -14,9 +14,13 @@ uint32_t _ntohi(uint8_t *val) {
 }
 
 int main(int argc, char **argv) {
-  uint8_t buffer[BUFFERSIZE];
+  char time[80];
+  uint8_t locations[BUFFERSIZE], timestamps[BUFFERSIZE], data[5];
+  uint32_t size = 0, read, chunkX, chunkZ, offset;
+  time_t timestamp;
   size_t length;
   FILE *f;
+  struct tm saved;
 
   if (argc < 2 || !exists(path(argv[1]))) {
     fmt::print(stderr, "Usage: {} <Region file>\n", argv[0]);
@@ -28,26 +32,54 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  if ((length = fread(buffer, sizeof(uint8_t), HEADER_SIZE, f)) !=
+  if ((length = fread(locations, sizeof(uint8_t), HEADER_SIZE, f)) !=
       HEADER_SIZE) {
     fmt::print(stderr, "Error reading header, not enough bytes read.\n");
     fclose(f);
     return 1;
   }
 
-  fclose(f);
+  if ((length = fread(timestamps, sizeof(uint8_t), HEADER_SIZE, f)) !=
+      HEADER_SIZE) {
+    fmt::print(stderr, "Error reading header, not enough bytes read.\n");
+    fclose(f);
+    return 1;
+  }
+
+  fmt::print("{}\t{}\t{}\t{}\t{}\t{}\n", "X", "Z", "Offset", "Size",
+             "Compression", "Saved");
 
   for (int it = 0; it < REGIONSIZE * REGIONSIZE; it++) {
     // Bound check
-    const int chunkX = it & 0x1f;
-    const int chunkZ = it >> 5;
+    chunkX = it & 0x1f;
+    chunkZ = it >> 5;
+    size = 0;
 
     // Get the location of the data from the header
-    const uint32_t offset = (_ntohi(buffer + it * 4) >> 8) * 4096;
+    offset = (_ntohi(locations + it * 4) >> 8);
+    timestamp = _ntohi(timestamps + it * 4);
 
-    fmt::print("Chunk {: >2}.{: >2} {:->68}\n", chunkX, chunkZ,
-               " " + (offset ? std::to_string(offset) : "Not found"));
+    if (offset) {
+      fseek(f, offset * 4096, SEEK_SET);
+      if ((read = fread(data, sizeof(uint8_t), 5, f)) == 5)
+        size = _ntohi(data);
+      else
+        fmt::print(stderr, "Not enough data read for chunk {} {}\n", chunkX,
+                   chunkZ);
+
+      saved = *localtime(&timestamp);
+      strftime(time, 80, "%c", &saved);
+
+    } else {
+      size = 0;
+      strcpy(time, "No data");
+    }
+
+    fmt::print("{}\t{}\t{}\t{}\t{}\t{}\n", chunkX, chunkZ,
+               (offset ? std::to_string(offset) : "Not found"), size, data[4],
+               std::string(time));
   }
 
+  fclose(f);
   return 0;
 }
