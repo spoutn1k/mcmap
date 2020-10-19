@@ -10,16 +10,48 @@
 // | |__| (_) | | | \__ \ |_| |  | |_| | (__| || (_) | |  \__ \.
 //  \____\___/|_| |_|___/\__|_|   \__,_|\___|\__\___/|_|  |___/
 
-IsometricCanvas::IsometricCanvas(const Terrain::Coordinates &coords,
-                                 const Colors::Palette &colors,
-                                 const uint16_t padding)
-    : map(coords), padding(padding) {
+IsometricCanvas::IsometricCanvas() {
   // This is a legacy setting, changing how the map is drawn. It can be 2 or
   // 3; it means that a block is drawn with a 2 or 3 pixel offset over the
   // block under it. This changes the orientation of the map: but it totally
   // changes the drawing of special blocks, and as no special cases can be
   // made easily, I set it to 3 for now.
   heightOffset = 3;
+}
+
+void IsometricCanvas::setColors(const Colors::Palette &colors) {
+  // Setting and pre-caching colors
+  palette = colors;
+
+  auto beamColor = colors.find("mcmap:beacon_beam");
+  if (beamColor != colors.end())
+    beaconBeam = beamColor->second;
+
+  auto waterColor = colors.find("minecraft:water");
+  if (waterColor != colors.end())
+    water = waterColor->second;
+
+  auto airColor = colors.find("minecraft:air");
+  if (airColor != colors.end())
+    air = airColor->second;
+
+  // Set to true to use shading later on
+  shading = false;
+  // Precompute the shading profile. The values are arbitrary, and will go
+  // through Colors::Color.modcolor further down the code. The 255 array
+  // represents the entire world height. This profile is linear, going from
+  // -100 at height 0 to 100 at height 255. This replaced a convoluted formula
+  // that did a much better job of higlighting overground terrain, but would
+  // look weird in other dimensions.
+  // Legacy formula: ((100.0f / (1.0f + exp(- (1.3f * (float(y) *
+  // MIN(g_MapsizeY, 200) / g_MapsizeY) / 16.0f) + 6.0f))) - 91)
+  brightnessLookup = new float[255];
+  for (int y = 0; y < 255; ++y)
+    brightnessLookup[y] = -100 + 200 * float(y) / 255;
+}
+
+void IsometricCanvas::setMap(const Coordinates &_map) {
+  map = _map;
 
   nXChunks = CHUNK(map.maxX) - CHUNK(map.minX) + 1;
   nZChunks = CHUNK(map.maxZ) - CHUNK(map.minZ) + 1;
@@ -57,43 +89,13 @@ IsometricCanvas::IsometricCanvas(const Terrain::Coordinates &coords,
   // => A chunk's width equals its size on each side times 2.
   // By generalizing this formula, the entire map's size equals the sum of its
   // length on both the horizontal axis times 2.
-  width = (sizeX + sizeZ + this->padding) * 2;
+  width = (sizeX + sizeZ) * 2;
 
-  height =
-      sizeX + sizeZ + (256 - map.minY) * heightOffset + this->padding * 2 + 1;
+  height = sizeX + sizeZ + (256 - map.minY) * heightOffset + 1;
 
   size = uint64_t(width * height * BYTESPERPIXEL);
   bytesBuffer = new uint8_t[size];
   memset(bytesBuffer, 0, size);
-
-  // Setting and pre-caching colors
-  palette = colors;
-
-  auto beamColor = colors.find("mcmap:beacon_beam");
-  if (beamColor != colors.end())
-    beaconBeam = beamColor->second;
-
-  auto waterColor = colors.find("minecraft:water");
-  if (waterColor != colors.end())
-    water = waterColor->second;
-
-  auto airColor = colors.find("minecraft:air");
-  if (airColor != colors.end())
-    air = airColor->second;
-
-  // Set to true to use shading later on
-  shading = false;
-  // Precompute the shading profile. The values are arbitrary, and will go
-  // through Colors::Color.modcolor further down the code. The 255 array
-  // represents the entire world height. This profile is linear, going from
-  // -100 at height 0 to 100 at height 255. This replaced a convoluted formula
-  // that did a much better job of higlighting overground terrain, but would
-  // look weird in other dimensions.
-  // Legacy formula: ((100.0f / (1.0f + exp(- (1.3f * (float(y) *
-  // MIN(g_MapsizeY, 200) / g_MapsizeY) / 16.0f) + 6.0f))) - 91)
-  brightnessLookup = new float[255];
-  for (int y = 0; y < 255; ++y)
-    brightnessLookup[y] = -100 + 200 * float(y) / 255;
 }
 
 //  ____                       _
@@ -124,7 +126,7 @@ uint32_t IsometricCanvas::firstLine() const {
         line = row;
 
   // Return the value plus padding, to ensure the space before
-  return line - padding;
+  return line;
 }
 
 uint32_t IsometricCanvas::lastLine() const {
@@ -137,14 +139,14 @@ uint32_t IsometricCanvas::lastLine() const {
         line = row;
 
   // Return the value plus padding, to ensure the space after
-  return line + padding;
+  return line;
 }
 
 uint32_t IsometricCanvas::getCroppedHeight() const {
   uint32_t croppedHeight = lastLine() - firstLine();
 
   // If the two values are just the padding hardcoded
-  if (croppedHeight == int64_t(padding) * 2)
+  if (!croppedHeight)
     return 0;
 
   return croppedHeight + 1;
@@ -437,8 +439,7 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
 
   const uint32_t bmpPosX = // The formula is:
       2 * (sizeZ - 1)      // From the middle of the image
-      + (x - z) * 2 // Calc the offset (greater x on the right, z to the left)
-      + padding;    // Add padding by moving to the right
+      + (x - z) * 2; // Calc the offset (greater x on the right, z to the left)
 
   // To get the height of a pixel, we have to look at how a flat layer
   // articulates:
@@ -458,7 +459,6 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
   const uint32_t bmpPosY = // The formula for the base is:
       height               // Starting from the bottom -1,
       - 2                  // Remove the rest of the height of a block,
-      - padding            // Remove the padding (Adding space to the bottom),
 
       // We add x and z for the depth, so that the final block is on the
       // bottom
@@ -561,10 +561,6 @@ uint64_t IsometricCanvas::calcAnchor(const IsometricCanvas &subCanvas) {
     anchorY = height - minOffset;
     break;
   }
-
-  // Adjust the padding before translating to an offset
-  anchorX = anchorX + padding - subCanvas.padding;
-  anchorY = anchorY - padding + subCanvas.padding;
 
   // Translate those coordinates as an offset from the beginning of the
   // buffer

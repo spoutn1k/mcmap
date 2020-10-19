@@ -74,9 +74,6 @@ int main(int argc, char **argv) {
   if (options.hideBeacons)
     colors["mcmap:beacon_beam"] = Colors::Block();
 
-  // This is the canvas on which the final image will be rendered
-  IsometricCanvas finalCanvas(coords, colors, options.padding);
-
   // Prepare the sub-regions to render
   // This could be bypassed when the program is run in single-threaded mode, but
   // it works just fine when run in single threaded, so why bother making huge
@@ -84,14 +81,22 @@ int main(int argc, char **argv) {
   Terrain::Coordinates *subCoords = new Terrain::Coordinates[options.splits];
   splitCoords(coords, subCoords, options.splits);
 
+  std::vector<IsometricCanvas> subCanvasses(options.splits);
+  for (uint16_t i = 0; i < options.splits; i++) {
+    subCanvasses[i].setMap(subCoords[i]);
+    subCanvasses[i].setColors(colors);
+  }
+
 #ifndef DISABLE_OMP
-#pragma omp parallel shared(finalCanvas)
+#pragma omp parallel shared(subCanvasses)
 #endif
   {
 #ifndef DISABLE_OMP
 #pragma omp for ordered schedule(static)
 #endif
     for (uint16_t i = 0; i < options.splits; i++) {
+      IsometricCanvas &canvas = subCanvasses[i];
+
       // Load the minecraft terrain to render
       Terrain::Data world(subCoords[i]);
       world.load(regionDir);
@@ -101,26 +106,15 @@ int main(int argc, char **argv) {
       subCoords[i].maxY = std::min(subCoords[i].maxY, world.maxHeight());
 
       // Draw the terrain fragment
-      IsometricCanvas canvas(subCoords[i], colors);
       canvas.shading = options.shading;
       canvas.setMarkers(options.totalMarkers, &options.markers);
       canvas.renderTerrain(world);
-
-#ifndef DISABLE_OMP
-#pragma omp ordered
-#endif
-      {
-        // Merge the terrain fragment into the final canvas. The ordered
-        // directive in the pragma is primordial, as the merging algorithm
-        // cannot merge terrain when not in order.
-        finalCanvas.merge(canvas);
-      }
     }
   }
 
   delete[] subCoords;
 
-  PNG::Image(options.outFile, &finalCanvas).save();
+  PNG::Image(options.outFile, &subCanvasses[0]).save();
   logger::info("Job complete.\n");
 
   return 0;

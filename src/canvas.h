@@ -44,8 +44,7 @@ struct IsometricCanvas {
   uint8_t offsetX, offsetZ; // Offset of the first block in the first chunk
 
   uint32_t width, height; // Bitmap width and height
-  uint16_t padding;       // Padding inside the image
-  uint8_t heightOffset;   // Offset for block rendering
+  uint8_t heightOffset;   // Offset of the first block in the first chunk
 
   uint8_t *bytesBuffer; // The buffer where pixels are written
   uint64_t size;        // The size of the buffer
@@ -75,11 +74,12 @@ struct IsometricCanvas {
 
   uint8_t orientedX, orientedZ, y;
 
-  IsometricCanvas(const Terrain::Coordinates &coords,
-                  const Colors::Palette &colors, const uint16_t padding = 0);
+  IsometricCanvas();
 
   ~IsometricCanvas() { delete[] bytesBuffer; }
 
+  void setColors(const Colors::Palette &);
+  void setMap(const Coordinates &);
   void setMarkers(uint8_t n, Colors::Marker (*array)[256]) {
     totalMarkers = n;
     markers = array;
