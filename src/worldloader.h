@@ -16,14 +16,14 @@ using nbt::NBT;
 using std::string;
 using std::vector;
 
-void scanWorldDirectory(const std::filesystem::path &, Coordinates *);
-
 namespace Terrain {
 
 typedef NBT Chunk;
 typedef Chunk *ChunkList;
 
-using Coordinates = struct Coordinates;
+using Coordinates = Coordinates<int32_t>;
+
+void scanWorldDirectory(const std::filesystem::path &, Coordinates *);
 
 struct Data {
   // The coordinates of the loaded chunks. This coordinates maps

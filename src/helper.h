@@ -30,8 +30,10 @@ enum Orientation {
 };
 
 // A simple coordinates structure
+template <typename Integer,
+          std::enable_if_t<std::is_integral<Integer>::value, int> = 0>
 struct Coordinates {
-  int32_t minX, maxX, minZ, maxZ;
+  Integer minX, maxX, minZ, maxZ;
   uint8_t minY, maxY;
   Orientation orientation;
 
@@ -40,18 +42,18 @@ struct Coordinates {
     orientation = NW;
   }
 
-  Coordinates(int32_t init) : Coordinates() {
+  Coordinates(Integer init) : Coordinates() {
     minX = maxX = minZ = maxZ = init;
   }
 
   void setUndefined() {
-    minX = minZ = std::numeric_limits<int32_t>::max();
-    maxX = maxZ = std::numeric_limits<int32_t>::min();
+    minX = minZ = std::numeric_limits<Integer>::max();
+    maxX = maxZ = std::numeric_limits<Integer>::min();
   }
 
   bool isUndefined() {
-    return (minX == minZ && minX == std::numeric_limits<int32_t>::max() &&
-            maxX == maxZ && maxX == std::numeric_limits<int32_t>::min());
+    return (minX == minZ && minX == std::numeric_limits<Integer>::max() &&
+            maxX == maxZ && maxX == std::numeric_limits<Integer>::min());
   }
 
   void crop(const Coordinates &boundaries) {
@@ -66,7 +68,7 @@ struct Coordinates {
   }
 };
 
-void splitCoords(const Coordinates &original, Coordinates *&subCoords,
-                 const uint16_t count);
+void splitCoords(const Coordinates<int32_t> &original,
+                 Coordinates<int32_t> *subCoords, const uint16_t count);
 
 #endif // HELPER_H_

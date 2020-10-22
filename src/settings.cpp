@@ -137,8 +137,8 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
 
     // Scan the region directory and map the existing terrain in this set of
     // coordinates
-    Coordinates existingWorld;
-    scanWorldDirectory(opts->regionDir(), &existingWorld);
+    Terrain::Coordinates existingWorld;
+    Terrain::scanWorldDirectory(opts->regionDir(), &existingWorld);
 
     if (opts->boundaries.isUndefined()) {
       // No boundaries were defined, import the whole existing world

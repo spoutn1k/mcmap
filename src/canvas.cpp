@@ -51,7 +51,7 @@ void IsometricCanvas::setColors(const Colors::Palette &colors) {
     brightnessLookup[y] = -100 + 200 * float(y) / 255;
 }
 
-void IsometricCanvas::setMap(const Coordinates &_map) {
+void IsometricCanvas::setMap(const Terrain::Coordinates &_map) {
   map = _map;
 
   nXChunks = CHUNK(map.maxX) - CHUNK(map.minX) + 1;

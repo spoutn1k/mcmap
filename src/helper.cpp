@@ -32,8 +32,8 @@ bool isNumeric(const char *str) {
   return true;
 }
 
-void splitCoords(const Coordinates &original, Coordinates *&subCoords,
-                 const uint16_t count) {
+void splitCoords(const Coordinates<int32_t> &original,
+                 Coordinates<int32_t> *subCoords, const uint16_t count) {
   // Split the coordinates of the entire terrain in `count` terrain fragments
 
   for (uint16_t index = 0; index < count; index++) {

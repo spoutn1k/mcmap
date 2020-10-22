@@ -55,7 +55,7 @@ struct WorldOptions {
   // Map boundaries
   Dimension dim;
   std::string customDim;
-  Coordinates boundaries;
+  Terrain::Coordinates boundaries;
   uint16_t splits;
 
   // Image settings

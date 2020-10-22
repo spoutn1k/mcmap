@@ -3,8 +3,8 @@
 
 NBT minecraft_air(nbt::tag_type::tag_end);
 
-void scanWorldDirectory(const std::filesystem::path &regionDir,
-                        Coordinates *savedWorld) {
+void Terrain::scanWorldDirectory(const std::filesystem::path &regionDir,
+                                 Terrain::Coordinates *savedWorld) {
   const char delimiter = '.';
   std::string index;
   char buffer[4];

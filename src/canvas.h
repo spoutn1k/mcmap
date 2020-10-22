@@ -39,7 +39,7 @@ struct Beam {
 struct IsometricCanvas {
   bool shading;
 
-  Coordinates map;          // The coordinates describing the 3D map
+  Terrain::Coordinates map; // The coordinates describing the 3D map
   uint32_t sizeX, sizeZ;    // The size of the 3D map
   uint8_t offsetX, offsetZ; // Offset of the first block in the first chunk
 
@@ -79,7 +79,7 @@ struct IsometricCanvas {
   ~IsometricCanvas() { delete[] bytesBuffer; }
 
   void setColors(const Colors::Palette &);
-  void setMap(const Coordinates &);
+  void setMap(const Terrain::Coordinates &);
   void setMarkers(uint8_t n, Colors::Marker (*array)[256]) {
     totalMarkers = n;
     markers = array;
@@ -111,7 +111,7 @@ struct IsometricCanvas {
 // A sparse canvas made with smaller canvasses
 struct CompositeCanvas {
   uint64_t width, height;
-  Coordinates map;
+  Terrain::Coordinates map;
 
   struct Position {
     uint32_t offsetX, offsetY;

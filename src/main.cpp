@@ -10,9 +10,6 @@
 
 using std::string;
 
-void printHelp(char *binary);
-void render(IsometricCanvas *canvas, const Terrain::Data &world);
-
 void printHelp(char *binary) {
   logger::info(
       "Usage: {} <options> WORLDPATH\n\n"
@@ -111,8 +108,6 @@ int main(int argc, char **argv) {
       canvas.renderTerrain(world);
     }
   }
-
-  logger::info("{}\n", CompositeCanvas(subCanvasses).to_string());
 
   delete[] subCoords;
 

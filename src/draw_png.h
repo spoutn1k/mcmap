@@ -11,20 +11,7 @@
 #include "./worldloader.h"
 #include "colors.h"
 #include "helper.h"
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <ctime>
-#include <functional>
-#include <list>
 #include <png.h>
-#include <utility>
-#ifndef _WIN32
-#include <sys/stat.h>
-#endif
-#if defined(_WIN32) && !defined(__GNUC__)
-#include <direct.h>
-#endif
 
 namespace PNG {
 
