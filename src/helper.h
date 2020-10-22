@@ -66,6 +66,25 @@ struct Coordinates {
   std::string to_string() const {
     return fmt::format("x{} z{} to x{} z{}", minX, minZ, maxX, maxZ);
   }
+
+  void rotate() {
+    std::swap(minX, minZ);
+    std::swap(maxX, maxZ);
+    std::swap(minX, maxX);
+    minX = -minX;
+    maxX = -maxX;
+  };
+
+  Coordinates<Integer> orient(Orientation o) const {
+    Coordinates<Integer> oriented = *this;
+
+    for (int i = 0; i < (4 + o - orientation) % 4; i++)
+      oriented.rotate();
+
+    oriented.orientation = o;
+
+    return oriented;
+  };
 };
 
 void splitCoords(const Coordinates<int32_t> &original,

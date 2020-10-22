@@ -112,6 +112,7 @@ int main(int argc, char **argv) {
   delete[] subCoords;
 
   CompositeCanvas merged(subCanvasses);
+  logger::debug("{}\n", merged.to_string());
   PNG::Image(options.outFile, &merged, 0).save();
   logger::info("Job complete.\n");
 

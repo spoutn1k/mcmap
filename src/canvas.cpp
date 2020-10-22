@@ -464,6 +464,9 @@ size_t IsometricCanvas::getLine(uint8_t *buffer, size_t bufSize,
                                 uint64_t y) const {
   uint8_t *start = bytesBuffer + y * width * BYTESPERPIXEL;
 
+  if (y > height)
+    return 0;
+
   for (size_t i = 0; i < std::min(bufSize, size_t(width)); i++)
     blend(buffer + i * BYTESPERPIXEL, start + i * BYTESPERPIXEL);
 
@@ -474,10 +477,11 @@ CompositeCanvas::CompositeCanvas(const std::vector<IsometricCanvas> &parts) {
   subCanvasses = std::vector<Position>(parts.size());
 
   for (auto &canvas : parts) {
-    map.minX = std::min(canvas.map.minX, map.minX);
-    map.minZ = std::min(canvas.map.minZ, map.minZ);
-    map.maxX = std::max(canvas.map.maxX, map.maxX);
-    map.maxZ = std::max(canvas.map.maxZ, map.maxZ);
+    Terrain::Coordinates oriented = canvas.map.orient(Orientation::NW);
+    map.minX = std::min(oriented.minX, map.minX);
+    map.minZ = std::min(oriented.minZ, map.minZ);
+    map.maxX = std::max(oriented.maxX, map.maxX);
+    map.maxZ = std::max(oriented.maxZ, map.maxZ);
   }
 
   int64_t sizeX = map.maxX - map.minX + 1;
@@ -487,11 +491,12 @@ CompositeCanvas::CompositeCanvas(const std::vector<IsometricCanvas> &parts) {
   height = sizeX + sizeZ + 256 * 3 + 1;
 
   for (std::vector<IsometricCanvas>::size_type i = 0; i < parts.size(); i++) {
-    uint32_t oX, oZ;
+    uint32_t oX, oY;
     const IsometricCanvas &canvas = parts[i];
-    oX = (canvas.map.minX - map.minX + canvas.map.minZ - map.minZ) * 2;
-    oZ = (canvas.map.minZ - map.minZ + canvas.map.minX - map.minX);
-    subCanvasses[i] = {oX, oZ, &canvas};
+    Terrain::Coordinates oriented = canvas.map.orient(Orientation::NW);
+    oX = (oriented.minX - map.minX + oriented.minZ - map.minZ) * 2;
+    oY = (oriented.minZ - map.minZ + oriented.minX - map.minX);
+    subCanvasses[i] = {oX, oY, &canvas};
   }
 }
 
