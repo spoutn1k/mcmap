@@ -3,6 +3,7 @@
  */
 
 #include "./canvas.h"
+#include <string>
 
 //   ____                _                   _
 //  / ___|___  _ __  ___| |_ _ __ _   _  ___| |_ ___  _ __ ___
@@ -96,66 +97,6 @@ void IsometricCanvas::setMap(const Coordinates &_map) {
   size = uint64_t(width * height * BYTESPERPIXEL);
   bytesBuffer = new uint8_t[size];
   memset(bytesBuffer, 0, size);
-}
-
-//  ____                       _
-// / ___|_ __ ___  _ __  _ __ (_)_ __   __ _
-//| |   | '__/ _ \| '_ \| '_ \| | '_ \ / _` |
-//| |___| | | (_) | |_) | |_) | | | | | (_| |
-// \____|_|  \___/| .__/| .__/|_|_| |_|\__, |
-//                |_|   |_|            |___/
-// The following methods are related to the cropping mechanism.
-
-uint32_t IsometricCanvas::getCroppedWidth() const {
-  // Not implemented, returns the actual width. Might come back to this but it
-  // is not as interesting as the height.
-  return width;
-}
-
-uint32_t IsometricCanvas::firstLine() const {
-  // Tip: Return -7 for a freaky glichy look
-  // return -7;
-
-  // We search for the first non-empty line, return it as a line index (ie
-  // line n)
-  uint32_t line = 0;
-
-  for (uint32_t row = 0; row < height && !line; row++)
-    for (uint32_t pixel = 0; pixel < width && !line; pixel++)
-      if (*(bytesBuffer + (pixel + row * width) * BYTESPERPIXEL))
-        line = row;
-
-  // Return the value plus padding, to ensure the space before
-  return line;
-}
-
-uint32_t IsometricCanvas::lastLine() const {
-  // We search for the last non-empty line
-  uint32_t line = 0;
-
-  for (uint32_t row = height - 1; row > 0 && !line; row--)
-    for (uint32_t pixel = 0; pixel < width && !line; pixel++)
-      if (*(bytesBuffer + (pixel + row * width) * BYTESPERPIXEL))
-        line = row;
-
-  // Return the value plus padding, to ensure the space after
-  return line;
-}
-
-uint32_t IsometricCanvas::getCroppedHeight() const {
-  uint32_t croppedHeight = lastLine() - firstLine();
-
-  // If the two values are just the padding hardcoded
-  if (!croppedHeight)
-    return 0;
-
-  return croppedHeight + 1;
-}
-
-uint64_t IsometricCanvas::getCroppedOffset() const {
-  // The first line to render in the cropped view of the canvas, as an offset
-  // from the beginning of the byte buffer
-  return firstLine() * width * BYTESPERPIXEL;
 }
 
 // ____                     _
@@ -519,134 +460,66 @@ const Colors::Block *IsometricCanvas::nextBlock() {
   return sections[sectionY].colors[index];
 }
 
-// __  __                _
-//|  \/  | ___ _ __ __ _(_)_ __   __ _
-//| |\/| |/ _ \ '__/ _` | | '_ \ / _` |
-//| |  | |  __/ | | (_| | | | | | (_| |
-//|_|  |_|\___|_|  \__, |_|_| |_|\__, |
-//                 |___/         |___/
-// This is the canvas merging code.
+size_t IsometricCanvas::getLine(uint8_t *buffer, size_t bufSize,
+                                uint64_t y) const {
+  uint8_t *start = bytesBuffer + y * width * BYTESPERPIXEL;
 
-uint64_t IsometricCanvas::calcAnchor(const IsometricCanvas &subCanvas) {
-  // Determine where in the canvas' 2D matrix is the subcanvas supposed to
-  // go: the anchor is the bottom left pixel in the canvas where the
-  // sub-canvas must be superimposed
-  uint32_t anchorX = 0, anchorY = height;
-  const uint64_t minOffset =
-      subCanvas.map.minX - map.minX + subCanvas.map.minZ - map.minZ;
-  const uint64_t maxOffset =
-      map.maxX - subCanvas.map.maxX + map.maxZ - subCanvas.map.maxZ;
+  for (size_t i = 0; i < std::min(bufSize, size_t(width)); i++)
+    blend(buffer + i * BYTESPERPIXEL, start + i * BYTESPERPIXEL);
 
-  switch (map.orientation) {
-    // We know an image's width is relative to it's terrain size; we use
-    // that property to determine where to put the subcanvas.
-  case NW:
-    anchorX = minOffset * 2;
-    anchorY = height - maxOffset;
-    break;
-
-    // This is the opposite of NW
-  case SE:
-    anchorX = maxOffset * 2;
-    anchorY = height - minOffset;
-    break;
-
-  case SW:
-    anchorX = maxOffset * 2;
-    anchorY = height - maxOffset;
-    break;
-
-  case NE:
-    anchorX = minOffset * 2;
-    anchorY = height - minOffset;
-    break;
-  }
-
-  // Translate those coordinates as an offset from the beginning of the
-  // buffer
-  return (anchorX + width * anchorY) * BYTESPERPIXEL;
+  return std::min(bufSize, size_t(width));
 }
 
-void overlay(uint8_t *const dest, const uint8_t *const source,
-             const uint32_t width) {
-  // Render a sub-canvas above the canvas' content
-  for (uint32_t pixel = 0; pixel < width; pixel++) {
-    const uint8_t *data = source + pixel * BYTESPERPIXEL;
-    // If the subCanvas is empty here, skip
-    if (!data[3])
-      continue;
+CompositeCanvas::CompositeCanvas(const std::vector<IsometricCanvas> &parts) {
+  subCanvasses = std::vector<Position>(parts.size());
 
-    // If the subCanvas has a fully opaque block or the canvas has
-    // nothing, just overwrite the canvas' pixel
-    if (data[3] == 0xff || !(dest + pixel * BYTESPERPIXEL)[3]) {
-      memcpy(dest + pixel * BYTESPERPIXEL, data, BYTESPERPIXEL);
-      continue;
-    }
+  for (auto &canvas : parts) {
+    map.minX = std::min(canvas.map.minX, map.minX);
+    map.minZ = std::min(canvas.map.minZ, map.minZ);
+    map.maxX = std::max(canvas.map.maxX, map.maxX);
+    map.maxZ = std::max(canvas.map.maxZ, map.maxZ);
+  }
 
-    // Finally, blend the transparent pixel into the canvas
-    blend(dest + pixel * BYTESPERPIXEL, data);
+  int64_t sizeX = map.maxX - map.minX + 1;
+  int64_t sizeZ = map.maxZ - map.minZ + 1;
+
+  width = (sizeX + sizeZ) * 2;
+  height = sizeX + sizeZ + 256 * 3 + 1;
+
+  for (std::vector<IsometricCanvas>::size_type i = 0; i < parts.size(); i++) {
+    uint32_t oX, oZ;
+    const IsometricCanvas &canvas = parts[i];
+    oX = (canvas.map.minX - map.minX + canvas.map.minZ - map.minZ) * 2;
+    oZ = (canvas.map.minZ - map.minZ + canvas.map.minX - map.minX);
+    subCanvasses[i] = {oX, oZ, &canvas};
   }
 }
 
-void underlay(uint8_t *const dest, const uint8_t *const source,
-              const uint32_t width) {
-  // Render a sub-canvas under the canvas' content
-  uint8_t tmpPixel[4];
+std::string CompositeCanvas::to_string() {
+  std::string buffer =
+      fmt::format("Composite Canvas of size {}x{}\n", width, height);
+  buffer.append(fmt::format("For map {}\n", map.to_string()));
+  buffer.append("Composed of maps:");
 
-  for (uint32_t pixel = 0; pixel < width; pixel++) {
-    const uint8_t *data = source + pixel * BYTESPERPIXEL;
-    // If the subCanvas is empty here, or the canvas already has a pixel
-    if (!data[3] || (dest + pixel * BYTESPERPIXEL)[3] == 0xff)
-      continue;
+  for (auto &position : subCanvasses)
+    buffer.append(fmt::format("\n- {}, offset by x{} y{}",
+                              position.subCanvas->map.to_string(),
+                              position.offsetX, position.offsetY));
 
-    memcpy(tmpPixel, dest + pixel * BYTESPERPIXEL, BYTESPERPIXEL);
-    memcpy(dest + pixel * BYTESPERPIXEL, data, BYTESPERPIXEL);
-    blend(dest + pixel * BYTESPERPIXEL, tmpPixel);
-  }
+  return buffer;
 }
 
-void IsometricCanvas::merge(const IsometricCanvas &subCanvas) {
-#ifdef CLOCK
-  auto begin = std::chrono::high_resolution_clock::now();
-#endif
+size_t CompositeCanvas::getLine(uint8_t *buffer, size_t size,
+                                uint64_t y) const {
+  memset(buffer, 0, size);
+  size_t written = 0;
 
-  // This routine determines where the subCanvas' buffer should be
-  // written, then writes it in the objects' own buffer. This results in a
-  // "merge" that really is a superimposition of the subCanvas onto the
-  // main canvas.
-  //
-  // This routine is supposed to be called multiple times with ORDERED
-  // subcanvasses (leftmost/rightmost first, then the one next to it, then ..
-  // etc. Easy as slices are made in only one direction)
-  if (subCanvas.width > width || subCanvas.height > height) {
-    logger::error("Cannot merge a canvas of bigger dimensions\n");
-    return;
+  for (auto &pos : subCanvasses) {
+    if (y < pos.offsetY + pos.subCanvas->height)
+      written += pos.subCanvas->getLine(buffer + pos.offsetX * BYTESPERPIXEL,
+                                        size - pos.offsetX * BYTESPERPIXEL,
+                                        y - pos.offsetY);
   }
 
-  // Determine where in the canvas' 2D matrix is the subcanvas supposed to
-  // go: the anchor is the bottom left pixel in the canvas where the
-  // sub-canvas must be superimposed, translated as an offset from the
-  // beginning of the buffer
-  const uint64_t anchor = calcAnchor(subCanvas);
-
-  // For every line of the subCanvas, we create a pointer to its
-  // beginning, and a pointer to where in the canvas it should be copied
-  for (uint32_t line = 1; line < subCanvas.height + 1; line++) {
-    uint8_t *subLine = subCanvas.bytesBuffer + subCanvas.size -
-                       line * subCanvas.width * BYTESPERPIXEL;
-    uint8_t *position = bytesBuffer + anchor - line * width * BYTESPERPIXEL;
-
-    // Then import the line over or under the existing data, depending on
-    // the orientation
-    if (map.orientation == NW || map.orientation == SW)
-      overlay(position, subLine, subCanvas.width);
-    else
-      underlay(position, subLine, subCanvas.width);
-  }
-
-#ifdef CLOCK
-  auto end = std::chrono::high_resolution_clock::now();
-  logger::info("Merged canvas in {}ms\n",
-               std::chrono::duration<double, std::milli>(end - begin).count());
-#endif
+  return written;
 }

@@ -12,8 +12,9 @@
 
 namespace PNG {
 
-Image::Image(const std::filesystem::path file, const IsometricCanvas *pixels)
-    : canvas(pixels) {
+Image::Image(const std::filesystem::path file, const CompositeCanvas *contents,
+             uint8_t padding)
+    : padding(padding), canvas(contents) {
   imageHandle = nullptr;
   imageHandle = fopen(file.c_str(), "wb");
 
@@ -27,8 +28,7 @@ Image::Image(const std::filesystem::path file, const IsometricCanvas *pixels)
 
 bool Image::create() {
 
-  const uint32_t width = canvas->getCroppedWidth(),
-                 height = canvas->getCroppedHeight();
+  const uint32_t width = canvas->width, height = canvas->height;
 
   if (!(width && height)) {
     logger::warn("Nothing to output: canvas is empty !\n");
@@ -36,7 +36,7 @@ bool Image::create() {
   }
 
   logger::debug("Image dimensions are {}x{}, 32bpp, {}MiB\n", width, height,
-                float(canvas->getCroppedSize() / float(1024 * 1024)));
+                float(width * height / float(1024 * 1024)));
 
   fseeko(imageHandle, 0, SEEK_SET);
 
@@ -95,6 +95,9 @@ bool Image::save() {
   if (!ready)
     return false;
 
+  size_t bufSize = (canvas->width + 2 * padding) * BYTESPERPIXEL;
+  uint8_t *buffer = new uint8_t[bufSize];
+
   // libpng will issue a longjmp on error, so code flow will end up here if
   // something goes wrong in the code below
   if (setjmp(png_jmpbuf(pngPtr))) {
@@ -102,18 +105,17 @@ bool Image::save() {
     return false;
   }
 
-  uint8_t *srcLine = canvas->bytesBuffer + canvas->getCroppedOffset();
-  const uint64_t croppedHeight = canvas->getCroppedHeight();
-
   logger::info("Writing to file...\n");
-  for (uint64_t y = 0; y < croppedHeight; ++y) {
-    png_write_row(pngPtr, (png_bytep)srcLine);
-    srcLine += canvas->width * BYTESPERPIXEL;
+  for (uint64_t y = 0; y < canvas->height; ++y) {
+    canvas->getLine(buffer, bufSize - padding * BYTESPERPIXEL, y);
+    png_write_row(pngPtr, (png_bytep)buffer);
   }
 
-  png_write_end(pngPtr, NULL);
+  delete[] buffer;
 
+  png_write_end(pngPtr, NULL);
   png_destroy_write_struct(&pngPtr, &pngInfoPtr);
+
   return true;
 }
 

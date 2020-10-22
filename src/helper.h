@@ -1,38 +1,9 @@
 #ifndef HELPER_H_
 #define HELPER_H_
 
+#include "./logger.h"
 #include <algorithm>
-#include <chrono>
-#include <cstdio>
-#include <cstring>
-#include <ctime>
-#include <limits>
-#include <sstream>
-#include <stdint.h>
 #include <string>
-#include <sys/stat.h>
-#include <sys/types.h>
-
-// Difference between MSVC++ and gcc/others
-#if defined(_WIN32) && !defined(__GNUC__)
-#include <windows.h>
-#define usleep(x) Sleep((x) / 1000);
-#define isatty(x) 0
-#else
-#include <unistd.h>
-#endif
-
-// For fseek
-#if defined(_WIN32) && !defined(__GNUC__)
-// MSVC++
-#define fseek64 _fseeki64
-#elif defined(__APPLE__)
-#define fseek64 fseeko
-#elif defined(__FreeBSD__)
-#define fseek64 fseeko
-#else
-#define fseek64 fseeko64
-#endif
 
 #define CHUNKSIZE 16
 #define REGIONSIZE 32
@@ -91,11 +62,7 @@ struct Coordinates {
   }
 
   std::string to_string() const {
-    std::stringstream ss;
-    ss << "From x:" << minX << " z:" << minZ << " to x:" << maxX
-       << " z:" << maxZ;
-
-    return ss.str();
+    return fmt::format("x{} z{} to x{} z{}", minX, minZ, maxX, maxZ);
   }
 };
 

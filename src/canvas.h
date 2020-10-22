@@ -85,26 +85,6 @@ struct IsometricCanvas {
     markers = array;
   }
 
-  // Cropping methods
-  // Those getters return a value inferior to the actual underlying values
-  // leaving out empty areas, to essentially 'crop' the canvas to fit perfectly
-  // the image
-  uint32_t getCroppedWidth() const;
-  uint32_t getCroppedHeight() const;
-
-  uint64_t getCroppedSize() const {
-    return getCroppedWidth() * getCroppedHeight();
-  }
-  uint64_t getCroppedOffset() const;
-
-  // Line indexes
-  uint32_t firstLine() const;
-  uint32_t lastLine() const;
-
-  // Merging methods
-  void merge(const IsometricCanvas &subCanvas);
-  uint64_t calcAnchor(const IsometricCanvas &subCanvas);
-
   // Drawing methods
   // Helpers for position lookup
   void orientChunk(int32_t &x, int32_t &z);
@@ -125,6 +105,26 @@ struct IsometricCanvas {
   void renderBeamSection(const int64_t, const int64_t, const uint8_t);
 
   const Colors::Block *nextBlock();
+  size_t getLine(uint8_t *, size_t, uint64_t) const;
+};
+
+// A sparse canvas made with smaller canvasses
+struct CompositeCanvas {
+  uint64_t width, height;
+  Coordinates map;
+
+  struct Position {
+    uint32_t offsetX, offsetY;
+    const IsometricCanvas *subCanvas;
+  };
+
+  std::vector<Position> subCanvasses;
+
+  CompositeCanvas(const std::vector<IsometricCanvas> &);
+
+  std::string to_string();
+
+  size_t getLine(uint8_t *, size_t, uint64_t) const;
 };
 
 #endif

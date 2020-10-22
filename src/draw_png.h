@@ -31,13 +31,15 @@ namespace PNG {
 struct Image {
   FILE *imageHandle;
 
+  uint8_t padding;
   png_structp pngPtr;
   png_infop pngInfoPtr;
-  const IsometricCanvas *canvas;
+  const CompositeCanvas *canvas;
 
   bool ready = false;
 
-  Image(const std::filesystem::path file, const IsometricCanvas *pixels);
+  Image(const std::filesystem::path file, const CompositeCanvas *contents,
+        uint8_t padding = 0);
 
   ~Image() {
     if (imageHandle)
