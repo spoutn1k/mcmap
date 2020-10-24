@@ -462,14 +462,26 @@ const Colors::Block *IsometricCanvas::nextBlock() {
 size_t IsometricCanvas::getLine(uint8_t *buffer, size_t bufSize,
                                 uint64_t y) const {
   uint8_t *start = bytesBuffer + y * width * BYTESPERPIXEL;
+  uint8_t tmpPixel[4];
 
   if (y > height)
     return 0;
 
-  for (size_t i = 0; i < std::min(bufSize, size_t(width)); i++)
-    blend(buffer + i * BYTESPERPIXEL, start + i * BYTESPERPIXEL);
+  size_t boundary = std::min(bufSize, size_t(width));
 
-  return std::min(bufSize, size_t(width));
+  for (size_t i = 0; i < boundary; i++) {
+    const uint8_t *data = start + i * BYTESPERPIXEL;
+
+    // If the subCanvas is empty here, or the canvas already has a pixel
+    if (!data[3] || (buffer + i * BYTESPERPIXEL)[3] == 0xff)
+      continue;
+
+    memcpy(tmpPixel, buffer + i * BYTESPERPIXEL, BYTESPERPIXEL);
+    memcpy(buffer + i * BYTESPERPIXEL, data, BYTESPERPIXEL);
+    blend(buffer + i * BYTESPERPIXEL, tmpPixel);
+  }
+
+  return boundary;
 }
 
 bool compare(const CompositeCanvas::Position &p1,
@@ -477,7 +489,7 @@ bool compare(const CompositeCanvas::Position &p1,
   Terrain::Coordinates c1 = p1.subCanvas->map.orient(Orientation::NW);
   Terrain::Coordinates c2 = p2.subCanvas->map.orient(Orientation::NW);
 
-  return (c1.minX + c1.minZ) < (c2.minX + c2.minZ);
+  return (c1.minX + c1.minZ) > (c2.minX + c2.minZ);
 }
 
 CompositeCanvas::CompositeCanvas(const std::vector<IsometricCanvas> &parts) {
