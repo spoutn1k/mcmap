@@ -138,7 +138,7 @@ struct CompositeCanvas {
 
   struct Position {
     // Struct holding metadata about where the subCanvas is to be drawn.
-    uint32_t offsetX, offsetY;        // Offsets to draw the image
+    int64_t offsetX, offsetY;         // Offsets to draw the image
     const IsometricCanvas *subCanvas; // Canvas to draw
   };
 

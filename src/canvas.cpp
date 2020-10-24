@@ -91,7 +91,7 @@ void IsometricCanvas::setMap(const Terrain::Coordinates &_map) {
   // length on both the horizontal axis times 2.
   width = (sizeX + sizeZ) * 2;
 
-  height = sizeX + sizeZ + (256 - map.minY) * heightOffset + 1;
+  height = sizeX + sizeZ + (map.maxY - map.minY + 1) * heightOffset - 1;
 
   size = uint64_t(width * height * BYTESPERPIXEL);
   bytesBuffer = new uint8_t[size];
@@ -508,11 +508,13 @@ CompositeCanvas::CompositeCanvas(const std::vector<IsometricCanvas> &parts) {
     map.minZ = std::min(oriented.minZ, map.minZ);
     map.maxX = std::max(oriented.maxX, map.maxX);
     map.maxZ = std::max(oriented.maxZ, map.maxZ);
+    map.minY = std::min(oriented.minY, map.minY);
+    map.maxY = std::max(oriented.maxY, map.maxY);
   }
 
   // We deduce the image's size from the map
   width = (map.sizeX() + map.sizeZ()) * 2;
-  height = map.sizeX() + map.sizeZ() + 256 * 3 + 1;
+  height = map.sizeX() + map.sizeZ() + (map.maxY - map.minY + 1) * 3 - 1;
 
   // This vector holds positions, describing where to draw each canvas onto the
   // final image
@@ -521,7 +523,7 @@ CompositeCanvas::CompositeCanvas(const std::vector<IsometricCanvas> &parts) {
   // Having the coordinates of the full map, we can determine the offset of each
   // sub-map and thus the offset in the final image
   for (std::vector<IsometricCanvas>::size_type i = 0; i < parts.size(); i++) {
-    uint32_t oX, oY;
+    int64_t oX, oY;
     const IsometricCanvas &canvas = parts[i];
     // The following is possible because all the maps are oriented in the same
     // direction
@@ -543,6 +545,7 @@ CompositeCanvas::CompositeCanvas(const std::vector<IsometricCanvas> &parts) {
     // This one is simpler, the vertical distance being equal to the distance
     // between top corners.
     oY = oriented.minX - map.minX + oriented.minZ - map.minZ;
+    logger::debug("Subcanvas height {}\n", canvas.height);
 
     // Add this to the list of positions
     subCanvasses[i] = {oX, oY, &canvas};
@@ -574,7 +577,7 @@ size_t CompositeCanvas::getLine(uint8_t *buffer, size_t size,
 
   // Compose the line from all the subCanvasses that are on this line
   for (auto &pos : subCanvasses) {
-    if (y < pos.offsetY + pos.subCanvas->height)
+    if (y < uint64_t(pos.offsetY + pos.subCanvas->height))
       written += pos.subCanvas->getLine(buffer + pos.offsetX * BYTESPERPIXEL,
                                         size - pos.offsetX * BYTESPERPIXEL,
                                         y - pos.offsetY);
