@@ -113,7 +113,7 @@ int main(int argc, char **argv) {
 
   CompositeCanvas merged(subCanvasses);
   logger::debug("{}\n", merged.to_string());
-  PNG::Image(options.outFile, &merged, 0).save();
+  PNG::Image(options.outFile, &merged, options.padding).save();
   logger::info("Job complete.\n");
 
   return 0;

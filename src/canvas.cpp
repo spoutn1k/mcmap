@@ -537,7 +537,6 @@ std::string CompositeCanvas::to_string() {
 
 size_t CompositeCanvas::getLine(uint8_t *buffer, size_t size,
                                 uint64_t y) const {
-  memset(buffer, 0, size);
   size_t written = 0;
 
   for (auto &pos : subCanvasses) {

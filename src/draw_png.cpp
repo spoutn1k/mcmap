@@ -27,13 +27,13 @@ Image::Image(const std::filesystem::path file, const CompositeCanvas *contents,
 }
 
 bool Image::create() {
-
-  const uint32_t width = canvas->width, height = canvas->height;
-
-  if (!(width && height)) {
+  if (!(canvas->width && canvas->height)) {
     logger::warn("Nothing to output: canvas is empty !\n");
     return false;
   }
+
+  const uint32_t width = canvas->width + 2 * padding,
+                 height = canvas->height + 2 * padding;
 
   logger::debug("Image dimensions are {}x{}, 32bpp, {}MiB\n", width, height,
                 float(width * height / float(1024 * 1024)));
@@ -109,11 +109,22 @@ bool Image::save() {
   static auto last = std::chrono::high_resolution_clock::now();
 #endif
 
+  memset(buffer, 0, bufSize);
+  for (uint64_t y = 0; y < padding; ++y)
+    png_write_row(pngPtr, (png_bytep)buffer);
+
   for (uint64_t y = 0; y < canvas->height; ++y) {
     logger::printProgress("Composing final PNG", y, canvas->height);
-    canvas->getLine(buffer, bufSize - padding * BYTESPERPIXEL, y);
+    memset(buffer + padding * BYTESPERPIXEL, 0,
+           bufSize - padding * BYTESPERPIXEL);
+    canvas->getLine(buffer + padding * BYTESPERPIXEL,
+                    bufSize - padding * BYTESPERPIXEL, y);
     png_write_row(pngPtr, (png_bytep)buffer);
   }
+
+  memset(buffer, 0, bufSize);
+  for (uint64_t y = 0; y < padding; ++y)
+    png_write_row(pngPtr, (png_bytep)buffer);
 
   png_write_end(pngPtr, NULL);
   png_destroy_write_struct(&pngPtr, &pngInfoPtr);
