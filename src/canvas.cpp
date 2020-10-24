@@ -3,7 +3,6 @@
  */
 
 #include "./canvas.h"
-#include <string>
 
 //   ____                _                   _
 //  / ___|___  _ __  ___| |_ _ __ _   _  ___| |_ ___  _ __ ___
@@ -473,8 +472,17 @@ size_t IsometricCanvas::getLine(uint8_t *buffer, size_t bufSize,
   return std::min(bufSize, size_t(width));
 }
 
+bool compare(const CompositeCanvas::Position &p1,
+             const CompositeCanvas::Position &p2) {
+  Terrain::Coordinates c1 = p1.subCanvas->map.orient(Orientation::NW);
+  Terrain::Coordinates c2 = p2.subCanvas->map.orient(Orientation::NW);
+
+  return (c1.minX + c1.minZ) < (c2.minX + c2.minZ);
+}
+
 CompositeCanvas::CompositeCanvas(const std::vector<IsometricCanvas> &parts) {
   subCanvasses = std::vector<Position>(parts.size());
+  map.setUndefined();
 
   for (auto &canvas : parts) {
     Terrain::Coordinates oriented = canvas.map.orient(Orientation::NW);
@@ -484,20 +492,20 @@ CompositeCanvas::CompositeCanvas(const std::vector<IsometricCanvas> &parts) {
     map.maxZ = std::max(oriented.maxZ, map.maxZ);
   }
 
-  int64_t sizeX = map.maxX - map.minX + 1;
-  int64_t sizeZ = map.maxZ - map.minZ + 1;
-
-  width = (sizeX + sizeZ) * 2;
-  height = sizeX + sizeZ + 256 * 3 + 1;
+  width = (map.sizeX() + map.sizeZ()) * 2;
+  height = map.sizeX() + map.sizeZ() + 256 * 3 + 1;
 
   for (std::vector<IsometricCanvas>::size_type i = 0; i < parts.size(); i++) {
     uint32_t oX, oY;
     const IsometricCanvas &canvas = parts[i];
     Terrain::Coordinates oriented = canvas.map.orient(Orientation::NW);
-    oX = (oriented.minX - map.minX + oriented.minZ - map.minZ) * 2;
-    oY = (oriented.minZ - map.minZ + oriented.minX - map.minX);
+    oX = 2 * (map.sizeZ() - oriented.sizeZ() - (map.minX - oriented.minX) +
+              (map.minZ - oriented.minZ));
+    oY = oriented.minX - map.minX + oriented.minZ - map.minZ;
     subCanvasses[i] = {oX, oY, &canvas};
   }
+
+  std::sort(subCanvasses.begin(), subCanvasses.end(), compare);
 }
 
 std::string CompositeCanvas::to_string() {
@@ -507,9 +515,10 @@ std::string CompositeCanvas::to_string() {
   buffer.append("Composed of maps:");
 
   for (auto &position : subCanvasses)
-    buffer.append(fmt::format("\n- {}, offset by x{} y{}",
-                              position.subCanvas->map.to_string(),
-                              position.offsetX, position.offsetY));
+    buffer.append(fmt::format(
+        "\n- {}, offset by x{} y{}, oriented as {}",
+        position.subCanvas->map.to_string(), position.offsetX, position.offsetY,
+        position.subCanvas->map.orient(Orientation::NW).to_string()));
 
   return buffer;
 }

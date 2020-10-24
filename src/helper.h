@@ -68,11 +68,11 @@ struct Coordinates {
   }
 
   void rotate() {
-    std::swap(minX, minZ);
-    std::swap(maxX, maxZ);
     std::swap(minX, maxX);
     minX = -minX;
     maxX = -maxX;
+    std::swap(minX, minZ);
+    std::swap(maxX, maxZ);
   };
 
   Coordinates<Integer> orient(Orientation o) const {
@@ -85,6 +85,9 @@ struct Coordinates {
 
     return oriented;
   };
+
+  inline Integer sizeX() const { return maxX - minX + 1; }
+  inline Integer sizeZ() const { return maxZ - minZ + 1; }
 };
 
 void splitCoords(const Coordinates<int32_t> &original,
