@@ -486,6 +486,8 @@ size_t IsometricCanvas::getLine(uint8_t *buffer, size_t bufSize,
 
 bool compare(const CompositeCanvas::Position &p1,
              const CompositeCanvas::Position &p2) {
+  // This method is used to order a list of maps. The ordering is done by the
+  // distance to the top-right corner of the map in North Western orientation.
   Terrain::Coordinates c1 = p1.subCanvas->map.orient(Orientation::NW);
   Terrain::Coordinates c2 = p2.subCanvas->map.orient(Orientation::NW);
 
@@ -493,9 +495,13 @@ bool compare(const CompositeCanvas::Position &p1,
 }
 
 CompositeCanvas::CompositeCanvas(const std::vector<IsometricCanvas> &parts) {
-  subCanvasses = std::vector<Position>(parts.size());
-  map.setUndefined();
+  // Composite Canvas initialization
+  // From a set of Isometric Canvasses, create a virtual sparse canvas to
+  // compose an image
 
+  // First, determine the size of the virtual map
+  // All the maps are oriented as NW to simplify the process
+  map.setUndefined();
   for (auto &canvas : parts) {
     Terrain::Coordinates oriented = canvas.map.orient(Orientation::NW);
     map.minX = std::min(oriented.minX, map.minX);
@@ -504,19 +510,46 @@ CompositeCanvas::CompositeCanvas(const std::vector<IsometricCanvas> &parts) {
     map.maxZ = std::max(oriented.maxZ, map.maxZ);
   }
 
+  // We deduce the image's size from the map
   width = (map.sizeX() + map.sizeZ()) * 2;
   height = map.sizeX() + map.sizeZ() + 256 * 3 + 1;
 
+  // This vector holds positions, describing where to draw each canvas onto the
+  // final image
+  subCanvasses = std::vector<Position>(parts.size());
+
+  // Having the coordinates of the full map, we can determine the offset of each
+  // sub-map and thus the offset in the final image
   for (std::vector<IsometricCanvas>::size_type i = 0; i < parts.size(); i++) {
     uint32_t oX, oY;
     const IsometricCanvas &canvas = parts[i];
+    // The following is possible because all the maps are oriented in the same
+    // direction
     Terrain::Coordinates oriented = canvas.map.orient(Orientation::NW);
+
+    // This formula is thought around the top corner' position.
+    //
+    // The top corner's postition of the sub-map is influenced by its distance
+    // to the full map's top corner => we compare the minX and minZ coordinates
+    //
+    // From there, the map's top corner is sizeZ pizels from the edge, and the
+    // sub-canvasses' edge is at sizeZ' pixels from its top corner.
+    //
+    // By adding up those elements we get the delta between the edge of the full
+    // image and the edge of the partial image.
     oX = 2 * (map.sizeZ() - oriented.sizeZ() - (map.minX - oriented.minX) +
               (map.minZ - oriented.minZ));
+
+    // This one is simpler, the vertical distance being equal to the distance
+    // between top corners.
     oY = oriented.minX - map.minX + oriented.minZ - map.minZ;
+
+    // Add this to the list of positions
     subCanvasses[i] = {oX, oY, &canvas};
   }
 
+  // Sort the positions, to render first the canvasses far from the edge to
+  // avoid overwriting too many blocks.
   std::sort(subCanvasses.begin(), subCanvasses.end(), compare);
 }
 
@@ -539,6 +572,7 @@ size_t CompositeCanvas::getLine(uint8_t *buffer, size_t size,
                                 uint64_t y) const {
   size_t written = 0;
 
+  // Compose the line from all the subCanvasses that are on this line
   for (auto &pos : subCanvasses) {
     if (y < pos.offsetY + pos.subCanvas->height)
       written += pos.subCanvas->getLine(buffer + pos.offsetX * BYTESPERPIXEL,

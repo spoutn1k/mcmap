@@ -108,17 +108,42 @@ struct IsometricCanvas {
   size_t getLine(uint8_t *, size_t, uint64_t) const;
 };
 
-// A sparse canvas made with smaller canvasses
 struct CompositeCanvas {
-  uint64_t width, height;
-  Terrain::Coordinates map;
+  // A sparse canvas made with smaller canvasses
+  //
+  // To render multiple canvasses made by threads, we compose an image from them
+  // directly. This object allows to do so. It is given a list of canvasses, and
+  // can be read as an image (made out of lines, with a height and width) that
+  // is composed of the canvasses, without actually using any more memory.
+  //
+  // This is done by keeping track of the offset of each sub-canvas from the top
+  // left of the image. When reading a line, it is composed of the lines of each
+  // sub-canvas, with the appropriate offset.
+  //
+  // +-------------------+
+  // |Composite Canvas   |
+  // |+------------+     |
+  // ||Canvas 1    |     |
+  // ||    +------------+|
+  // ||    |Canvas 2    ||
+  // ||====|============|| < Read line
+  // ||    |            ||
+  // |+----|            ||
+  // |     |            ||
+  // |     +------------+|
+  // +-------------------+
+
+  uint64_t width, height;   // Properties of the final image
+  Terrain::Coordinates map; // Virtual isometric map it draws
 
   struct Position {
-    uint32_t offsetX, offsetY;
-    const IsometricCanvas *subCanvas;
+    // Struct holding metadata about where the subCanvas is to be drawn.
+    uint32_t offsetX, offsetY;        // Offsets to draw the image
+    const IsometricCanvas *subCanvas; // Canvas to draw
   };
 
-  std::vector<Position> subCanvasses;
+  std::vector<Position>
+      subCanvasses; // Sorted list of Positions to draw the final image
 
   CompositeCanvas(const std::vector<IsometricCanvas> &);
 
