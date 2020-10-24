@@ -105,16 +105,28 @@ bool Image::save() {
     return false;
   }
 
-  logger::info("Writing to file...\n");
+#ifdef CLOCK
+  static auto last = std::chrono::high_resolution_clock::now();
+#endif
+
   for (uint64_t y = 0; y < canvas->height; ++y) {
+    logger::printProgress("Composing final PNG", y, canvas->height);
     canvas->getLine(buffer, bufSize - padding * BYTESPERPIXEL, y);
     png_write_row(pngPtr, (png_bytep)buffer);
   }
 
-  delete[] buffer;
-
   png_write_end(pngPtr, NULL);
   png_destroy_write_struct(&pngPtr, &pngInfoPtr);
+
+  delete[] buffer;
+
+#ifdef CLOCK
+  uint32_t ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::high_resolution_clock::now() - last)
+                    .count();
+
+  logger::debug("Rendered canvas in {}ms\n", ms);
+#endif
 
   return true;
 }
