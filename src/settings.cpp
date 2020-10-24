@@ -4,6 +4,9 @@
 #define ISPATH(p) (!(p).empty() && std::filesystem::exists((p)))
 
 bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
+  opts->boundaries.setUndefined();
+  opts->boundaries.minY = 0;
+  opts->boundaries.maxY = 255;
 #define MOREARGS(x) (argpos + (x) < argc)
 #define NEXTARG argv[++argpos]
 #define POLLARG(x) argv[argpos + (x)]
@@ -154,6 +157,7 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
 
     if (opts->boundaries.maxX < opts->boundaries.minX ||
         opts->boundaries.maxZ < opts->boundaries.minZ) {
+      logger::debug("{}\n", opts->boundaries.to_string());
       logger::error("Nothing to render: -from X Z has to be <= -to X Z\n");
       return false;
     }

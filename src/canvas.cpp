@@ -545,7 +545,6 @@ CompositeCanvas::CompositeCanvas(const std::vector<IsometricCanvas> &parts) {
     // This one is simpler, the vertical distance being equal to the distance
     // between top corners.
     oY = oriented.minX - map.minX + oriented.minZ - map.minZ;
-    logger::debug("Subcanvas height {}\n", canvas.height);
 
     // Add this to the list of positions
     subCanvasses[i] = {oX, oY, &canvas};

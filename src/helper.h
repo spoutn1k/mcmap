@@ -49,6 +49,8 @@ struct Coordinates {
   void setUndefined() {
     minX = minZ = std::numeric_limits<Integer>::max();
     maxX = maxZ = std::numeric_limits<Integer>::min();
+    minY = std::numeric_limits<uint8_t>::max();
+    maxY = std::numeric_limits<uint8_t>::min();
   }
 
   bool isUndefined() {
@@ -64,7 +66,8 @@ struct Coordinates {
   }
 
   std::string to_string() const {
-    return fmt::format("x{} z{} to x{} z{}", minX, minZ, maxX, maxZ);
+    return fmt::format("x{} z{} y{} to x{} z{} y{}", minX, minZ, minY, maxX,
+                       maxZ, maxY);
   }
 
   void rotate() {
