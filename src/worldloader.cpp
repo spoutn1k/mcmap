@@ -58,45 +58,6 @@ void Terrain::Data::load(const std::filesystem::path &regionDir) {
   this->regionDir = regionDir;
 }
 
-void Terrain::Data::loadRegion(const std::filesystem::path &regionFile,
-                               const int regionX, const int regionZ) {
-  FILE *regionHandle;
-  uint8_t regionHeader[REGION_HEADER_SIZE];
-
-  if (!(regionHandle = fopen(regionFile.c_str(), "rb"))) {
-    logger::error("Opening region file {} failed: {}\n", regionFile.c_str(),
-                  strerror(errno));
-    return;
-  }
-  // Then, we read the header (of size 4K) storing the chunks locations
-
-  if (fread(regionHeader, sizeof(uint8_t), REGION_HEADER_SIZE, regionHandle) !=
-      REGION_HEADER_SIZE) {
-    logger::error("Region header too short in {}\n", regionFile.c_str());
-    fclose(regionHandle);
-    return;
-  }
-
-  // For all the chunks in the file
-  for (int it = 0; it < REGIONSIZE * REGIONSIZE; it++) {
-    // Bound check
-    const int chunkX = (regionX << 5) + (it & 0x1f);
-    const int chunkZ = (regionZ << 5) + (it >> 5);
-    if (chunkX < map.minX || chunkX > map.maxX || chunkZ < map.minZ ||
-        chunkZ > map.maxZ) {
-      // Chunk is not in bounds
-      continue;
-    }
-
-    // Get the location of the data from the header
-    const uint32_t offset = (_ntohl(regionHeader + it * 4) >> 8) * 4096;
-
-    loadChunk(offset, regionHandle, chunkX, chunkZ, regionFile);
-  }
-
-  fclose(regionHandle);
-}
-
 void Terrain::Data::inflateChunk(vector<NBT> *sections) {
   // Some chunks are "hollow", empty sections being present between blocks.
   // Internally, minecraft does not store those empty sections, instead relying
@@ -379,8 +340,8 @@ Terrain::Chunk &Terrain::Data::chunkAt(int64_t xPos, int64_t zPos) {
       "r." + std::to_string(rX) + "." + std::to_string(rZ) + ".mca";
 
   if (!std::filesystem::exists(regionFile)) {
-    logger::debug("Region file r.{}.{}.mca does not exist, skipping ..\n", xPos,
-                  zPos);
+    logger::debug("Region file r.{}.{}.mca does not exist, skipping ..\n", rX,
+                  rZ);
     return empty;
   }
 
