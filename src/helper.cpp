@@ -32,9 +32,15 @@ bool isNumeric(const char *str) {
   return true;
 }
 
-void splitCoords(const Coordinates &original, Coordinates *&subCoords,
-                 const uint16_t count) {
+void splitCoords(const Coordinates<int32_t> &original,
+                 Coordinates<int32_t> *subCoords, const uint16_t count) {
   // Split the coordinates of the entire terrain in `count` terrain fragments
+  uint32_t width = (original.sizeX() + original.sizeZ()) * 2;
+  uint32_t height = original.sizeX() + original.sizeZ() +
+                    (original.maxY - original.minY + 1) * 3 - 1;
+  logger::debug("Rendering map {} requires a {}x{} image of {}MB\n",
+                original.to_string(), width, height,
+                width * height * 4 / (1024 * 1024));
 
   for (uint16_t index = 0; index < count; index++) {
     // Initialization with the original's values
@@ -53,5 +59,14 @@ void splitCoords(const Coordinates &original, Coordinates *&subCoords,
     // covered
     if (index == count - 1)
       subCoords[index].maxX = original.maxX;
+  }
+
+  if (count > 1) {
+    width = (subCoords[0].sizeX() + subCoords[0].sizeZ()) * 2;
+    height = subCoords[0].sizeX() + subCoords[0].sizeZ() +
+             (subCoords[0].maxY - subCoords[0].minY + 1) * 3 - 1;
+    logger::debug("Splitting into {} maps requiring {} {}x{} images of {}MB\n",
+                  count, count, width, height,
+                  width * height * 4 / (1024 * 1024));
   }
 }

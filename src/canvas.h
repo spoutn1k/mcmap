@@ -39,13 +39,12 @@ struct Beam {
 struct IsometricCanvas {
   bool shading;
 
-  Coordinates map;          // The coordinates describing the 3D map
+  Terrain::Coordinates map; // The coordinates describing the 3D map
   uint32_t sizeX, sizeZ;    // The size of the 3D map
   uint8_t offsetX, offsetZ; // Offset of the first block in the first chunk
 
   uint32_t width, height; // Bitmap width and height
-  uint16_t padding;       // Padding inside the image
-  uint8_t heightOffset;   // Offset for block rendering
+  uint8_t heightOffset;   // Offset of the first block in the first chunk
 
   uint8_t *bytesBuffer; // The buffer where pixels are written
   uint64_t size;        // The size of the buffer
@@ -75,35 +74,16 @@ struct IsometricCanvas {
 
   uint8_t orientedX, orientedZ, y;
 
-  IsometricCanvas(const Terrain::Coordinates &coords,
-                  const Colors::Palette &colors, const uint16_t padding = 0);
+  IsometricCanvas();
 
   ~IsometricCanvas() { delete[] bytesBuffer; }
 
+  void setColors(const Colors::Palette &);
+  void setMap(const Terrain::Coordinates &);
   void setMarkers(uint8_t n, Colors::Marker (*array)[256]) {
     totalMarkers = n;
     markers = array;
   }
-
-  // Cropping methods
-  // Those getters return a value inferior to the actual underlying values
-  // leaving out empty areas, to essentially 'crop' the canvas to fit perfectly
-  // the image
-  uint32_t getCroppedWidth() const;
-  uint32_t getCroppedHeight() const;
-
-  uint64_t getCroppedSize() const {
-    return getCroppedWidth() * getCroppedHeight();
-  }
-  uint64_t getCroppedOffset() const;
-
-  // Line indexes
-  uint32_t firstLine() const;
-  uint32_t lastLine() const;
-
-  // Merging methods
-  void merge(const IsometricCanvas &subCanvas);
-  uint64_t calcAnchor(const IsometricCanvas &subCanvas);
 
   // Drawing methods
   // Helpers for position lookup
@@ -114,8 +94,8 @@ struct IsometricCanvas {
   }
 
   // Drawing entrypoints
-  void renderTerrain(const Terrain::Data &);
-  void renderChunk(const Terrain::Data &);
+  void renderTerrain(Terrain::Data &);
+  void renderChunk(Terrain::Data &);
   void renderSection();
   // Draw a block from virtual coords in the canvas
   void renderBlock(const Colors::Block *, const uint32_t, const uint32_t,
@@ -125,6 +105,51 @@ struct IsometricCanvas {
   void renderBeamSection(const int64_t, const int64_t, const uint8_t);
 
   const Colors::Block *nextBlock();
+  size_t getLine(uint8_t *, size_t, uint64_t) const;
+};
+
+struct CompositeCanvas {
+  // A sparse canvas made with smaller canvasses
+  //
+  // To render multiple canvasses made by threads, we compose an image from them
+  // directly. This object allows to do so. It is given a list of canvasses, and
+  // can be read as an image (made out of lines, with a height and width) that
+  // is composed of the canvasses, without actually using any more memory.
+  //
+  // This is done by keeping track of the offset of each sub-canvas from the top
+  // left of the image. When reading a line, it is composed of the lines of each
+  // sub-canvas, with the appropriate offset.
+  //
+  // +-------------------+
+  // |Composite Canvas   |
+  // |+------------+     |
+  // ||Canvas 1    |     |
+  // ||    +------------+|
+  // ||    |Canvas 2    ||
+  // ||====|============|| < Read line
+  // ||    |            ||
+  // |+----|            ||
+  // |     |            ||
+  // |     +------------+|
+  // +-------------------+
+
+  uint64_t width, height;   // Properties of the final image
+  Terrain::Coordinates map; // Virtual isometric map it draws
+
+  struct Position {
+    // Struct holding metadata about where the subCanvas is to be drawn.
+    int64_t offsetX, offsetY;         // Offsets to draw the image
+    const IsometricCanvas *subCanvas; // Canvas to draw
+  };
+
+  std::vector<Position>
+      subCanvasses; // Sorted list of Positions to draw the final image
+
+  CompositeCanvas(const std::vector<IsometricCanvas> &);
+
+  std::string to_string();
+
+  size_t getLine(uint8_t *, size_t, uint64_t) const;
 };
 
 #endif

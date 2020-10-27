@@ -1,38 +1,9 @@
 #ifndef HELPER_H_
 #define HELPER_H_
 
+#include "./logger.h"
 #include <algorithm>
-#include <chrono>
-#include <cstdio>
-#include <cstring>
-#include <ctime>
-#include <limits>
-#include <sstream>
-#include <stdint.h>
 #include <string>
-#include <sys/stat.h>
-#include <sys/types.h>
-
-// Difference between MSVC++ and gcc/others
-#if defined(_WIN32) && !defined(__GNUC__)
-#include <windows.h>
-#define usleep(x) Sleep((x) / 1000);
-#define isatty(x) 0
-#else
-#include <unistd.h>
-#endif
-
-// For fseek
-#if defined(_WIN32) && !defined(__GNUC__)
-// MSVC++
-#define fseek64 _fseeki64
-#elif defined(__APPLE__)
-#define fseek64 fseeko
-#elif defined(__FreeBSD__)
-#define fseek64 fseeko
-#else
-#define fseek64 fseeko64
-#endif
 
 #define CHUNKSIZE 16
 #define REGIONSIZE 32
@@ -59,8 +30,10 @@ enum Orientation {
 };
 
 // A simple coordinates structure
+template <typename Integer,
+          std::enable_if_t<std::is_integral<Integer>::value, int> = 0>
 struct Coordinates {
-  int32_t minX, maxX, minZ, maxZ;
+  Integer minX, maxX, minZ, maxZ;
   uint8_t minY, maxY;
   Orientation orientation;
 
@@ -69,18 +42,20 @@ struct Coordinates {
     orientation = NW;
   }
 
-  Coordinates(int32_t init) : Coordinates() {
+  Coordinates(Integer init) : Coordinates() {
     minX = maxX = minZ = maxZ = init;
   }
 
   void setUndefined() {
-    minX = minZ = std::numeric_limits<int32_t>::max();
-    maxX = maxZ = std::numeric_limits<int32_t>::min();
+    minX = minZ = std::numeric_limits<Integer>::max();
+    maxX = maxZ = std::numeric_limits<Integer>::min();
+    minY = std::numeric_limits<uint8_t>::max();
+    maxY = std::numeric_limits<uint8_t>::min();
   }
 
   bool isUndefined() {
-    return (minX == minZ && minX == std::numeric_limits<int32_t>::max() &&
-            maxX == maxZ && maxX == std::numeric_limits<int32_t>::min());
+    return (minX == minZ && minX == std::numeric_limits<Integer>::max() &&
+            maxX == maxZ && maxX == std::numeric_limits<Integer>::min());
   }
 
   void crop(const Coordinates &boundaries) {
@@ -91,15 +66,34 @@ struct Coordinates {
   }
 
   std::string to_string() const {
-    std::stringstream ss;
-    ss << "From x:" << minX << " z:" << minZ << " to x:" << maxX
-       << " z:" << maxZ;
-
-    return ss.str();
+    return fmt::format("x{} z{} y{} to x{} z{} y{}", minX, minZ, minY, maxX,
+                       maxZ, maxY);
   }
+
+  void rotate() {
+    std::swap(minX, maxX);
+    minX = -minX;
+    maxX = -maxX;
+    std::swap(minX, minZ);
+    std::swap(maxX, maxZ);
+  };
+
+  Coordinates<Integer> orient(Orientation o) const {
+    Coordinates<Integer> oriented = *this;
+
+    for (int i = 0; i < (4 + o - orientation) % 4; i++)
+      oriented.rotate();
+
+    oriented.orientation = o;
+
+    return oriented;
+  };
+
+  inline Integer sizeX() const { return maxX - minX + 1; }
+  inline Integer sizeZ() const { return maxZ - minZ + 1; }
 };
 
-void splitCoords(const Coordinates &original, Coordinates *&subCoords,
-                 const uint16_t count);
+void splitCoords(const Coordinates<int32_t> &original,
+                 Coordinates<int32_t> *subCoords, const uint16_t count);
 
 #endif // HELPER_H_

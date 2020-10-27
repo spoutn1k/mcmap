@@ -10,9 +10,6 @@
 
 using std::string;
 
-void printHelp(char *binary);
-void render(IsometricCanvas *canvas, const Terrain::Data &world);
-
 void printHelp(char *binary) {
   logger::info(
       "Usage: {} <options> WORLDPATH\n\n"
@@ -74,9 +71,6 @@ int main(int argc, char **argv) {
   if (options.hideBeacons)
     colors["mcmap:beacon_beam"] = Colors::Block();
 
-  // This is the canvas on which the final image will be rendered
-  IsometricCanvas finalCanvas(coords, colors, options.padding);
-
   // Prepare the sub-regions to render
   // This could be bypassed when the program is run in single-threaded mode, but
   // it works just fine when run in single threaded, so why bother making huge
@@ -84,14 +78,22 @@ int main(int argc, char **argv) {
   Terrain::Coordinates *subCoords = new Terrain::Coordinates[options.splits];
   splitCoords(coords, subCoords, options.splits);
 
+  std::vector<IsometricCanvas> subCanvasses(options.splits);
+  for (uint16_t i = 0; i < options.splits; i++) {
+    subCanvasses[i].setMap(subCoords[i]);
+    subCanvasses[i].setColors(colors);
+  }
+
 #ifndef DISABLE_OMP
-#pragma omp parallel shared(finalCanvas)
+#pragma omp parallel shared(subCanvasses)
 #endif
   {
 #ifndef DISABLE_OMP
 #pragma omp for ordered schedule(static)
 #endif
     for (uint16_t i = 0; i < options.splits; i++) {
+      IsometricCanvas &canvas = subCanvasses[i];
+
       // Load the minecraft terrain to render
       Terrain::Data world(subCoords[i]);
       world.load(regionDir);
@@ -100,32 +102,18 @@ int main(int argc, char **argv) {
       subCoords[i].minY = std::max(subCoords[i].minY, world.minHeight());
       subCoords[i].maxY = std::min(subCoords[i].maxY, world.maxHeight());
 
-      // Pre-cache the colors used in the part of the world loaded to squeeze a
-      // few milliseconds of color lookup
-      Colors::Palette localColors;
-      Colors::filter(colors, world.cache, &localColors);
-
       // Draw the terrain fragment
-      IsometricCanvas canvas(subCoords[i], localColors);
       canvas.shading = options.shading;
       canvas.setMarkers(options.totalMarkers, &options.markers);
       canvas.renderTerrain(world);
-
-#ifndef DISABLE_OMP
-#pragma omp ordered
-#endif
-      {
-        // Merge the terrain fragment into the final canvas. The ordered
-        // directive in the pragma is primordial, as the merging algorithm
-        // cannot merge terrain when not in order.
-        finalCanvas.merge(canvas);
-      }
     }
   }
 
   delete[] subCoords;
 
-  PNG::Image(options.outFile, &finalCanvas).save();
+  CompositeCanvas merged(subCanvasses);
+  logger::debug("{}\n", merged.to_string());
+  PNG::Image(options.outFile, &merged, options.padding).save();
   logger::info("Job complete.\n");
 
   return 0;

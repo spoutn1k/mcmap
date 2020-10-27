@@ -10,16 +10,48 @@
 // | |__| (_) | | | \__ \ |_| |  | |_| | (__| || (_) | |  \__ \.
 //  \____\___/|_| |_|___/\__|_|   \__,_|\___|\__\___/|_|  |___/
 
-IsometricCanvas::IsometricCanvas(const Terrain::Coordinates &coords,
-                                 const Colors::Palette &colors,
-                                 const uint16_t padding)
-    : map(coords), padding(padding) {
+IsometricCanvas::IsometricCanvas() {
   // This is a legacy setting, changing how the map is drawn. It can be 2 or
   // 3; it means that a block is drawn with a 2 or 3 pixel offset over the
   // block under it. This changes the orientation of the map: but it totally
   // changes the drawing of special blocks, and as no special cases can be
   // made easily, I set it to 3 for now.
   heightOffset = 3;
+}
+
+void IsometricCanvas::setColors(const Colors::Palette &colors) {
+  // Setting and pre-caching colors
+  palette = colors;
+
+  auto beamColor = colors.find("mcmap:beacon_beam");
+  if (beamColor != colors.end())
+    beaconBeam = beamColor->second;
+
+  auto waterColor = colors.find("minecraft:water");
+  if (waterColor != colors.end())
+    water = waterColor->second;
+
+  auto airColor = colors.find("minecraft:air");
+  if (airColor != colors.end())
+    air = airColor->second;
+
+  // Set to true to use shading later on
+  shading = false;
+  // Precompute the shading profile. The values are arbitrary, and will go
+  // through Colors::Color.modcolor further down the code. The 255 array
+  // represents the entire world height. This profile is linear, going from
+  // -100 at height 0 to 100 at height 255. This replaced a convoluted formula
+  // that did a much better job of higlighting overground terrain, but would
+  // look weird in other dimensions.
+  // Legacy formula: ((100.0f / (1.0f + exp(- (1.3f * (float(y) *
+  // MIN(g_MapsizeY, 200) / g_MapsizeY) / 16.0f) + 6.0f))) - 91)
+  brightnessLookup = new float[255];
+  for (int y = 0; y < 255; ++y)
+    brightnessLookup[y] = -100 + 200 * float(y) / 255;
+}
+
+void IsometricCanvas::setMap(const Terrain::Coordinates &_map) {
+  map = _map;
 
   nXChunks = CHUNK(map.maxX) - CHUNK(map.minX) + 1;
   nZChunks = CHUNK(map.maxZ) - CHUNK(map.minZ) + 1;
@@ -57,103 +89,13 @@ IsometricCanvas::IsometricCanvas(const Terrain::Coordinates &coords,
   // => A chunk's width equals its size on each side times 2.
   // By generalizing this formula, the entire map's size equals the sum of its
   // length on both the horizontal axis times 2.
-  width = (sizeX + sizeZ + this->padding) * 2;
+  width = (sizeX + sizeZ) * 2;
 
-  height =
-      sizeX + sizeZ + (256 - map.minY) * heightOffset + this->padding * 2 + 1;
+  height = sizeX + sizeZ + (map.maxY - map.minY + 1) * heightOffset - 1;
 
   size = uint64_t(width * height * BYTESPERPIXEL);
   bytesBuffer = new uint8_t[size];
   memset(bytesBuffer, 0, size);
-
-  // Setting and pre-caching colors
-  palette = colors;
-
-  auto beamColor = colors.find("mcmap:beacon_beam");
-  if (beamColor != colors.end())
-    beaconBeam = beamColor->second;
-
-  auto waterColor = colors.find("minecraft:water");
-  if (waterColor != colors.end())
-    water = waterColor->second;
-
-  auto airColor = colors.find("minecraft:air");
-  if (airColor != colors.end())
-    air = airColor->second;
-
-  // Set to true to use shading later on
-  shading = false;
-  // Precompute the shading profile. The values are arbitrary, and will go
-  // through Colors::Color.modcolor further down the code. The 255 array
-  // represents the entire world height. This profile is linear, going from
-  // -100 at height 0 to 100 at height 255. This replaced a convoluted formula
-  // that did a much better job of higlighting overground terrain, but would
-  // look weird in other dimensions.
-  // Legacy formula: ((100.0f / (1.0f + exp(- (1.3f * (float(y) *
-  // MIN(g_MapsizeY, 200) / g_MapsizeY) / 16.0f) + 6.0f))) - 91)
-  brightnessLookup = new float[255];
-  for (int y = 0; y < 255; ++y)
-    brightnessLookup[y] = -100 + 200 * float(y) / 255;
-}
-
-//  ____                       _
-// / ___|_ __ ___  _ __  _ __ (_)_ __   __ _
-//| |   | '__/ _ \| '_ \| '_ \| | '_ \ / _` |
-//| |___| | | (_) | |_) | |_) | | | | | (_| |
-// \____|_|  \___/| .__/| .__/|_|_| |_|\__, |
-//                |_|   |_|            |___/
-// The following methods are related to the cropping mechanism.
-
-uint32_t IsometricCanvas::getCroppedWidth() const {
-  // Not implemented, returns the actual width. Might come back to this but it
-  // is not as interesting as the height.
-  return width;
-}
-
-uint32_t IsometricCanvas::firstLine() const {
-  // Tip: Return -7 for a freaky glichy look
-  // return -7;
-
-  // We search for the first non-empty line, return it as a line index (ie
-  // line n)
-  uint32_t line = 0;
-
-  for (uint32_t row = 0; row < height && !line; row++)
-    for (uint32_t pixel = 0; pixel < width && !line; pixel++)
-      if (*(bytesBuffer + (pixel + row * width) * BYTESPERPIXEL))
-        line = row;
-
-  // Return the value plus padding, to ensure the space before
-  return line - padding;
-}
-
-uint32_t IsometricCanvas::lastLine() const {
-  // We search for the last non-empty line
-  uint32_t line = 0;
-
-  for (uint32_t row = height - 1; row > 0 && !line; row--)
-    for (uint32_t pixel = 0; pixel < width && !line; pixel++)
-      if (*(bytesBuffer + (pixel + row * width) * BYTESPERPIXEL))
-        line = row;
-
-  // Return the value plus padding, to ensure the space after
-  return line + padding;
-}
-
-uint32_t IsometricCanvas::getCroppedHeight() const {
-  uint32_t croppedHeight = lastLine() - firstLine();
-
-  // If the two values are just the padding hardcoded
-  if (croppedHeight == int64_t(padding) * 2)
-    return 0;
-
-  return croppedHeight + 1;
-}
-
-uint64_t IsometricCanvas::getCroppedOffset() const {
-  // The first line to render in the cropped view of the canvas, as an offset
-  // from the beginning of the byte buffer
-  return firstLine() * width * BYTESPERPIXEL;
 }
 
 // ____                     _
@@ -192,7 +134,7 @@ void IsometricCanvas::orientChunk(int32_t &x, int32_t &z) {
   }
 }
 
-void IsometricCanvas::renderTerrain(const Terrain::Data &world) {
+void IsometricCanvas::renderTerrain(Terrain::Data &world) {
   // world is supposed to have the SAME set of coordinates as the canvas
   for (chunkX = 0; chunkX < nXChunks; chunkX++) {
     for (chunkZ = 0; chunkZ < nZChunks; chunkZ++) {
@@ -205,11 +147,11 @@ void IsometricCanvas::renderTerrain(const Terrain::Data &world) {
   return;
 }
 
-void IsometricCanvas::renderChunk(const Terrain::Data &terrain) {
+void IsometricCanvas::renderChunk(Terrain::Data &terrain) {
   int32_t worldX = chunkX, worldZ = chunkZ;
   orientChunk(worldX, worldZ);
 
-  const NBT &chunk = terrain.chunkAt(worldX, worldZ);
+  NBT &chunk = terrain.chunkAt(worldX, worldZ);
   const uint8_t minHeight = terrain.minHeight(worldX, worldZ),
                 maxHeight = terrain.maxHeight(worldX, worldZ);
 
@@ -248,6 +190,8 @@ void IsometricCanvas::renderChunk(const Terrain::Data &terrain) {
     }
 
   beamNo = 0;
+
+  chunk.erase("Level");
 }
 
 // A bit like the above: where do we begin rendering in the 16x16 horizontal
@@ -436,8 +380,7 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
 
   const uint32_t bmpPosX = // The formula is:
       2 * (sizeZ - 1)      // From the middle of the image
-      + (x - z) * 2 // Calc the offset (greater x on the right, z to the left)
-      + padding;    // Add padding by moving to the right
+      + (x - z) * 2; // Calc the offset (greater x on the right, z to the left)
 
   // To get the height of a pixel, we have to look at how a flat layer
   // articulates:
@@ -457,7 +400,6 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
   const uint32_t bmpPosY = // The formula for the base is:
       height               // Starting from the bottom -1,
       - 2                  // Remove the rest of the height of a block,
-      - padding            // Remove the padding (Adding space to the bottom),
 
       // We add x and z for the depth, so that the final block is on the
       // bottom
@@ -518,138 +460,128 @@ const Colors::Block *IsometricCanvas::nextBlock() {
   return sections[sectionY].colors[index];
 }
 
-// __  __                _
-//|  \/  | ___ _ __ __ _(_)_ __   __ _
-//| |\/| |/ _ \ '__/ _` | | '_ \ / _` |
-//| |  | |  __/ | | (_| | | | | | (_| |
-//|_|  |_|\___|_|  \__, |_|_| |_|\__, |
-//                 |___/         |___/
-// This is the canvas merging code.
-
-uint64_t IsometricCanvas::calcAnchor(const IsometricCanvas &subCanvas) {
-  // Determine where in the canvas' 2D matrix is the subcanvas supposed to
-  // go: the anchor is the bottom left pixel in the canvas where the
-  // sub-canvas must be superimposed
-  uint32_t anchorX = 0, anchorY = height;
-  const uint64_t minOffset =
-      subCanvas.map.minX - map.minX + subCanvas.map.minZ - map.minZ;
-  const uint64_t maxOffset =
-      map.maxX - subCanvas.map.maxX + map.maxZ - subCanvas.map.maxZ;
-
-  switch (map.orientation) {
-    // We know an image's width is relative to it's terrain size; we use
-    // that property to determine where to put the subcanvas.
-  case NW:
-    anchorX = minOffset * 2;
-    anchorY = height - maxOffset;
-    break;
-
-    // This is the opposite of NW
-  case SE:
-    anchorX = maxOffset * 2;
-    anchorY = height - minOffset;
-    break;
-
-  case SW:
-    anchorX = maxOffset * 2;
-    anchorY = height - maxOffset;
-    break;
-
-  case NE:
-    anchorX = minOffset * 2;
-    anchorY = height - minOffset;
-    break;
-  }
-
-  // Adjust the padding before translating to an offset
-  anchorX = anchorX + padding - subCanvas.padding;
-  anchorY = anchorY - padding + subCanvas.padding;
-
-  // Translate those coordinates as an offset from the beginning of the
-  // buffer
-  return (anchorX + width * anchorY) * BYTESPERPIXEL;
-}
-
-void overlay(uint8_t *const dest, const uint8_t *const source,
-             const uint32_t width) {
-  // Render a sub-canvas above the canvas' content
-  for (uint32_t pixel = 0; pixel < width; pixel++) {
-    const uint8_t *data = source + pixel * BYTESPERPIXEL;
-    // If the subCanvas is empty here, skip
-    if (!data[3])
-      continue;
-
-    // If the subCanvas has a fully opaque block or the canvas has
-    // nothing, just overwrite the canvas' pixel
-    if (data[3] == 0xff || !(dest + pixel * BYTESPERPIXEL)[3]) {
-      memcpy(dest + pixel * BYTESPERPIXEL, data, BYTESPERPIXEL);
-      continue;
-    }
-
-    // Finally, blend the transparent pixel into the canvas
-    blend(dest + pixel * BYTESPERPIXEL, data);
-  }
-}
-
-void underlay(uint8_t *const dest, const uint8_t *const source,
-              const uint32_t width) {
-  // Render a sub-canvas under the canvas' content
+size_t IsometricCanvas::getLine(uint8_t *buffer, size_t bufSize,
+                                uint64_t y) const {
+  uint8_t *start = bytesBuffer + y * width * BYTESPERPIXEL;
   uint8_t tmpPixel[4];
 
-  for (uint32_t pixel = 0; pixel < width; pixel++) {
-    const uint8_t *data = source + pixel * BYTESPERPIXEL;
+  if (y > height)
+    return 0;
+
+  size_t boundary = std::min(bufSize, size_t(width));
+
+  for (size_t i = 0; i < boundary; i++) {
+    const uint8_t *data = start + i * BYTESPERPIXEL;
+
     // If the subCanvas is empty here, or the canvas already has a pixel
-    if (!data[3] || (dest + pixel * BYTESPERPIXEL)[3] == 0xff)
+    if (!data[3] || (buffer + i * BYTESPERPIXEL)[3] == 0xff)
       continue;
 
-    memcpy(tmpPixel, dest + pixel * BYTESPERPIXEL, BYTESPERPIXEL);
-    memcpy(dest + pixel * BYTESPERPIXEL, data, BYTESPERPIXEL);
-    blend(dest + pixel * BYTESPERPIXEL, tmpPixel);
+    memcpy(tmpPixel, buffer + i * BYTESPERPIXEL, BYTESPERPIXEL);
+    memcpy(buffer + i * BYTESPERPIXEL, data, BYTESPERPIXEL);
+    blend(buffer + i * BYTESPERPIXEL, tmpPixel);
   }
+
+  return boundary;
 }
 
-void IsometricCanvas::merge(const IsometricCanvas &subCanvas) {
-#ifdef CLOCK
-  auto begin = std::chrono::high_resolution_clock::now();
-#endif
+bool compare(const CompositeCanvas::Position &p1,
+             const CompositeCanvas::Position &p2) {
+  // This method is used to order a list of maps. The ordering is done by the
+  // distance to the top-right corner of the map in North Western orientation.
+  Terrain::Coordinates c1 = p1.subCanvas->map.orient(Orientation::NW);
+  Terrain::Coordinates c2 = p2.subCanvas->map.orient(Orientation::NW);
 
-  // This routine determines where the subCanvas' buffer should be
-  // written, then writes it in the objects' own buffer. This results in a
-  // "merge" that really is a superimposition of the subCanvas onto the
-  // main canvas.
-  //
-  // This routine is supposed to be called multiple times with ORDERED
-  // subcanvasses (leftmost/rightmost first, then the one next to it, then ..
-  // etc. Easy as slices are made in only one direction)
-  if (subCanvas.width > width || subCanvas.height > height) {
-    logger::error("Cannot merge a canvas of bigger dimensions\n");
-    return;
+  return (c1.minX + c1.minZ) > (c2.minX + c2.minZ);
+}
+
+CompositeCanvas::CompositeCanvas(const std::vector<IsometricCanvas> &parts) {
+  // Composite Canvas initialization
+  // From a set of Isometric Canvasses, create a virtual sparse canvas to
+  // compose an image
+
+  // First, determine the size of the virtual map
+  // All the maps are oriented as NW to simplify the process
+  map.setUndefined();
+  for (auto &canvas : parts) {
+    Terrain::Coordinates oriented = canvas.map.orient(Orientation::NW);
+    map.minX = std::min(oriented.minX, map.minX);
+    map.minZ = std::min(oriented.minZ, map.minZ);
+    map.maxX = std::max(oriented.maxX, map.maxX);
+    map.maxZ = std::max(oriented.maxZ, map.maxZ);
+    map.minY = std::min(oriented.minY, map.minY);
+    map.maxY = std::max(oriented.maxY, map.maxY);
   }
 
-  // Determine where in the canvas' 2D matrix is the subcanvas supposed to
-  // go: the anchor is the bottom left pixel in the canvas where the
-  // sub-canvas must be superimposed, translated as an offset from the
-  // beginning of the buffer
-  const uint64_t anchor = calcAnchor(subCanvas);
+  // We deduce the image's size from the map
+  width = (map.sizeX() + map.sizeZ()) * 2;
+  height = map.sizeX() + map.sizeZ() + (map.maxY - map.minY + 1) * 3 - 1;
 
-  // For every line of the subCanvas, we create a pointer to its
-  // beginning, and a pointer to where in the canvas it should be copied
-  for (uint32_t line = 1; line < subCanvas.height + 1; line++) {
-    uint8_t *subLine = subCanvas.bytesBuffer + subCanvas.size -
-                       line * subCanvas.width * BYTESPERPIXEL;
-    uint8_t *position = bytesBuffer + anchor - line * width * BYTESPERPIXEL;
+  // This vector holds positions, describing where to draw each canvas onto the
+  // final image
+  subCanvasses = std::vector<Position>(parts.size());
 
-    // Then import the line over or under the existing data, depending on
-    // the orientation
-    if (map.orientation == NW || map.orientation == SW)
-      overlay(position, subLine, subCanvas.width);
-    else
-      underlay(position, subLine, subCanvas.width);
+  // Having the coordinates of the full map, we can determine the offset of each
+  // sub-map and thus the offset in the final image
+  for (std::vector<IsometricCanvas>::size_type i = 0; i < parts.size(); i++) {
+    int64_t oX, oY;
+    const IsometricCanvas &canvas = parts[i];
+    // The following is possible because all the maps are oriented in the same
+    // direction
+    Terrain::Coordinates oriented = canvas.map.orient(Orientation::NW);
+
+    // This formula is thought around the top corner' position.
+    //
+    // The top corner's postition of the sub-map is influenced by its distance
+    // to the full map's top corner => we compare the minX and minZ coordinates
+    //
+    // From there, the map's top corner is sizeZ pizels from the edge, and the
+    // sub-canvasses' edge is at sizeZ' pixels from its top corner.
+    //
+    // By adding up those elements we get the delta between the edge of the full
+    // image and the edge of the partial image.
+    oX = 2 * (map.sizeZ() - oriented.sizeZ() - (map.minX - oriented.minX) +
+              (map.minZ - oriented.minZ));
+
+    // This one is simpler, the vertical distance being equal to the distance
+    // between top corners.
+    oY = oriented.minX - map.minX + oriented.minZ - map.minZ;
+
+    // Add this to the list of positions
+    subCanvasses[i] = {oX, oY, &canvas};
   }
 
-#ifdef CLOCK
-  auto end = std::chrono::high_resolution_clock::now();
-  logger::info("Merged canvas in {}ms\n",
-               std::chrono::duration<double, std::milli>(end - begin).count());
-#endif
+  // Sort the positions, to render first the canvasses far from the edge to
+  // avoid overwriting too many blocks.
+  std::sort(subCanvasses.begin(), subCanvasses.end(), compare);
+}
+
+std::string CompositeCanvas::to_string() {
+  std::string buffer =
+      fmt::format("Composite Canvas of size {}x{}\n", width, height);
+  buffer.append(fmt::format("For map {}\n", map.to_string()));
+  buffer.append("Composed of maps:");
+
+  for (auto &position : subCanvasses)
+    buffer.append(fmt::format(
+        "\n- {}, offset by x{} y{}, oriented as {}",
+        position.subCanvas->map.to_string(), position.offsetX, position.offsetY,
+        position.subCanvas->map.orient(Orientation::NW).to_string()));
+
+  return buffer;
+}
+
+size_t CompositeCanvas::getLine(uint8_t *buffer, size_t size,
+                                uint64_t y) const {
+  size_t written = 0;
+
+  // Compose the line from all the subCanvasses that are on this line
+  for (auto &pos : subCanvasses) {
+    if (y < uint64_t(pos.offsetY + pos.subCanvas->height))
+      written += pos.subCanvas->getLine(buffer + pos.offsetX * BYTESPERPIXEL,
+                                        size - pos.offsetX * BYTESPERPIXEL,
+                                        y - pos.offsetY);
+  }
+
+  return written;
 }

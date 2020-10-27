@@ -1,9 +1,10 @@
 #include "worldloader.h"
+#include "logger.h"
 
 NBT minecraft_air(nbt::tag_type::tag_end);
 
-void scanWorldDirectory(const std::filesystem::path &regionDir,
-                        Coordinates *savedWorld) {
+void Terrain::scanWorldDirectory(const std::filesystem::path &regionDir,
+                                 Terrain::Coordinates *savedWorld) {
   const char delimiter = '.';
   std::string index;
   char buffer[4];
@@ -54,70 +55,7 @@ void scanWorldDirectory(const std::filesystem::path &regionDir,
 }
 
 void Terrain::Data::load(const std::filesystem::path &regionDir) {
-  // Parse all the necessary region files
-  for (int16_t rx = REGION(map.minX); rx < REGION(map.maxX) + 1; rx++) {
-    for (int16_t rz = REGION(map.minZ); rz < REGION(map.maxZ) + 1; rz++) {
-      std::filesystem::path regionFile = std::filesystem::path(regionDir) /=
-          "r." + std::to_string(rx) + "." + std::to_string(rz) + ".mca";
-
-      if (!std::filesystem::exists(regionFile)) {
-        logger::debug("Region file r.{}.{}.mca does not exist, skipping ..\n",
-                      rx, rz);
-        continue;
-      }
-
-      loadRegion(regionFile, rx, rz);
-      // Printing the progress requires the coordinates to be re-mapped from 0,
-      // hence the awful pasta dish here.
-#define SIZEX (REGION(map.maxX) - REGION(map.minX) + 1)
-#define SIZEZ (REGION(map.maxZ) - REGION(map.minZ) + 1)
-      logger::printProgress("Loading world",
-                            (rx - REGION(map.minX)) * SIZEZ +
-                                (rz - REGION(map.minZ)),
-                            SIZEX * SIZEZ);
-#undef SIZEX
-#undef SIZEZ
-    }
-  }
-}
-
-void Terrain::Data::loadRegion(const std::filesystem::path &regionFile,
-                               const int regionX, const int regionZ) {
-  FILE *regionHandle;
-  uint8_t regionHeader[REGION_HEADER_SIZE];
-
-  if (!(regionHandle = fopen(regionFile.c_str(), "rb"))) {
-    logger::error("Opening region file {} failed: {}\n", regionFile.c_str(),
-                  strerror(errno));
-    return;
-  }
-  // Then, we read the header (of size 4K) storing the chunks locations
-
-  if (fread(regionHeader, sizeof(uint8_t), REGION_HEADER_SIZE, regionHandle) !=
-      REGION_HEADER_SIZE) {
-    logger::error("Region header too short in {}\n", regionFile.c_str());
-    fclose(regionHandle);
-    return;
-  }
-
-  // For all the chunks in the file
-  for (int it = 0; it < REGIONSIZE * REGIONSIZE; it++) {
-    // Bound check
-    const int chunkX = (regionX << 5) + (it & 0x1f);
-    const int chunkZ = (regionZ << 5) + (it >> 5);
-    if (chunkX < map.minX || chunkX > map.maxX || chunkZ < map.minZ ||
-        chunkZ > map.maxZ) {
-      // Chunk is not in bounds
-      continue;
-    }
-
-    // Get the location of the data from the header
-    const uint32_t offset = (_ntohl(regionHeader + it * 4) >> 8) * 4096;
-
-    loadChunk(offset, regionHandle, chunkX, chunkZ, regionFile);
-  }
-
-  fclose(regionHandle);
+  this->regionDir = regionDir;
 }
 
 void Terrain::Data::inflateChunk(vector<NBT> *sections) {
@@ -393,4 +331,43 @@ void sectionAtPre116(const uint64_t index_length,
     // lower_data now contains the index in the palette
     buffer[index] = lower_data;
   }
+}
+
+Terrain::Chunk &Terrain::Data::chunkAt(int64_t xPos, int64_t zPos) {
+  int32_t rX = REGION(xPos), rZ = REGION(zPos), cX = xPos & 0x1f,
+          cZ = zPos & 0x1f;
+  std::filesystem::path regionFile = std::filesystem::path(regionDir) /=
+      "r." + std::to_string(rX) + "." + std::to_string(rZ) + ".mca";
+
+  if (!std::filesystem::exists(regionFile)) {
+    logger::debug("Region file r.{}.{}.mca does not exist, skipping ..\n", rX,
+                  rZ);
+    return empty;
+  }
+
+  FILE *regionHandle;
+  uint8_t regionHeader[REGION_HEADER_SIZE];
+
+  if (!(regionHandle = fopen(regionFile.c_str(), "rb"))) {
+    logger::error("Opening region file {} failed: {}\n", regionFile.c_str(),
+                  strerror(errno));
+    return empty;
+  }
+
+  // Then, we read the header (of size 4K) storing the chunks locations
+  if (fread(regionHeader, sizeof(uint8_t), REGION_HEADER_SIZE, regionHandle) !=
+      REGION_HEADER_SIZE) {
+    logger::error("Region header too short in {}\n", regionFile.c_str());
+    fclose(regionHandle);
+    return empty;
+  }
+
+  const uint32_t offset =
+      (_ntohl(regionHeader + ((cZ << 5) + cX) * 4) >> 8) * 4096;
+
+  loadChunk(offset, regionHandle, xPos, zPos, regionFile);
+
+  fclose(regionHandle);
+
+  return chunks[chunkIndex(xPos, zPos)];
 }
