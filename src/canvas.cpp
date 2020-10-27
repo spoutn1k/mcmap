@@ -256,7 +256,8 @@ void IsometricCanvas::renderSection() {
       }
 
       uint8_t maxY = std::min(16, map.maxY - (yPos << 4) + 1);
-      for (y = 0; y < maxY; y++) {
+      uint8_t minY = std::max(0, map.minY - (yPos << 4) + 1);
+      for (y = minY; y < maxY; y++) {
 
         if (beamColumn)
           renderBlock(beams[currentBeam].color, (chunkX << 4) + x,
