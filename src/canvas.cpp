@@ -255,8 +255,8 @@ void IsometricCanvas::renderSection() {
         }
       }
 
+      uint8_t minY = std::max(0, map.minY - (yPos << 4));
       uint8_t maxY = std::min(16, map.maxY - (yPos << 4) + 1);
-      uint8_t minY = std::max(0, map.minY - (yPos << 4) + 1);
       for (y = minY; y < maxY; y++) {
 
         if (beamColumn)
@@ -414,12 +414,12 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
       - (y - map.minY) * heightOffset;
 
   if (bmpPosX > width - 1)
-    throw std::range_error("Invalid x: " + std::to_string(bmpPosX) + "/" +
-                           std::to_string(width));
+    throw std::range_error(fmt::format("Invalid x: {}/{} (Block {}.{}.{})",
+                                       bmpPosX, width, x, y, z));
 
   if (bmpPosY > height - 1)
-    throw std::range_error("Invalid y: " + std::to_string(bmpPosY) + "/" +
-                           std::to_string(height));
+    throw std::range_error(fmt::format("Invalid y: {}/{} (Block {}.{}.{})",
+                                       bmpPosY, height, x, y, z));
 
   // Pointer to the color to use, and local color copy if changes are due
   Colors::Block localColor;
