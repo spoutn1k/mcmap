@@ -1,7 +1,7 @@
 #include "./VERSION"
-#include "./draw_png.h"
 #include "./helper.h"
 #include "./logger.h"
+#include "./png.h"
 #include "./settings.h"
 #include "./worldloader.h"
 #include <algorithm>

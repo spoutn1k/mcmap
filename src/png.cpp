@@ -2,7 +2,7 @@
  * This file contains functions to create and save a png file
  */
 
-#include "draw_png.h"
+#include "png.h"
 
 #ifndef Z_BEST_SPEED
 #define Z_BEST_SPEED 6
@@ -10,7 +10,7 @@
 
 namespace PNG {
 
-PNG::PNG() : imageHandle(nullptr) {}
+PNG::PNG() : imageHandle(nullptr) { _height = _width = _padding = 0; }
 
 PNGWriter::PNGWriter(const std::filesystem::path file,
                      const CompositeCanvas *contents)

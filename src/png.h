@@ -34,8 +34,8 @@ struct PNG {
 
   void set_padding(uint8_t padding) { _padding = padding; }
 
-  virtual uint32_t get_height() { return _height; };
-  virtual uint32_t get_width() { return _width; };
+  virtual uint32_t get_height() { return _height + 2 * _padding; };
+  virtual uint32_t get_width() { return _width + 2 * _padding; };
 };
 
 struct PNGWriter : public PNG {
