@@ -3,8 +3,6 @@
  */
 
 #include "draw_png.h"
-#include "logger.h"
-#include <cstdio>
 
 #ifndef Z_BEST_SPEED
 #define Z_BEST_SPEED 6
@@ -12,28 +10,26 @@
 
 namespace PNG {
 
-Image::Image(const std::filesystem::path file, const CompositeCanvas *contents,
-             uint8_t padding)
-    : padding(padding), canvas(contents) {
-  imageHandle = nullptr;
-  imageHandle = fopen(file.c_str(), "wb");
+PNG::PNG() : imageHandle(nullptr) {}
 
-  if (imageHandle == nullptr) {
+PNGWriter::PNGWriter(const std::filesystem::path file,
+                     const CompositeCanvas *contents)
+    : super::PNG(), _canvas(contents) {
+  super::imageHandle = fopen(file.c_str(), "wb");
+
+  if (super::imageHandle == nullptr) {
     throw(std::runtime_error("Error opening '" + file.string() +
                              "' for writing: " + string(strerror(errno))));
   }
-
-  ready = create();
 }
 
-bool Image::create() {
-  if (!(canvas->width && canvas->height)) {
+bool PNGWriter::create() {
+  if (!(_canvas->width && _canvas->height)) {
     logger::warn("Nothing to output: canvas is empty !\n");
     return false;
   }
 
-  const uint32_t width = canvas->width + 2 * padding,
-                 height = canvas->height + 2 * padding;
+  const uint32_t width = get_width(), height = get_height();
 
   logger::debug("Image dimensions are {}x{}, 32bpp, {}MiB\n", width, height,
                 float(width * height / float(1024 * 1024)));
@@ -79,7 +75,7 @@ bool Image::create() {
   text[0].text = (png_charp)VERSION;
   text[0].text_length = 5;
 
-  string coords = canvas->map.to_string();
+  string coords = _canvas->map.to_string();
   text[1].compression = PNG_TEXT_COMPRESSION_NONE;
   text[1].key = (png_charp) "Coordinates";
   text[1].text = (png_charp)coords.c_str();
@@ -91,11 +87,11 @@ bool Image::create() {
   return true;
 }
 
-bool Image::save() {
-  if (!ready)
+bool PNGWriter::save() {
+  if (!create())
     return false;
 
-  size_t bufSize = (canvas->width + 2 * padding) * BYTESPERPIXEL;
+  size_t bufSize = get_width() * BYTESPERPIXEL;
   uint8_t *buffer = new uint8_t[bufSize];
 
   // libpng will issue a longjmp on error, so code flow will end up here if
@@ -110,20 +106,20 @@ bool Image::save() {
 #endif
 
   memset(buffer, 0, bufSize);
-  for (uint64_t y = 0; y < padding; ++y)
+  for (uint64_t y = 0; y < _padding; ++y)
     png_write_row(pngPtr, (png_bytep)buffer);
 
-  for (uint64_t y = 0; y < canvas->height; ++y) {
-    logger::printProgress("Composing final PNG", y, canvas->height);
-    memset(buffer + padding * BYTESPERPIXEL, 0,
-           bufSize - padding * BYTESPERPIXEL);
-    canvas->getLine(buffer + padding * BYTESPERPIXEL,
-                    bufSize - padding * BYTESPERPIXEL, y);
+  for (uint64_t y = 0; y < _canvas->height; ++y) {
+    logger::printProgress("Composing final PNG", y, _canvas->height);
+    memset(buffer + _padding * BYTESPERPIXEL, 0,
+           bufSize - _padding * BYTESPERPIXEL);
+    _canvas->getLine(buffer + _padding * BYTESPERPIXEL,
+                     bufSize - _padding * BYTESPERPIXEL, y);
     png_write_row(pngPtr, (png_bytep)buffer);
   }
 
   memset(buffer, 0, bufSize);
-  for (uint64_t y = 0; y < padding; ++y)
+  for (uint64_t y = 0; y < _padding; ++y)
     png_write_row(pngPtr, (png_bytep)buffer);
 
   png_write_end(pngPtr, NULL);
