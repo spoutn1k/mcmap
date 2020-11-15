@@ -10,11 +10,18 @@
 
 namespace PNG {
 
-PNG::PNG() : imageHandle(nullptr) { _height = _width = _padding = 0; }
+PNG::PNG() : imageHandle(nullptr) {
+  _type = UNKNOWN;
+  _bytesPerPixel = 0;
+  _height = _width = _padding = 0;
+  logger::info("Called PNG constructor\n");
+}
 
 PNGWriter::PNGWriter(const std::filesystem::path file,
                      const CompositeCanvas *contents)
     : super::PNG(), _canvas(contents) {
+  _type = RGBA;
+  _bytesPerPixel = 4;
   super::imageHandle = fopen(file.c_str(), "wb");
 
   if (super::imageHandle == nullptr) {
@@ -136,6 +143,104 @@ bool PNGWriter::save() {
 #endif
 
   return true;
+}
+
+PNGReader::PNGReader(const std::filesystem::path file) {
+  png_byte header[8]; // Check header
+  png_uint_32 width, height;
+  int type, interlace, comp, filter, _bitDepth;
+
+  imageHandle = fopen(file.c_str(), "rb");
+
+  if (imageHandle == nullptr) {
+    throw(std::runtime_error("Error opening '" + file.string() +
+                             "' for reading: " + string(strerror(errno))));
+  }
+
+  if (fread(header, 1, 8, imageHandle) != 8 || !png_check_sig(header, 8)) {
+    logger::error("Not a PNG file\n");
+    return;
+  }
+
+  // Check the validity of the header
+  pngPtr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+
+  // Tell libpng the file's header has been handled
+  png_set_sig_bytes(pngPtr, 8);
+
+  pngInfoPtr = NULL;
+
+  if (pngPtr == NULL || setjmp(png_jmpbuf(pngPtr))) {
+    logger::error("Error reading {}\n", file.c_str());
+    png_destroy_read_struct(&pngPtr, &pngInfoPtr, NULL);
+    return;
+  }
+
+  pngInfoPtr = png_create_info_struct(pngPtr);
+
+  png_init_io(pngPtr, imageHandle);
+
+  png_read_info(pngPtr, pngInfoPtr);
+
+  // Check image format (square, RGBA)
+  png_uint_32 ret = png_get_IHDR(pngPtr, pngInfoPtr, &width, &height,
+                                 &_bitDepth, &type, &interlace, &comp, &filter);
+  if (ret == 0) {
+    logger::error("Error reading png\n");
+    png_destroy_read_struct(&pngPtr, &pngInfoPtr, NULL);
+    return;
+  }
+
+  // Use the gathered info to fill the struct
+  _width = width;
+  _height = height;
+
+  switch (type) {
+  case PNG_COLOR_TYPE_GRAY_ALPHA:
+    _type = GRAYSCALEALPHA;
+    _bytesPerPixel = 2;
+    break;
+
+  case PNG_COLOR_TYPE_GRAY:
+    _type = GRAYSCALE;
+    _bytesPerPixel = 1;
+    break;
+
+  case PNG_COLOR_TYPE_PALETTE:
+    _type = PALETTE;
+    _bytesPerPixel = 1;
+    break;
+
+  case PNG_COLOR_TYPE_RGB:
+    _type = RGB;
+    _bytesPerPixel = 3;
+    break;
+
+  case PNG_COLOR_TYPE_RGBA:
+    _type = RGBA;
+    _bytesPerPixel = 4;
+    break;
+
+  default:
+    _type = UNKNOWN;
+    _bytesPerPixel = 0;
+  }
+
+  logger::debug("Opened PNG file {}: size is {}x{}, {}bpp\n", file.c_str(),
+                get_width(), get_height(), _bytesPerPixel);
+}
+
+uint32_t PNGReader::getLine(uint8_t *buffer, size_t size) {
+  if (size < get_width()) {
+    logger::error("Buffer too small");
+    return 0;
+  }
+
+  png_bytep row_pointer = (png_bytep)buffer;
+
+  png_read_row(pngPtr, row_pointer, NULL);
+
+  return get_width();
 }
 
 } // namespace PNG

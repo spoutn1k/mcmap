@@ -1,11 +1,6 @@
 #ifndef DRAW_PNG_H_
 #define DRAW_PNG_H_
 
-// Separate them in case I ever implement 16bit rendering
-#define CHANSPERPIXEL 4
-#define BYTESPERCHAN 1
-#define BYTESPERPIXEL 4
-
 #include "./canvas.h"
 #include "./settings.h"
 #include "./worldloader.h"
@@ -14,15 +9,22 @@
 #include "logger.h"
 #include <png.h>
 
+// Separate them in case I ever implement 16bit rendering
+#define CHANSPERPIXEL 4
+#define BYTESPERCHAN 1
+#define BYTESPERPIXEL 4
+
 namespace PNG {
 
-enum colortype { RGB, RGBA, GRAYSCALE, GRAYSCALEALPHA, PALETTE, UNKNOWN };
+enum ColorType { RGB, RGBA, GRAYSCALE, GRAYSCALEALPHA, PALETTE, UNKNOWN };
 
 struct PNG {
   FILE *imageHandle;
   png_structp pngPtr;
   png_infop pngInfoPtr;
 
+  ColorType _type;
+  uint8_t _bytesPerPixel;
   uint32_t _width, _height;
   uint8_t _padding;
 
@@ -53,6 +55,15 @@ struct PNGWriter : public PNG {
   inline uint32_t get_width() override {
     return _canvas->width + 2 * _padding;
   };
+
+private:
+  typedef PNG super;
+};
+
+struct PNGReader : public PNG {
+  PNGReader(const std::filesystem::path);
+
+  uint32_t getLine(uint8_t *, uint64_t);
 
 private:
   typedef PNG super;
