@@ -1,18 +1,10 @@
 #ifndef DRAW_PNG_H_
 #define DRAW_PNG_H_
 
-#include "./canvas.h"
-#include "./settings.h"
-#include "./worldloader.h"
-#include "colors.h"
-#include "helper.h"
-#include "logger.h"
+#include <filesystem>
+#include <logger.hpp>
 #include <png.h>
-
-// Separate them in case I ever implement 16bit rendering
-#define CHANSPERPIXEL 4
-#define BYTESPERCHAN 1
-#define BYTESPERPIXEL 4
+#include <string>
 
 namespace PNG {
 
@@ -36,25 +28,18 @@ struct PNG {
 
   void set_padding(uint8_t padding) { _padding = padding; }
 
-  virtual uint32_t get_height() { return _height + 2 * _padding; };
-  virtual uint32_t get_width() { return _width + 2 * _padding; };
+  uint32_t get_height() { return _height + 2 * _padding; };
+  void set_height(uint32_t height) { _height = height; };
+
+  uint32_t get_width() { return _width + 2 * _padding; };
+  void set_width(uint32_t width) { _width = width; };
 };
 
 struct PNGWriter : public PNG {
-  const CompositeCanvas *_canvas;
-
-  PNGWriter(const std::filesystem::path, const CompositeCanvas *);
+  PNGWriter(const std::filesystem::path);
 
   bool create();
   bool save();
-
-  inline uint32_t get_height() override {
-    return _canvas->height + 2 * _padding;
-  };
-
-  inline uint32_t get_width() override {
-    return _canvas->width + 2 * _padding;
-  };
 
 private:
   typedef PNG super;

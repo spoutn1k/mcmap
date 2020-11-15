@@ -2,7 +2,6 @@
 #define COLORS_
 
 #include "./helper.h"
-#include "./logger.h"
 #include <filesystem>
 #include <json.hpp>
 #include <list>

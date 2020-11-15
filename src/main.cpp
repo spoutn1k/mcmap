@@ -1,6 +1,6 @@
 #include "./VERSION"
+#include "./canvas.h"
 #include "./helper.h"
-#include "./logger.h"
 #include "./png.h"
 #include "./settings.h"
 #include "./worldloader.h"
@@ -9,6 +9,8 @@
 #include <utility>
 
 using std::string;
+
+SETUP_LOGGER
 
 void printHelp(char *binary) {
   logger::info(
@@ -113,9 +115,9 @@ int main(int argc, char **argv) {
 
   CompositeCanvas merged(subCanvasses);
   logger::debug("{}\n", merged.to_string());
-  PNG::PNGWriter image(options.outFile, &merged);
+  /*PNG::PNGWriter image(options.outFile, &merged);
   image.set_padding(options.padding);
-  image.save();
+  image.save();*/
   logger::info("Job complete.\n");
 
   return 0;

@@ -4,7 +4,6 @@
 #include "./helper.h"
 #include "./section.h"
 #include "./worldloader.h"
-#include <stdint.h>
 
 #define CHANSPERPIXEL 4
 #define BYTESPERCHAN 1

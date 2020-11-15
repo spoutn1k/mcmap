@@ -17,29 +17,26 @@ PNG::PNG() : imageHandle(nullptr) {
   logger::info("Called PNG constructor\n");
 }
 
-PNGWriter::PNGWriter(const std::filesystem::path file,
-                     const CompositeCanvas *contents)
-    : super::PNG(), _canvas(contents) {
+PNGWriter::PNGWriter(const std::filesystem::path file) : super::PNG() {
   _type = RGBA;
   _bytesPerPixel = 4;
   super::imageHandle = fopen(file.c_str(), "wb");
 
   if (super::imageHandle == nullptr) {
     throw(std::runtime_error("Error opening '" + file.string() +
-                             "' for writing: " + string(strerror(errno))));
+                             "' for writing: " + std::string(strerror(errno))));
   }
 }
 
 bool PNGWriter::create() {
-  if (!(_canvas->width && _canvas->height)) {
+  if (!(get_width() || get_height())) {
     logger::warn("Nothing to output: canvas is empty !\n");
     return false;
   }
 
-  const uint32_t width = get_width(), height = get_height();
-
-  logger::debug("Image dimensions are {}x{}, 32bpp, {}MiB\n", width, height,
-                float(width * height / float(1024 * 1024)));
+  logger::debug("Image dimensions are {}x{}, 32bpp, {}MiB\n", get_width(),
+                get_height(),
+                float(get_width() * get_height() / float(1024 * 1024)));
 
   fseeko(imageHandle, 0, SEEK_SET);
 
@@ -70,35 +67,38 @@ bool PNGWriter::create() {
   // Check out http://www.libpng.org/pub/png/book/chapter11.html for more info.
 
   // First, dump the required IHDR block.
-  png_set_IHDR(pngPtr, pngInfoPtr, width, height, 8, PNG_COLOR_TYPE_RGBA,
-               PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE,
-               PNG_FILTER_TYPE_BASE);
+  png_set_IHDR(pngPtr, pngInfoPtr, get_width(), get_height(), 8,
+               PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE,
+               PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
 
-  png_text text[2];
+  /*
+    png_text text[2];
 
-#include "VERSION"
-  text[0].compression = PNG_TEXT_COMPRESSION_NONE;
-  text[0].key = (png_charp) "Software";
-  text[0].text = (png_charp)VERSION;
-  text[0].text_length = 5;
+  #include "VERSION"
+    text[0].compression = PNG_TEXT_COMPRESSION_NONE;
+    text[0].key = (png_charp) "Software";
+    text[0].text = (png_charp)VERSION;
+    text[0].text_length = 5;
 
-  string coords = _canvas->map.to_string();
-  text[1].compression = PNG_TEXT_COMPRESSION_NONE;
-  text[1].key = (png_charp) "Coordinates";
-  text[1].text = (png_charp)coords.c_str();
+    std::string coords = _canvas->map.to_string();
+    text[1].compression = PNG_TEXT_COMPRESSION_NONE;
+    text[1].key = (png_charp) "Coordinates";
+    text[1].text = (png_charp)coords.c_str();
 
-  png_set_text(pngPtr, pngInfoPtr, text, 2);
+    png_set_text(pngPtr, pngInfoPtr, text, 2);
+  */
 
   png_write_info(pngPtr, pngInfoPtr);
 
   return true;
 }
 
+/*
 bool PNGWriter::save() {
   if (!create())
     return false;
 
-  size_t bufSize = get_width() * BYTESPERPIXEL;
+  size_t bufSize = get_width() * _bytesPerPixel;
   uint8_t *buffer = new uint8_t[bufSize];
 
   // libpng will issue a longjmp on error, so code flow will end up here if
@@ -118,10 +118,10 @@ bool PNGWriter::save() {
 
   for (uint64_t y = 0; y < _canvas->height; ++y) {
     logger::printProgress("Composing final PNG", y, _canvas->height);
-    memset(buffer + _padding * BYTESPERPIXEL, 0,
-           bufSize - _padding * BYTESPERPIXEL);
-    _canvas->getLine(buffer + _padding * BYTESPERPIXEL,
-                     bufSize - _padding * BYTESPERPIXEL, y);
+    memset(buffer + _padding * _bytesPerPixel, 0,
+           bufSize - _padding * _bytesPerPixel);
+    _canvas->getLine(buffer + _padding * _bytesPerPixel,
+                     bufSize - _padding * _bytesPerPixel, y);
     png_write_row(pngPtr, (png_bytep)buffer);
   }
 
@@ -144,6 +144,7 @@ bool PNGWriter::save() {
 
   return true;
 }
+*/
 
 PNGReader::PNGReader(const std::filesystem::path file) {
   png_byte header[8]; // Check header
@@ -154,7 +155,7 @@ PNGReader::PNGReader(const std::filesystem::path file) {
 
   if (imageHandle == nullptr) {
     throw(std::runtime_error("Error opening '" + file.string() +
-                             "' for reading: " + string(strerror(errno))));
+                             "' for reading: " + std::string(strerror(errno))));
   }
 
   if (fread(header, 1, 8, imageHandle) != 8 || !png_check_sig(header, 8)) {

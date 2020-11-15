@@ -1,8 +1,9 @@
 #ifndef HELPER_H_
 #define HELPER_H_
 
-#include "./logger.h"
 #include <algorithm>
+#include <logger.hpp>
+#include <stdint.h>
 #include <string>
 
 #define CHUNKSIZE 16
