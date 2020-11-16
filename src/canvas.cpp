@@ -3,6 +3,7 @@
  */
 
 #include "./canvas.h"
+#include "fmt/color.h"
 #include "png.h"
 
 //   ____                _                   _
@@ -587,8 +588,9 @@ size_t CompositeCanvas::getLine(uint8_t *buffer, size_t size,
   return written;
 }
 
-bool CompositeCanvas::save(const std::filesystem::path file,
-                           const uint8_t padding = 0) {
+bool Canvas::save(const std::filesystem::path file,
+                  const uint8_t padding = 0) const {
+  // Write the buffer to file
   PNG::PNGWriter output(file);
 
   output.set_width(width);

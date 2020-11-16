@@ -31,19 +31,28 @@ struct Beam {
   }
 };
 
+// Canvas
+// Common features of both canvas types.
+struct Canvas {
+  Terrain::Coordinates map; // The coordinates describing the 3D map
+  uint32_t width, height;   // Bitmap width and height
+
+  virtual size_t getLine(uint8_t *, size_t, uint64_t) const = 0;
+
+  bool save(const std::filesystem::path, uint8_t) const;
+};
+
 // Isometric canvas
 // This structure holds the final bitmap data, a 2D array of pixels. It is
-// created with a set of 3D coordinates, and translate every block drawn into a
-// 2D position.
-struct IsometricCanvas {
+// created with a set of 3D coordinates, and translate every block drawn into
+// a 2D position.
+struct IsometricCanvas : Canvas {
   bool shading;
 
-  Terrain::Coordinates map; // The coordinates describing the 3D map
   uint32_t sizeX, sizeZ;    // The size of the 3D map
   uint8_t offsetX, offsetZ; // Offset of the first block in the first chunk
 
-  uint32_t width, height; // Bitmap width and height
-  uint8_t heightOffset;   // Offset of the first block in the first chunk
+  uint8_t heightOffset; // Offset of the first block in the first chunk
 
   uint8_t *bytesBuffer; // The buffer where pixels are written
   uint64_t size;        // The size of the buffer
@@ -104,20 +113,21 @@ struct IsometricCanvas {
   void renderBeamSection(const int64_t, const int64_t, const uint8_t);
 
   const Colors::Block *nextBlock();
-  size_t getLine(uint8_t *, size_t, uint64_t) const;
+  size_t getLine(uint8_t *, size_t, uint64_t) const override;
 };
 
-struct CompositeCanvas {
+struct CompositeCanvas : public Canvas {
   // A sparse canvas made with smaller canvasses
   //
-  // To render multiple canvasses made by threads, we compose an image from them
-  // directly. This object allows to do so. It is given a list of canvasses, and
-  // can be read as an image (made out of lines, with a height and width) that
-  // is composed of the canvasses, without actually using any more memory.
+  // To render multiple canvasses made by threads, we compose an image from
+  // them directly. This object allows to do so. It is given a list of
+  // canvasses, and can be read as an image (made out of lines, with a height
+  // and width) that is composed of the canvasses, without actually using any
+  // more memory.
   //
-  // This is done by keeping track of the offset of each sub-canvas from the top
-  // left of the image. When reading a line, it is composed of the lines of each
-  // sub-canvas, with the appropriate offset.
+  // This is done by keeping track of the offset of each sub-canvas from the
+  // top left of the image. When reading a line, it is composed of the lines
+  // of each sub-canvas, with the appropriate offset.
   //
   // +-------------------+
   // |Composite Canvas   |
@@ -132,9 +142,6 @@ struct CompositeCanvas {
   // |     +------------+|
   // +-------------------+
 
-  uint64_t width, height;   // Properties of the final image
-  Terrain::Coordinates map; // Virtual isometric map it draws
-
   struct Position {
     // Struct holding metadata about where the subCanvas is to be drawn.
     int64_t offsetX, offsetY;         // Offsets to draw the image
@@ -146,11 +153,9 @@ struct CompositeCanvas {
 
   CompositeCanvas(const std::vector<IsometricCanvas> &);
 
+  size_t getLine(uint8_t *, size_t, uint64_t) const override;
+
   std::string to_string();
-
-  size_t getLine(uint8_t *, size_t, uint64_t) const;
-
-  bool save(const std::filesystem::path, uint8_t);
 };
 
 #endif

@@ -115,9 +115,8 @@ int main(int argc, char **argv) {
   CompositeCanvas merged(subCanvasses);
   logger::debug("{}\n", merged.to_string());
 
-  merged.save(options.outFile, options.padding);
-
-  logger::info("Job complete.\n");
+  if (merged.save(options.outFile, options.padding))
+    logger::info("Job complete.\n");
 
   return 0;
 }
