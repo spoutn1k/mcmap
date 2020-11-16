@@ -76,14 +76,15 @@ int main(int argc, char **argv) {
   // This could be bypassed when the program is run in single-threaded mode, but
   // it works just fine when run in single threaded, so why bother making huge
   // if-elses ?
-  Terrain::Coordinates *subCoords = new Terrain::Coordinates[options.splits];
-  splitCoords(coords, subCoords, options.splits);
+  std::vector<Terrain::Coordinates> subCoords;
+  coords.schedule(subCoords, 256);
 
-  std::vector<IsometricCanvas> subCanvasses(options.splits);
-  for (uint16_t i = 0; i < options.splits; i++) {
+  std::vector<IsometricCanvas> subCanvasses(subCoords.size());
+  for (uint16_t i = 0; i < subCoords.size(); i++) {
     subCanvasses[i].setMap(subCoords[i]);
     subCanvasses[i].setColors(colors);
   }
+  logger::info("Scheduled {} fragments\n", subCoords.size());
 
 #ifndef DISABLE_OMP
 #pragma omp parallel shared(subCanvasses)
@@ -92,7 +93,8 @@ int main(int argc, char **argv) {
 #ifndef DISABLE_OMP
 #pragma omp for ordered schedule(static)
 #endif
-    for (uint16_t i = 0; i < options.splits; i++) {
+    for (std::vector<Terrain::Coordinates>::size_type i = 0;
+         i < subCoords.size(); i++) {
       IsometricCanvas &canvas = subCanvasses[i];
 
       // Load the minecraft terrain to render
@@ -109,8 +111,6 @@ int main(int argc, char **argv) {
       canvas.renderTerrain(world);
     }
   }
-
-  delete[] subCoords;
 
   CompositeCanvas merged(subCanvasses);
   logger::debug("{}\n", merged.to_string());

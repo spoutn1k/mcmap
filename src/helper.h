@@ -92,6 +92,34 @@ struct Coordinates {
 
   inline Integer sizeX() const { return maxX - minX + 1; }
   inline Integer sizeZ() const { return maxZ - minZ + 1; }
+
+  size_t footprint() const {
+    Integer width = (sizeX() + sizeZ()) * 2;
+    Integer height = sizeX() + sizeZ() + (maxY - minY + 1) * 3 - 1;
+
+#define BYTESPERPIXEL 4
+    return width * height * BYTESPERPIXEL;
+#undef BYTESPERPIXEL
+  }
+
+  void schedule(std::vector<Coordinates<Integer>> &fragments, size_t size = 0) {
+    for (Integer x = minX; x < maxX; x += size) {
+      for (Integer z = minZ; z < maxZ; z += size) {
+        Coordinates<Integer> fragment = *this;
+
+        fragment.minX = x;
+        fragment.maxX = std::min(Integer(x + size - 1), maxX);
+
+        fragment.minZ = z;
+        fragment.maxZ = std::min(Integer(z + size - 1), maxZ);
+
+        fragments.push_back(fragment);
+      }
+    }
+
+    for (auto fragment : fragments)
+      logger::info(" - {}\n", fragment.to_string());
+  }
 };
 
 void splitCoords(const Coordinates<int32_t> &original,
