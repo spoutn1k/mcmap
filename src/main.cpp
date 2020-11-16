@@ -1,7 +1,6 @@
 #include "./VERSION"
 #include "./canvas.h"
 #include "./helper.h"
-#include "./png.h"
 #include "./settings.h"
 #include "./worldloader.h"
 #include <algorithm>
@@ -115,9 +114,9 @@ int main(int argc, char **argv) {
 
   CompositeCanvas merged(subCanvasses);
   logger::debug("{}\n", merged.to_string());
-  /*PNG::PNGWriter image(options.outFile, &merged);
-  image.set_padding(options.padding);
-  image.save();*/
+
+  merged.save(options.outFile, options.padding);
+
   logger::info("Job complete.\n");
 
   return 0;

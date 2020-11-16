@@ -33,13 +33,23 @@ struct PNG {
 
   uint32_t get_width() { return _width + 2 * _padding; };
   void set_width(uint32_t width) { _width = width; };
+
+  bool error_callback();
+
+  inline size_t row_size() { return get_width() * _bytesPerPixel; };
 };
 
 struct PNGWriter : public PNG {
   PNGWriter(const std::filesystem::path);
+  ~PNGWriter();
+
+  uint8_t *buffer;
 
   bool create();
-  bool save();
+
+  uint8_t *getBuffer();
+  uint32_t writeLine();
+  void pad();
 
 private:
   typedef PNG super;
@@ -48,7 +58,7 @@ private:
 struct PNGReader : public PNG {
   PNGReader(const std::filesystem::path);
 
-  uint32_t getLine(uint8_t *, uint64_t);
+  uint32_t getLine(uint8_t *, size_t);
 
 private:
   typedef PNG super;

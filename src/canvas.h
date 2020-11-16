@@ -149,6 +149,8 @@ struct CompositeCanvas {
   std::string to_string();
 
   size_t getLine(uint8_t *, size_t, uint64_t) const;
+
+  bool save(const std::filesystem::path, uint8_t);
 };
 
 #endif

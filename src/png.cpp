@@ -14,18 +14,35 @@ PNG::PNG() : imageHandle(nullptr) {
   _type = UNKNOWN;
   _bytesPerPixel = 0;
   _height = _width = _padding = 0;
-  logger::info("Called PNG constructor\n");
+}
+
+bool PNG::error_callback() {
+  // libpng will issue a longjmp on error, so code flow will end up here if
+  // something goes wrong in the code below
+  if (setjmp(png_jmpbuf(pngPtr))) {
+    logger::error("libpng encountered an error\n");
+    png_destroy_write_struct(&pngPtr, &pngInfoPtr);
+    return true;
+  }
+
+  return false;
 }
 
 PNGWriter::PNGWriter(const std::filesystem::path file) : super::PNG() {
   _type = RGBA;
   _bytesPerPixel = 4;
+  buffer = nullptr;
   super::imageHandle = fopen(file.c_str(), "wb");
 
   if (super::imageHandle == nullptr) {
     throw(std::runtime_error("Error opening '" + file.string() +
                              "' for writing: " + std::string(strerror(errno))));
   }
+}
+
+PNGWriter::~PNGWriter() {
+  if (buffer)
+    delete[] buffer;
 }
 
 bool PNGWriter::create() {
@@ -54,12 +71,8 @@ bool PNGWriter::create() {
     return false;
   }
 
-  // libpng will issue a longjmp on error, so code flow will end up here if
-  // something goes wrong in the code below
-  if (setjmp(png_jmpbuf(pngPtr))) {
-    png_destroy_write_struct(&pngPtr, &pngInfoPtr);
+  if (error_callback())
     return false;
-  }
 
   png_init_io(pngPtr, imageHandle);
 
@@ -93,58 +106,27 @@ bool PNGWriter::create() {
   return true;
 }
 
-/*
-bool PNGWriter::save() {
-  if (!create())
-    return false;
-
-  size_t bufSize = get_width() * _bytesPerPixel;
-  uint8_t *buffer = new uint8_t[bufSize];
-
-  // libpng will issue a longjmp on error, so code flow will end up here if
-  // something goes wrong in the code below
-  if (setjmp(png_jmpbuf(pngPtr))) {
-    png_destroy_write_struct(&pngPtr, &pngInfoPtr);
-    return false;
-  }
-
-#ifdef CLOCK
-  static auto last = std::chrono::high_resolution_clock::now();
-#endif
-
-  memset(buffer, 0, bufSize);
-  for (uint64_t y = 0; y < _padding; ++y)
-    png_write_row(pngPtr, (png_bytep)buffer);
-
-  for (uint64_t y = 0; y < _canvas->height; ++y) {
-    logger::printProgress("Composing final PNG", y, _canvas->height);
-    memset(buffer + _padding * _bytesPerPixel, 0,
-           bufSize - _padding * _bytesPerPixel);
-    _canvas->getLine(buffer + _padding * _bytesPerPixel,
-                     bufSize - _padding * _bytesPerPixel, y);
-    png_write_row(pngPtr, (png_bytep)buffer);
-  }
-
-  memset(buffer, 0, bufSize);
-  for (uint64_t y = 0; y < _padding; ++y)
-    png_write_row(pngPtr, (png_bytep)buffer);
-
-  png_write_end(pngPtr, NULL);
-  png_destroy_write_struct(&pngPtr, &pngInfoPtr);
-
-  delete[] buffer;
-
-#ifdef CLOCK
-  uint32_t ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::high_resolution_clock::now() - last)
-                    .count();
-
-  logger::debug("Rendered canvas in {}ms\n", ms);
-#endif
-
-  return true;
+void PNGWriter::pad() {
+  getBuffer();
+  memset(buffer, 0, row_size());
+  for (size_t k = 0; k < _padding; k++)
+    writeLine();
 }
-*/
+
+uint8_t *PNGWriter::getBuffer() {
+  if (!buffer) {
+    buffer = new uint8_t[row_size()];
+    memset(buffer, 0, row_size());
+  }
+
+  return buffer + _padding * _bytesPerPixel;
+}
+
+uint32_t PNGWriter::writeLine() {
+  png_write_row(pngPtr, (png_bytep)buffer);
+
+  return row_size();
+}
 
 PNGReader::PNGReader(const std::filesystem::path file) {
   png_byte header[8]; // Check header
@@ -171,9 +153,8 @@ PNGReader::PNGReader(const std::filesystem::path file) {
 
   pngInfoPtr = NULL;
 
-  if (pngPtr == NULL || setjmp(png_jmpbuf(pngPtr))) {
+  if (pngPtr == NULL || error_callback()) {
     logger::error("Error reading {}\n", file.c_str());
-    png_destroy_read_struct(&pngPtr, &pngInfoPtr, NULL);
     return;
   }
 
@@ -187,7 +168,7 @@ PNGReader::PNGReader(const std::filesystem::path file) {
   png_uint_32 ret = png_get_IHDR(pngPtr, pngInfoPtr, &width, &height,
                                  &_bitDepth, &type, &interlace, &comp, &filter);
   if (ret == 0) {
-    logger::error("Error reading png\n");
+    logger::error("Error getting IDHR block of file {}\n", file.c_str());
     png_destroy_read_struct(&pngPtr, &pngInfoPtr, NULL);
     return;
   }

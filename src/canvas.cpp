@@ -3,6 +3,7 @@
  */
 
 #include "./canvas.h"
+#include "png.h"
 
 //   ____                _                   _
 //  / ___|___  _ __  ___| |_ _ __ _   _  ___| |_ ___  _ __ ___
@@ -584,4 +585,33 @@ size_t CompositeCanvas::getLine(uint8_t *buffer, size_t size,
   }
 
   return written;
+}
+
+bool CompositeCanvas::save(const std::filesystem::path file,
+                           const uint8_t padding = 0) {
+  PNG::PNGWriter output(file);
+
+  output.set_width(width);
+  output.set_height(height);
+  output.set_padding(padding);
+
+  if (!output.create()) {
+    logger::error("Error saving to {}\n", file.c_str());
+    return false;
+  }
+
+  size_t size = width * BYTESPERPIXEL;
+  uint8_t *buffer = output.getBuffer();
+
+  output.pad();
+
+  for (size_t y = 0; y < height; y++) {
+    memset(buffer, 0, size);
+    getLine(buffer, size, y);
+    output.writeLine();
+  }
+
+  output.pad();
+
+  return true;
 }
