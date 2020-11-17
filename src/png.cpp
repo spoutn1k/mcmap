@@ -11,8 +11,7 @@
 namespace PNG {
 
 PNG::PNG() : imageHandle(nullptr) {
-  _type = UNKNOWN;
-  _bytesPerPixel = 0;
+  set_type(UNKNOWN);
   _height = _width = _padding = 0;
 }
 
@@ -28,10 +27,44 @@ bool PNG::error_callback() {
   return false;
 }
 
+ColorType PNG::set_type(int type) {
+  switch (type) {
+  case GRAYSCALEALPHA:
+    _type = GRAYSCALEALPHA;
+    _bytesPerPixel = 2;
+    break;
+
+  case GRAYSCALE:
+    _type = GRAYSCALE;
+    _bytesPerPixel = 1;
+    break;
+
+  case PALETTE:
+    _type = PALETTE;
+    _bytesPerPixel = 1;
+    break;
+
+  case RGB:
+    _type = RGB;
+    _bytesPerPixel = 3;
+    break;
+
+  case RGBA:
+    _type = RGBA;
+    _bytesPerPixel = 4;
+    break;
+
+  default:
+    _type = UNKNOWN;
+    _bytesPerPixel = 0;
+  }
+
+  return _type;
+}
+
 PNGWriter::PNGWriter(const std::filesystem::path file) : super::PNG() {
-  _type = RGBA;
-  _bytesPerPixel = 4;
   buffer = nullptr;
+  set_type(RGBA);
   super::imageHandle = fopen(file.c_str(), "wb");
 
   if (super::imageHandle == nullptr) {
@@ -177,36 +210,7 @@ PNGReader::PNGReader(const std::filesystem::path file) {
   _width = width;
   _height = height;
 
-  switch (type) {
-  case PNG_COLOR_TYPE_GRAY_ALPHA:
-    _type = GRAYSCALEALPHA;
-    _bytesPerPixel = 2;
-    break;
-
-  case PNG_COLOR_TYPE_GRAY:
-    _type = GRAYSCALE;
-    _bytesPerPixel = 1;
-    break;
-
-  case PNG_COLOR_TYPE_PALETTE:
-    _type = PALETTE;
-    _bytesPerPixel = 1;
-    break;
-
-  case PNG_COLOR_TYPE_RGB:
-    _type = RGB;
-    _bytesPerPixel = 3;
-    break;
-
-  case PNG_COLOR_TYPE_RGBA:
-    _type = RGBA;
-    _bytesPerPixel = 4;
-    break;
-
-  default:
-    _type = UNKNOWN;
-    _bytesPerPixel = 0;
-  }
+  set_type(type);
 
   logger::debug("Opened PNG file {}: size is {}x{}, {}bpp\n", file.c_str(),
                 get_width(), get_height(), _bytesPerPixel);

@@ -8,7 +8,14 @@
 
 namespace PNG {
 
-enum ColorType { RGB, RGBA, GRAYSCALE, GRAYSCALEALPHA, PALETTE, UNKNOWN };
+enum ColorType {
+  RGB = PNG_COLOR_TYPE_RGB,
+  RGBA = PNG_COLOR_TYPE_RGB_ALPHA,
+  GRAYSCALE = PNG_COLOR_TYPE_GRAY,
+  GRAYSCALEALPHA = PNG_COLOR_TYPE_GRAY_ALPHA,
+  PALETTE = PNG_COLOR_TYPE_PALETTE,
+  UNKNOWN = -1
+};
 
 struct PNG {
   FILE *imageHandle;
@@ -25,6 +32,8 @@ struct PNG {
     if (imageHandle)
       fclose(imageHandle);
   }
+
+  ColorType set_type(int);
 
   void set_padding(uint8_t padding) { _padding = padding; }
 
