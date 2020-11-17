@@ -7,20 +7,9 @@
 #include "fmt/color.h"
 #include "png.h"
 
-//   ____                _                   _
-//  / ___|___  _ __  ___| |_ _ __ _   _  ___| |_ ___  _ __ ___
-// | |   / _ \| '_ \/ __| __| '__| | | |/ __| __/ _ \| '__/ __|
-// | |__| (_) | | | \__ \ |_| |  | |_| | (__| || (_) | |  \__ \.
-//  \____\___/|_| |_|___/\__|_|   \__,_|\___|\__\___/|_|  |___/
+#define BLOCKHEIGHT 3
 
-IsometricCanvas::IsometricCanvas() {
-  // This is a legacy setting, changing how the map is drawn. It can be 2 or
-  // 3; it means that a block is drawn with a 2 or 3 pixel offset over the
-  // block under it. This changes the orientation of the map: but it totally
-  // changes the drawing of special blocks, and as no special cases can be
-  // made easily, I set it to 3 for now.
-  heightOffset = 3;
-}
+IsometricCanvas::IsometricCanvas() {}
 
 std::string IsometricCanvas::to_string() const {
   return fmt::format("Isometric Canvas of size {}x{}, for map {}", width,
@@ -99,7 +88,7 @@ void IsometricCanvas::setMap(const Terrain::Coordinates &_map) {
   // length on both the horizontal axis times 2.
   width = (sizeX + sizeZ) * 2;
 
-  height = sizeX + sizeZ + (map.maxY - map.minY + 1) * heightOffset - 1;
+  height = sizeX + sizeZ + (map.maxY - map.minY + 1) * BLOCKHEIGHT - 1;
 
   size = uint64_t(width * height * BYTESPERPIXEL);
   bytesBuffer = new uint8_t[size];
@@ -419,7 +408,7 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
       - sizeX -
       sizeZ
       // Finally move that position up y blocks
-      - (y - map.minY) * heightOffset;
+      - (y - map.minY) * BLOCKHEIGHT;
 
   if (bmpPosX > width - 1)
     throw std::range_error(fmt::format("Invalid x: {}/{} (Block {}.{}.{})",
@@ -523,7 +512,8 @@ CompositeCanvas::CompositeCanvas(const std::vector<IsometricCanvas> &parts) {
 
   // We deduce the image's size from the map
   width = (map.sizeX() + map.sizeZ()) * 2;
-  height = map.sizeX() + map.sizeZ() + (map.maxY - map.minY + 1) * 3 - 1;
+  height =
+      map.sizeX() + map.sizeZ() + (map.maxY - map.minY + 1) * BLOCKHEIGHT - 1;
 
   // This vector holds positions, describing where to draw each canvas onto the
   // final image

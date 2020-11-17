@@ -54,8 +54,6 @@ struct IsometricCanvas : Canvas {
   uint32_t sizeX, sizeZ;    // The size of the 3D map
   uint8_t offsetX, offsetZ; // Offset of the first block in the first chunk
 
-  uint8_t heightOffset; // Offset of the first block in the first chunk
-
   uint8_t *bytesBuffer; // The buffer where pixels are written
   uint64_t size;        // The size of the buffer
 
