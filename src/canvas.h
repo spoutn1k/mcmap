@@ -57,8 +57,6 @@ struct IsometricCanvas : Canvas {
   uint8_t *bytesBuffer; // The buffer where pixels are written
   uint64_t size;        // The size of the buffer
 
-  uint32_t nXChunks, nZChunks;
-
   Colors::Palette palette;  // The colors to use when drawing
   Colors::Block air, water, // fire, earth. Teh four nations lived in harmoiny
       beaconBeam;           // Cached colors for easy access

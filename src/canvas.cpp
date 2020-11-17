@@ -50,9 +50,6 @@ void IsometricCanvas::setColors(const Colors::Palette &colors) {
 void IsometricCanvas::setMap(const Terrain::Coordinates &_map) {
   map = _map;
 
-  nXChunks = CHUNK(map.maxX) - CHUNK(map.minX) + 1;
-  nZChunks = CHUNK(map.maxZ) - CHUNK(map.minZ) + 1;
-
   sizeX = map.maxX - map.minX + 1;
   sizeZ = map.maxZ - map.minZ + 1;
 
@@ -76,7 +73,6 @@ void IsometricCanvas::setMap(const Terrain::Coordinates &_map) {
   }
 
   if (map.orientation == NE || map.orientation == SW) {
-    std::swap(nXChunks, nZChunks);
     std::swap(sizeX, sizeZ);
     std::swap(offsetX, offsetZ);
   }
@@ -132,6 +128,14 @@ void IsometricCanvas::orientChunk(int32_t &x, int32_t &z) {
 }
 
 void IsometricCanvas::renderTerrain(Terrain::Data &world) {
+  uint32_t nXChunks, nZChunks;
+
+  nXChunks = CHUNK(map.maxX - map.minX) + 1;
+  nZChunks = CHUNK(map.maxZ - map.minZ) + 1;
+
+  if (map.orientation == NE || map.orientation == SW)
+    std::swap(nXChunks, nZChunks);
+
   // world is supposed to have the SAME set of coordinates as the canvas
   for (chunkX = 0; chunkX < nXChunks; chunkX++) {
     for (chunkZ = 0; chunkZ < nZChunks; chunkZ++) {
