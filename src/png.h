@@ -3,10 +3,13 @@
 
 #include <filesystem>
 #include <logger.hpp>
+#include <map>
 #include <png.h>
 #include <string>
 
 namespace PNG {
+
+typedef std::map<std::string, std::string> Comments;
 
 enum ColorType {
   RGB = PNG_COLOR_TYPE_RGB,
@@ -54,7 +57,9 @@ struct PNGWriter : public PNG {
 
   uint8_t *buffer;
 
-  bool create();
+  void set_text(const Comments &);
+
+  bool create(const Comments & = {});
 
   uint8_t *getBuffer();
   uint32_t writeLine();

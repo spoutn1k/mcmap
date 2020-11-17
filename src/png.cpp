@@ -78,20 +78,39 @@ PNGWriter::~PNGWriter() {
     delete[] buffer;
 }
 
-bool PNGWriter::create() {
+void PNGWriter::set_text(const Comments &comments) {
+  std::vector<png_text> text(comments.size());
+  size_t index = 0;
+
+  for (auto const &pair : comments) {
+    text[index].compression = PNG_TEXT_COMPRESSION_NONE;
+    text[index].key = (png_charp)pair.first.c_str();
+    text[index].text = (png_charp)pair.second.c_str();
+    text[index].text_length = pair.second.length();
+
+    index++;
+  }
+
+  png_set_text(pngPtr, pngInfoPtr, &text[0], text.size());
+}
+
+bool PNGWriter::create(const Comments &comments) {
   if (!(get_width() || get_height())) {
     logger::warn("Nothing to output: canvas is empty !\n");
     return false;
   }
 
-  logger::debug("Image dimensions are {}x{}, 32bpp, {}MiB\n", get_width(),
-                get_height(),
+  logger::debug("Image dimensions are {}x{}, {}bpp, {}MiB\n", get_width(),
+                get_height(), 8 * _bytesPerPixel,
                 float(get_width() * get_height() / float(1024 * 1024)));
 
   fseeko(imageHandle, 0, SEEK_SET);
 
   // Write header
   pngPtr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+
+  if (error_callback())
+    return false;
 
   if (pngPtr == NULL) {
     return false;
@@ -104,35 +123,18 @@ bool PNGWriter::create() {
     return false;
   }
 
-  if (error_callback())
-    return false;
-
   png_init_io(pngPtr, imageHandle);
 
+  set_text(comments);
+
   // The png file format works by having blocks piled up in a certain order.
-  // Check out http://www.libpng.org/pub/png/book/chapter11.html for more info.
+  // Check out http://www.libpng.org/pub/png/book/chapter11.html for more
+  // info.
 
   // First, dump the required IHDR block.
   png_set_IHDR(pngPtr, pngInfoPtr, get_width(), get_height(), 8,
                PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE,
                PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
-
-  /*
-    png_text text[2];
-
-  #include "VERSION"
-    text[0].compression = PNG_TEXT_COMPRESSION_NONE;
-    text[0].key = (png_charp) "Software";
-    text[0].text = (png_charp)VERSION;
-    text[0].text_length = 5;
-
-    std::string coords = _canvas->map.to_string();
-    text[1].compression = PNG_TEXT_COMPRESSION_NONE;
-    text[1].key = (png_charp) "Coordinates";
-    text[1].text = (png_charp)coords.c_str();
-
-    png_set_text(pngPtr, pngInfoPtr, text, 2);
-  */
 
   png_write_info(pngPtr, pngInfoPtr);
 
