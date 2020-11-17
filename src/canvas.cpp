@@ -3,6 +3,7 @@
  */
 
 #include "./canvas.h"
+#include "VERSION"
 #include "fmt/color.h"
 #include "png.h"
 
@@ -597,7 +598,12 @@ bool Canvas::save(const std::filesystem::path file,
   output.set_height(height);
   output.set_padding(padding);
 
-  if (!output.create()) {
+  PNG::Comments comments = {
+      {"Software", VERSION},
+      {"Coordinates", map.to_string()},
+  };
+
+  if (!output.create(comments)) {
     logger::error("Error saving to {}\n", file.c_str());
     return false;
   }
