@@ -6,10 +6,11 @@
 #include "VERSION"
 #include "fmt/color.h"
 #include "png.h"
+#include <vector>
 
 #define BLOCKHEIGHT 3
 
-IsometricCanvas::IsometricCanvas() {}
+IsometricCanvas::IsometricCanvas() : Canvas(BYTES) {}
 
 std::string IsometricCanvas::to_string() const {
   return fmt::format("Isometric Canvas of size {}x{}, for map {}", width,
@@ -86,9 +87,10 @@ void IsometricCanvas::setMap(const Terrain::Coordinates &_map) {
 
   height = sizeX + sizeZ + (map.maxY - map.minY + 1) * BLOCKHEIGHT - 1;
 
-  size = uint64_t(width * height * BYTESPERPIXEL);
-  bytesBuffer = new uint8_t[size];
-  memset(bytesBuffer, 0, size);
+  size_t size = size_t(width * height * BYTESPERPIXEL);
+  drawing.bytes_buffer->reserve(size);
+
+  memset(&(*drawing.bytes_buffer)[0], 0, size);
 }
 
 // ____                     _
@@ -463,7 +465,8 @@ const Colors::Block *IsometricCanvas::nextBlock() {
 
 size_t IsometricCanvas::getLine(uint8_t *buffer, size_t bufSize,
                                 uint64_t y) const {
-  uint8_t *start = bytesBuffer + y * width * BYTESPERPIXEL;
+  const uint8_t *start =
+      &(*drawing.bytes_buffer)[0] + y * width * BYTESPERPIXEL;
   uint8_t tmpPixel[4];
 
   if (y > height)

@@ -2,8 +2,10 @@
 #define CANVAS_H_
 
 #include "./helper.h"
+#include "./png.h"
 #include "./section.h"
 #include "./worldloader.h"
+#include <filesystem>
 
 #define CHANSPERPIXEL 4
 #define BYTESPERCHAN 1
@@ -42,6 +44,67 @@ struct Canvas {
   bool save(const std::filesystem::path, uint8_t) const;
 
   virtual std::string to_string() const = 0;
+
+  enum BufferType { BYTES, CANVAS, IMAGE, EMPTY };
+
+  union DrawingBuffer {
+    long null_buffer;
+    std::vector<uint8_t> *bytes_buffer;
+    // std::vector<Canvas> *canvas_buffer;
+    PNG::PNGReader *image_buffer;
+
+    DrawingBuffer() : null_buffer(0) {}
+    // drawing_buffer(std::vector<Canvas> fragments) : canvas_buffer(fragments)
+    // {}
+    DrawingBuffer(std::filesystem::path file) {
+      image_buffer = new PNG::PNGReader(file);
+    }
+
+    DrawingBuffer(BufferType type) {
+      switch (type) {
+      case BYTES: {
+        bytes_buffer = new std::vector<uint8_t>();
+        break;
+      }
+
+      case IMAGE:
+        logger::error("Default constructing image canvas not supported\n");
+
+      default: {
+        null_buffer = long(0);
+      }
+      }
+    }
+
+    void destroy(BufferType type) {
+      switch (type) {
+      case BYTES: {
+        delete bytes_buffer;
+        break;
+      }
+
+      case IMAGE: {
+        delete image_buffer;
+        break;
+      }
+
+      default:
+        break;
+      }
+    }
+  };
+
+  BufferType type;
+  DrawingBuffer drawing;
+
+  Canvas() : drawing() {}
+  Canvas(BufferType _type) : type(_type), drawing(_type) {}
+  Canvas(std::filesystem::path file) : type(IMAGE), drawing(file) {
+    width = drawing.image_buffer->get_width();
+    height = drawing.image_buffer->get_height();
+  };
+
+  ~Canvas() { drawing.destroy(type); }
 };
 
 // Isometric canvas
@@ -53,9 +116,6 @@ struct IsometricCanvas : Canvas {
 
   uint32_t sizeX, sizeZ;    // The size of the 3D map
   uint8_t offsetX, offsetZ; // Offset of the first block in the first chunk
-
-  uint8_t *bytesBuffer; // The buffer where pixels are written
-  uint64_t size;        // The size of the buffer
 
   Colors::Palette palette;  // The colors to use when drawing
   Colors::Block air, water, // fire, earth. Teh four nations lived in harmoiny
@@ -82,7 +142,8 @@ struct IsometricCanvas : Canvas {
 
   IsometricCanvas();
 
-  ~IsometricCanvas() { delete[] bytesBuffer; }
+  ~IsometricCanvas() { // delete[] bytesBuffer;
+  }
 
   std::string to_string() const override;
 
@@ -98,7 +159,7 @@ struct IsometricCanvas : Canvas {
   void orientChunk(int32_t &x, int32_t &z);
   void orientSection(uint8_t &x, uint8_t &z);
   inline uint8_t *pixel(uint32_t x, uint32_t y) {
-    return &bytesBuffer[(x + y * width) * BYTESPERPIXEL];
+    return &(*drawing.bytes_buffer)[(x + y * width) * BYTESPERPIXEL];
   }
 
   // Drawing entrypoints
