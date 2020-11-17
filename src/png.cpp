@@ -74,6 +74,9 @@ PNGWriter::PNGWriter(const std::filesystem::path file) : super::PNG() {
 }
 
 PNGWriter::~PNGWriter() {
+  png_write_end(pngPtr, NULL);
+  png_destroy_write_struct(&pngPtr, &pngInfoPtr);
+
   if (buffer)
     delete[] buffer;
 }
