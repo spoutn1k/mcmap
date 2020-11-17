@@ -99,12 +99,18 @@ struct Canvas {
 
   Canvas() : drawing() {}
   Canvas(BufferType _type) : type(_type), drawing(_type) {}
-  Canvas(std::filesystem::path file) : type(IMAGE), drawing(file) {
+  Canvas(const std::filesystem::path &file) : type(IMAGE), drawing(file) {
     width = drawing.image_buffer->get_width();
     height = drawing.image_buffer->get_height();
   };
 
   ~Canvas() { drawing.destroy(type); }
+};
+
+struct ImageCanvas : Canvas {
+  const std::filesystem::path file;
+
+  ImageCanvas(const std::filesystem::path &file) : Canvas(file) {}
 };
 
 // Isometric canvas
