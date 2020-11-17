@@ -22,6 +22,11 @@ IsometricCanvas::IsometricCanvas() {
   heightOffset = 3;
 }
 
+std::string IsometricCanvas::to_string() const {
+  return fmt::format("Isometric Canvas of size {}x{}, for map {}", width,
+                     height, map.to_string());
+}
+
 void IsometricCanvas::setColors(const Colors::Palette &colors) {
   // Setting and pre-caching colors
   palette = colors;
@@ -559,16 +564,16 @@ CompositeCanvas::CompositeCanvas(const std::vector<IsometricCanvas> &parts) {
   std::sort(subCanvasses.begin(), subCanvasses.end(), compare);
 }
 
-std::string CompositeCanvas::to_string() {
+std::string CompositeCanvas::to_string() const {
   std::string buffer =
-      fmt::format("Composite Canvas of size {}x{}\n", width, height);
-  buffer.append(fmt::format("For map {}\n", map.to_string()));
-  buffer.append("Composed of maps:");
+      fmt::format("Composite Canvas of size {}x{}, for map {}\n", width, height,
+                  map.to_string());
+  buffer.append(fmt::format("Composed of {} maps:", subCanvasses.size()));
 
   for (auto &position : subCanvasses)
     buffer.append(fmt::format(
         "\n- {}, offset by x{} y{}, oriented as {}",
-        position.subCanvas->map.to_string(), position.offsetX, position.offsetY,
+        position.subCanvas->to_string(), position.offsetX, position.offsetY,
         position.subCanvas->map.orient(Orientation::NW).to_string()));
 
   return buffer;

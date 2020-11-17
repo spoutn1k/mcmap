@@ -40,6 +40,8 @@ struct Canvas {
   virtual size_t getLine(uint8_t *, size_t, uint64_t) const = 0;
 
   bool save(const std::filesystem::path, uint8_t) const;
+
+  virtual std::string to_string() const = 0;
 };
 
 // Isometric canvas
@@ -85,6 +87,8 @@ struct IsometricCanvas : Canvas {
   IsometricCanvas();
 
   ~IsometricCanvas() { delete[] bytesBuffer; }
+
+  std::string to_string() const override;
 
   void setColors(const Colors::Palette &);
   void setMap(const Terrain::Coordinates &);
@@ -155,7 +159,7 @@ struct CompositeCanvas : public Canvas {
 
   size_t getLine(uint8_t *, size_t, uint64_t) const override;
 
-  std::string to_string();
+  std::string to_string() const override;
 };
 
 #endif
