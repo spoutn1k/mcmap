@@ -37,13 +37,14 @@ struct Beam {
 // Common features of both canvas types.
 struct Canvas {
   Terrain::Coordinates map; // The coordinates describing the 3D map
-  uint32_t width, height;   // Bitmap width and height
+  size_t width, height;     // Bitmap width and height
 
   virtual size_t getLine(uint8_t *buffer, size_t size, uint64_t line) const {
     switch (type) {
     case BYTES:
       return _get_line(&drawing.bytes_buffer->operator[](0), buffer, size,
                        line);
+
     case IMAGE:
       return _get_line(drawing.image_buffer, buffer, size, line);
 
@@ -58,7 +59,7 @@ struct Canvas {
   bool save(const std::filesystem::path, uint8_t) const;
 
   virtual std::string to_string() const {
-    return fmt::format("Canvas with type {}\n", type);
+    return fmt::format("Canvas with type {}", type);
   };
 
   enum BufferType { BYTES, CANVAS, IMAGE, EMPTY };
@@ -118,7 +119,8 @@ struct Canvas {
 
   Canvas() : drawing() {}
   Canvas(BufferType _type) : type(_type), drawing(_type) {}
-  Canvas(const std::filesystem::path &file) : type(IMAGE), drawing(file) {
+  Canvas(const Terrain::Coordinates &map, const std::filesystem::path &file)
+      : map(map), type(IMAGE), drawing(file) {
     width = drawing.image_buffer->get_width();
     height = drawing.image_buffer->get_height();
   };
@@ -128,7 +130,8 @@ struct Canvas {
     width = other.width;
     height = other.height;
 
-    switch (other.type) {
+    type = other.type;
+    switch (type) {
     case BYTES: {
       drawing.bytes_buffer = std::move(other.drawing.bytes_buffer);
       other.drawing.bytes_buffer = nullptr;
@@ -153,7 +156,9 @@ struct Canvas {
 struct ImageCanvas : Canvas {
   const std::filesystem::path file;
 
-  ImageCanvas(const std::filesystem::path &file) : Canvas(file) {}
+  ImageCanvas(const Terrain::Coordinates &map,
+              const std::filesystem::path &file)
+      : Canvas(map, file), file(file) {}
 };
 
 // Isometric canvas

@@ -35,11 +35,34 @@ size_t Canvas::_get_line(const uint8_t *data, uint8_t *buffer, size_t bufSize,
   return boundary;
 }
 
-size_t Canvas::_get_line(PNG::PNGReader *data, uint8_t *buffer, size_t bufSize,
-                         uint64_t) const {
-  data->getLine(buffer, bufSize);
+std::vector<uint8_t> read_bytes;
 
-  return data->get_width();
+size_t Canvas::_get_line(PNG::PNGReader *data, uint8_t *buffer, size_t bufSize,
+                         uint64_t y) const {
+  if (y > data->get_height()) {
+    logger::error("Invalid access to PNG image: line {}\n", y);
+    return 0;
+  }
+
+  size_t requested = std::min(bufSize, width * data->_bytesPerPixel);
+
+  read_bytes.reserve(requested);
+  uint8_t tmpPixel[4];
+  data->getLine(&read_bytes[0], requested);
+
+  for (size_t i = 0; i < width; i++) {
+    const uint8_t *read_pixel = &read_bytes[0] + i * BYTESPERPIXEL;
+
+    // If the subCanvas is empty here, or the canvas already has a pixel
+    if (!read_pixel[3] || (buffer + i * BYTESPERPIXEL)[3] == 0xff)
+      continue;
+
+    memcpy(tmpPixel, buffer + i * BYTESPERPIXEL, BYTESPERPIXEL);
+    memcpy(buffer + i * BYTESPERPIXEL, read_pixel, BYTESPERPIXEL);
+    blend(buffer + i * BYTESPERPIXEL, tmpPixel);
+  }
+
+  return requested;
 }
 
 std::string IsometricCanvas::to_string() const {
@@ -586,7 +609,8 @@ size_t CompositeCanvas::getLine(uint8_t *buffer, size_t size,
 
   // Compose the line from all the subCanvasses that are on this line
   for (auto &pos : subCanvasses) {
-    if (y < uint64_t(pos.offsetY + pos.subCanvas->height))
+    if (y >= uint64_t(pos.offsetY) &&
+        y < uint64_t(pos.offsetY + pos.subCanvas->height))
       written += pos.subCanvas->getLine(buffer + pos.offsetX * BYTESPERPIXEL,
                                         size - pos.offsetX * BYTESPERPIXEL,
                                         y - pos.offsetY);
