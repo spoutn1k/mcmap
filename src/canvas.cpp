@@ -10,7 +10,37 @@
 
 #define BLOCKHEIGHT 3
 
-IsometricCanvas::IsometricCanvas() : Canvas(BYTES) {}
+size_t Canvas::_get_line(const uint8_t *data, uint8_t *buffer, size_t bufSize,
+                         uint64_t y) const {
+  const uint8_t *start = data + y * width * BYTESPERPIXEL;
+  uint8_t tmpPixel[4];
+
+  if (y > height)
+    return 0;
+
+  size_t boundary = std::min(bufSize, size_t(width));
+
+  for (size_t i = 0; i < boundary; i++) {
+    const uint8_t *data = start + i * BYTESPERPIXEL;
+
+    // If the subCanvas is empty here, or the canvas already has a pixel
+    if (!data[3] || (buffer + i * BYTESPERPIXEL)[3] == 0xff)
+      continue;
+
+    memcpy(tmpPixel, buffer + i * BYTESPERPIXEL, BYTESPERPIXEL);
+    memcpy(buffer + i * BYTESPERPIXEL, data, BYTESPERPIXEL);
+    blend(buffer + i * BYTESPERPIXEL, tmpPixel);
+  }
+
+  return boundary;
+}
+
+size_t Canvas::_get_line(PNG::PNGReader *data, uint8_t *buffer, size_t bufSize,
+                         uint64_t) const {
+  data->getLine(buffer, bufSize);
+
+  return data->get_width();
+}
 
 std::string IsometricCanvas::to_string() const {
   return fmt::format("Isometric Canvas of size {}x{}, for map {}", width,
@@ -463,32 +493,6 @@ const Colors::Block *IsometricCanvas::nextBlock() {
   return sections[sectionY].colors[index];
 }
 
-size_t IsometricCanvas::getLine(uint8_t *buffer, size_t bufSize,
-                                uint64_t y) const {
-  const uint8_t *start =
-      &(*drawing.bytes_buffer)[0] + y * width * BYTESPERPIXEL;
-  uint8_t tmpPixel[4];
-
-  if (y > height)
-    return 0;
-
-  size_t boundary = std::min(bufSize, size_t(width));
-
-  for (size_t i = 0; i < boundary; i++) {
-    const uint8_t *data = start + i * BYTESPERPIXEL;
-
-    // If the subCanvas is empty here, or the canvas already has a pixel
-    if (!data[3] || (buffer + i * BYTESPERPIXEL)[3] == 0xff)
-      continue;
-
-    memcpy(tmpPixel, buffer + i * BYTESPERPIXEL, BYTESPERPIXEL);
-    memcpy(buffer + i * BYTESPERPIXEL, data, BYTESPERPIXEL);
-    blend(buffer + i * BYTESPERPIXEL, tmpPixel);
-  }
-
-  return boundary;
-}
-
 bool compare(const CompositeCanvas::Position &p1,
              const CompositeCanvas::Position &p2) {
   // This method is used to order a list of maps. The ordering is done by the
@@ -499,7 +503,7 @@ bool compare(const CompositeCanvas::Position &p1,
   return (c1.minX + c1.minZ) > (c2.minX + c2.minZ);
 }
 
-CompositeCanvas::CompositeCanvas(const std::vector<IsometricCanvas> &parts) {
+CompositeCanvas::CompositeCanvas(const std::vector<Canvas> &parts) {
   // Composite Canvas initialization
   // From a set of Isometric Canvasses, create a virtual sparse canvas to
   // compose an image
@@ -530,7 +534,7 @@ CompositeCanvas::CompositeCanvas(const std::vector<IsometricCanvas> &parts) {
   // sub-map and thus the offset in the final image
   for (std::vector<IsometricCanvas>::size_type i = 0; i < parts.size(); i++) {
     int64_t oX, oY;
-    const IsometricCanvas &canvas = parts[i];
+    const Canvas &canvas = parts[i];
     // The following is possible because all the maps are oriented in the same
     // direction
     Terrain::Coordinates oriented = canvas.map.orient(Orientation::NW);

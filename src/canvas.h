@@ -39,11 +39,27 @@ struct Canvas {
   Terrain::Coordinates map; // The coordinates describing the 3D map
   uint32_t width, height;   // Bitmap width and height
 
-  virtual size_t getLine(uint8_t *, size_t, uint64_t) const = 0;
+  virtual size_t getLine(uint8_t *buffer, size_t size, uint64_t line) const {
+    switch (type) {
+    case BYTES:
+      return _get_line(&drawing.bytes_buffer->operator[](0), buffer, size,
+                       line);
+    case IMAGE:
+      return _get_line(drawing.image_buffer, buffer, size, line);
+
+    default:
+      return 0;
+    }
+  }
+
+  size_t _get_line(const uint8_t *, uint8_t *, size_t, uint64_t) const;
+  size_t _get_line(PNG::PNGReader *, uint8_t *, size_t, uint64_t) const;
 
   bool save(const std::filesystem::path, uint8_t) const;
 
-  virtual std::string to_string() const = 0;
+  virtual std::string to_string() const {
+    return fmt::format("Canvas with type {}\n", type);
+  };
 
   enum BufferType { BYTES, CANVAS, IMAGE, EMPTY };
 
@@ -54,7 +70,8 @@ struct Canvas {
     PNG::PNGReader *image_buffer;
 
     DrawingBuffer() : null_buffer(0) {}
-    // drawing_buffer(std::vector<Canvas> fragments) : canvas_buffer(fragments)
+    // drawing_buffer(std::vector<Canvas> fragments) :
+    // canvas_buffer(fragments)
     // {}
     DrawingBuffer(std::filesystem::path file) {
       image_buffer = new PNG::PNGReader(file);
@@ -79,12 +96,14 @@ struct Canvas {
     void destroy(BufferType type) {
       switch (type) {
       case BYTES: {
-        delete bytes_buffer;
+        if (bytes_buffer)
+          delete bytes_buffer;
         break;
       }
 
       case IMAGE: {
-        delete image_buffer;
+        if (image_buffer)
+          delete image_buffer;
         break;
       }
 
@@ -104,6 +123,30 @@ struct Canvas {
     height = drawing.image_buffer->get_height();
   };
 
+  Canvas &operator=(Canvas &&other) {
+    map = other.map;
+    width = other.width;
+    height = other.height;
+
+    switch (other.type) {
+    case BYTES: {
+      drawing.bytes_buffer = std::move(other.drawing.bytes_buffer);
+      other.drawing.bytes_buffer = nullptr;
+      break;
+    }
+
+    case IMAGE: {
+      drawing.image_buffer = std::move(other.drawing.image_buffer);
+      other.drawing.image_buffer = nullptr;
+      break;
+    }
+    default:
+      drawing.null_buffer = long(0);
+    }
+
+    return *this;
+  }
+
   ~Canvas() { drawing.destroy(type); }
 };
 
@@ -115,17 +158,18 @@ struct ImageCanvas : Canvas {
 
 // Isometric canvas
 // This structure holds the final bitmap data, a 2D array of pixels. It is
-// created with a set of 3D coordinates, and translate every block drawn into
-// a 2D position.
+// created with a set of 3D coordinates, and translate every block drawn
+// into a 2D position.
 struct IsometricCanvas : Canvas {
   bool shading;
 
   uint32_t sizeX, sizeZ;    // The size of the 3D map
   uint8_t offsetX, offsetZ; // Offset of the first block in the first chunk
 
-  Colors::Palette palette;  // The colors to use when drawing
-  Colors::Block air, water, // fire, earth. Teh four nations lived in harmoiny
-      beaconBeam;           // Cached colors for easy access
+  Colors::Palette palette; // The colors to use when drawing
+  Colors::Block air,
+      water,      // fire, earth. Teh four nations lived in harmoiny
+      beaconBeam; // Cached colors for easy access
 
   // TODO bye bye
   uint8_t totalMarkers = 0;
@@ -146,7 +190,7 @@ struct IsometricCanvas : Canvas {
 
   uint8_t orientedX, orientedZ, y;
 
-  IsometricCanvas();
+  IsometricCanvas() : Canvas(BYTES) {}
 
   ~IsometricCanvas() { // delete[] bytesBuffer;
   }
@@ -180,7 +224,6 @@ struct IsometricCanvas : Canvas {
   void renderBeamSection(const int64_t, const int64_t, const uint8_t);
 
   const Colors::Block *nextBlock();
-  size_t getLine(uint8_t *, size_t, uint64_t) const override;
 };
 
 struct CompositeCanvas : public Canvas {
@@ -188,9 +231,9 @@ struct CompositeCanvas : public Canvas {
   //
   // To render multiple canvasses made by threads, we compose an image from
   // them directly. This object allows to do so. It is given a list of
-  // canvasses, and can be read as an image (made out of lines, with a height
-  // and width) that is composed of the canvasses, without actually using any
-  // more memory.
+  // canvasses, and can be read as an image (made out of lines, with a
+  // height and width) that is composed of the canvasses, without actually
+  // using any more memory.
   //
   // This is done by keeping track of the offset of each sub-canvas from the
   // top left of the image. When reading a line, it is composed of the lines
@@ -211,14 +254,14 @@ struct CompositeCanvas : public Canvas {
 
   struct Position {
     // Struct holding metadata about where the subCanvas is to be drawn.
-    int64_t offsetX, offsetY;         // Offsets to draw the image
-    const IsometricCanvas *subCanvas; // Canvas to draw
+    int64_t offsetX, offsetY; // Offsets to draw the image
+    const Canvas *subCanvas;  // Canvas to draw
   };
 
   std::vector<Position>
       subCanvasses; // Sorted list of Positions to draw the final image
 
-  CompositeCanvas(const std::vector<IsometricCanvas> &);
+  CompositeCanvas(const std::vector<Canvas> &);
 
   size_t getLine(uint8_t *, size_t, uint64_t) const override;
 
