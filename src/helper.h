@@ -116,9 +116,6 @@ struct Coordinates {
         fragments.push_back(fragment);
       }
     }
-
-    for (auto fragment : fragments)
-      logger::info(" - {}\n", fragment.to_string());
   }
 
   // The following methods are used to get the position of the map in an image

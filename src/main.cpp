@@ -77,17 +77,12 @@ int main(int argc, char **argv) {
   // it works just fine when run in single threaded, so why bother making huge
   // if-elses ?
   std::vector<Terrain::Coordinates> subCoords;
-  coords.schedule(subCoords, 256);
+  coords.schedule(subCoords, 512);
 
-  std::vector<IsometricCanvas> subCanvasses(subCoords.size());
-  for (uint16_t i = 0; i < subCoords.size(); i++) {
-    subCanvasses[i].setMap(subCoords[i]);
-    subCanvasses[i].setColors(colors);
-  }
-  logger::info("Scheduled {} fragments\n", subCoords.size());
+  std::vector<Canvas> fragments(subCoords.size());
 
 #ifndef DISABLE_OMP
-#pragma omp parallel shared(subCanvasses)
+#pragma omp parallel shared(fragments)
 #endif
   {
 #ifndef DISABLE_OMP
@@ -95,7 +90,9 @@ int main(int argc, char **argv) {
 #endif
     for (std::vector<Terrain::Coordinates>::size_type i = 0;
          i < subCoords.size(); i++) {
-      IsometricCanvas &canvas = subCanvasses[i];
+      IsometricCanvas canvas;
+      canvas.setMap(subCoords[i]);
+      canvas.setColors(colors);
 
       // Load the minecraft terrain to render
       Terrain::Data world(subCoords[i]);
@@ -109,10 +106,16 @@ int main(int argc, char **argv) {
       canvas.shading = options.shading;
       canvas.setMarkers(options.totalMarkers, &options.markers);
       canvas.renderTerrain(world);
+
+      std::filesystem::path temporary =
+          fmt::format("{}.png", canvas.map.to_string());
+      canvas.save(temporary, 0);
+
+      fragments[i] = std::move(ImageCanvas(canvas.map, temporary));
     }
   }
 
-  CompositeCanvas merged(subCanvasses);
+  CompositeCanvas merged(std::move(fragments));
   logger::debug("{}\n", merged.to_string());
 
   if (merged.save(options.outFile, options.padding))
