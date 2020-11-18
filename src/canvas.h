@@ -11,6 +11,8 @@
 #define BYTESPERCHAN 1
 #define BYTESPERPIXEL 4
 
+#define BLOCKHEIGHT 3
+
 struct Beam {
   uint8_t position;
   const Colors::Block *color;
@@ -37,7 +39,12 @@ struct Beam {
 // Common features of both canvas types.
 struct Canvas {
   Terrain::Coordinates map; // The coordinates describing the 3D map
-  size_t width, height;     // Bitmap width and height
+
+  inline size_t width() const { return (map.sizeX() + map.sizeZ()) * 2; }
+  inline size_t height() const {
+    return map.sizeX() + map.sizeZ() + (map.maxY - map.minY + 1) * BLOCKHEIGHT -
+           1;
+  }
 
   virtual size_t getLine(uint8_t *buffer, size_t size, uint64_t line) const {
     switch (type) {
@@ -67,21 +74,28 @@ struct Canvas {
   union DrawingBuffer {
     long null_buffer;
     std::vector<uint8_t> *bytes_buffer;
-    // std::vector<Canvas> *canvas_buffer;
+    std::vector<Canvas> *canvas_buffer;
     PNG::PNGReader *image_buffer;
 
     DrawingBuffer() : null_buffer(0) {}
-    // drawing_buffer(std::vector<Canvas> fragments) :
-    // canvas_buffer(fragments)
-    // {}
+
     DrawingBuffer(std::filesystem::path file) {
       image_buffer = new PNG::PNGReader(file);
+    }
+
+    DrawingBuffer(std::vector<Canvas> &&fragments) {
+      canvas_buffer = new std::vector<Canvas>(std::move(fragments));
     }
 
     DrawingBuffer(BufferType type) {
       switch (type) {
       case BYTES: {
         bytes_buffer = new std::vector<uint8_t>();
+        break;
+      }
+
+      case CANVAS: {
+        canvas_buffer = new std::vector<Canvas>();
         break;
       }
 
@@ -99,6 +113,12 @@ struct Canvas {
       case BYTES: {
         if (bytes_buffer)
           delete bytes_buffer;
+        break;
+      }
+
+      case CANVAS: {
+        if (canvas_buffer)
+          delete canvas_buffer;
         break;
       }
 
@@ -120,16 +140,17 @@ struct Canvas {
   Canvas() : drawing() { map.setUndefined(); }
 
   Canvas(BufferType _type) : type(_type), drawing(_type) {}
+
+  Canvas(std::vector<Canvas> &&fragments) : drawing(std::move(fragments)) {}
+
   Canvas(const Terrain::Coordinates &map, const std::filesystem::path &file)
       : map(map), type(IMAGE), drawing(file) {
-    width = drawing.image_buffer->get_width();
-    height = drawing.image_buffer->get_height();
+    assert(width() == drawing.image_buffer->get_width());
+    assert(height() == drawing.image_buffer->get_height());
   };
 
   Canvas &operator=(Canvas &&other) {
     map = other.map;
-    width = other.width;
-    height = other.height;
 
     type = other.type;
     switch (type) {
@@ -139,11 +160,18 @@ struct Canvas {
       break;
     }
 
+    case CANVAS: {
+      drawing.canvas_buffer = std::move(other.drawing.canvas_buffer);
+      other.drawing.canvas_buffer = nullptr;
+      break;
+    }
+
     case IMAGE: {
       drawing.image_buffer = std::move(other.drawing.image_buffer);
       other.drawing.image_buffer = nullptr;
       break;
     }
+
     default:
       drawing.null_buffer = long(0);
     }
@@ -168,6 +196,8 @@ struct ImageCanvas : Canvas {
 // into a 2D position.
 struct IsometricCanvas : Canvas {
   bool shading;
+
+  size_t width, height;
 
   uint32_t sizeX, sizeZ;    // The size of the 3D map
   uint8_t offsetX, offsetZ; // Offset of the first block in the first chunk

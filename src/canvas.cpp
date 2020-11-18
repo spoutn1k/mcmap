@@ -1,24 +1,18 @@
-/**
- * This file contains functions to draw blocks to a png file
- */
-
 #include "./canvas.h"
 #include "VERSION"
 #include "fmt/color.h"
 #include "png.h"
 #include <vector>
 
-#define BLOCKHEIGHT 3
-
 size_t Canvas::_get_line(const uint8_t *data, uint8_t *buffer, size_t bufSize,
                          uint64_t y) const {
-  const uint8_t *start = data + y * width * BYTESPERPIXEL;
+  const uint8_t *start = data + y * width() * BYTESPERPIXEL;
   uint8_t tmpPixel[4];
 
-  if (y > height)
+  if (y > height())
     return 0;
 
-  size_t boundary = std::min(bufSize, size_t(width));
+  size_t boundary = std::min(bufSize, width());
 
   for (size_t i = 0; i < boundary; i++) {
     const uint8_t *data = start + i * BYTESPERPIXEL;
@@ -44,13 +38,13 @@ size_t Canvas::_get_line(PNG::PNGReader *data, uint8_t *buffer, size_t bufSize,
     return 0;
   }
 
-  size_t requested = std::min(bufSize, width * data->_bytesPerPixel);
+  size_t requested = std::min(bufSize, width() * data->_bytesPerPixel);
 
   read_bytes.reserve(requested);
   uint8_t tmpPixel[4];
   data->getLine(&read_bytes[0], requested);
 
-  for (size_t i = 0; i < width; i++) {
+  for (size_t i = 0; i < width(); i++) {
     const uint8_t *read_pixel = &read_bytes[0] + i * BYTESPERPIXEL;
 
     // If the subCanvas is empty here, or the canvas already has a pixel
@@ -516,6 +510,15 @@ const Colors::Block *IsometricCanvas::nextBlock() {
   return sections[sectionY].colors[index];
 }
 
+/*bool compare(const Canvas &p1, const Canvas &p2) {
+  // This method is used to order a list of maps. The ordering is done by the
+  // distance to the top-right corner of the map in North Western orientation.
+  Terrain::Coordinates c1 = p1.map.orient(Orientation::NW);
+  Terrain::Coordinates c2 = p2.map.orient(Orientation::NW);
+
+  return (c1.minX + c1.minZ) > (c2.minX + c2.minZ);
+}*/
+
 bool compare(const CompositeCanvas::Position &p1,
              const CompositeCanvas::Position &p2) {
   // This method is used to order a list of maps. The ordering is done by the
@@ -543,11 +546,6 @@ CompositeCanvas::CompositeCanvas(const std::vector<Canvas> &parts) {
     map.maxY = std::max(oriented.maxY, map.maxY);
   }
 
-  // We deduce the image's size from the map
-  width = (map.sizeX() + map.sizeZ()) * 2;
-  height =
-      map.sizeX() + map.sizeZ() + (map.maxY - map.minY + 1) * BLOCKHEIGHT - 1;
-
   // This vector holds positions, describing where to draw each canvas onto the
   // final image
   subCanvasses = std::vector<Position>(parts.size());
@@ -569,8 +567,8 @@ CompositeCanvas::CompositeCanvas(const std::vector<Canvas> &parts) {
 
 std::string CompositeCanvas::to_string() const {
   std::string buffer =
-      fmt::format("Composite Canvas of size {}x{}, for map {}\n", width, height,
-                  map.to_string());
+      fmt::format("Composite Canvas of size {}x{}, for map {}\n", width(),
+                  height(), map.to_string());
   buffer.append(fmt::format("Composed of {} maps:", subCanvasses.size()));
 
   for (auto &position : subCanvasses)
@@ -589,7 +587,7 @@ size_t CompositeCanvas::getLine(uint8_t *buffer, size_t size,
   // Compose the line from all the subCanvasses that are on this line
   for (auto &pos : subCanvasses) {
     if (y >= uint64_t(pos.offsetY) &&
-        y < uint64_t(pos.offsetY + pos.subCanvas->height))
+        y < uint64_t(pos.offsetY + pos.subCanvas->height()))
       written += pos.subCanvas->getLine(buffer + pos.offsetX * BYTESPERPIXEL,
                                         size - pos.offsetX * BYTESPERPIXEL,
                                         y - pos.offsetY);
@@ -603,8 +601,8 @@ bool Canvas::save(const std::filesystem::path file,
   // Write the buffer to file
   PNG::PNGWriter output(file);
 
-  output.set_width(width);
-  output.set_height(height);
+  output.set_width(width());
+  output.set_height(height());
   output.set_padding(padding);
 
   PNG::Comments comments = {
@@ -617,12 +615,12 @@ bool Canvas::save(const std::filesystem::path file,
     return false;
   }
 
-  size_t size = width * BYTESPERPIXEL;
+  size_t size = width() * BYTESPERPIXEL;
   uint8_t *buffer = output.getBuffer();
 
   output.pad();
 
-  for (size_t y = 0; y < height; y++) {
+  for (size_t y = 0; y < height(); y++) {
     memset(buffer, 0, size);
     getLine(buffer, size, y);
     output.writeLine();
