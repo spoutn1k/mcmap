@@ -218,7 +218,7 @@ PNGReader::PNGReader(const std::filesystem::path file) {
   set_type(type);
 
   logger::debug("Opened PNG file {}: size is {}x{}, {}bpp\n", file.c_str(),
-                get_width(), get_height(), _bytesPerPixel);
+                get_width(), get_height(), 8 * _bytesPerPixel);
 }
 
 uint32_t PNGReader::getLine(uint8_t *buffer, size_t size) {
