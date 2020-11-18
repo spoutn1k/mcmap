@@ -75,9 +75,67 @@ size_t Canvas::_get_line(const std::vector<Canvas> &fragments, uint8_t *buffer,
   return written;
 }
 
-std::string IsometricCanvas::to_string() const {
-  return fmt::format("Isometric Canvas of size {}x{}, for map {}", width,
-                     height, map.to_string());
+bool Canvas::save(const std::filesystem::path file,
+                  const uint8_t padding) const {
+  // Write the buffer to file
+  PNG::PNGWriter output(file);
+
+  output.set_width(width());
+  output.set_height(height());
+  output.set_padding(padding);
+
+  PNG::Comments comments = {
+      {"Software", VERSION},
+      {"Coordinates", map.to_string()},
+  };
+
+  if (!output.create(comments)) {
+    logger::error("Error saving to {}\n", file.c_str());
+    return false;
+  }
+
+  size_t size = width() * BYTESPERPIXEL;
+  uint8_t *buffer = output.getBuffer();
+
+  output.pad();
+
+  for (size_t y = 0; y < height(); y++) {
+    memset(buffer, 0, size);
+    getLine(buffer, size, y);
+    output.writeLine();
+  }
+
+  output.pad();
+
+  return true;
+}
+
+std::string Canvas::to_string() const {
+  std::map<Canvas::BufferType, std::string> names = {
+      {Canvas::BufferType::BYTES, "Byte"},
+      {Canvas::BufferType::CANVAS, "Canvas"},
+      {Canvas::BufferType::IMAGE, "Image"},
+      {Canvas::BufferType::EMPTY, "Void"},
+  };
+
+  std::string description =
+      fmt::format("{} canvas ({}x{})", names.at(type), width(), height());
+
+  switch (type) {
+  case CANVAS: {
+    for (auto &canvas : *drawing.canvas_buffer)
+      description.append(
+          fmt::format("\n - {}, offset {}.{}", canvas.to_string(),
+                      canvas.map.offsetX(map), canvas.map.offsetY(map),
+                      canvas.map.orient(Orientation::NW).to_string()));
+    break;
+  }
+
+  default:
+    break;
+  }
+
+  return description;
 }
 
 void IsometricCanvas::setColors(const Colors::Palette &colors) {
@@ -106,7 +164,7 @@ void IsometricCanvas::setColors(const Colors::Palette &colors) {
   // look weird in other dimensions.
   // Legacy formula: ((100.0f / (1.0f + exp(- (1.3f * (float(y) *
   // MIN(g_MapsizeY, 200) / g_MapsizeY) / 16.0f) + 6.0f))) - 91)
-  brightnessLookup = new float[255];
+  brightnessLookup = std::vector<float>(255);
   for (int y = 0; y < 255; ++y)
     brightnessLookup[y] = -100 + 200 * float(y) / 255;
 }
@@ -545,55 +603,4 @@ CompositeCanvas::CompositeCanvas(std::vector<Canvas> &&parts)
   // avoid overwriting too many blocks.
   std::sort(drawing.canvas_buffer->begin(), drawing.canvas_buffer->end(),
             compare);
-}
-
-std::string CompositeCanvas::to_string() const {
-  std::string buffer =
-      fmt::format("Composite Canvas of size {}x{}, for map {}\n", width(),
-                  height(), map.to_string());
-  buffer.append(
-      fmt::format("Composed of {} maps:", drawing.canvas_buffer->size()));
-
-  for (auto &canvas : *drawing.canvas_buffer)
-    buffer.append(fmt::format("\n- {}, offset by x{} y{}, oriented as {}",
-                              canvas.to_string(), canvas.map.offsetX(map),
-                              canvas.map.offsetY(map),
-                              canvas.map.orient(Orientation::NW).to_string()));
-
-  return buffer;
-}
-
-bool Canvas::save(const std::filesystem::path file,
-                  const uint8_t padding = 0) const {
-  // Write the buffer to file
-  PNG::PNGWriter output(file);
-
-  output.set_width(width());
-  output.set_height(height());
-  output.set_padding(padding);
-
-  PNG::Comments comments = {
-      {"Software", VERSION},
-      {"Coordinates", map.to_string()},
-  };
-
-  if (!output.create(comments)) {
-    logger::error("Error saving to {}\n", file.c_str());
-    return false;
-  }
-
-  size_t size = width() * BYTESPERPIXEL;
-  uint8_t *buffer = output.getBuffer();
-
-  output.pad();
-
-  for (size_t y = 0; y < height(); y++) {
-    memset(buffer, 0, size);
-    getLine(buffer, size, y);
-    output.writeLine();
-  }
-
-  output.pad();
-
-  return true;
 }

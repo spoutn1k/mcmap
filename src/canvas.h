@@ -69,11 +69,9 @@ struct Canvas {
   size_t _get_line(const std::vector<Canvas> &, uint8_t *, size_t,
                    uint64_t) const;
 
-  bool save(const std::filesystem::path, uint8_t) const;
+  bool save(const std::filesystem::path, uint8_t = 0) const;
 
-  virtual std::string to_string() const {
-    return fmt::format("Canvas with type {}", type);
-  };
+  virtual std::string to_string() const;
 
   enum BufferType { BYTES, CANVAS, IMAGE, EMPTY };
 
@@ -145,9 +143,10 @@ struct Canvas {
 
   Canvas() : drawing() { map.setUndefined(); }
 
-  Canvas(BufferType _type) : type(_type), drawing(_type) {}
+  Canvas(BufferType _type) : type(_type), drawing(_type) { map.setUndefined(); }
 
   Canvas(std::vector<Canvas> &&fragments) : drawing(std::move(fragments)) {
+    map.setUndefined();
     type = CANVAS;
 
     // Determine the size of the virtual map
@@ -197,12 +196,6 @@ struct Canvas {
   }
 
   ~Canvas() { drawing.destroy(type); }
-
-  void swap(Canvas &a, Canvas &b) {
-    Canvas c(std::move(a));
-    a = std::move(b);
-    b = std::move(c);
-  }
 };
 
 struct ImageCanvas : Canvas {
@@ -234,7 +227,7 @@ struct IsometricCanvas : Canvas {
   uint8_t totalMarkers = 0;
   Colors::Marker (*markers)[256];
 
-  float *brightnessLookup;
+  std::vector<float> brightnessLookup;
 
   Section sections[16];
 
@@ -253,8 +246,6 @@ struct IsometricCanvas : Canvas {
 
   ~IsometricCanvas() { // delete[] bytesBuffer;
   }
-
-  std::string to_string() const override;
 
   void setColors(const Colors::Palette &);
   void setMap(const Terrain::Coordinates &);
@@ -312,8 +303,6 @@ struct CompositeCanvas : public Canvas {
   // +-------------------+
 
   CompositeCanvas(std::vector<Canvas> &&);
-
-  std::string to_string() const override;
 };
 
 #endif
