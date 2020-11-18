@@ -11,8 +11,7 @@
 namespace PNG {
 
 PNG::PNG() : imageHandle(nullptr) {
-  _type = UNKNOWN;
-  _bytesPerPixel = 0;
+  set_type(UNKNOWN);
   _height = _width = _padding = 0;
 }
 
@@ -28,10 +27,44 @@ bool PNG::error_callback() {
   return false;
 }
 
+ColorType PNG::set_type(int type) {
+  switch (type) {
+  case GRAYSCALEALPHA:
+    _type = GRAYSCALEALPHA;
+    _bytesPerPixel = 2;
+    break;
+
+  case GRAYSCALE:
+    _type = GRAYSCALE;
+    _bytesPerPixel = 1;
+    break;
+
+  case PALETTE:
+    _type = PALETTE;
+    _bytesPerPixel = 1;
+    break;
+
+  case RGB:
+    _type = RGB;
+    _bytesPerPixel = 3;
+    break;
+
+  case RGBA:
+    _type = RGBA;
+    _bytesPerPixel = 4;
+    break;
+
+  default:
+    _type = UNKNOWN;
+    _bytesPerPixel = 0;
+  }
+
+  return _type;
+}
+
 PNGWriter::PNGWriter(const std::filesystem::path file) : super::PNG() {
-  _type = RGBA;
-  _bytesPerPixel = 4;
   buffer = nullptr;
+  set_type(RGBA);
   super::imageHandle = fopen(file.c_str(), "wb");
 
   if (super::imageHandle == nullptr) {
@@ -41,24 +74,46 @@ PNGWriter::PNGWriter(const std::filesystem::path file) : super::PNG() {
 }
 
 PNGWriter::~PNGWriter() {
+  png_write_end(pngPtr, NULL);
+  png_destroy_write_struct(&pngPtr, &pngInfoPtr);
+
   if (buffer)
     delete[] buffer;
 }
 
-bool PNGWriter::create() {
+void PNGWriter::set_text(const Comments &comments) {
+  std::vector<png_text> text(comments.size());
+  size_t index = 0;
+
+  for (auto const &pair : comments) {
+    text[index].compression = PNG_TEXT_COMPRESSION_NONE;
+    text[index].key = (png_charp)pair.first.c_str();
+    text[index].text = (png_charp)pair.second.c_str();
+    text[index].text_length = pair.second.length();
+
+    index++;
+  }
+
+  png_set_text(pngPtr, pngInfoPtr, &text[0], text.size());
+}
+
+bool PNGWriter::create(const Comments &comments) {
   if (!(get_width() || get_height())) {
     logger::warn("Nothing to output: canvas is empty !\n");
     return false;
   }
 
-  logger::debug("Image dimensions are {}x{}, 32bpp, {}MiB\n", get_width(),
-                get_height(),
+  logger::debug("Image dimensions are {}x{}, {}bpp, {}MiB\n", get_width(),
+                get_height(), 8 * _bytesPerPixel,
                 float(get_width() * get_height() / float(1024 * 1024)));
 
   fseeko(imageHandle, 0, SEEK_SET);
 
   // Write header
   pngPtr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+
+  if (error_callback())
+    return false;
 
   if (pngPtr == NULL) {
     return false;
@@ -71,35 +126,18 @@ bool PNGWriter::create() {
     return false;
   }
 
-  if (error_callback())
-    return false;
-
   png_init_io(pngPtr, imageHandle);
 
+  set_text(comments);
+
   // The png file format works by having blocks piled up in a certain order.
-  // Check out http://www.libpng.org/pub/png/book/chapter11.html for more info.
+  // Check out http://www.libpng.org/pub/png/book/chapter11.html for more
+  // info.
 
   // First, dump the required IHDR block.
   png_set_IHDR(pngPtr, pngInfoPtr, get_width(), get_height(), 8,
                PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE,
                PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
-
-  /*
-    png_text text[2];
-
-  #include "VERSION"
-    text[0].compression = PNG_TEXT_COMPRESSION_NONE;
-    text[0].key = (png_charp) "Software";
-    text[0].text = (png_charp)VERSION;
-    text[0].text_length = 5;
-
-    std::string coords = _canvas->map.to_string();
-    text[1].compression = PNG_TEXT_COMPRESSION_NONE;
-    text[1].key = (png_charp) "Coordinates";
-    text[1].text = (png_charp)coords.c_str();
-
-    png_set_text(pngPtr, pngInfoPtr, text, 2);
-  */
 
   png_write_info(pngPtr, pngInfoPtr);
 
@@ -129,16 +167,26 @@ uint32_t PNGWriter::writeLine() {
 }
 
 PNGReader::PNGReader(const std::filesystem::path file) {
-  png_byte header[8]; // Check header
-  png_uint_32 width, height;
-  int type, interlace, comp, filter, _bitDepth;
-
   imageHandle = fopen(file.c_str(), "rb");
 
   if (imageHandle == nullptr) {
     throw(std::runtime_error("Error opening '" + file.string() +
                              "' for reading: " + std::string(strerror(errno))));
   }
+
+  init();
+}
+
+PNGReader::PNGReader(const PNGReader &other) {
+  imageHandle = fdopen(dup(fileno(other.imageHandle)), "r");
+
+  init();
+}
+
+void PNGReader::init() {
+  png_byte header[8]; // Check header
+  png_uint_32 width, height;
+  int type, interlace, comp, filter, _bitDepth;
 
   if (fread(header, 1, 8, imageHandle) != 8 || !png_check_sig(header, 8)) {
     logger::error("Not a PNG file\n");
@@ -154,7 +202,7 @@ PNGReader::PNGReader(const std::filesystem::path file) {
   pngInfoPtr = NULL;
 
   if (pngPtr == NULL || error_callback()) {
-    logger::error("Error reading {}\n", file.c_str());
+    logger::error("Error reading file\n");
     return;
   }
 
@@ -168,7 +216,7 @@ PNGReader::PNGReader(const std::filesystem::path file) {
   png_uint_32 ret = png_get_IHDR(pngPtr, pngInfoPtr, &width, &height,
                                  &_bitDepth, &type, &interlace, &comp, &filter);
   if (ret == 0) {
-    logger::error("Error getting IDHR block of file {}\n", file.c_str());
+    logger::error("Error getting IDHR block of file\n");
     png_destroy_read_struct(&pngPtr, &pngInfoPtr, NULL);
     return;
   }
@@ -177,39 +225,10 @@ PNGReader::PNGReader(const std::filesystem::path file) {
   _width = width;
   _height = height;
 
-  switch (type) {
-  case PNG_COLOR_TYPE_GRAY_ALPHA:
-    _type = GRAYSCALEALPHA;
-    _bytesPerPixel = 2;
-    break;
+  set_type(type);
 
-  case PNG_COLOR_TYPE_GRAY:
-    _type = GRAYSCALE;
-    _bytesPerPixel = 1;
-    break;
-
-  case PNG_COLOR_TYPE_PALETTE:
-    _type = PALETTE;
-    _bytesPerPixel = 1;
-    break;
-
-  case PNG_COLOR_TYPE_RGB:
-    _type = RGB;
-    _bytesPerPixel = 3;
-    break;
-
-  case PNG_COLOR_TYPE_RGBA:
-    _type = RGBA;
-    _bytesPerPixel = 4;
-    break;
-
-  default:
-    _type = UNKNOWN;
-    _bytesPerPixel = 0;
-  }
-
-  logger::debug("Opened PNG file {}: size is {}x{}, {}bpp\n", file.c_str(),
-                get_width(), get_height(), _bytesPerPixel);
+  logger::debug("Opened PNG file: size is {}x{}, {}bpp\n", get_width(),
+                get_height(), 8 * _bytesPerPixel);
 }
 
 uint32_t PNGReader::getLine(uint8_t *buffer, size_t size) {

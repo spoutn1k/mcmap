@@ -120,6 +120,46 @@ struct Coordinates {
     for (auto fragment : fragments)
       logger::info(" - {}\n", fragment.to_string());
   }
+
+  // The following methods are used to get the position of the map in an image
+  // made by another (englobing) map, called the referential
+
+  inline Integer offsetX(const Coordinates<Integer> &referential) const {
+    // This formula is thought around the top corner' position.
+    //
+    // The top corner's postition of the sub-map is influenced by its distance
+    // to the full map's top corner => we compare the minX and minZ coordinates
+    //
+    // From there, the map's top corner is sizeZ pizels from the edge, and the
+    // sub-canvasses' edge is at sizeZ' pixels from its top corner.
+    //
+    // By adding up those elements we get the delta between the edge of the full
+    // image and the edge of the partial image.
+    Coordinates<Integer> oriented = this->orient(Orientation::NW);
+
+    return 2 * (referential.sizeZ() - oriented.sizeZ() -
+                (referential.minX - oriented.minX) +
+                (referential.minZ - oriented.minZ));
+  }
+
+  inline Integer offsetY(const Coordinates<Integer> &referential) const {
+    // This one is simpler, the vertical distance being equal to the distance
+    // between top corners.
+    Coordinates<Integer> oriented = this->orient(Orientation::NW);
+
+    return oriented.minX - referential.minX + oriented.minZ - referential.minZ;
+  }
+
+  Coordinates<Integer> &operator+=(const Coordinates<Integer> &other) {
+    minX = std::min(other.minX, minX);
+    minZ = std::min(other.minZ, minZ);
+    maxX = std::max(other.maxX, maxX);
+    maxZ = std::max(other.maxZ, maxZ);
+    minY = std::min(other.minY, minY);
+    maxY = std::max(other.maxY, maxY);
+
+    return *this;
+  }
 };
 
 void splitCoords(const Coordinates<int32_t> &original,

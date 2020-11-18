@@ -1,24 +1,83 @@
-/**
- * This file contains functions to draw blocks to a png file
- */
-
 #include "./canvas.h"
+#include "VERSION"
 #include "fmt/color.h"
 #include "png.h"
+#include <vector>
 
-//   ____                _                   _
-//  / ___|___  _ __  ___| |_ _ __ _   _  ___| |_ ___  _ __ ___
-// | |   / _ \| '_ \/ __| __| '__| | | |/ __| __/ _ \| '__/ __|
-// | |__| (_) | | | \__ \ |_| |  | |_| | (__| || (_) | |  \__ \.
-//  \____\___/|_| |_|___/\__|_|   \__,_|\___|\__\___/|_|  |___/
+size_t Canvas::_get_line(const uint8_t *data, uint8_t *buffer, size_t bufSize,
+                         uint64_t y) const {
+  const uint8_t *start = data + y * width() * BYTESPERPIXEL;
+  uint8_t tmpPixel[4];
 
-IsometricCanvas::IsometricCanvas() {
-  // This is a legacy setting, changing how the map is drawn. It can be 2 or
-  // 3; it means that a block is drawn with a 2 or 3 pixel offset over the
-  // block under it. This changes the orientation of the map: but it totally
-  // changes the drawing of special blocks, and as no special cases can be
-  // made easily, I set it to 3 for now.
-  heightOffset = 3;
+  if (y > height())
+    return 0;
+
+  size_t boundary = std::min(bufSize, width());
+
+  for (size_t i = 0; i < boundary; i++) {
+    const uint8_t *data = start + i * BYTESPERPIXEL;
+
+    // If the subCanvas is empty here, or the canvas already has a pixel
+    if (!data[3] || (buffer + i * BYTESPERPIXEL)[3] == 0xff)
+      continue;
+
+    memcpy(tmpPixel, buffer + i * BYTESPERPIXEL, BYTESPERPIXEL);
+    memcpy(buffer + i * BYTESPERPIXEL, data, BYTESPERPIXEL);
+    blend(buffer + i * BYTESPERPIXEL, tmpPixel);
+  }
+
+  return boundary;
+}
+
+std::vector<uint8_t> read_bytes;
+
+size_t Canvas::_get_line(PNG::PNGReader *data, uint8_t *buffer, size_t bufSize,
+                         uint64_t y) const {
+  if (y > data->get_height()) {
+    logger::error("Invalid access to PNG image: line {}\n", y);
+    return 0;
+  }
+
+  size_t requested = std::min(bufSize, width() * data->_bytesPerPixel);
+
+  read_bytes.reserve(requested);
+  uint8_t tmpPixel[4];
+  data->getLine(&read_bytes[0], requested);
+
+  for (size_t i = 0; i < width(); i++) {
+    const uint8_t *read_pixel = &read_bytes[0] + i * BYTESPERPIXEL;
+
+    // If the subCanvas is empty here, or the canvas already has a pixel
+    if (!read_pixel[3] || (buffer + i * BYTESPERPIXEL)[3] == 0xff)
+      continue;
+
+    memcpy(tmpPixel, buffer + i * BYTESPERPIXEL, BYTESPERPIXEL);
+    memcpy(buffer + i * BYTESPERPIXEL, read_pixel, BYTESPERPIXEL);
+    blend(buffer + i * BYTESPERPIXEL, tmpPixel);
+  }
+
+  return requested;
+}
+
+size_t Canvas::_get_line(const std::vector<Canvas> &fragments, uint8_t *buffer,
+                         size_t size, uint64_t y) const {
+  size_t written = 0;
+
+  // Compose the line from all the subCanvasses that are on this line
+  for (auto &pos : fragments) {
+    if (y >= uint64_t(pos.map.offsetY(map)) &&
+        y < uint64_t(pos.map.offsetY(map) + pos.height()))
+      written += pos.getLine(buffer + pos.map.offsetX(map) * BYTESPERPIXEL,
+                             size - pos.map.offsetX(map) * BYTESPERPIXEL,
+                             y - pos.map.offsetY(map));
+  }
+
+  return written;
+}
+
+std::string IsometricCanvas::to_string() const {
+  return fmt::format("Isometric Canvas of size {}x{}, for map {}", width,
+                     height, map.to_string());
 }
 
 void IsometricCanvas::setColors(const Colors::Palette &colors) {
@@ -55,9 +114,6 @@ void IsometricCanvas::setColors(const Colors::Palette &colors) {
 void IsometricCanvas::setMap(const Terrain::Coordinates &_map) {
   map = _map;
 
-  nXChunks = CHUNK(map.maxX) - CHUNK(map.minX) + 1;
-  nZChunks = CHUNK(map.maxZ) - CHUNK(map.minZ) + 1;
-
   sizeX = map.maxX - map.minX + 1;
   sizeZ = map.maxZ - map.minZ + 1;
 
@@ -81,7 +137,6 @@ void IsometricCanvas::setMap(const Terrain::Coordinates &_map) {
   }
 
   if (map.orientation == NE || map.orientation == SW) {
-    std::swap(nXChunks, nZChunks);
     std::swap(sizeX, sizeZ);
     std::swap(offsetX, offsetZ);
   }
@@ -93,11 +148,12 @@ void IsometricCanvas::setMap(const Terrain::Coordinates &_map) {
   // length on both the horizontal axis times 2.
   width = (sizeX + sizeZ) * 2;
 
-  height = sizeX + sizeZ + (map.maxY - map.minY + 1) * heightOffset - 1;
+  height = sizeX + sizeZ + (map.maxY - map.minY + 1) * BLOCKHEIGHT - 1;
 
-  size = uint64_t(width * height * BYTESPERPIXEL);
-  bytesBuffer = new uint8_t[size];
-  memset(bytesBuffer, 0, size);
+  size_t size = size_t(width * height * BYTESPERPIXEL);
+  drawing.bytes_buffer->reserve(size);
+
+  memset(&(*drawing.bytes_buffer)[0], 0, size);
 }
 
 // ____                     _
@@ -137,6 +193,14 @@ void IsometricCanvas::orientChunk(int32_t &x, int32_t &z) {
 }
 
 void IsometricCanvas::renderTerrain(Terrain::Data &world) {
+  uint32_t nXChunks, nZChunks;
+
+  nXChunks = CHUNK(map.maxX - map.minX) + 1;
+  nZChunks = CHUNK(map.maxZ - map.minZ) + 1;
+
+  if (map.orientation == NE || map.orientation == SW)
+    std::swap(nXChunks, nZChunks);
+
   // world is supposed to have the SAME set of coordinates as the canvas
   for (chunkX = 0; chunkX < nXChunks; chunkX++) {
     for (chunkZ = 0; chunkZ < nZChunks; chunkZ++) {
@@ -413,7 +477,7 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
       - sizeX -
       sizeZ
       // Finally move that position up y blocks
-      - (y - map.minY) * heightOffset;
+      - (y - map.minY) * BLOCKHEIGHT;
 
   if (bmpPosX > width - 1)
     throw std::range_error(fmt::format("Invalid x: {}/{} (Block {}.{}.{})",
@@ -462,130 +526,41 @@ const Colors::Block *IsometricCanvas::nextBlock() {
   return sections[sectionY].colors[index];
 }
 
-size_t IsometricCanvas::getLine(uint8_t *buffer, size_t bufSize,
-                                uint64_t y) const {
-  uint8_t *start = bytesBuffer + y * width * BYTESPERPIXEL;
-  uint8_t tmpPixel[4];
-
-  if (y > height)
-    return 0;
-
-  size_t boundary = std::min(bufSize, size_t(width));
-
-  for (size_t i = 0; i < boundary; i++) {
-    const uint8_t *data = start + i * BYTESPERPIXEL;
-
-    // If the subCanvas is empty here, or the canvas already has a pixel
-    if (!data[3] || (buffer + i * BYTESPERPIXEL)[3] == 0xff)
-      continue;
-
-    memcpy(tmpPixel, buffer + i * BYTESPERPIXEL, BYTESPERPIXEL);
-    memcpy(buffer + i * BYTESPERPIXEL, data, BYTESPERPIXEL);
-    blend(buffer + i * BYTESPERPIXEL, tmpPixel);
-  }
-
-  return boundary;
-}
-
-bool compare(const CompositeCanvas::Position &p1,
-             const CompositeCanvas::Position &p2) {
+bool compare(const Canvas &p1, const Canvas &p2) {
   // This method is used to order a list of maps. The ordering is done by the
   // distance to the top-right corner of the map in North Western orientation.
-  Terrain::Coordinates c1 = p1.subCanvas->map.orient(Orientation::NW);
-  Terrain::Coordinates c2 = p2.subCanvas->map.orient(Orientation::NW);
+  Terrain::Coordinates c1 = p1.map.orient(Orientation::NW);
+  Terrain::Coordinates c2 = p2.map.orient(Orientation::NW);
 
   return (c1.minX + c1.minZ) > (c2.minX + c2.minZ);
 }
 
-CompositeCanvas::CompositeCanvas(const std::vector<IsometricCanvas> &parts) {
+CompositeCanvas::CompositeCanvas(std::vector<Canvas> &&parts)
+    : Canvas(std::move(parts)) {
   // Composite Canvas initialization
-  // From a set of Isometric Canvasses, create a virtual sparse canvas to
+  // From a set of canvasses, create a virtual sparse canvas to
   // compose an image
 
-  // First, determine the size of the virtual map
-  // All the maps are oriented as NW to simplify the process
-  map.setUndefined();
-  for (auto &canvas : parts) {
-    Terrain::Coordinates oriented = canvas.map.orient(Orientation::NW);
-    map.minX = std::min(oriented.minX, map.minX);
-    map.minZ = std::min(oriented.minZ, map.minZ);
-    map.maxX = std::max(oriented.maxX, map.maxX);
-    map.maxZ = std::max(oriented.maxZ, map.maxZ);
-    map.minY = std::min(oriented.minY, map.minY);
-    map.maxY = std::max(oriented.maxY, map.maxY);
-  }
-
-  // We deduce the image's size from the map
-  width = (map.sizeX() + map.sizeZ()) * 2;
-  height = map.sizeX() + map.sizeZ() + (map.maxY - map.minY + 1) * 3 - 1;
-
-  // This vector holds positions, describing where to draw each canvas onto the
-  // final image
-  subCanvasses = std::vector<Position>(parts.size());
-
-  // Having the coordinates of the full map, we can determine the offset of each
-  // sub-map and thus the offset in the final image
-  for (std::vector<IsometricCanvas>::size_type i = 0; i < parts.size(); i++) {
-    int64_t oX, oY;
-    const IsometricCanvas &canvas = parts[i];
-    // The following is possible because all the maps are oriented in the same
-    // direction
-    Terrain::Coordinates oriented = canvas.map.orient(Orientation::NW);
-
-    // This formula is thought around the top corner' position.
-    //
-    // The top corner's postition of the sub-map is influenced by its distance
-    // to the full map's top corner => we compare the minX and minZ coordinates
-    //
-    // From there, the map's top corner is sizeZ pizels from the edge, and the
-    // sub-canvasses' edge is at sizeZ' pixels from its top corner.
-    //
-    // By adding up those elements we get the delta between the edge of the full
-    // image and the edge of the partial image.
-    oX = 2 * (map.sizeZ() - oriented.sizeZ() - (map.minX - oriented.minX) +
-              (map.minZ - oriented.minZ));
-
-    // This one is simpler, the vertical distance being equal to the distance
-    // between top corners.
-    oY = oriented.minX - map.minX + oriented.minZ - map.minZ;
-
-    // Add this to the list of positions
-    subCanvasses[i] = {oX, oY, &canvas};
-  }
-
-  // Sort the positions, to render first the canvasses far from the edge to
+  // Sort the canvasses, to render first the canvasses far from the edge to
   // avoid overwriting too many blocks.
-  std::sort(subCanvasses.begin(), subCanvasses.end(), compare);
+  std::sort(drawing.canvas_buffer->begin(), drawing.canvas_buffer->end(),
+            compare);
 }
 
-std::string CompositeCanvas::to_string() {
+std::string CompositeCanvas::to_string() const {
   std::string buffer =
-      fmt::format("Composite Canvas of size {}x{}\n", width, height);
-  buffer.append(fmt::format("For map {}\n", map.to_string()));
-  buffer.append("Composed of maps:");
+      fmt::format("Composite Canvas of size {}x{}, for map {}\n", width(),
+                  height(), map.to_string());
+  buffer.append(
+      fmt::format("Composed of {} maps:", drawing.canvas_buffer->size()));
 
-  for (auto &position : subCanvasses)
-    buffer.append(fmt::format(
-        "\n- {}, offset by x{} y{}, oriented as {}",
-        position.subCanvas->map.to_string(), position.offsetX, position.offsetY,
-        position.subCanvas->map.orient(Orientation::NW).to_string()));
+  for (auto &canvas : *drawing.canvas_buffer)
+    buffer.append(fmt::format("\n- {}, offset by x{} y{}, oriented as {}",
+                              canvas.to_string(), canvas.map.offsetX(map),
+                              canvas.map.offsetY(map),
+                              canvas.map.orient(Orientation::NW).to_string()));
 
   return buffer;
-}
-
-size_t CompositeCanvas::getLine(uint8_t *buffer, size_t size,
-                                uint64_t y) const {
-  size_t written = 0;
-
-  // Compose the line from all the subCanvasses that are on this line
-  for (auto &pos : subCanvasses) {
-    if (y < uint64_t(pos.offsetY + pos.subCanvas->height))
-      written += pos.subCanvas->getLine(buffer + pos.offsetX * BYTESPERPIXEL,
-                                        size - pos.offsetX * BYTESPERPIXEL,
-                                        y - pos.offsetY);
-  }
-
-  return written;
 }
 
 bool Canvas::save(const std::filesystem::path file,
@@ -593,21 +568,26 @@ bool Canvas::save(const std::filesystem::path file,
   // Write the buffer to file
   PNG::PNGWriter output(file);
 
-  output.set_width(width);
-  output.set_height(height);
+  output.set_width(width());
+  output.set_height(height());
   output.set_padding(padding);
 
-  if (!output.create()) {
+  PNG::Comments comments = {
+      {"Software", VERSION},
+      {"Coordinates", map.to_string()},
+  };
+
+  if (!output.create(comments)) {
     logger::error("Error saving to {}\n", file.c_str());
     return false;
   }
 
-  size_t size = width * BYTESPERPIXEL;
+  size_t size = width() * BYTESPERPIXEL;
   uint8_t *buffer = output.getBuffer();
 
   output.pad();
 
-  for (size_t y = 0; y < height; y++) {
+  for (size_t y = 0; y < height(); y++) {
     memset(buffer, 0, size);
     getLine(buffer, size, y);
     output.writeLine();

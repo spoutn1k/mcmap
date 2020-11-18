@@ -3,12 +3,22 @@
 
 #include <filesystem>
 #include <logger.hpp>
+#include <map>
 #include <png.h>
 #include <string>
 
 namespace PNG {
 
-enum ColorType { RGB, RGBA, GRAYSCALE, GRAYSCALEALPHA, PALETTE, UNKNOWN };
+typedef std::map<std::string, std::string> Comments;
+
+enum ColorType {
+  RGB = PNG_COLOR_TYPE_RGB,
+  RGBA = PNG_COLOR_TYPE_RGB_ALPHA,
+  GRAYSCALE = PNG_COLOR_TYPE_GRAY,
+  GRAYSCALEALPHA = PNG_COLOR_TYPE_GRAY_ALPHA,
+  PALETTE = PNG_COLOR_TYPE_PALETTE,
+  UNKNOWN = -1
+};
 
 struct PNG {
   FILE *imageHandle;
@@ -25,6 +35,8 @@ struct PNG {
     if (imageHandle)
       fclose(imageHandle);
   }
+
+  ColorType set_type(int);
 
   void set_padding(uint8_t padding) { _padding = padding; }
 
@@ -45,7 +57,9 @@ struct PNGWriter : public PNG {
 
   uint8_t *buffer;
 
-  bool create();
+  void set_text(const Comments &);
+
+  bool create(const Comments & = {});
 
   uint8_t *getBuffer();
   uint32_t writeLine();
@@ -57,7 +71,9 @@ private:
 
 struct PNGReader : public PNG {
   PNGReader(const std::filesystem::path);
+  PNGReader(const PNGReader &other);
 
+  void init();
   uint32_t getLine(uint8_t *, size_t);
 
 private:
