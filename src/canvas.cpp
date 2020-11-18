@@ -528,12 +528,11 @@ bool compare(const CompositeCanvas::Position &p1,
 
 CompositeCanvas::CompositeCanvas(const std::vector<Canvas> &parts) {
   // Composite Canvas initialization
-  // From a set of Isometric Canvasses, create a virtual sparse canvas to
+  // From a set of canvasses, create a virtual sparse canvas to
   // compose an image
 
   // First, determine the size of the virtual map
   // All the maps are oriented as NW to simplify the process
-  map.setUndefined();
   for (auto &canvas : parts) {
     Terrain::Coordinates oriented = canvas.map.orient(Orientation::NW);
     map.minX = std::min(oriented.minX, map.minX);
@@ -556,31 +555,11 @@ CompositeCanvas::CompositeCanvas(const std::vector<Canvas> &parts) {
   // Having the coordinates of the full map, we can determine the offset of each
   // sub-map and thus the offset in the final image
   for (std::vector<IsometricCanvas>::size_type i = 0; i < parts.size(); i++) {
-    int64_t oX, oY;
     const Canvas &canvas = parts[i];
-    // The following is possible because all the maps are oriented in the same
-    // direction
-    Terrain::Coordinates oriented = canvas.map.orient(Orientation::NW);
-
-    // This formula is thought around the top corner' position.
-    //
-    // The top corner's postition of the sub-map is influenced by its distance
-    // to the full map's top corner => we compare the minX and minZ coordinates
-    //
-    // From there, the map's top corner is sizeZ pizels from the edge, and the
-    // sub-canvasses' edge is at sizeZ' pixels from its top corner.
-    //
-    // By adding up those elements we get the delta between the edge of the full
-    // image and the edge of the partial image.
-    oX = 2 * (map.sizeZ() - oriented.sizeZ() - (map.minX - oriented.minX) +
-              (map.minZ - oriented.minZ));
-
-    // This one is simpler, the vertical distance being equal to the distance
-    // between top corners.
-    oY = oriented.minX - map.minX + oriented.minZ - map.minZ;
 
     // Add this to the list of positions
-    subCanvasses[i] = {oX, oY, &canvas};
+    subCanvasses[i] = {canvas.map.offsetX(map), canvas.map.offsetY(map),
+                       &canvas};
   }
 
   // Sort the positions, to render first the canvasses far from the edge to

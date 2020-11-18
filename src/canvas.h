@@ -117,7 +117,8 @@ struct Canvas {
   BufferType type;
   DrawingBuffer drawing;
 
-  Canvas() : drawing() {}
+  Canvas() : drawing() { map.setUndefined(); }
+
   Canvas(BufferType _type) : type(_type), drawing(_type) {}
   Canvas(const Terrain::Coordinates &map, const std::filesystem::path &file)
       : map(map), type(IMAGE), drawing(file) {
