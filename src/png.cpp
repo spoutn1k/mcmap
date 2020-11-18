@@ -10,9 +10,20 @@
 
 namespace PNG {
 
-PNG::PNG() : imageHandle(nullptr) {
+PNG::PNG(const std::filesystem::path &file) : file(file), imageHandle(nullptr) {
   set_type(UNKNOWN);
-  _height = _width = _padding = 0;
+  _line = _height = _width = _padding = 0;
+  pngPtr = NULL;
+  pngInfoPtr = NULL;
+}
+
+void PNG::_close() {
+  if (imageHandle) {
+    fclose(imageHandle);
+    imageHandle = nullptr;
+  }
+
+  _line = 0;
 }
 
 bool PNG::error_callback() {
@@ -20,7 +31,6 @@ bool PNG::error_callback() {
   // something goes wrong in the code below
   if (setjmp(png_jmpbuf(pngPtr))) {
     logger::error("libpng encountered an error\n");
-    png_destroy_write_struct(&pngPtr, &pngInfoPtr);
     return true;
   }
 
@@ -62,26 +72,25 @@ ColorType PNG::set_type(int type) {
   return _type;
 }
 
-PNGWriter::PNGWriter(const std::filesystem::path file) : super::PNG() {
+PNGWriter::PNGWriter(const std::filesystem::path &file) : super::PNG(file) {
   buffer = nullptr;
   set_type(RGBA);
-  super::imageHandle = fopen(file.c_str(), "wb");
-
-  if (super::imageHandle == nullptr) {
-    throw(std::runtime_error("Error opening '" + file.string() +
-                             "' for writing: " + std::string(strerror(errno))));
-  }
 }
 
 PNGWriter::~PNGWriter() {
-  png_write_end(pngPtr, NULL);
-  png_destroy_write_struct(&pngPtr, &pngInfoPtr);
-
   if (buffer)
     delete[] buffer;
 }
 
-void PNGWriter::set_text(const Comments &comments) {
+void PNGWriter::_close() {
+  png_write_end(pngPtr, NULL);
+  png_destroy_write_struct(&pngPtr, &pngInfoPtr);
+}
+
+void PNGWriter::set_text(const Comments &_comments) { comments = _comments; }
+
+void write_text(png_structp pngPtr, png_infop pngInfoPtr,
+                const Comments &comments) {
   std::vector<png_text> text(comments.size());
   size_t index = 0;
 
@@ -97,10 +106,15 @@ void PNGWriter::set_text(const Comments &comments) {
   png_set_text(pngPtr, pngInfoPtr, &text[0], text.size());
 }
 
-bool PNGWriter::create(const Comments &comments) {
+void PNGWriter::_open() {
+  if (!(super::imageHandle = fopen(file.c_str(), "wb"))) {
+    throw(std::runtime_error("Error opening '" + file.string() +
+                             "' for writing: " + std::string(strerror(errno))));
+  }
+
   if (!(get_width() || get_height())) {
     logger::warn("Nothing to output: canvas is empty !\n");
-    return false;
+    return;
   }
 
   logger::debug("Image dimensions are {}x{}, {}bpp, {}MiB\n", get_width(),
@@ -113,22 +127,22 @@ bool PNGWriter::create(const Comments &comments) {
   pngPtr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 
   if (error_callback())
-    return false;
+    return;
 
   if (pngPtr == NULL) {
-    return false;
+    return;
   }
 
   pngInfoPtr = png_create_info_struct(pngPtr);
 
   if (pngInfoPtr == NULL) {
     png_destroy_write_struct(&pngPtr, NULL);
-    return false;
+    return;
   }
 
   png_init_io(pngPtr, imageHandle);
 
-  set_text(comments);
+  write_text(pngPtr, pngInfoPtr, comments);
 
   // The png file format works by having blocks piled up in a certain order.
   // Check out http://www.libpng.org/pub/png/book/chapter11.html for more
@@ -141,14 +155,14 @@ bool PNGWriter::create(const Comments &comments) {
 
   png_write_info(pngPtr, pngInfoPtr);
 
-  return true;
+  return;
 }
 
 void PNGWriter::pad() {
   getBuffer();
   memset(buffer, 0, row_size());
   for (size_t k = 0; k < _padding; k++)
-    writeLine();
+    png_write_row(pngPtr, (png_bytep)buffer);
 }
 
 uint8_t *PNGWriter::getBuffer() {
@@ -161,52 +175,61 @@ uint8_t *PNGWriter::getBuffer() {
 }
 
 uint32_t PNGWriter::writeLine() {
+  if (!_line++) {
+    _open();
+    pad();
+  }
+
   png_write_row(pngPtr, (png_bytep)buffer);
+
+  if (_line == _height) {
+    pad();
+    _close();
+  }
 
   return row_size();
 }
 
-PNGReader::PNGReader(const std::filesystem::path file) {
-  imageHandle = fopen(file.c_str(), "rb");
+PNGReader::PNGReader(const std::filesystem::path &file) : PNG(file) {
+  _open();
+  _close();
+}
 
-  if (imageHandle == nullptr) {
+PNGReader::PNGReader(const PNGReader &other) : PNG(other.file) {}
+
+PNGReader::~PNGReader() {}
+
+void PNGReader::_close() {
+  png_destroy_read_struct(&pngPtr, &pngInfoPtr, NULL);
+  super::_close();
+}
+
+void PNGReader::_open() {
+  if (!(super::imageHandle = fopen(file.c_str(), "rb"))) {
     throw(std::runtime_error("Error opening '" + file.string() +
                              "' for reading: " + std::string(strerror(errno))));
   }
 
-  init();
-}
-
-PNGReader::PNGReader(const PNGReader &other) {
-  imageHandle = fdopen(dup(fileno(other.imageHandle)), "r");
-
-  init();
-}
-
-void PNGReader::init() {
-  png_byte header[8]; // Check header
-  png_uint_32 width, height;
-  int type, interlace, comp, filter, _bitDepth;
-
+  // Check the validity of the header
+  png_byte header[8];
   if (fread(header, 1, 8, imageHandle) != 8 || !png_check_sig(header, 8)) {
-    logger::error("Not a PNG file\n");
+    logger::error("PNGReader: File {} is not a PNG\n", file.string());
     return;
   }
 
-  // Check the validity of the header
   pngPtr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-
   // Tell libpng the file's header has been handled
   png_set_sig_bytes(pngPtr, 8);
 
-  pngInfoPtr = NULL;
-
   if (pngPtr == NULL || error_callback()) {
-    logger::error("Error reading file\n");
+    logger::error("PNGReader: Error reading {}\n", file.string());
     return;
   }
 
   pngInfoPtr = png_create_info_struct(pngPtr);
+
+  png_uint_32 width, height;
+  int type, interlace, comp, filter, _bitDepth;
 
   png_init_io(pngPtr, imageHandle);
 
@@ -227,11 +250,15 @@ void PNGReader::init() {
 
   set_type(type);
 
-  logger::debug("Opened PNG file: size is {}x{}, {}bpp\n", get_width(),
+  logger::debug("Reading PNG file: size is {}x{}, {}bpp\n", get_width(),
                 get_height(), 8 * _bytesPerPixel);
 }
 
 uint32_t PNGReader::getLine(uint8_t *buffer, size_t size) {
+  // Open and initialize if this is the first read
+  if (!_line++)
+    _open();
+
   if (size < get_width()) {
     logger::error("Buffer too small");
     return 0;
@@ -240,6 +267,9 @@ uint32_t PNGReader::getLine(uint8_t *buffer, size_t size) {
   png_bytep row_pointer = (png_bytep)buffer;
 
   png_read_row(pngPtr, row_pointer, NULL);
+
+  if (_line == _height)
+    _close();
 
   return get_width();
 }

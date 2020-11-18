@@ -89,23 +89,16 @@ bool Canvas::save(const std::filesystem::path file,
       {"Coordinates", map.to_string()},
   };
 
-  if (!output.create(comments)) {
-    logger::error("Error saving to {}\n", file.c_str());
-    return false;
-  }
+  output.set_text(comments);
 
   size_t size = width() * BYTESPERPIXEL;
   uint8_t *buffer = output.getBuffer();
-
-  output.pad();
 
   for (size_t y = 0; y < height(); y++) {
     memset(buffer, 0, size);
     getLine(buffer, size, y);
     output.writeLine();
   }
-
-  output.pad();
 
   return true;
 }
