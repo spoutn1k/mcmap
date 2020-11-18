@@ -167,16 +167,26 @@ uint32_t PNGWriter::writeLine() {
 }
 
 PNGReader::PNGReader(const std::filesystem::path file) {
-  png_byte header[8]; // Check header
-  png_uint_32 width, height;
-  int type, interlace, comp, filter, _bitDepth;
-
   imageHandle = fopen(file.c_str(), "rb");
 
   if (imageHandle == nullptr) {
     throw(std::runtime_error("Error opening '" + file.string() +
                              "' for reading: " + std::string(strerror(errno))));
   }
+
+  init();
+}
+
+PNGReader::PNGReader(const PNGReader &other) {
+  imageHandle = fdopen(dup(fileno(other.imageHandle)), "r");
+
+  init();
+}
+
+void PNGReader::init() {
+  png_byte header[8]; // Check header
+  png_uint_32 width, height;
+  int type, interlace, comp, filter, _bitDepth;
 
   if (fread(header, 1, 8, imageHandle) != 8 || !png_check_sig(header, 8)) {
     logger::error("Not a PNG file\n");
@@ -192,7 +202,7 @@ PNGReader::PNGReader(const std::filesystem::path file) {
   pngInfoPtr = NULL;
 
   if (pngPtr == NULL || error_callback()) {
-    logger::error("Error reading {}\n", file.c_str());
+    logger::error("Error reading file\n");
     return;
   }
 
@@ -206,7 +216,7 @@ PNGReader::PNGReader(const std::filesystem::path file) {
   png_uint_32 ret = png_get_IHDR(pngPtr, pngInfoPtr, &width, &height,
                                  &_bitDepth, &type, &interlace, &comp, &filter);
   if (ret == 0) {
-    logger::error("Error getting IDHR block of file {}\n", file.c_str());
+    logger::error("Error getting IDHR block of file\n");
     png_destroy_read_struct(&pngPtr, &pngInfoPtr, NULL);
     return;
   }
@@ -217,8 +227,8 @@ PNGReader::PNGReader(const std::filesystem::path file) {
 
   set_type(type);
 
-  logger::debug("Opened PNG file {}: size is {}x{}, {}bpp\n", file.c_str(),
-                get_width(), get_height(), 8 * _bytesPerPixel);
+  logger::debug("Opened PNG file: size is {}x{}, {}bpp\n", get_width(),
+                get_height(), 8 * _bytesPerPixel);
 }
 
 uint32_t PNGReader::getLine(uint8_t *buffer, size_t size) {

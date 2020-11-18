@@ -71,7 +71,9 @@ private:
 
 struct PNGReader : public PNG {
   PNGReader(const std::filesystem::path);
+  PNGReader(const PNGReader &other);
 
+  void init();
   uint32_t getLine(uint8_t *, size_t);
 
 private:
