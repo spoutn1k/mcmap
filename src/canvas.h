@@ -6,6 +6,7 @@
 #include "./section.h"
 #include "./worldloader.h"
 #include <filesystem>
+#include <vector>
 
 #define CHANSPERPIXEL 4
 #define BYTESPERCHAN 1
@@ -52,6 +53,9 @@ struct Canvas {
       return _get_line(&drawing.bytes_buffer->operator[](0), buffer, size,
                        line);
 
+    case CANVAS:
+      return _get_line(*drawing.canvas_buffer, buffer, size, line);
+
     case IMAGE:
       return _get_line(drawing.image_buffer, buffer, size, line);
 
@@ -62,6 +66,8 @@ struct Canvas {
 
   size_t _get_line(const uint8_t *, uint8_t *, size_t, uint64_t) const;
   size_t _get_line(PNG::PNGReader *, uint8_t *, size_t, uint64_t) const;
+  size_t _get_line(const std::vector<Canvas> &, uint8_t *, size_t,
+                   uint64_t) const;
 
   bool save(const std::filesystem::path, uint8_t) const;
 
@@ -141,13 +147,24 @@ struct Canvas {
 
   Canvas(BufferType _type) : type(_type), drawing(_type) {}
 
-  Canvas(std::vector<Canvas> &&fragments) : drawing(std::move(fragments)) {}
+  Canvas(std::vector<Canvas> &&fragments) : drawing(std::move(fragments)) {
+    type = CANVAS;
+
+    // Determine the size of the virtual map
+    // All the maps are oriented as NW to simplify the process
+    for (auto &fragment : *drawing.canvas_buffer) {
+      Terrain::Coordinates oriented = fragment.map.orient(Orientation::NW);
+      map += oriented;
+    }
+  }
 
   Canvas(const Terrain::Coordinates &map, const std::filesystem::path &file)
       : map(map), type(IMAGE), drawing(file) {
     assert(width() == drawing.image_buffer->get_width());
     assert(height() == drawing.image_buffer->get_height());
   };
+
+  Canvas(Canvas &&other) { *this = std::move(other); }
 
   Canvas &operator=(Canvas &&other) {
     map = other.map;
@@ -180,6 +197,12 @@ struct Canvas {
   }
 
   ~Canvas() { drawing.destroy(type); }
+
+  void swap(Canvas &a, Canvas &b) {
+    Canvas c(std::move(a));
+    a = std::move(b);
+    b = std::move(c);
+  }
 };
 
 struct ImageCanvas : Canvas {
@@ -288,18 +311,7 @@ struct CompositeCanvas : public Canvas {
   // |     +------------+|
   // +-------------------+
 
-  struct Position {
-    // Struct holding metadata about where the subCanvas is to be drawn.
-    int64_t offsetX, offsetY; // Offsets to draw the image
-    const Canvas *subCanvas;  // Canvas to draw
-  };
-
-  std::vector<Position>
-      subCanvasses; // Sorted list of Positions to draw the final image
-
-  CompositeCanvas(const std::vector<Canvas> &);
-
-  size_t getLine(uint8_t *, size_t, uint64_t) const override;
+  CompositeCanvas(std::vector<Canvas> &&);
 
   std::string to_string() const override;
 };

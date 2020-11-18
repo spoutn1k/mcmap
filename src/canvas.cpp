@@ -59,6 +59,22 @@ size_t Canvas::_get_line(PNG::PNGReader *data, uint8_t *buffer, size_t bufSize,
   return requested;
 }
 
+size_t Canvas::_get_line(const std::vector<Canvas> &fragments, uint8_t *buffer,
+                         size_t size, uint64_t y) const {
+  size_t written = 0;
+
+  // Compose the line from all the subCanvasses that are on this line
+  for (auto &pos : fragments) {
+    if (y >= uint64_t(pos.map.offsetY(map)) &&
+        y < uint64_t(pos.map.offsetY(map) + pos.height()))
+      written += pos.getLine(buffer + pos.map.offsetX(map) * BYTESPERPIXEL,
+                             size - pos.map.offsetX(map) * BYTESPERPIXEL,
+                             y - pos.map.offsetY(map));
+  }
+
+  return written;
+}
+
 std::string IsometricCanvas::to_string() const {
   return fmt::format("Isometric Canvas of size {}x{}, for map {}", width,
                      height, map.to_string());
@@ -510,90 +526,41 @@ const Colors::Block *IsometricCanvas::nextBlock() {
   return sections[sectionY].colors[index];
 }
 
-/*bool compare(const Canvas &p1, const Canvas &p2) {
+bool compare(const Canvas &p1, const Canvas &p2) {
   // This method is used to order a list of maps. The ordering is done by the
   // distance to the top-right corner of the map in North Western orientation.
   Terrain::Coordinates c1 = p1.map.orient(Orientation::NW);
   Terrain::Coordinates c2 = p2.map.orient(Orientation::NW);
 
   return (c1.minX + c1.minZ) > (c2.minX + c2.minZ);
-}*/
-
-bool compare(const CompositeCanvas::Position &p1,
-             const CompositeCanvas::Position &p2) {
-  // This method is used to order a list of maps. The ordering is done by the
-  // distance to the top-right corner of the map in North Western orientation.
-  Terrain::Coordinates c1 = p1.subCanvas->map.orient(Orientation::NW);
-  Terrain::Coordinates c2 = p2.subCanvas->map.orient(Orientation::NW);
-
-  return (c1.minX + c1.minZ) > (c2.minX + c2.minZ);
 }
 
-CompositeCanvas::CompositeCanvas(const std::vector<Canvas> &parts) {
+CompositeCanvas::CompositeCanvas(std::vector<Canvas> &&parts)
+    : Canvas(std::move(parts)) {
   // Composite Canvas initialization
   // From a set of canvasses, create a virtual sparse canvas to
   // compose an image
 
-  // First, determine the size of the virtual map
-  // All the maps are oriented as NW to simplify the process
-  for (auto &canvas : parts) {
-    Terrain::Coordinates oriented = canvas.map.orient(Orientation::NW);
-    map.minX = std::min(oriented.minX, map.minX);
-    map.minZ = std::min(oriented.minZ, map.minZ);
-    map.maxX = std::max(oriented.maxX, map.maxX);
-    map.maxZ = std::max(oriented.maxZ, map.maxZ);
-    map.minY = std::min(oriented.minY, map.minY);
-    map.maxY = std::max(oriented.maxY, map.maxY);
-  }
-
-  // This vector holds positions, describing where to draw each canvas onto the
-  // final image
-  subCanvasses = std::vector<Position>(parts.size());
-
-  // Having the coordinates of the full map, we can determine the offset of each
-  // sub-map and thus the offset in the final image
-  for (std::vector<IsometricCanvas>::size_type i = 0; i < parts.size(); i++) {
-    const Canvas &canvas = parts[i];
-
-    // Add this to the list of positions
-    subCanvasses[i] = {canvas.map.offsetX(map), canvas.map.offsetY(map),
-                       &canvas};
-  }
-
-  // Sort the positions, to render first the canvasses far from the edge to
+  // Sort the canvasses, to render first the canvasses far from the edge to
   // avoid overwriting too many blocks.
-  std::sort(subCanvasses.begin(), subCanvasses.end(), compare);
+  std::sort(drawing.canvas_buffer->begin(), drawing.canvas_buffer->end(),
+            compare);
 }
 
 std::string CompositeCanvas::to_string() const {
   std::string buffer =
       fmt::format("Composite Canvas of size {}x{}, for map {}\n", width(),
                   height(), map.to_string());
-  buffer.append(fmt::format("Composed of {} maps:", subCanvasses.size()));
+  buffer.append(
+      fmt::format("Composed of {} maps:", drawing.canvas_buffer->size()));
 
-  for (auto &position : subCanvasses)
-    buffer.append(fmt::format(
-        "\n- {}, offset by x{} y{}, oriented as {}",
-        position.subCanvas->to_string(), position.offsetX, position.offsetY,
-        position.subCanvas->map.orient(Orientation::NW).to_string()));
+  for (auto &canvas : *drawing.canvas_buffer)
+    buffer.append(fmt::format("\n- {}, offset by x{} y{}, oriented as {}",
+                              canvas.to_string(), canvas.map.offsetX(map),
+                              canvas.map.offsetY(map),
+                              canvas.map.orient(Orientation::NW).to_string()));
 
   return buffer;
-}
-
-size_t CompositeCanvas::getLine(uint8_t *buffer, size_t size,
-                                uint64_t y) const {
-  size_t written = 0;
-
-  // Compose the line from all the subCanvasses that are on this line
-  for (auto &pos : subCanvasses) {
-    if (y >= uint64_t(pos.offsetY) &&
-        y < uint64_t(pos.offsetY + pos.subCanvas->height()))
-      written += pos.subCanvas->getLine(buffer + pos.offsetX * BYTESPERPIXEL,
-                                        size - pos.offsetX * BYTESPERPIXEL,
-                                        y - pos.offsetY);
-  }
-
-  return written;
 }
 
 bool Canvas::save(const std::filesystem::path file,
