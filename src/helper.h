@@ -121,6 +121,17 @@ struct Coordinates {
 
     return oriented.minX - referential.minX + oriented.minZ - referential.minZ;
   }
+
+  Coordinates<Integer> &operator+=(const Coordinates<Integer> &other) {
+    minX = std::min(other.minX, minX);
+    minZ = std::min(other.minZ, minZ);
+    maxX = std::max(other.maxX, maxX);
+    maxZ = std::max(other.maxZ, maxZ);
+    minY = std::min(other.minY, minY);
+    maxY = std::max(other.maxY, maxY);
+
+    return *this;
+  }
 };
 
 void splitCoords(const Coordinates<int32_t> &original,
