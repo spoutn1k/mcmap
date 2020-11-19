@@ -85,6 +85,8 @@ PNGWriter::~PNGWriter() {
 void PNGWriter::_close() {
   png_write_end(pngPtr, NULL);
   png_destroy_write_struct(&pngPtr, &pngInfoPtr);
+
+  super::_close();
 }
 
 void PNGWriter::set_text(const Comments &_comments) { comments = _comments; }

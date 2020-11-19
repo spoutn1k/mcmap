@@ -64,12 +64,13 @@ size_t Canvas::_get_line(const std::vector<Canvas> &fragments, uint8_t *buffer,
   size_t written = 0;
 
   // Compose the line from all the subCanvasses that are on this line
-  for (auto &pos : fragments) {
-    if (y >= uint64_t(pos.map.offsetY(map)) &&
-        y < uint64_t(pos.map.offsetY(map) + pos.height()))
-      written += pos.getLine(buffer + pos.map.offsetX(map) * BYTESPERPIXEL,
-                             size - pos.map.offsetX(map) * BYTESPERPIXEL,
-                             y - pos.map.offsetY(map));
+  for (auto &fragment : fragments) {
+    if (y >= uint64_t(fragment.map.offsetY(map)) &&
+        y < uint64_t(fragment.map.offsetY(map) + fragment.height()))
+      written +=
+          fragment.getLine(buffer + fragment.map.offsetX(map) * BYTESPERPIXEL,
+                           size - fragment.map.offsetX(map) * BYTESPERPIXEL,
+                           y - fragment.map.offsetY(map));
   }
 
   return written;
@@ -112,13 +113,14 @@ std::string Canvas::to_string() const {
   };
 
   std::string description =
-      fmt::format("{} canvas ({}x{})", names.at(type), width(), height());
+      fmt::format("{} canvas ({}x{}) ({})", names.at(type), width(), height(),
+                  map.to_string());
 
   switch (type) {
   case CANVAS: {
     for (auto &canvas : *drawing.canvas_buffer)
       description.append(
-          fmt::format("\n - {}, offset {}.{}", canvas.to_string(),
+          fmt::format("\n - {}, offset {}.{}, as {}", canvas.to_string(),
                       canvas.map.offsetX(map), canvas.map.offsetY(map),
                       canvas.map.orient(Orientation::NW).to_string()));
     break;
@@ -309,6 +311,7 @@ void IsometricCanvas::renderChunk(Terrain::Data &terrain) {
   beamNo = 0;
 
   chunk.erase("Level");
+  rendered++;
 }
 
 // A bit like the above: where do we begin rendering in the 16x16 horizontal

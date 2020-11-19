@@ -141,7 +141,7 @@ struct Canvas {
   BufferType type;
   DrawingBuffer drawing;
 
-  Canvas() : drawing() { map.setUndefined(); }
+  Canvas() : type(EMPTY), drawing() { map.setUndefined(); }
 
   Canvas(BufferType _type) : type(_type), drawing(_type) { map.setUndefined(); }
 
@@ -212,6 +212,7 @@ struct ImageCanvas : Canvas {
 // into a 2D position.
 struct IsometricCanvas : Canvas {
   bool shading;
+  size_t rendered;
 
   size_t width, height;
 
@@ -242,10 +243,9 @@ struct IsometricCanvas : Canvas {
 
   uint8_t orientedX, orientedZ, y;
 
-  IsometricCanvas() : Canvas(BYTES) {}
+  IsometricCanvas() : Canvas(BYTES), rendered(0) {}
 
-  ~IsometricCanvas() { // delete[] bytesBuffer;
-  }
+  inline bool empty() const { return !rendered; }
 
   void setColors(const Colors::Palette &);
   void setMap(const Terrain::Coordinates &);
