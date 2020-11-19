@@ -248,8 +248,8 @@ void IsometricCanvas::orientChunk(int32_t &x, int32_t &z) {
 void IsometricCanvas::renderTerrain(Terrain::Data &world) {
   uint32_t nXChunks, nZChunks;
 
-  nXChunks = CHUNK(map.maxX - map.minX) + 1;
-  nZChunks = CHUNK(map.maxZ - map.minZ) + 1;
+  nXChunks = CHUNK(map.maxX) - CHUNK(map.minX) + 1;
+  nZChunks = CHUNK(map.maxZ) - CHUNK(map.minZ) + 1;
 
   if (map.orientation == NE || map.orientation == SW)
     std::swap(nXChunks, nZChunks);
