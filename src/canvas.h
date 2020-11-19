@@ -39,12 +39,21 @@ struct Beam {
 // Canvas
 // Common features of both canvas types.
 struct Canvas {
+  enum BufferType { BYTES, CANVAS, IMAGE, EMPTY };
+
   Terrain::Coordinates map; // The coordinates describing the 3D map
 
-  inline size_t width() const { return (map.sizeX() + map.sizeZ()) * 2; }
+  inline size_t width() const {
+    if (type != EMPTY)
+      return (map.sizeX() + map.sizeZ()) * 2;
+    return 0;
+  }
+
   inline size_t height() const {
-    return map.sizeX() + map.sizeZ() + (map.maxY - map.minY + 1) * BLOCKHEIGHT -
-           1;
+    if (type != EMPTY)
+      return map.sizeX() + map.sizeZ() +
+             (map.maxY - map.minY + 1) * BLOCKHEIGHT - 1;
+    return 0;
   }
 
   virtual size_t getLine(uint8_t *buffer, size_t size, uint64_t line) const {
@@ -72,8 +81,6 @@ struct Canvas {
   bool save(const std::filesystem::path, uint8_t = 0) const;
 
   virtual std::string to_string() const;
-
-  enum BufferType { BYTES, CANVAS, IMAGE, EMPTY };
 
   union DrawingBuffer {
     long null_buffer;

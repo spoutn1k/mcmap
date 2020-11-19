@@ -67,8 +67,8 @@ struct Coordinates {
   }
 
   std::string to_string() const {
-    return fmt::format("x{} z{} y{} to x{} z{} y{}", minX, minZ, minY, maxX,
-                       maxZ, maxY);
+    return fmt::format("{}.{}.{} ~> {}.{}.{}", minX, minZ, minY, maxX, maxZ,
+                       maxY);
   }
 
   void rotate() {

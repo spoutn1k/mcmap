@@ -112,23 +112,17 @@ std::string Canvas::to_string() const {
       {Canvas::BufferType::EMPTY, "Void"},
   };
 
-  std::string description =
-      fmt::format("{} canvas ({}x{}) ({})", names.at(type), width(), height(),
-                  map.to_string());
+  std::string description = fmt::format("{} canvas", names.at(type));
 
-  switch (type) {
-  case CANVAS: {
+  if (type != EMPTY)
+    description.append(
+        fmt::format(" ({}x{} for {})", width(), height(), map.to_string()));
+
+  if (type == CANVAS)
     for (auto &canvas : *drawing.canvas_buffer)
       description.append(
-          fmt::format("\n - {}, offset {}.{}, as {}", canvas.to_string(),
-                      canvas.map.offsetX(map), canvas.map.offsetY(map),
-                      canvas.map.orient(Orientation::NW).to_string()));
-    break;
-  }
-
-  default:
-    break;
-  }
+          fmt::format("\n - {}, offset {}.{}", canvas.to_string(),
+                      canvas.map.offsetX(map), canvas.map.offsetY(map)));
 
   return description;
 }
