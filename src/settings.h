@@ -67,9 +67,7 @@ struct WorldOptions {
   Colors::Marker markers[256];
 
   // Memory limits, legacy code for image splitting
-  int offsetY;
   uint64_t memlimit;
-  bool memlimitSet, wholeworld;
 
   WorldOptions() : mode(RENDER), saveName(""), colorFile(""), dim("overworld") {
     outFile = "output.png";
@@ -79,15 +77,12 @@ struct WorldOptions {
     boundaries.minY = 0;
     boundaries.maxY = 255;
 
-    offsetY = 3;
     hideWater = hideBeacons = shading = false;
     padding = 5;
 
     totalMarkers = 0;
 
-    wholeworld = false;
-    memlimit = 2000 * uint64_t(1024 * 1024);
-    memlimitSet = false;
+    memlimit = 3500 * uint64_t(1024 * 1024);
   }
 
   std::filesystem::path regionDir() { return dim.regionDir(saveName); }

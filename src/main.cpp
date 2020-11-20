@@ -4,6 +4,8 @@
 #include "./settings.h"
 #include "./worldloader.h"
 #include <algorithm>
+#include <limits>
+#include <omp.h>
 #include <string>
 #include <utility>
 
@@ -72,21 +74,33 @@ int main(int argc, char **argv) {
   if (options.hideBeacons)
     colors["mcmap:beacon_beam"] = Colors::Block();
 
-  // Prepare the sub-regions to render
-  // This could be bypassed when the program is run in single-threaded mode, but
-  // it works just fine when run in single threaded, so why bother making huge
-  // if-elses ?
   std::vector<Terrain::Coordinates> subCoords;
   coords.schedule(subCoords, 512);
+
+  size_t tile_size = subCoords[0].footprint();
+
+  size_t overhead = 60 * size_t(1024 * 1024) + 16 * tile_size;
+  size_t required = tile_size * subCoords.size();
+  size_t need_cache = (required - options.memlimit + overhead) / tile_size;
+
+  if (required < options.memlimit)
+    need_cache = std::numeric_limits<size_t>::max();
+  else
+    need_cache = subCoords.size() - need_cache;
+
+  logger::debug("Memory required: {}MB => keeping {}/{} "
+                "(caching {}MB total)\n",
+                required / size_t(1024 * 1024), need_cache, subCoords.size(),
+                (required - options.memlimit + overhead) / size_t(1024 * 1024));
 
   std::vector<Canvas> fragments(subCoords.size());
 
 #ifndef DISABLE_OMP
-#pragma omp parallel shared(fragments)
+#pragma omp parallel shared(fragments, need_cache)
 #endif
   {
 #ifndef DISABLE_OMP
-#pragma omp for ordered schedule(static)
+#pragma omp for ordered schedule(dynamic)
 #endif
     for (std::vector<Terrain::Coordinates>::size_type i = 0;
          i < subCoords.size(); i++) {
@@ -107,16 +121,36 @@ int main(int argc, char **argv) {
       canvas.setMarkers(options.totalMarkers, &options.markers);
       canvas.renderTerrain(world);
 
-      std::filesystem::path temporary =
-          fmt::format("{}.png", canvas.map.to_string());
-      canvas.save(temporary, 0);
+      if (!canvas.empty()) {
+        if (i >= need_cache) {
+          std::filesystem::path temporary =
+              fmt::format("/tmp/{}.png", canvas.map.to_string());
+          canvas.save(temporary, 0);
 
-      fragments[i] = std::move(ImageCanvas(canvas.map, temporary));
+          fragments[i] = std::move(ImageCanvas(canvas.map, temporary));
+        } else
+          fragments[i] = std::move(canvas);
+      } else {
+        if (i < need_cache && need_cache != std::numeric_limits<size_t>::max())
+          need_cache++;
+      }
     }
   }
 
   CompositeCanvas merged(std::move(fragments));
   logger::debug("{}\n", merged.to_string());
+
+  size_t cached, memory, empty;
+  cached = memory = empty = 0;
+  for (const auto &canvas : *merged.drawing.canvas_buffer) {
+    if (canvas.type == Canvas::BYTES)
+      memory++;
+    if (canvas.type == Canvas::IMAGE)
+      cached++;
+    if (canvas.type == Canvas::EMPTY)
+      empty++;
+  }
+  logger::debug("{} cached, {} in memory, {} empty\n", cached, memory, empty);
 
   if (merged.save(options.outFile, options.padding))
     logger::info("Job complete.\n");

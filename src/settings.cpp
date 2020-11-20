@@ -4,9 +4,6 @@
 #define ISPATH(p) (!(p).empty() && std::filesystem::exists((p)))
 
 bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
-  opts->boundaries.setUndefined();
-  opts->boundaries.minY = 0;
-  opts->boundaries.maxY = 255;
 #define MOREARGS(x) (argpos + (x) < argc)
 #define NEXTARG argv[++argpos]
 #define POLLARG(x) argv[argpos + (x)]
@@ -108,8 +105,12 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
       opts->boundaries.orientation = NE;
     } else if (strcmp(option, "-se") == 0) {
       opts->boundaries.orientation = SE;
-    } else if (strcmp(option, "-3") == 0) {
-      opts->offsetY = 3;
+    } else if (strcmp(option, "-mb") == 0) {
+      if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
+        logger::error("{} needs an integer\n", option);
+        return false;
+      }
+      opts->memlimit = atoi(NEXTARG) * size_t(1024 * 1024);
     } else if (strcmp(option, "-help") == 0 || strcmp(option, "-h") == 0) {
       return false;
     } else if (strcmp(option, "-verbose") == 0 || strcmp(option, "-v") == 0) {
