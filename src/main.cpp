@@ -86,10 +86,13 @@ int main(int argc, char **argv) {
 
   // This value represents the amount of canvasses that can fit in memory at
   // once to avoid going over the limit of RAM
-  size_t capacity;
+  Counter<size_t> capacity;
   if (!(capacity = memory_capacity(options.mem_limit, tiles[0].footprint(),
                                    tiles.size(), THREADS)))
     return ERROR;
+
+  logger::debug("Memory capacity: {} tiles - {} tiles scheduled\n",
+                size_t(capacity), tiles.size());
 
   // If caching is needed, ensure the cache directory is available
   if (capacity < tiles.size())
@@ -134,16 +137,14 @@ int main(int argc, char **argv) {
       } else {
         // If the canvas was empty, increase the capacity to reflect the free
         // space
-        if (i < capacity && capacity != std::numeric_limits<size_t>::max())
-          capacity++;
+        if (i < capacity)
+          ++capacity;
       }
     }
   }
 
   CompositeCanvas merged(std::move(fragments));
-  if (capacity != std::numeric_limits<size_t>::max())
-    logger::debug("{}\n{}/{} canvasses cached\n", merged.to_string(),
-                  tiles.size() - capacity, tiles.size());
+  logger::debug("{}\n", merged.to_string());
 
   if (merged.save(options.outFile, options.padding))
     logger::info("Job complete.\n");
