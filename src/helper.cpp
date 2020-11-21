@@ -35,9 +35,17 @@ bool isNumeric(const char *str) {
 
 size_t memory_capacity(size_t limit, size_t element_size, size_t elements,
                        size_t threads) {
-  const size_t overhead = 60 * size_t(1024 * 1024) + threads * element_size;
+  const size_t overhead =
+      60 * size_t(1024 * 1024) + std::min(threads, elements) * element_size;
   const size_t required = element_size * elements;
   size_t capacity = std::numeric_limits<size_t>::max();
+
+  if (limit < overhead) {
+    logger::error(
+        "At least {:.2f}MB are required to render with those parameters\n",
+        float(overhead) / float(1024 * 1024));
+    return 0;
+  }
 
   if (required > limit) {
     capacity = elements - (required - limit + overhead) / element_size;

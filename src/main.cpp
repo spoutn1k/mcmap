@@ -13,6 +13,9 @@ using std::string;
 
 SETUP_LOGGER
 
+#define SUCCESS 0
+#define ERROR 1
+
 void printHelp(char *binary) {
   logger::info(
       "Usage: {} <options> WORLDPATH\n\n"
@@ -43,13 +46,9 @@ int main(int argc, char **argv) {
   Settings::WorldOptions options;
   Colors::Palette colors;
 
-  // Always same random seed, as this is only used for block noise,
-  // which should give the same result for the same input every time
-  srand(1337);
-
   if (argc < 2 || !parseArgs(argc, argv, &options)) {
     printHelp(argv[0]);
-    return 1;
+    return ERROR;
   }
 
   Colors::load(options.colorFile, &colors);
@@ -80,8 +79,10 @@ int main(int argc, char **argv) {
 
   // This value represents the amount of canvasses that can fit in memory at
   // once to avoid going over the limit of RAM
-  size_t capacity = memory_capacity(options.mem_limit, tiles[0].footprint(),
-                                    tiles.size(), omp_get_max_threads());
+  size_t capacity;
+  if (!(capacity = memory_capacity(options.mem_limit, tiles[0].footprint(),
+                                   tiles.size(), omp_get_max_threads())))
+    return ERROR;
 
 #ifndef DISABLE_OMP
 #pragma omp parallel shared(fragments, capacity)
@@ -135,5 +136,5 @@ int main(int argc, char **argv) {
   if (merged.save(options.outFile, options.padding))
     logger::info("Job complete.\n");
 
-  return 0;
+  return SUCCESS;
 }

@@ -167,6 +167,11 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
       logger::error("Nothing to render: -min Y has to be < -max Y\n");
       return false;
     }
+
+    if (opts->tile_size < 16) {
+      logger::error("Cannot render tiles this small\n");
+      return false;
+    }
   }
 
   return true;
