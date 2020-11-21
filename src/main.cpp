@@ -34,7 +34,7 @@ void printHelp(char *binary) {
       "  -marker X Z color   draw a marker at X Z of the desired color\n"
       "  -padding int (=5)   padding to use around the image\n"
       "  -h[elp]             display an option summary\n"
-      "  -v[erbose]          toggle debug mode\n"
+      "  -v[erbose]          toggle debug mode (-vv for more)\n"
       "  -dumpcolors         dump a json with all defined colors\n",
       binary);
 }

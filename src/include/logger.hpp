@@ -22,10 +22,11 @@ namespace logger {
   }
 
 enum levels {
-  INFO,
+  INFO = 0,
   WARNING,
   ERROR,
   DEBUG,
+  DEEP_DEBUG,
 };
 
 extern int level;
@@ -66,8 +67,20 @@ void debug(const char *format, const Args &...args) {
       (prettyErr ? fmt::emphasis::bold | fg(fmt::color::cadet_blue)
                  : fmt::text_style());
 
-  if (level == DEBUG) {
+  if (level >= DEBUG) {
     fmt::print(stderr, deb, "[Debug] ");
+    fmt::vprint(stderr, format, fmt::make_format_args(args...));
+  }
+}
+
+template <typename... Args>
+void deep_debug(const char *format, const Args &...args) {
+  fmt::text_style deb =
+      (prettyErr ? fmt::emphasis::bold | fg(fmt::color::dark_slate_gray)
+                 : fmt::text_style());
+
+  if (level >= DEEP_DEBUG) {
+    fmt::print(stderr, deb, "[Deep Debug] ");
     fmt::vprint(stderr, format, fmt::make_format_args(args...));
   }
 }

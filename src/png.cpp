@@ -119,9 +119,8 @@ void PNGWriter::_open() {
     return;
   }
 
-  logger::debug("Image dimensions are {}x{}, {}bpp, {}MiB\n", get_width(),
-                get_height(), 8 * _bytesPerPixel,
-                float(get_width() * get_height() / float(1024 * 1024)));
+  logger::deep_debug("PNGWriter: image {}x{}, {}bpp\n", get_width(),
+                     get_height(), 8 * _bytesPerPixel);
 
   fseeko(imageHandle, 0, SEEK_SET);
 
@@ -252,8 +251,8 @@ void PNGReader::_open() {
 
   set_type(type);
 
-  logger::debug("Reading PNG file: size is {}x{}, {}bpp\n", get_width(),
-                get_height(), 8 * _bytesPerPixel);
+  logger::deep_debug("PNGReader: PNG file of size {}x{}, {}bpp\n", get_width(),
+                     get_height(), 8 * _bytesPerPixel);
 }
 
 uint32_t PNGReader::getLine(uint8_t *buffer, size_t size) {

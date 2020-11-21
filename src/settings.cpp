@@ -113,6 +113,8 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
       return false;
     } else if (strcmp(option, "-verbose") == 0 || strcmp(option, "-v") == 0) {
       logger::level = logger::levels::DEBUG;
+    } else if (strcmp(option, "-vv") == 0) {
+      logger::level = logger::levels::DEEP_DEBUG;
     } else {
       opts->saveName = std::filesystem::path(option);
       if (!ISPATH(opts->saveName)) {
