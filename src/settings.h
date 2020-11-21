@@ -56,7 +56,6 @@ struct WorldOptions {
   Dimension dim;
   std::string customDim;
   Terrain::Coordinates boundaries;
-  uint16_t splits;
 
   // Image settings
   uint16_t padding; // Should be enough
@@ -73,7 +72,6 @@ struct WorldOptions {
   WorldOptions() : mode(RENDER), saveName(""), colorFile(""), dim("overworld") {
     outFile = "output.png";
 
-    splits = 1;
     boundaries.setUndefined();
     boundaries.minY = 0;
     boundaries.maxY = 255;

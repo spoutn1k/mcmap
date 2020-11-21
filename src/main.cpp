@@ -29,11 +29,10 @@ void printHelp(char *binary) {
       "  -nobeacons          do not render beacon beams\n"
       "  -shading            toggle shading (brightens blocks depending on "
       "height)\n"
-#ifndef DISABLE_OMP
-      "  -splits VAL         render with VAL threads\n"
-#endif
+      "  -mb int (=3500)     use the specified amount of memory (in MB)\n"
+      "  -tile int (=1024)   render terrain in tiles of the specified size\n"
       "  -marker X Z color   draw a marker at X Z of the desired color\n"
-      "  -padding VAL        padding to use around the image (default 5)\n"
+      "  -padding int (=5)   padding to use around the image\n"
       "  -h[elp]             display an option summary\n"
       "  -v[erbose]          toggle debug mode\n"
       "  -dumpcolors         dump a json with all defined colors\n",
@@ -111,7 +110,7 @@ int main(int argc, char **argv) {
       canvas.renderTerrain(world);
 
       if (!canvas.empty()) {
-        if (true || i >= capacity) {
+        if (i >= capacity) {
           std::filesystem::path temporary =
               fmt::format("/tmp/{}.png", canvas.map.to_string());
           canvas.save(temporary, 0);
@@ -129,8 +128,9 @@ int main(int argc, char **argv) {
   }
 
   CompositeCanvas merged(std::move(fragments));
-  logger::debug("{}\n{}/{} canvasses cached\n", merged.to_string(),
-                tiles.size() - capacity, tiles.size());
+  if (capacity != std::numeric_limits<size_t>::max())
+    logger::debug("{}\n{}/{} canvasses cached\n", merged.to_string(),
+                  tiles.size() - capacity, tiles.size());
 
   if (merged.save(options.outFile, options.padding))
     logger::info("Job complete.\n");

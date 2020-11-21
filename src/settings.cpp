@@ -40,14 +40,6 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
       const int height = atoi(NEXTARG);
       opts->boundaries.minY =
           (height < MIN_TERRAIN_HEIGHT ? MIN_TERRAIN_HEIGHT : height);
-#ifndef DISABLE_OMP
-    } else if (strcmp(option, "-splits") == 0) {
-      if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
-        logger::error("{} needs an integer argument\n", option);
-        return false;
-      }
-      opts->splits = atoi(NEXTARG);
-#endif
     } else if (strcmp(option, "-padding") == 0) {
       if (!MOREARGS(1) || !isNumeric(POLLARG(1)) || atoi(POLLARG(1)) < 0) {
         logger::error("{} needs an positive integer argument\n", option);
@@ -171,12 +163,6 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
 
     if (opts->boundaries.maxX - opts->boundaries.minX < 0) {
       logger::error("Nothing to render: -min Y has to be < -max Y\n");
-      return false;
-    }
-
-    int64_t length = opts->boundaries.maxX - opts->boundaries.minX + 1;
-    if (opts->splits > length) {
-      logger::error("Cannot split terrain in more than {} units.\n", length);
       return false;
     }
   }
