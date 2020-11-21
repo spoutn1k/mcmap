@@ -102,7 +102,7 @@ struct Coordinates {
 #undef BYTESPERPIXEL
   }
 
-  void schedule(std::vector<Coordinates<Integer>> &fragments, size_t size = 0) {
+  void tile(std::vector<Coordinates<Integer>> &fragments, size_t size) {
     for (Integer x = minX; x <= maxX; x += size) {
       for (Integer z = minZ; z <= maxZ; z += size) {
         Coordinates<Integer> fragment = *this;
@@ -159,7 +159,6 @@ struct Coordinates {
   }
 };
 
-void splitCoords(const Coordinates<int32_t> &original,
-                 Coordinates<int32_t> *subCoords, const uint16_t count);
+size_t memory_capacity(size_t, size_t, size_t, size_t);
 
 #endif // HELPER_H_

@@ -74,47 +74,36 @@ int main(int argc, char **argv) {
   if (options.hideBeacons)
     colors["mcmap:beacon_beam"] = Colors::Block();
 
-  std::vector<Terrain::Coordinates> subCoords;
-  coords.schedule(subCoords, 512);
+  std::vector<Terrain::Coordinates> tiles;
+  coords.tile(tiles, 512);
 
-  size_t tile_size = subCoords[0].footprint();
+  std::vector<Canvas> fragments(tiles.size());
 
-  size_t overhead = 60 * size_t(1024 * 1024) + 16 * tile_size;
-  size_t required = tile_size * subCoords.size();
-  size_t need_cache = (required - options.memlimit + overhead) / tile_size;
-
-  if (required < options.memlimit)
-    need_cache = std::numeric_limits<size_t>::max();
-  else
-    need_cache = subCoords.size() - need_cache;
-
-  logger::debug("Memory required: {}MB => keeping {}/{} "
-                "(caching {}MB total)\n",
-                required / size_t(1024 * 1024), need_cache, subCoords.size(),
-                (required - options.memlimit + overhead) / size_t(1024 * 1024));
-
-  std::vector<Canvas> fragments(subCoords.size());
+  // This value represents the amount of canvasses that can fit in memory at
+  // once to avoid going over the limit of RAM
+  size_t capacity = memory_capacity(options.memlimit, tiles[0].footprint(),
+                                    tiles.size(), omp_get_max_threads());
 
 #ifndef DISABLE_OMP
-#pragma omp parallel shared(fragments, need_cache)
+#pragma omp parallel shared(fragments, capacity)
 #endif
   {
 #ifndef DISABLE_OMP
 #pragma omp for ordered schedule(dynamic)
 #endif
-    for (std::vector<Terrain::Coordinates>::size_type i = 0;
-         i < subCoords.size(); i++) {
+    for (std::vector<Terrain::Coordinates>::size_type i = 0; i < tiles.size();
+         i++) {
       IsometricCanvas canvas;
-      canvas.setMap(subCoords[i]);
+      canvas.setMap(tiles[i]);
       canvas.setColors(colors);
 
       // Load the minecraft terrain to render
-      Terrain::Data world(subCoords[i]);
+      Terrain::Data world(tiles[i]);
       world.load(regionDir);
 
       // Cap the height to avoid having a ridiculous image height
-      subCoords[i].minY = std::max(subCoords[i].minY, world.minHeight());
-      subCoords[i].maxY = std::min(subCoords[i].maxY, world.maxHeight());
+      tiles[i].minY = std::max(tiles[i].minY, world.minHeight());
+      tiles[i].maxY = std::min(tiles[i].maxY, world.maxHeight());
 
       // Draw the terrain fragment
       canvas.shading = options.shading;
@@ -122,7 +111,7 @@ int main(int argc, char **argv) {
       canvas.renderTerrain(world);
 
       if (!canvas.empty()) {
-        if (i >= need_cache) {
+        if (i >= capacity) {
           std::filesystem::path temporary =
               fmt::format("/tmp/{}.png", canvas.map.to_string());
           canvas.save(temporary, 0);
@@ -131,26 +120,17 @@ int main(int argc, char **argv) {
         } else
           fragments[i] = std::move(canvas);
       } else {
-        if (i < need_cache && need_cache != std::numeric_limits<size_t>::max())
-          need_cache++;
+        // If the canvas was empty, increase the capacity to reflect the free
+        // space
+        if (i < capacity && capacity != std::numeric_limits<size_t>::max())
+          capacity++;
       }
     }
   }
 
   CompositeCanvas merged(std::move(fragments));
-  logger::debug("{}\n", merged.to_string());
-
-  size_t cached, memory, empty;
-  cached = memory = empty = 0;
-  for (const auto &canvas : *merged.drawing.canvas_buffer) {
-    if (canvas.type == Canvas::BYTES)
-      memory++;
-    if (canvas.type == Canvas::IMAGE)
-      cached++;
-    if (canvas.type == Canvas::EMPTY)
-      empty++;
-  }
-  logger::debug("{} cached, {} in memory, {} empty\n", cached, memory, empty);
+  logger::debug("{}\n{}/{} canvasses cached\n", merged.to_string(),
+                tiles.size() - capacity, tiles.size());
 
   if (merged.save(options.outFile, options.padding))
     logger::info("Job complete.\n");
