@@ -110,7 +110,13 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
         logger::error("{} needs an integer\n", option);
         return false;
       }
-      opts->memlimit = atoi(NEXTARG) * size_t(1024 * 1024);
+      opts->mem_limit = atoi(NEXTARG) * size_t(1024 * 1024);
+    } else if (strcmp(option, "-tile") == 0) {
+      if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
+        logger::error("{} needs an integer\n", option);
+        return false;
+      }
+      opts->tile_size = atoi(NEXTARG);
     } else if (strcmp(option, "-help") == 0 || strcmp(option, "-h") == 0) {
       return false;
     } else if (strcmp(option, "-verbose") == 0 || strcmp(option, "-v") == 0) {

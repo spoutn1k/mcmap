@@ -67,7 +67,8 @@ struct WorldOptions {
   Colors::Marker markers[256];
 
   // Memory limits, legacy code for image splitting
-  uint64_t memlimit;
+  size_t mem_limit;
+  size_t tile_size;
 
   WorldOptions() : mode(RENDER), saveName(""), colorFile(""), dim("overworld") {
     outFile = "output.png";
@@ -82,7 +83,8 @@ struct WorldOptions {
 
     totalMarkers = 0;
 
-    memlimit = 3500 * uint64_t(1024 * 1024);
+    mem_limit = 3500 * uint64_t(1024 * 1024);
+    tile_size = 1024;
   }
 
   std::filesystem::path regionDir() { return dim.regionDir(saveName); }

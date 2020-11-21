@@ -75,13 +75,13 @@ int main(int argc, char **argv) {
     colors["mcmap:beacon_beam"] = Colors::Block();
 
   std::vector<Terrain::Coordinates> tiles;
-  coords.tile(tiles, 512);
+  coords.tile(tiles, options.tile_size);
 
   std::vector<Canvas> fragments(tiles.size());
 
   // This value represents the amount of canvasses that can fit in memory at
   // once to avoid going over the limit of RAM
-  size_t capacity = memory_capacity(options.memlimit, tiles[0].footprint(),
+  size_t capacity = memory_capacity(options.mem_limit, tiles[0].footprint(),
                                     tiles.size(), omp_get_max_threads());
 
 #ifndef DISABLE_OMP
@@ -111,7 +111,7 @@ int main(int argc, char **argv) {
       canvas.renderTerrain(world);
 
       if (!canvas.empty()) {
-        if (i >= capacity) {
+        if (true || i >= capacity) {
           std::filesystem::path temporary =
               fmt::format("/tmp/{}.png", canvas.map.to_string());
           canvas.save(temporary, 0);
