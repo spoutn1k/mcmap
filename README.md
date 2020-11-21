@@ -46,7 +46,8 @@ Most of the code uses `std::filesystem` to access files and from my understandin
 |`-nether`      |render the nether|
 |`-end`          |render the end|
 |`-dim[ension] [namespace:]id` |render a dimension by namespaced ID|
-|`-splits`       |number of sub-terrains to render; if threading is available, every sub-terrain is rendered in a thread|
+|`-mb VAL`       |maximum memory to use at once (default 3.5G, increase for large maps if you have the ram)|
+|`-tile VAL`       |render terrain in tiles of the specified size (default 1024)|
 |`-padding`      |padding around the final image, in pixels (default: 5)|
 |`-h[elp]`      |display an option summary|
 |`-v[erbose]`   |toggle debug mode|
@@ -56,13 +57,16 @@ Most of the code uses `std::filesystem` to access files and from my understandin
 
 #### Tips
 
-When passing only a level, `mcmap` will try to guess the size of the existing terrain, but the Minecraft storage format does not make is easy. The best results are achieved using `-from x z -to X Z` to define an area to render.
+`mcmap` will render the terrain in batches using all the threads of your computer. Unfortunately, when those batches merge, some artifacts are created: lines appear in oceans where the merge was operated.
 
-If rendering large areas, working in threaded mode can greatly speed up the process. Try using `-splits` with the number of cores your CPU has for the best performance.
+Use `-tile` with a bigger value to limit the amount of batches and thus of artifacts. This is limited by the available memory, as rendering a whole map iin one go may require 10+ gigabytes of ram.
+
+Use `-tile` with a lower value to increase performance. 256 and 512 tiles are really efficient.
 
 ## Color file format
 
-`mcmap` supports changing the colors of blocks. To do so, prepare a custom color file, and pass it as an argument using the `-colors` argument.
+`mcmap` supports changing the colors of blocks. To do so, prepare a custom color file by editing the output of `mcmap -dumpcolors`, and pass it as an argument using the `-colors` argument.
+
 The accepted format is a `json` file, with a specific structure.
 The root contains a list of [block IDs](https://minecraft.gamepedia.com/Java_Edition_data_values#Blocks) to modify, with the namespace prefix, such as `namespace:block`.
 
@@ -158,8 +162,10 @@ cd mcmap && make -j
 
 #### macOS
 
-In an Apple environment, you need to install `brew` to get the libraries. 
+In an Apple environment, you need to install the libraries. 
 You also need a developer toolkit recent enough, with the version of `g++ --version` superior to 10. 
+
+Using [`brew`](https://brew.sh/):
 ```
 brew install libpng libomp
 git clone http://github.com/spoutn1k/mcmap
@@ -182,4 +188,10 @@ Compile using `CXX=g++-Y make`.
 
 ### Compilation fails complaining about OMP something
 
-Try compiling with `OPENMP=NOTHXM8 make`. This disables the underlying threading code, so you won't be able to use the `splits` option.
+Try compiling with `OPENMP=NOTHXM8 make`.
+This disables the underlying threading code, so performance may drop.
+
+### Output has lines in the ocean
+
+This is due to the merging algorithm.
+Try increasing the tile size with the `-tile` option, or change the color of the water block to use the `Full` block type to make it less noticeable.
