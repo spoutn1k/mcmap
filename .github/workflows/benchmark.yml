@@ -6,7 +6,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Execution
-      uses: spoutn1k/mcmap-benchmark@v4
+      uses: spoutn1k/mcmap-benchmark@v4.01
     - name: Upload time data
       uses: actions/upload-artifact@v1
       with:

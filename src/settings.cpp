@@ -1,12 +1,9 @@
 #include "./settings.h"
-#include "logger.h"
+#include "logger.hpp"
 
 #define ISPATH(p) (!(p).empty() && std::filesystem::exists((p)))
 
 bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
-  opts->boundaries.setUndefined();
-  opts->boundaries.minY = 0;
-  opts->boundaries.maxY = 255;
 #define MOREARGS(x) (argpos + (x) < argc)
 #define NEXTARG argv[++argpos]
 #define POLLARG(x) argv[argpos + (x)]
@@ -43,14 +40,6 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
       const int height = atoi(NEXTARG);
       opts->boundaries.minY =
           (height < MIN_TERRAIN_HEIGHT ? MIN_TERRAIN_HEIGHT : height);
-#ifndef DISABLE_OMP
-    } else if (strcmp(option, "-splits") == 0) {
-      if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
-        logger::error("{} needs an integer argument\n", option);
-        return false;
-      }
-      opts->splits = atoi(NEXTARG);
-#endif
     } else if (strcmp(option, "-padding") == 0) {
       if (!MOREARGS(1) || !isNumeric(POLLARG(1)) || atoi(POLLARG(1)) < 0) {
         logger::error("{} needs an positive integer argument\n", option);
@@ -108,12 +97,24 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
       opts->boundaries.orientation = NE;
     } else if (strcmp(option, "-se") == 0) {
       opts->boundaries.orientation = SE;
-    } else if (strcmp(option, "-3") == 0) {
-      opts->offsetY = 3;
+    } else if (strcmp(option, "-mb") == 0) {
+      if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
+        logger::error("{} needs an integer\n", option);
+        return false;
+      }
+      opts->mem_limit = atoi(NEXTARG) * size_t(1024 * 1024);
+    } else if (strcmp(option, "-tile") == 0) {
+      if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
+        logger::error("{} needs an integer\n", option);
+        return false;
+      }
+      opts->tile_size = atoi(NEXTARG);
     } else if (strcmp(option, "-help") == 0 || strcmp(option, "-h") == 0) {
       return false;
     } else if (strcmp(option, "-verbose") == 0 || strcmp(option, "-v") == 0) {
-      logger::setDebug();
+      logger::level = logger::levels::DEBUG;
+    } else if (strcmp(option, "-vv") == 0) {
+      logger::level = logger::levels::DEEP_DEBUG;
     } else {
       opts->saveName = std::filesystem::path(option);
       if (!ISPATH(opts->saveName)) {
@@ -167,9 +168,8 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
       return false;
     }
 
-    int64_t length = opts->boundaries.maxX - opts->boundaries.minX + 1;
-    if (opts->splits > length) {
-      logger::error("Cannot split terrain in more than {} units.\n", length);
+    if (opts->tile_size < 16) {
+      logger::error("Cannot render tiles this small\n");
       return false;
     }
   }

@@ -1,8 +1,9 @@
 #ifndef HELPER_H_
 #define HELPER_H_
 
-#include "./logger.h"
 #include <algorithm>
+#include <logger.hpp>
+#include <stdint.h>
 #include <string>
 
 #define CHUNKSIZE 16
@@ -66,8 +67,8 @@ struct Coordinates {
   }
 
   std::string to_string() const {
-    return fmt::format("x{} z{} y{} to x{} z{} y{}", minX, minZ, minY, maxX,
-                       maxZ, maxY);
+    return fmt::format("{}.{}.{} ~> {}.{}.{}", minX, minZ, minY, maxX, maxZ,
+                       maxY);
   }
 
   void rotate() {
@@ -91,9 +92,73 @@ struct Coordinates {
 
   inline Integer sizeX() const { return maxX - minX + 1; }
   inline Integer sizeZ() const { return maxZ - minZ + 1; }
+
+  size_t footprint() const {
+    Integer width = (sizeX() + sizeZ()) * 2;
+    Integer height = sizeX() + sizeZ() + (maxY - minY + 1) * 3 - 1;
+
+#define BYTESPERPIXEL 4
+    return width * height * BYTESPERPIXEL;
+#undef BYTESPERPIXEL
+  }
+
+  void tile(std::vector<Coordinates<Integer>> &fragments, size_t size) {
+    for (Integer x = minX; x <= maxX; x += size) {
+      for (Integer z = minZ; z <= maxZ; z += size) {
+        Coordinates<Integer> fragment = *this;
+
+        fragment.minX = x;
+        fragment.maxX = std::min(Integer(x + size - 1), maxX);
+
+        fragment.minZ = z;
+        fragment.maxZ = std::min(Integer(z + size - 1), maxZ);
+
+        fragments.push_back(fragment);
+      }
+    }
+  }
+
+  // The following methods are used to get the position of the map in an image
+  // made by another (englobing) map, called the referential
+
+  inline Integer offsetX(const Coordinates<Integer> &referential) const {
+    // This formula is thought around the top corner' position.
+    //
+    // The top corner's postition of the sub-map is influenced by its distance
+    // to the full map's top corner => we compare the minX and minZ coordinates
+    //
+    // From there, the map's top corner is sizeZ pizels from the edge, and the
+    // sub-canvasses' edge is at sizeZ' pixels from its top corner.
+    //
+    // By adding up those elements we get the delta between the edge of the full
+    // image and the edge of the partial image.
+    Coordinates<Integer> oriented = this->orient(Orientation::NW);
+
+    return 2 * (referential.sizeZ() - oriented.sizeZ() -
+                (referential.minX - oriented.minX) +
+                (referential.minZ - oriented.minZ));
+  }
+
+  inline Integer offsetY(const Coordinates<Integer> &referential) const {
+    // This one is simpler, the vertical distance being equal to the distance
+    // between top corners.
+    Coordinates<Integer> oriented = this->orient(Orientation::NW);
+
+    return oriented.minX - referential.minX + oriented.minZ - referential.minZ;
+  }
+
+  Coordinates<Integer> &operator+=(const Coordinates<Integer> &other) {
+    minX = std::min(other.minX, minX);
+    minZ = std::min(other.minZ, minZ);
+    maxX = std::max(other.maxX, maxX);
+    maxZ = std::max(other.maxZ, maxZ);
+    minY = std::min(other.minY, minY);
+    maxY = std::max(other.maxY, maxY);
+
+    return *this;
+  }
 };
 
-void splitCoords(const Coordinates<int32_t> &original,
-                 Coordinates<int32_t> *subCoords, const uint16_t count);
+size_t memory_capacity(size_t, size_t, size_t, size_t);
 
 #endif // HELPER_H_

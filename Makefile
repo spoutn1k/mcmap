@@ -1,4 +1,8 @@
 # Variables check and initialization
+ifeq ($(shell env | grep ^DEBUG=),)
+	export DEBUG=FALSE
+endif
+
 ifeq ($(shell env | grep ^OS=),)
 	export OS=LINUX
 endif
@@ -15,7 +19,7 @@ LDFLAGS=-lz -lpng
 
 ifeq ($(OS), LINUX)
 	# Fix some issues on older compilers
-	LDFLAGS += -s -lstdc++fs
+	LDFLAGS +=-lstdc++fs
 endif
 
 # Resolve OpenMP values
@@ -32,6 +36,12 @@ ifeq ($(OPENMP), TRUE)
 	endif
 else
 	CFLAGS += -DDISABLE_OMP
+endif
+
+ifeq ($(DEBUG), TRUE)
+	CFLAGS += -g
+else
+	LDFLAGS += -s
 endif
 
 # Files to use

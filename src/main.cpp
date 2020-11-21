@@ -1,14 +1,26 @@
 #include "./VERSION"
-#include "./draw_png.h"
+#include "./canvas.h"
 #include "./helper.h"
-#include "./logger.h"
 #include "./settings.h"
 #include "./worldloader.h"
 #include <algorithm>
+#include <limits>
+#include <omp.h>
 #include <string>
 #include <utility>
 
 using std::string;
+
+SETUP_LOGGER
+
+#define SUCCESS 0
+#define ERROR 1
+
+#ifdef _OPENMP
+#define THREADS omp_get_max_threads()
+#else
+#define THREADS 1
+#endif
 
 void printHelp(char *binary) {
   logger::info(
@@ -26,13 +38,12 @@ void printHelp(char *binary) {
       "  -nobeacons          do not render beacon beams\n"
       "  -shading            toggle shading (brightens blocks depending on "
       "height)\n"
-#ifndef DISABLE_OMP
-      "  -splits VAL         render with VAL threads\n"
-#endif
+      "  -mb int (=3500)     use the specified amount of memory (in MB)\n"
+      "  -tile int (=1024)   render terrain in tiles of the specified size\n"
       "  -marker X Z color   draw a marker at X Z of the desired color\n"
-      "  -padding VAL        padding to use around the image (default 5)\n"
+      "  -padding int (=5)   padding to use around the image\n"
       "  -h[elp]             display an option summary\n"
-      "  -v[erbose]          toggle debug mode\n"
+      "  -v[erbose]          toggle debug mode (-vv for more)\n"
       "  -dumpcolors         dump a json with all defined colors\n",
       binary);
 }
@@ -41,13 +52,9 @@ int main(int argc, char **argv) {
   Settings::WorldOptions options;
   Colors::Palette colors;
 
-  // Always same random seed, as this is only used for block noise,
-  // which should give the same result for the same input every time
-  srand(1337);
-
   if (argc < 2 || !parseArgs(argc, argv, &options)) {
     printHelp(argv[0]);
-    return 1;
+    return ERROR;
   }
 
   Colors::load(options.colorFile, &colors);
@@ -71,50 +78,69 @@ int main(int argc, char **argv) {
   if (options.hideBeacons)
     colors["mcmap:beacon_beam"] = Colors::Block();
 
-  // Prepare the sub-regions to render
-  // This could be bypassed when the program is run in single-threaded mode, but
-  // it works just fine when run in single threaded, so why bother making huge
-  // if-elses ?
-  Terrain::Coordinates *subCoords = new Terrain::Coordinates[options.splits];
-  splitCoords(coords, subCoords, options.splits);
+  std::vector<Terrain::Coordinates> tiles;
+  coords.tile(tiles, options.tile_size);
 
-  std::vector<IsometricCanvas> subCanvasses(options.splits);
-  for (uint16_t i = 0; i < options.splits; i++) {
-    subCanvasses[i].setMap(subCoords[i]);
-    subCanvasses[i].setColors(colors);
-  }
+  std::vector<Canvas> fragments(tiles.size());
+
+  // This value represents the amount of canvasses that can fit in memory at
+  // once to avoid going over the limit of RAM
+  size_t capacity;
+  if (!(capacity = memory_capacity(options.mem_limit, tiles[0].footprint(),
+                                   tiles.size(), THREADS)))
+    return ERROR;
 
 #ifndef DISABLE_OMP
-#pragma omp parallel shared(subCanvasses)
+#pragma omp parallel shared(fragments, capacity)
 #endif
   {
 #ifndef DISABLE_OMP
-#pragma omp for ordered schedule(static)
+#pragma omp for ordered schedule(dynamic)
 #endif
-    for (uint16_t i = 0; i < options.splits; i++) {
-      IsometricCanvas &canvas = subCanvasses[i];
+    for (std::vector<Terrain::Coordinates>::size_type i = 0; i < tiles.size();
+         i++) {
+      IsometricCanvas canvas;
+      canvas.setMap(tiles[i]);
+      canvas.setColors(colors);
 
       // Load the minecraft terrain to render
-      Terrain::Data world(subCoords[i]);
+      Terrain::Data world(tiles[i]);
       world.load(regionDir);
 
       // Cap the height to avoid having a ridiculous image height
-      subCoords[i].minY = std::max(subCoords[i].minY, world.minHeight());
-      subCoords[i].maxY = std::min(subCoords[i].maxY, world.maxHeight());
+      tiles[i].minY = std::max(tiles[i].minY, world.minHeight());
+      tiles[i].maxY = std::min(tiles[i].maxY, world.maxHeight());
 
       // Draw the terrain fragment
       canvas.shading = options.shading;
       canvas.setMarkers(options.totalMarkers, &options.markers);
       canvas.renderTerrain(world);
+
+      if (!canvas.empty()) {
+        if (i >= capacity) {
+          std::filesystem::path temporary =
+              fmt::format("/tmp/{}.png", canvas.map.to_string());
+          canvas.save(temporary, 0);
+
+          fragments[i] = std::move(ImageCanvas(canvas.map, temporary));
+        } else
+          fragments[i] = std::move(canvas);
+      } else {
+        // If the canvas was empty, increase the capacity to reflect the free
+        // space
+        if (i < capacity && capacity != std::numeric_limits<size_t>::max())
+          capacity++;
+      }
     }
   }
 
-  delete[] subCoords;
+  CompositeCanvas merged(std::move(fragments));
+  if (capacity != std::numeric_limits<size_t>::max())
+    logger::debug("{}\n{}/{} canvasses cached\n", merged.to_string(),
+                  tiles.size() - capacity, tiles.size());
 
-  CompositeCanvas merged(subCanvasses);
-  logger::debug("{}\n", merged.to_string());
-  PNG::Image(options.outFile, &merged, options.padding).save();
-  logger::info("Job complete.\n");
+  if (merged.save(options.outFile, options.padding))
+    logger::info("Job complete.\n");
 
-  return 0;
+  return SUCCESS;
 }
