@@ -3,6 +3,7 @@
  */
 
 #include "./canvas.h"
+#include <limits>
 
 //   ____                _                   _
 //  / ___|___  _ __  ___| |_ _ __ _   _  ___| |_ ___  _ __ ___
@@ -185,7 +186,8 @@ void IsometricCanvas::renderChunk(Terrain::Data &terrain) {
   }
 
   if (beamNo)
-    for (yPos = maxSection + 1; yPos < 16; yPos++) {
+    for (yPos = maxSection + 1; yPos < std::min(16, map.maxY >> 4) + 1;
+         yPos++) {
       renderBeamSection(chunkX, chunkZ, yPos);
     }
 
@@ -228,6 +230,9 @@ void IsometricCanvas::renderSection() {
   uint8_t block_index;
   int32_t worldX = chunkX, worldZ = chunkZ;
 
+  uint8_t minY = std::max(0, map.minY - (yPos << 4));
+  uint8_t maxY = std::min(16, map.maxY - (yPos << 4) + 1);
+
   // We need the real position of the section for bounds checking
   orientChunk(worldX, worldZ);
 
@@ -255,8 +260,6 @@ void IsometricCanvas::renderSection() {
         }
       }
 
-      uint8_t minY = std::max(0, map.minY - (yPos << 4));
-      uint8_t maxY = std::min(16, map.maxY - (yPos << 4) + 1);
       for (y = minY; y < maxY; y++) {
 
         if (beamColumn)
@@ -288,6 +291,9 @@ void IsometricCanvas::renderBeamSection(const int64_t xPos, const int64_t zPos,
 
   int32_t chunkX = xPos, chunkZ = zPos;
 
+  uint8_t minY = std::max(0, map.minY - (yPos << 4));
+  uint8_t maxY = std::min(16, map.maxY - (yPos << 4) + 1);
+
   // We need the real position of the section for bounds checking
   orientChunk(chunkX, chunkZ);
 
@@ -313,7 +319,7 @@ void IsometricCanvas::renderBeamSection(const int64_t xPos, const int64_t zPos,
           beamColumn = false;
       }
 
-      for (uint8_t y = 0; y < 16; y++) {
+      for (uint8_t y = minY; y < maxY; y++) {
         if (beamColumn)
           renderBlock(beams[currentBeam].color, (xPos << 4) + x,
                       (zPos << 4) + z, (yPos << 4) + y, nbt::NBT());
