@@ -16,6 +16,12 @@ SETUP_LOGGER
 #define SUCCESS 0
 #define ERROR 1
 
+#ifdef _OPENMP
+#define THREADS omp_get_max_threads()
+#else
+#define THREADS 1
+#endif
+
 void printHelp(char *binary) {
   logger::info(
       "Usage: {} <options> WORLDPATH\n\n"
@@ -81,7 +87,7 @@ int main(int argc, char **argv) {
   // once to avoid going over the limit of RAM
   size_t capacity;
   if (!(capacity = memory_capacity(options.mem_limit, tiles[0].footprint(),
-                                   tiles.size(), omp_get_max_threads())))
+                                   tiles.size(), THREADS)))
     return ERROR;
 
 #ifndef DISABLE_OMP
