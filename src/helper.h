@@ -2,6 +2,7 @@
 #define HELPER_H_
 
 #include <algorithm>
+#include <filesystem>
 #include <logger.hpp>
 #include <stdint.h>
 #include <string>
@@ -22,6 +23,9 @@ uint8_t clamp(int32_t val);
 bool isNumeric(const char *str);
 
 uint32_t _ntohl(uint8_t *val);
+
+size_t memory_capacity(size_t, size_t, size_t, size_t);
+bool prepare_cache(const std::filesystem::path &);
 
 enum Orientation {
   NW = 0,
@@ -158,7 +162,5 @@ struct Coordinates {
     return *this;
   }
 };
-
-size_t memory_capacity(size_t, size_t, size_t, size_t);
 
 #endif // HELPER_H_

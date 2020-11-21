@@ -15,6 +15,7 @@ SETUP_LOGGER
 
 #define SUCCESS 0
 #define ERROR 1
+#define CACHE "cache"
 
 #ifdef _OPENMP
 #define THREADS omp_get_max_threads()
@@ -90,6 +91,11 @@ int main(int argc, char **argv) {
                                    tiles.size(), THREADS)))
     return ERROR;
 
+  // If caching is needed, ensure the cache directory is available
+  if (capacity < tiles.size())
+    if (!prepare_cache(CACHE))
+      return ERROR;
+
 #ifndef DISABLE_OMP
 #pragma omp parallel shared(fragments, capacity)
 #endif
@@ -119,8 +125,8 @@ int main(int argc, char **argv) {
       if (!canvas.empty()) {
         if (i >= capacity) {
           std::filesystem::path temporary =
-              fmt::format("/tmp/{}.png", canvas.map.to_string());
-          canvas.save(temporary, 0);
+              fmt::format("{}/{}.png", CACHE, canvas.map.to_string());
+          canvas.save(temporary);
 
           fragments[i] = std::move(ImageCanvas(canvas.map, temporary));
         } else
