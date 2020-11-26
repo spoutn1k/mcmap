@@ -13,20 +13,27 @@ FIND_PACKAGE(ZLIB REQUIRED)
 SET(CMAKE_CXX_STANDARD 17)
 SET(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+SET(SOURCES ${SOURCES}
+    src/blocktypes.def
+    src/block_drawers.cpp
+    src/canvas.cpp
+    src/colors.cpp
+    src/colors.bson
+    src/helper.cpp
+    src/png.cpp
+    src/section.cpp
+    src/settings.cpp
+    src/worldloader.cpp
+    src/VERSION
+    src/include/fmt/format.cpp)
+
 INCLUDE_DIRECTORIES(src/include)
 
-IF (TESTS_)
-    FIND_PACKAGE(GTest REQUIRED)
-    FILE(GLOB SOURCES tests/*.cpp)
-    ADD_EXECUTABLE(run_tests ${SOURCES})
-    TARGET_LINK_LIBRARIES(run_tests GTest::gtest GTest::gtest_main)
-ENDIF ()
-
 ADD_DEFINITIONS(-Wall -pedantic -D_FILE_OFFSET_BITS=64)
+LINK_LIBRARIES(ZLIB::ZLIB PNG::PNG)
 ADD_LINK_OPTIONS(-lstdc++fs)
-LINK_LIBRARIES(ZLIB::ZLIB)
 
-FILE(GLOB SOURCES src/*.cpp src/include/fmt/format.cpp)
+ADD_EXECUTABLE(json2bson scripts/json2bson.cpp src/include/fmt/format.cpp)
 
 ADD_CUSTOM_COMMAND(OUTPUT src/colors.bson
     PRE_BUILD
@@ -34,8 +41,14 @@ ADD_CUSTOM_COMMAND(OUTPUT src/colors.bson
     MAIN_DEPENDENCY src/colors.json
     DEPENDS src/colors.json)
 
-ADD_EXECUTABLE(json2bson scripts/json2bson.cpp src/include/fmt/format.cpp)
-ADD_EXECUTABLE(mcmap ${SOURCES} src/colors.bson)
+IF (TESTS_)
+    FIND_PACKAGE(GTest REQUIRED)
+    FILE(GLOB TEST tests/*cpp)
+    ADD_EXECUTABLE(run_tests ${TEST} ${SOURCES})
+    TARGET_LINK_LIBRARIES(run_tests GTest::gtest GTest::gtest_main)
+ENDIF ()
+
+ADD_EXECUTABLE(mcmap src/main.cpp ${SOURCES})
 
 IF (OpenMP_FOUND)
     TARGET_LINK_LIBRARIES(mcmap OpenMP::OpenMP_CXX)
@@ -49,8 +62,6 @@ ELSE()
 	ADD_DEFINITIONS(-O3 -fomit-frame-pointer)
 	SET_TARGET_PROPERTIES(mcmap PROPERTIES LINK_FLAGS -s)
 ENDIF()
-
-TARGET_LINK_LIBRARIES(mcmap PNG::PNG)
 
 INSTALL(TARGETS mcmap)
 
