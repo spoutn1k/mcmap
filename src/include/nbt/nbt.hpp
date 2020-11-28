@@ -57,13 +57,15 @@ public:
   using iterator = iter<NBT>;
   using const_iterator = iter<const NBT>;
 
-  NBT(const tag_type type) : type(type), content(type){};
+  NBT(const tag_type type, key_type name_ = "")
+      : type(type), content(type), name(name_){};
+
   NBT(std::nullptr_t = nullptr) : NBT(tag_type::tag_end){};
 
   template <
       typename Integer,
       typename std::enable_if<std::is_integral<Integer>::value, int>::type = 0>
-  NBT(const Integer value) {
+  NBT(const Integer value, key_type name_ = "") : name(name_) {
     switch (std::alignment_of<Integer>()) {
     case 1:
       type = tag_type::tag_byte;
@@ -91,7 +93,7 @@ public:
   template <typename Float,
             typename std::enable_if<std::is_floating_point<Float>::value,
                                     int>::type = 0>
-  NBT(const Float value) {
+  NBT(const Float value, key_type name_ = "") : name(name_) {
     switch (std::alignment_of<Float>()) {
     case 4:
       type = tag_type::tag_float;
@@ -105,12 +107,13 @@ public:
     }
   }
 
-  NBT(const tag_string_t str) : type(tag_type::tag_string), content(str){};
+  NBT(const tag_string_t str, key_type name_ = "")
+      : type(tag_type::tag_string), content(str), name(name_){};
 
   template <
       typename Integer,
       typename std::enable_if<std::is_integral<Integer>::value, int>::type = 0>
-  NBT(const std::vector<Integer> &data) {
+  NBT(const std::vector<Integer> &data, key_type name_ = "") : name(name_) {
     switch (std::alignment_of<Integer>()) {
     case 1:
       type = tag_type::tag_byte_array;
@@ -130,6 +133,12 @@ public:
       break;
     }
   }
+
+  NBT(const tag_list_t &data, key_type name_ = "")
+      : type(tag_type::tag_list), content(data), name(name_){};
+
+  NBT(const tag_compound_t &data, key_type name_ = "")
+      : type(tag_type::tag_compound), content(data), name(name_){};
 
   NBT(const NBT &other) : type(other.type), name(other.name) {
     switch (type) {
@@ -328,7 +337,10 @@ public:
       break;
     }
   }
+
+  void set_name(const std::string &name_) { name = name_; };
   std::string get_name() const { return name; };
+
   nbt::tag_type get_type() const { return type; };
 
   constexpr bool is_end() const noexcept { return type == tag_type::tag_end; }

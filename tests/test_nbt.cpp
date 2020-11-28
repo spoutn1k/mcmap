@@ -6,7 +6,13 @@
 #define BUFFERSIZE 2000000
 #define NBT_FILE "tests/level.dat"
 
-TEST(TestNBT, TestCreate) {
+TEST(TestNBT, TestCreateName) {
+  nbt::NBT test;
+  test.set_name("test NBT");
+  ASSERT_EQ(test.get_name(), "test NBT");
+}
+
+TEST(TestNBT, TestCreateEnd) {
   nbt::NBT test;
   ASSERT_TRUE(test.empty());
 }
@@ -64,6 +70,7 @@ TEST(TestNBT, TestCreateString) {
 
   ASSERT_FALSE(test.empty());
   ASSERT_EQ(test.get_type(), nbt::tag_type::tag_string);
+  ASSERT_EQ(test.get<std::string>(), "key");
 }
 
 TEST(TestNBT, TestCreateByteArray) {
@@ -94,6 +101,37 @@ TEST(TestNBT, TestCreateByteArray) {
   std::vector<int8_t> *cdata = ctest.get<std::vector<int8_t> *>();
   for (size_t i = 0; i < carray.size(); i++)
     ASSERT_EQ(carray.at(i), cdata->at(i));
+}
+
+TEST(TestNBT, TestCreateList) {
+  std::vector<std::string> elements = {"This", "is", "a", "test"};
+  std::vector<nbt::NBT> list;
+
+  for (auto &value : elements)
+    list.push_back(nbt::NBT(value));
+
+  nbt::NBT test = nbt::NBT(list);
+
+  ASSERT_FALSE(test.empty());
+  ASSERT_EQ(test.get_type(), nbt::tag_type::tag_list);
+
+  for (size_t i = 0; i < elements.size(); i++)
+    ASSERT_EQ(elements[i], test[i].get<std::string>());
+}
+
+TEST(TestNBT, TestCreateCompound) {
+  std::vector<std::string> elements = {"This", "is", "a", "test"};
+  std::map<std::string, nbt::NBT> compound;
+
+  for (auto &value : elements)
+    compound[value] = (nbt::NBT(value));
+
+  nbt::NBT test = nbt::NBT(compound);
+
+  ASSERT_FALSE(test.empty());
+  ASSERT_EQ(test.get_type(), nbt::tag_type::tag_compound);
+
+  // Iterators seem to be broken, have to delve into that
 }
 
 TEST(TestNBT, TestCreateIntArray) {
