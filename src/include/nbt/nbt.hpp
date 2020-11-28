@@ -60,13 +60,57 @@ public:
   NBT(const tag_type type) : type(type), content(type){};
   NBT(std::nullptr_t = nullptr) : NBT(tag_type::tag_end){};
 
-  NBT(const tag_byte_t byte) : type(tag_type::tag_byte), content(byte){};
+  template <
+      typename Integer,
+      typename std::enable_if<std::is_integral<Integer>::value, int>::type = 0>
+  NBT(const Integer value) {
+    switch (std::alignment_of<Integer>()) {
+    case 1:
+      type = tag_type::tag_byte;
+      content = tag_content(tag_byte_t(value));
+      break;
+
+    case 2:
+      type = tag_type::tag_short;
+      content = tag_content(tag_short_t(value));
+      break;
+
+    case 3:
+    case 4:
+      type = tag_type::tag_int;
+      content = tag_content(tag_int_t(value));
+      break;
+
+    default:
+      type = tag_type::tag_long;
+      content = tag_content(tag_long_t(value));
+      break;
+    }
+  }
+
+  template <typename Float,
+            typename std::enable_if<std::is_floating_point<Float>::value,
+                                    int>::type = 0>
+  NBT(const Float value) {
+    switch (std::alignment_of<Float>()) {
+    case 4:
+      type = tag_type::tag_float;
+      content = tag_content(tag_float_t(value));
+      break;
+
+    default:
+      type = tag_type::tag_double;
+      content = tag_content(tag_double_t(value));
+      break;
+    }
+  }
+
   NBT(const tag_string_t str) : type(tag_type::tag_string), content(str){};
 
   template <
       typename Integer,
       typename std::enable_if<std::is_integral<Integer>::value, int>::type = 0>
-  NBT(const std::vector<Integer> data) {
+  NBT(const std::vector<Integer> &data) {
     switch (std::alignment_of<Integer>()) {
     case 1:
       type = tag_type::tag_byte_array;

@@ -12,10 +12,51 @@ TEST(TestNBT, TestCreate) {
 }
 
 TEST(TestNBT, TestCreateByte) {
-  nbt::NBT test(uint8_t(4));
+  nbt::NBT test(std::numeric_limits<uint8_t>::max());
 
   ASSERT_FALSE(test.empty());
   ASSERT_EQ(test.get_type(), nbt::tag_type::tag_byte);
+  ASSERT_EQ(test.get<uint8_t>(), std::numeric_limits<uint8_t>::max());
+}
+
+TEST(TestNBT, TestCreateShort) {
+  nbt::NBT test(std::numeric_limits<uint16_t>::max());
+
+  ASSERT_FALSE(test.empty());
+  ASSERT_EQ(test.get_type(), nbt::tag_type::tag_short);
+  ASSERT_EQ(test.get<uint16_t>(), std::numeric_limits<uint16_t>::max());
+}
+
+TEST(TestNBT, TestCreateInt) {
+  nbt::NBT test(std::numeric_limits<uint32_t>::max());
+
+  ASSERT_FALSE(test.empty());
+  ASSERT_EQ(test.get_type(), nbt::tag_type::tag_int);
+  ASSERT_EQ(test.get<uint32_t>(), std::numeric_limits<uint32_t>::max());
+}
+
+TEST(TestNBT, TestCreateLong) {
+  nbt::NBT test(std::numeric_limits<uint64_t>::max());
+
+  ASSERT_FALSE(test.empty());
+  ASSERT_EQ(test.get_type(), nbt::tag_type::tag_long);
+  ASSERT_EQ(test.get<uint64_t>(), std::numeric_limits<uint64_t>::max());
+}
+
+TEST(TestNBT, TestCreateFloat) {
+  nbt::NBT test(std::numeric_limits<float>::max());
+
+  ASSERT_FALSE(test.empty());
+  ASSERT_EQ(test.get_type(), nbt::tag_type::tag_float);
+  ASSERT_EQ(test.get<float>(), std::numeric_limits<float>::max());
+}
+
+TEST(TestNBT, TestCreateDouble) {
+  nbt::NBT test(std::numeric_limits<double>::max());
+
+  ASSERT_FALSE(test.empty());
+  ASSERT_EQ(test.get_type(), nbt::tag_type::tag_double);
+  ASSERT_EQ(test.get<double>(), std::numeric_limits<double>::max());
 }
 
 TEST(TestNBT, TestCreateString) {
