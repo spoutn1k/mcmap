@@ -62,6 +62,31 @@ public:
 
   NBT(const tag_byte_t byte) : type(tag_type::tag_byte), content(byte){};
   NBT(const tag_string_t str) : type(tag_type::tag_string), content(str){};
+
+  template <
+      typename Integer,
+      typename std::enable_if<std::is_integral<Integer>::value, int>::type = 0>
+  NBT(const std::vector<Integer> data) {
+    switch (std::alignment_of<Integer>()) {
+    case 1:
+      type = tag_type::tag_byte_array;
+      content = tag_content(tag_byte_array_t(data.begin(), data.end()));
+      break;
+
+    case 2:
+    case 3:
+    case 4:
+      type = tag_type::tag_int_array;
+      content = tag_content(tag_int_array_t(data.begin(), data.end()));
+      break;
+
+    default:
+      type = tag_type::tag_long_array;
+      content = tag_content(tag_long_array_t(data.begin(), data.end()));
+      break;
+    }
+  }
+
   NBT(const NBT &other) : type(other.type), name(other.name) {
     switch (type) {
     case tag_type::tag_byte: {
@@ -670,7 +695,9 @@ private:
       long_array = new tag_long_array_t(value);
     }
 
-    tag_content(tag_long_array_t &&value) { *long_array = std::move(value); }
+    tag_content(tag_long_array_t &&value) {
+      long_array = new tag_long_array_t(std::move(value));
+    }
 
     tag_content(const tag_string_t &value) { string = new tag_string_t(value); }
 

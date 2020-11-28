@@ -25,15 +25,59 @@ TEST(TestNBT, TestCreateString) {
   ASSERT_EQ(test.get_type(), nbt::tag_type::tag_string);
 }
 
-/* TODO
-TEST(TestNBT, TestCreateArray) {
-  std::vector<uint8_t> array = {98, 97, 10, 99};
-  nbt::NBT test(array);
+TEST(TestNBT, TestCreateByteArray) {
+  std::vector<int8_t> array = {98, 97, 10, 99};
+  std::vector<uint8_t> uarray = {98, 97, 10, 99};
+  std::vector<char> carray = {98, 97, 10, 99};
 
+  nbt::NBT test(array);
   ASSERT_FALSE(test.empty());
   ASSERT_EQ(test.get_type(), nbt::tag_type::tag_byte_array);
+
+  std::vector<int8_t> *data = test.get<std::vector<int8_t> *>();
+  for (size_t i = 0; i < array.size(); i++)
+    ASSERT_EQ(array.at(i), data->at(i));
+
+  nbt::NBT utest(uarray);
+  ASSERT_FALSE(test.empty());
+  ASSERT_EQ(test.get_type(), nbt::tag_type::tag_byte_array);
+
+  std::vector<int8_t> *udata = utest.get<std::vector<int8_t> *>();
+  for (size_t i = 0; i < uarray.size(); i++)
+    ASSERT_EQ(uarray.at(i), udata->at(i));
+
+  nbt::NBT ctest(carray);
+  ASSERT_FALSE(test.empty());
+  ASSERT_EQ(test.get_type(), nbt::tag_type::tag_byte_array);
+
+  std::vector<int8_t> *cdata = ctest.get<std::vector<int8_t> *>();
+  for (size_t i = 0; i < carray.size(); i++)
+    ASSERT_EQ(carray.at(i), cdata->at(i));
 }
-*/
+
+TEST(TestNBT, TestCreateIntArray) {
+  std::vector<int> array = {98, 97, 10, 99};
+
+  nbt::NBT test(array);
+  ASSERT_FALSE(test.empty());
+  ASSERT_EQ(test.get_type(), nbt::tag_type::tag_int_array);
+
+  std::vector<int> *data = test.get<std::vector<int> *>();
+  for (size_t i = 0; i < array.size(); i++)
+    ASSERT_EQ(array.at(i), data->at(i));
+}
+
+TEST(TestNBT, TestCreateLongArray) {
+  std::vector<long> array = {98, 97, 10, 99};
+
+  nbt::NBT test(array);
+  ASSERT_FALSE(test.empty());
+  ASSERT_EQ(test.get_type(), nbt::tag_type::tag_long_array);
+
+  std::vector<long> *data = test.get<std::vector<long> *>();
+  for (size_t i = 0; i < array.size(); i++)
+    ASSERT_EQ(array.at(i), data->at(i));
+}
 
 class TestNBTParse : public ::testing::Test {
 protected:
