@@ -11,3 +11,7 @@ To print a chunk as json, you can pipe those scripts together:
 ```
 ./extractChunk <region file> X Z | ./nbt2json | python -m json.tool
 ```
+
+## Compilation
+
+Compile using `-DNBT_TOOLS=1` when calling `cmake`.
