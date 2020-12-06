@@ -145,19 +145,23 @@ Examples:
 
 ## Compilation
 
-`mcmap` depends on the `PNG` and `zlib` libraries. Development was made using `gcc` version 10, and can be compiled with `gcc` 8 or later or `clang` 10 or later.
+`mcmap` depends on the `PNG` and `zlib` libraries.
+Development was made using `gcc` version 10, and can be compiled with `gcc` 8 or later or `clang` 10 or later.
+Configuration is done using `CMake`.
 
 #### Linux
 
 Getting the libraries depends on your distribution:
 
-- Ubuntu: `apt update && apt install git make g++ libpng-dev`;
-- Archlinux: `pacman -S --needed git gcc make libpng`.
+- Ubuntu: `apt update && apt install git make g++ libpng-dev cmake`;
+- Archlinux: `pacman -S --needed git gcc make libpng cmake`.
 
 Then get the code and compile:
 ```
 git clone http://github.com/spoutn1k/mcmap
-cd mcmap && make -j
+cd mcmap
+cmake .
+make -j
 ```
 
 #### macOS
@@ -170,7 +174,8 @@ Using [`brew`](https://brew.sh/):
 brew install libpng libomp
 git clone http://github.com/spoutn1k/mcmap
 cd mcmap
-OS=MACOS make
+cmake .
+make -j
 ```
 
 #### Windows
