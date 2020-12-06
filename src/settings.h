@@ -56,7 +56,6 @@ struct WorldOptions {
   Dimension dim;
   std::string customDim;
   Terrain::Coordinates boundaries;
-  uint16_t splits;
 
   // Image settings
   uint16_t padding; // Should be enough
@@ -67,27 +66,23 @@ struct WorldOptions {
   Colors::Marker markers[256];
 
   // Memory limits, legacy code for image splitting
-  int offsetY;
-  uint64_t memlimit;
-  bool memlimitSet, wholeworld;
+  size_t mem_limit;
+  size_t tile_size;
 
   WorldOptions() : mode(RENDER), saveName(""), colorFile(""), dim("overworld") {
     outFile = "output.png";
 
-    splits = 1;
     boundaries.setUndefined();
     boundaries.minY = 0;
     boundaries.maxY = 255;
 
-    offsetY = 3;
     hideWater = hideBeacons = shading = false;
     padding = 5;
 
     totalMarkers = 0;
 
-    wholeworld = false;
-    memlimit = 2000 * uint64_t(1024 * 1024);
-    memlimitSet = false;
+    mem_limit = 3500 * uint64_t(1024 * 1024);
+    tile_size = 1024;
   }
 
   std::filesystem::path regionDir() { return dim.regionDir(saveName); }

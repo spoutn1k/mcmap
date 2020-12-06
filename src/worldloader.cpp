@@ -1,5 +1,4 @@
 #include "worldloader.h"
-#include "logger.h"
 
 NBT minecraft_air(nbt::tag_type::tag_end);
 
@@ -340,8 +339,8 @@ Terrain::Chunk &Terrain::Data::chunkAt(int64_t xPos, int64_t zPos) {
       "r." + std::to_string(rX) + "." + std::to_string(rZ) + ".mca";
 
   if (!std::filesystem::exists(regionFile)) {
-    logger::debug("Region file r.{}.{}.mca does not exist, skipping ..\n", rX,
-                  rZ);
+    logger::deep_debug("Region file r.{}.{}.mca does not exist, skipping ..\n",
+                       rX, rZ);
     return empty;
   }
 
