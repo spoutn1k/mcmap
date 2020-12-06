@@ -981,5 +981,9 @@
 	"minecraft:lava_cauldron": { "type": "Log", "color": [55, 55, 55, 255], "accent": [255, 90, 0, 255] },
 	"minecraft:powder_snow_cauldron": { "type": "Log", "color": [55, 55, 55, 255], "accent": [248, 253, 253, 255] },
 
-    "minecraft:powder_snow": [248, 253, 253, 255]
+    "minecraft:powder_snow": [248, 253, 253, 255],
+
+    "minecraft:dripstone_block": [136, 110, 94, 255],
+    "minecraft:pointed_dripstone": { "type": "Rod", "color": [132, 106, 91, 255] },
+    "minecraft:sculk_sensor": { "type": "Slab", "color": [16, 72, 86, 255] }
 }
