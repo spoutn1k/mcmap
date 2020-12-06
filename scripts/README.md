@@ -6,11 +6,12 @@ This directory contains various scripts to use when debugging and compiling `mcm
 - `nbt2json` takes a NBT file (as found in `level.dat`) and pastes its output as json;
 - `regionReader` reads a region file (`.mca` files) and prints all the chunks present in it;
 - `extractChunk` extracts a chunk from a given region file;
-- `memProf` creates a `tsv` with the memory used by a process over time. Only on Linux.
-
-Compile them by running `make`.
 
 To print a chunk as json, you can pipe those scripts together:
 ```
 ./extractChunk <region file> X Z | ./nbt2json | python -m json.tool
 ```
+
+## Compilation
+
+Compile using `-DNBT_TOOLS=1` when calling `cmake`.

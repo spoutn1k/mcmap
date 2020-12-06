@@ -57,11 +57,89 @@ public:
   using iterator = iter<NBT>;
   using const_iterator = iter<const NBT>;
 
-  NBT(const tag_type type) : type(type), content(type){};
+  NBT(const tag_type type, key_type name_ = "")
+      : type(type), content(type), name(name_){};
+
   NBT(std::nullptr_t = nullptr) : NBT(tag_type::tag_end){};
 
-  NBT(const tag_byte_t byte) : type(tag_type::tag_byte), content(byte){};
-  NBT(const tag_string_t str) : type(tag_type::tag_string), content(str){};
+  template <
+      typename Integer,
+      typename std::enable_if<std::is_integral<Integer>::value, int>::type = 0>
+  NBT(const Integer value, key_type name_ = "") : name(name_) {
+    switch (std::alignment_of<Integer>()) {
+    case 1:
+      type = tag_type::tag_byte;
+      content = tag_content(tag_byte_t(value));
+      break;
+
+    case 2:
+      type = tag_type::tag_short;
+      content = tag_content(tag_short_t(value));
+      break;
+
+    case 3:
+    case 4:
+      type = tag_type::tag_int;
+      content = tag_content(tag_int_t(value));
+      break;
+
+    default:
+      type = tag_type::tag_long;
+      content = tag_content(tag_long_t(value));
+      break;
+    }
+  }
+
+  template <typename Float,
+            typename std::enable_if<std::is_floating_point<Float>::value,
+                                    int>::type = 0>
+  NBT(const Float value, key_type name_ = "") : name(name_) {
+    switch (std::alignment_of<Float>()) {
+    case 4:
+      type = tag_type::tag_float;
+      content = tag_content(tag_float_t(value));
+      break;
+
+    default:
+      type = tag_type::tag_double;
+      content = tag_content(tag_double_t(value));
+      break;
+    }
+  }
+
+  NBT(const tag_string_t str, key_type name_ = "")
+      : type(tag_type::tag_string), content(str), name(name_){};
+
+  template <
+      typename Integer,
+      typename std::enable_if<std::is_integral<Integer>::value, int>::type = 0>
+  NBT(const std::vector<Integer> &data, key_type name_ = "") : name(name_) {
+    switch (std::alignment_of<Integer>()) {
+    case 1:
+      type = tag_type::tag_byte_array;
+      content = tag_content(tag_byte_array_t(data.begin(), data.end()));
+      break;
+
+    case 2:
+    case 3:
+    case 4:
+      type = tag_type::tag_int_array;
+      content = tag_content(tag_int_array_t(data.begin(), data.end()));
+      break;
+
+    default:
+      type = tag_type::tag_long_array;
+      content = tag_content(tag_long_array_t(data.begin(), data.end()));
+      break;
+    }
+  }
+
+  NBT(const tag_list_t &data, key_type name_ = "")
+      : type(tag_type::tag_list), content(data), name(name_){};
+
+  NBT(const tag_compound_t &data, key_type name_ = "")
+      : type(tag_type::tag_compound), content(data), name(name_){};
+
   NBT(const NBT &other) : type(other.type), name(other.name) {
     switch (type) {
     case tag_type::tag_byte: {
@@ -259,7 +337,10 @@ public:
       break;
     }
   }
+
+  void set_name(const std::string &name_) { name = name_; };
   std::string get_name() const { return name; };
+
   nbt::tag_type get_type() const { return type; };
 
   constexpr bool is_end() const noexcept { return type == tag_type::tag_end; }
@@ -670,7 +751,9 @@ private:
       long_array = new tag_long_array_t(value);
     }
 
-    tag_content(tag_long_array_t &&value) { *long_array = std::move(value); }
+    tag_content(tag_long_array_t &&value) {
+      long_array = new tag_long_array_t(std::move(value));
+    }
 
     tag_content(const tag_string_t &value) { string = new tag_string_t(value); }
 
