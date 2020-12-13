@@ -153,6 +153,18 @@ struct Block {
   }
 
   bool operator!=(const Block &other) const { return !operator==(other); }
+
+  Block shade(float fsub) const __attribute__((noinline)) {
+    Block shaded;
+    int sub = int(fsub * (float(primary.brightness()) / 323.0f + .21f));
+
+    shaded.primary.modColor(sub);
+    shaded.dark.modColor(sub);
+    shaded.light.modColor(sub);
+    shaded.secondary.modColor(sub);
+
+    return shaded;
+  }
 };
 
 typedef map<string, Colors::Block> Palette;
