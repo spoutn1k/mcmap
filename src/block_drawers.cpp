@@ -145,7 +145,7 @@ void drawOre(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
    * |DSLS|
    * |SDLL| */
 
-  int sub = (float(color->primary.BRIGHTNESS) / 323.0f + .21f);
+  int sub = (float(color->primary.brightness()) / 323.0f + .21f);
 
   Colors::Color secondaryLight(color->secondary);
   Colors::Color secondaryDark(color->secondary);
@@ -173,7 +173,7 @@ void drawGrown(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
 
   // First determine how much the color has to be lightened up or darkened
   // The brighter the color, the stronger the impact
-  int sub = (float(color->primary.BRIGHTNESS) / 323.0f + .21f);
+  int sub = (float(color->primary.brightness()) / 323.0f + .21f);
 
   Colors::Color secondaryLight(color->secondary);
   Colors::Color secondaryDark(color->secondary);
@@ -296,7 +296,7 @@ void drawLog(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
              const NBT &metadata, const Colors::Block *color) {
 
   string axis = "y";
-  int sub = (float(color->primary.BRIGHTNESS) / 323.0f + .21f);
+  int sub = (float(color->primary.brightness()) / 323.0f + .21f);
 
   Colors::Color secondaryLight(color->secondary);
   Colors::Color secondaryDark(color->secondary);

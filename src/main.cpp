@@ -58,7 +58,12 @@ int main(int argc, char **argv) {
     return ERROR;
   }
 
-  Colors::load(options.colorFile, &colors);
+  // Load colors from the text segment
+  Colors::load(&colors);
+
+  // If requested, load colors from file
+  if (!options.colorFile.empty())
+    Colors::load(options.colorFile, &colors);
 
   if (options.mode == Settings::DUMPCOLORS) {
     logger::info("{}", json(colors).dump());

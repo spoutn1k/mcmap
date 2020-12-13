@@ -1,63 +1,52 @@
 #include "colors.h"
 
 std::map<string, int> erroneous;
-std::vector<uint8_t> defaultColors =
+
+// Embedded colors, as a byte array. This array is created by compiling
+// `colors.json` into `colors.bson`, using `json2bson`, then included here. The
+// json library can then interpret it into a usable `Palette` object
+std::vector<uint8_t> default_colors =
 #include "colors.bson"
     ;
 
-bool Colors::load(const std::filesystem::path &colorFile, Palette *colors) {
-  json colors_j = json::from_bson(defaultColors), overriden;
-
-  if (!colorFile.empty()) {
-    if (!std::filesystem::exists(colorFile)) {
-      logger::error("Could not open color file {}\n", colorFile.c_str());
-    } else {
-      FILE *f = fopen(colorFile.c_str(), "r");
-
-      try {
-        overriden = json::parse(f);
-        colors_j.update(overriden);
-      } catch (const nlohmann::detail::parse_error &err) {
-        logger::error("Parsing color file {} failed: {}\n", colorFile.c_str(),
-                      err.what());
-      }
-
-      fclose(f);
-    }
+// Load embedded colors into the palette passed as an argument
+bool Colors::load(Palette *colors) {
+  try {
+    *colors = json::from_bson(default_colors).get<Colors::Palette>();
+  } catch (const nlohmann::detail::parse_error &err) {
+    logger::error("Error loading embedded colors: {}", err.what());
+    return false;
   }
-
-  *colors = colors_j.get<Colors::Palette>();
 
   return true;
 }
 
-void Colors::filter(const Palette &definitions,
-                    const std::vector<string> &filter, Palette *colors) {
+// Load colors from file into the palette passed as an argument
+bool Colors::load(const std::filesystem::path &color_file, Palette *colors) {
+  Palette colors_j;
 
-  std::vector<string> builtin = {"mcmap:beacon_beam"};
-
-  for (auto it : filter) {
-    if (definitions.find(it) != definitions.end()) {
-      colors->insert(std::pair<string, Colors::Block>(it, definitions.at(it)));
-      continue;
-    } else {
-      logger::warn("No color for block {}\n", it);
-      colors->insert(std::pair<string, Colors::Block>(it, Colors::Block()));
-    }
+  if (color_file.empty() || !std::filesystem::exists(color_file)) {
+    logger::error("Could not open color file `{}`\n", color_file.c_str());
+    return false;
   }
 
-  for (auto it : builtin) {
-    if (definitions.find(it) != definitions.end()) {
-      colors->insert(std::pair<string, Colors::Block>(it, definitions.at(it)));
-      continue;
-    } else {
-      logger::warn("No color for block {}\n", it);
-      colors->insert(std::pair<string, Colors::Block>(it, Colors::Block()));
-    }
+  FILE *f = fopen(color_file.c_str(), "r");
+
+  try {
+    colors_j = json::parse(f).get<Colors::Palette>();
+  } catch (const nlohmann::detail::parse_error &err) {
+    logger::error("Parsing color file {} failed: {}\n", color_file.c_str(),
+                  err.what());
+    fclose(f);
+    return false;
   }
 
-  logger::debug("Loaded {} colors out of the {} declared\n", colors->size(),
-                definitions.size());
+  fclose(f);
+
+  for (const auto &overriden : colors_j)
+    colors->insert_or_assign(overriden.first, overriden.second);
+
+  return true;
 }
 
 #define LIST(C)                                                                \

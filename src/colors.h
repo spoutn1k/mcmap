@@ -76,10 +76,12 @@ const std::map<string, list<int>> markerColors = {
 };
 
 struct Color {
+  // Red, Green, Blue
   uint8_t R, G, B;
-  uint8_t ALPHA, NOISE, BRIGHTNESS;
+  // Transparency, and legacy setting
+  uint8_t ALPHA, NOISE;
 
-  Color() { R = G = B = ALPHA = NOISE = BRIGHTNESS = 0; }
+  Color() { R = G = B = ALPHA = NOISE = 0; }
 
   Color(list<int> values) : Color() {
     uint8_t index = 0;
@@ -136,10 +138,8 @@ struct Block {
   }
 
   Block(const Colors::BlockTypes &bt, list<int> c1, list<int> c2)
-      : primary(c1), secondary(c2), light(c1), dark(c1) {
-    type = bt;
-    light.modColor(-17);
-    dark.modColor(-27);
+      : Block(bt, c1) {
+    secondary = c2;
   }
 
   Block operator+(const Block &other) const {
@@ -179,8 +179,8 @@ struct Marker {
   };
 };
 
+bool load(Palette *);
 bool load(const std::filesystem::path &, Palette *);
-void filter(const Palette &, const std::vector<string> &filter, Palette *);
 
 void to_json(json &j, const Block &b);
 void from_json(const json &j, Block &b);
