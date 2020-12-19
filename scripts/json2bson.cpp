@@ -8,8 +8,9 @@ using std::filesystem::exists;
 using std::filesystem::path;
 
 int main(int argc, char **argv) {
-  if (argc > 2 || (argc == 2 && !exists(path(argv[1])))) {
+  if (argc > 2) {
     fmt::print(stderr, "Usage: {} [json file]\n", argv[0]);
+
     return 1;
   }
 
@@ -22,14 +23,16 @@ int main(int argc, char **argv) {
     f = fopen(argv[1], "r");
 
   if (!f) {
-    fmt::print(stderr, "Error opening file: {}\n", strerror(errno));
+    fmt::print(stderr, "{}: Error opening {}: {}\n", argv[0], argv[1],
+               strerror(errno));
     return 1;
   }
 
   try {
     data = json::parse(f);
   } catch (const json::parse_error &err) {
-    fmt::print(stderr, "Error parsing file: {}\n", err.what());
+    fmt::print(stderr, "{}: Error parsing {}: {}\n", argv[0], argv[1],
+               err.what());
     fclose(f);
     return 1;
   }
