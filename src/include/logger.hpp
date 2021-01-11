@@ -33,11 +33,6 @@ extern int level;
 extern bool prettyOut, prettyErr;
 extern std::chrono::time_point<std::chrono::high_resolution_clock> last;
 
-void vinfo(const char *format, fmt::format_args args);
-void vwarning(const char *format, fmt::format_args args);
-void verror(const char *format, fmt::format_args args);
-void vdebug(const char *format, fmt::format_args args);
-
 template <typename... Args> void info(const char *format, const Args &...args) {
   fmt::vprint(format, fmt::make_format_args(args...));
 }

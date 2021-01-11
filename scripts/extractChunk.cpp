@@ -1,11 +1,13 @@
 #include <filesystem>
-#include <fmt/core.h>
+#include <logger.hpp>
 #include <zlib.h>
 
 #define BUFFERSIZE 2000000
 #define DECOMPRESSED_BUFFER BUFFERSIZE
 #define REGIONSIZE 32
 #define HEADER_SIZE REGIONSIZE *REGIONSIZE * 4
+
+SETUP_LOGGER;
 
 using std::filesystem::exists;
 using std::filesystem::path;
@@ -35,32 +37,31 @@ int main(int argc, char **argv) {
 
   if (argc < 4 || !exists(path(argv[1])) || !isNumeric(argv[2]) ||
       !isNumeric(argv[3])) {
-    fmt::print(stderr, "Usage: {} <Region file> <X> <Z>\n", argv[0]);
+    logger::error("Usage: {} <Region file> <X> <Z>\n", argv[0]);
     return 1;
   }
 
   uint8_t x = atoi(argv[2]), z = atoi(argv[3]);
 
   if (x > 31 || z > 31) {
-    fmt::print(stderr, "Invalid coordinates: {} {} must be 0 and 31\n", x, z);
+    logger::error("Invalid coordinates: {} {} must be 0 and 31\n", x, z);
     return 1;
   }
 
   if (isatty(STDOUT_FILENO)) {
-    fmt::print(
-        stderr,
+    logger::error(
         "Not printing compressed data to a terminal, pipe to a file instead\n");
     return 1;
   }
 
   if (!(f = fopen(argv[1], "r"))) {
-    fmt::print(stderr, "Error opening file: {}\n", strerror(errno));
+    logger::error("Error opening file: {}\n", strerror(errno));
     return 1;
   }
 
   if ((length = fread(buffer, sizeof(uint8_t), HEADER_SIZE, f)) !=
       HEADER_SIZE) {
-    fmt::print(stderr, "Error reading header, not enough bytes read.\n");
+    logger::error("Error reading header, not enough bytes read.\n");
     fclose(f);
     return 1;
   }
@@ -69,22 +70,22 @@ int main(int argc, char **argv) {
       (_ntohi(buffer + (x + z * REGIONSIZE) * 4) >> 8) * 4096;
 
   if (!offset) {
-    fmt::print(stderr, "Error: Chunk not found\n");
+    logger::error("Error: Chunk not found\n");
     fclose(f);
     return 1;
   }
 
   if (0 != fseek(f, offset, SEEK_SET)) {
-    fmt::print(stderr, "Accessing chunk data in file {} failed: {}\n", argv[1],
-               strerror(errno));
+    logger::error("Accessing chunk data in file {} failed: {}\n", argv[1],
+                  strerror(errno));
     fclose(f);
     return 1;
   }
 
   // Read the 5 bytes that give the size and type of data
   if (5 != fread(buffer, sizeof(uint8_t), 5, f)) {
-    fmt::print(stderr, "Reading chunk size from region file {} failed: {}\n",
-               argv[1], strerror(errno));
+    logger::error("Reading chunk size from region file {} failed: {}\n",
+                  argv[1], strerror(errno));
     fclose(f);
     return 1;
   }
@@ -93,7 +94,7 @@ int main(int argc, char **argv) {
   length--; // Sometimes the data is 1 byte smaller
 
   if (fread(buffer, sizeof(uint8_t), length, f) != length) {
-    fmt::print(stderr, "Not enough data for chunk: {}\n", strerror(errno));
+    logger::error("Not enough data for chunk: {}\n", strerror(errno));
     fclose(f);
     return 1;
   }
@@ -112,7 +113,7 @@ int main(int argc, char **argv) {
   inflateEnd(&zlibStream);
 
   if (status != Z_STREAM_END) {
-    fmt::print(stderr, "Decompressing chunk data failed: {}\n", zError(status));
+    logger::error("Decompressing chunk data failed: {}\n", zError(status));
     return 1;
   }
 

@@ -1,5 +1,5 @@
 #include <filesystem>
-#include <fmt/core.h>
+#include <logger.hpp>
 
 #define BUFFERSIZE 4096
 #define REGIONSIZE 32
@@ -7,6 +7,8 @@
 
 using std::filesystem::exists;
 using std::filesystem::path;
+
+SETUP_LOGGER;
 
 uint32_t _ntohi(uint8_t *val) {
   return (uint32_t(val[0]) << 24) + (uint32_t(val[1]) << 16) +
@@ -23,31 +25,31 @@ int main(int argc, char **argv) {
   struct tm saved;
 
   if (argc < 2 || !exists(path(argv[1]))) {
-    fmt::print(stderr, "Usage: {} <Region file>\n", argv[0]);
+    logger::error("Usage: {} <Region file>\n", argv[0]);
     return 1;
   }
 
   if (!(f = fopen(argv[1], "r"))) {
-    fmt::print(stderr, "Error opening file: {}\n", strerror(errno));
+    logger::error("Error opening file: {}\n", strerror(errno));
     return 1;
   }
 
   if ((length = fread(locations, sizeof(uint8_t), HEADER_SIZE, f)) !=
       HEADER_SIZE) {
-    fmt::print(stderr, "Error reading header, not enough bytes read.\n");
+    logger::error("Error reading header, not enough bytes read.\n");
     fclose(f);
     return 1;
   }
 
   if ((length = fread(timestamps, sizeof(uint8_t), HEADER_SIZE, f)) !=
       HEADER_SIZE) {
-    fmt::print(stderr, "Error reading header, not enough bytes read.\n");
+    logger::error("Error reading header, not enough bytes read.\n");
     fclose(f);
     return 1;
   }
 
-  fmt::print("{}\t{}\t{}\t{}\t{}\t{}\n", "X", "Z", "Offset", "Size",
-             "Compression", "Saved");
+  logger::info("{}\t{}\t{}\t{}\t{}\t{}\n", "X", "Z", "Offset", "Size",
+               "Compression", "Saved");
 
   for (int it = 0; it < REGIONSIZE * REGIONSIZE; it++) {
     // Bound check
@@ -64,8 +66,7 @@ int main(int argc, char **argv) {
       if ((read = fread(data, sizeof(uint8_t), 5, f)) == 5)
         size = _ntohi(data);
       else
-        fmt::print(stderr, "Not enough data read for chunk {} {}\n", chunkX,
-                   chunkZ);
+        logger::error("Not enough data read for chunk {} {}\n", chunkX, chunkZ);
 
       saved = *localtime(&timestamp);
       strftime(time, 80, "%c", &saved);
@@ -75,9 +76,9 @@ int main(int argc, char **argv) {
       strcpy(time, "No data");
     }
 
-    fmt::print("{}\t{}\t{}\t{}\t{}\t{}\n", chunkX, chunkZ,
-               (offset ? std::to_string(offset) : "Not found"), size, data[4],
-               std::string(time));
+    logger::info("{}\t{}\t{}\t{}\t{}\t{}\n", chunkX, chunkZ,
+                 (offset ? std::to_string(offset) : "Not found"), size, data[4],
+                 std::string(time));
   }
 
   fclose(f);
