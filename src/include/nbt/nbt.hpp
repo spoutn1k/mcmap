@@ -1,15 +1,14 @@
 #pragma once
-#include <stdexcept>
-#include <type_traits>
 #ifndef NBT_HPP_
 #define NBT_HPP_
 
-#include "./iterators.hpp"
-#include "./tag_types.hpp"
-#include <fmt/core.h>
 #include <map>
+#include <nbt/iterators.hpp>
+#include <nbt/tag_types.hpp>
+#include <stdexcept>
 #include <stdint.h>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -487,10 +486,21 @@ public:
                             std::string(type_name())));
   }
 
-  NBT &operator=(NBT other) noexcept {
+  NBT &operator=(NBT &other) noexcept {
     using std::swap;
     swap(type, other.type);
+    swap(name, other.name);
     swap(content, other.content);
+
+    return *this;
+  }
+
+  NBT &operator=(NBT &&other) noexcept {
+    type = other.type;
+    name = std::move(other.name);
+    content = std::move(other.content);
+
+    other.type = tag_type::tag_end;
 
     return *this;
   }
@@ -755,11 +765,10 @@ private:
       long_array = new tag_long_array_t(std::move(value));
     }
 
-    tag_content(const tag_string_t &value) { string = new tag_string_t(value); }
+    tag_content(const tag_string_t &value) : string(new tag_string_t(value)) {}
 
-    tag_content(tag_string_t &&value) {
-      string = new tag_string_t(std::move(value));
-    }
+    tag_content(tag_string_t &&value)
+        : string(new tag_string_t(std::move(value))) {}
 
     tag_content(const tag_list_t &value) : list(new tag_list_t(value)) {}
 
@@ -1015,14 +1024,19 @@ public:
     switch (get_type()) {
     case tag_type::tag_byte:
       return static_cast<ArithmeticType>(*get_ptr<const tag_byte_t *>());
+
     case tag_type::tag_short:
       return static_cast<ArithmeticType>(*get_ptr<const tag_short_t *>());
+
     case tag_type::tag_int:
       return static_cast<ArithmeticType>(*get_ptr<const tag_int_t *>());
+
     case tag_type::tag_long:
       return static_cast<ArithmeticType>(*get_ptr<const tag_long_t *>());
+
     case tag_type::tag_float:
       return static_cast<ArithmeticType>(*get_ptr<const tag_float_t *>());
+
     case tag_type::tag_double:
       return static_cast<ArithmeticType>(*get_ptr<const tag_double_t *>());
 

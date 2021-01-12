@@ -4,7 +4,6 @@
 
 #include <json.hpp>
 #include <nbt/nbt.hpp>
-#include <nbt/tag_types.hpp>
 
 using nlohmann::json;
 
