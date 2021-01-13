@@ -31,43 +31,44 @@ inline bool gz_parse_type(gzFile f, nbt::tag_type *type) {
 
 namespace nbt {
 
-static NBT parse(std::filesystem::path file) {
-  gzFile f;
-  std::stack<NBT> opened_elements;
+static NBT matryoshka(gzFile &f) {
+  bool done = false, list_mode = false;
+  tag_type current_type, list_type;
 
-  tag_type current_type;
+  char buffer[MAXELEMENTSIZE];
+
+  NBT current;
+
   int name_size;
-  uint32_t elements;
   std::string current_name;
+  uint32_t elements, list_elements;
 
-  char buffer[MAXELEMENTSIZE], *status;
+  std::stack<NBT> opened_elements;
+  std::stack<std::pair<uint32_t, bool>> lists;
 
-  bool done = false;
-
-  if (!(f = gzopen(file.c_str(), "r"))) {
-    return NBT();
-  }
-
-  while (!done && gz_parse_type(f, &current_type)) {
+  while (!done) {
     current_name = "";
 
-    switch (current_type) {
-
-    case tag_type::tag_end: {
-      // Tag end -> collapse the last opened compound into the next to last one
-      if (opened_elements.size() > 1) {
-        NBT tmp(std::move(opened_elements.top()));
-        opened_elements.pop();
-        opened_elements.top()[tmp.get_name()] = std::move(tmp);
-      } else {
+    if (!(lists.size() && lists.top().first)) {
+      if (!gz_parse_type(f, &current_type)) {
+        // Error getting the type
         done = true;
       }
 
-      break;
-    }
+      if (current_type == tag_type::tag_end) {
+        if (opened_elements.size() > 1) {
+          current = std::move(opened_elements.top());
+          opened_elements.pop();
+          fmt::print(stdout, "Closing container {}\n", current.get_name());
+          opened_elements.top()[current.get_name()] = std::move(current);
+          lists.pop();
+        } else {
+          done = true;
+        }
 
-    case tag_type::tag_byte: {
-      // Byte -> Read name and a byte
+        continue;
+      }
+
       PARSE(2);
       name_size = _NTOHS(buffer);
 
@@ -75,103 +76,89 @@ static NBT parse(std::filesystem::path file) {
         PARSE(name_size);
         current_name = std::string(buffer);
       }
+    } else {
+      current_type = list_type;
+    }
 
+    if (current_type == tag_type::tag_compound) {
+      opened_elements.push(NBT(NBT::tag_compound_t(), current_name));
+      fmt::print(stdout, "Opening compound {}\n", current_name);
+      lists.push({0, false});
+      continue;
+    }
+
+    if (current_type == tag_type::tag_list) {
+      PARSE(1);
+      list_type = nbt::tag_type(buffer[0]);
+
+      PARSE(4);
+      list_elements = _NTOHI(buffer);
+      list_mode = true;
+
+      opened_elements.push(NBT(NBT::tag_list_t(), current_name));
+      lists.push({list_elements, true});
+      fmt::print(stdout, "Opening list {} of type {}, length {}\n",
+                 current_name, list_type, list_elements);
+      continue;
+    }
+
+    switch (current_type) {
+
+    case tag_type::tag_list:
+    case tag_type::tag_compound:
+    case tag_type::tag_end:
+      break;
+
+    case tag_type::tag_byte: {
+      // Byte -> Read name and a byte
       PARSE(1);
       uint8_t byte = buffer[0];
 
-      opened_elements.top()[current_name] = NBT(byte, current_name);
+      current = NBT(byte, current_name);
       break;
     }
 
     case tag_type::tag_short: {
       PARSE(2);
-      name_size = _NTOHS(buffer);
-
-      if (name_size) {
-        PARSE(name_size);
-        current_name = std::string(buffer);
-      }
-
-      PARSE(2);
       uint16_t _short = _NTOHS(buffer);
 
-      opened_elements.top()[current_name] = NBT(_short, current_name);
+      current = NBT(_short, current_name);
       break;
     }
 
     case tag_type::tag_int: {
-      PARSE(2);
-      name_size = _NTOHS(buffer);
-
-      if (name_size) {
-        PARSE(name_size);
-        current_name = std::string(buffer);
-      }
-
       PARSE(4);
       uint32_t _int = _NTOHI(buffer);
 
-      opened_elements.top()[current_name] = NBT(_int, current_name);
+      current = NBT(_int, current_name);
       break;
     }
 
     case tag_type::tag_long: {
-      PARSE(2);
-      name_size = _NTOHS(buffer);
-
-      if (name_size) {
-        PARSE(name_size);
-        current_name = std::string(buffer);
-      }
-
       PARSE(8);
       uint64_t _long = _NTOHL(buffer);
 
-      opened_elements.top()[current_name] = NBT(_long, current_name);
+      current = NBT(_long, current_name);
       break;
     }
 
     case tag_type::tag_float: {
-      PARSE(2);
-      name_size = _NTOHS(buffer);
-
-      if (name_size) {
-        PARSE(name_size);
-        current_name = std::string(buffer);
-      }
-
       PARSE(4);
       float _float = float(_NTOHI(buffer));
 
-      opened_elements.top()[current_name] = NBT(_float, current_name);
+      current = NBT(_float, current_name);
       break;
     }
 
     case tag_type::tag_double: {
-      PARSE(2);
-      name_size = _NTOHS(buffer);
-
-      if (name_size) {
-        PARSE(name_size);
-        current_name = std::string(buffer);
-      }
-
       PARSE(8);
       double _double = double(_NTOHI(buffer));
 
-      opened_elements.top()[current_name] = NBT(_double, current_name);
+      current = NBT(_double, current_name);
       break;
     }
 
     case tag_type::tag_byte_array: {
-      PARSE(2);
-      name_size = _NTOHS(buffer);
-
-      if (name_size) {
-        PARSE(name_size);
-        current_name = std::string(buffer);
-      }
-
       PARSE(4);
       elements = _NTOHI(buffer);
 
@@ -182,19 +169,11 @@ static NBT parse(std::filesystem::path file) {
         bytes[i] = buffer[0];
       }
 
-      opened_elements.top()[current_name] = NBT(bytes, current_name);
+      current = NBT(bytes, current_name);
       break;
     }
 
     case tag_type::tag_int_array: {
-      PARSE(2);
-      name_size = _NTOHS(buffer);
-
-      if (name_size) {
-        PARSE(name_size);
-        current_name = std::string(buffer);
-      }
-
       PARSE(4);
       elements = _NTOHI(buffer);
 
@@ -205,19 +184,11 @@ static NBT parse(std::filesystem::path file) {
         ints[i] = _NTOHI(buffer);
       }
 
-      opened_elements.top()[current_name] = NBT(ints, current_name);
+      current = NBT(ints, current_name);
       break;
     }
 
     case tag_type::tag_long_array: {
-      PARSE(2);
-      name_size = _NTOHS(buffer);
-
-      if (name_size) {
-        PARSE(name_size);
-        current_name = std::string(buffer);
-      }
-
       PARSE(4);
       elements = _NTOHI(buffer);
 
@@ -228,19 +199,11 @@ static NBT parse(std::filesystem::path file) {
         longs[i] = _NTOHL(buffer);
       }
 
-      opened_elements.top()[current_name] = NBT(longs, current_name);
+      current = NBT(longs, current_name);
       break;
     }
 
     case tag_type::tag_string: {
-      PARSE(2);
-      name_size = _NTOHS(buffer);
-
-      if (name_size) {
-        PARSE(name_size);
-        current_name = std::string(buffer);
-      }
-
       PARSE(2);
       uint16_t string_size = _NTOHS(buffer);
 
@@ -248,30 +211,44 @@ static NBT parse(std::filesystem::path file) {
 
       std::string content(buffer);
 
-      opened_elements.top()[current_name] =
-          NBT(std::move(content), current_name);
+      current = NBT(std::move(content), current_name);
       break;
     }
-
-    case tag_type::tag_list: {
     }
 
-    case tag_type::tag_compound: {
-      // Compound -> Read name and push opened tag on the stack
-      PARSE(2);
-      name_size = _NTOHS(buffer);
+    if (!lists.top().first) {
+      fmt::print(stdout, "Added Standard {} ({})\n", current_name,
+                 current.type_name());
+      opened_elements.top()[current_name] = std::move(current);
+    } else {
+      NBT::tag_list_t *array = opened_elements.top().get<NBT::tag_list_t *>();
+      array->insert(array->begin(), current);
+      fmt::print(stdout, "Added element {}\n", lists.top().first);
+      lists.top().first = lists.top().first - 1;
 
-      if (name_size) {
-        PARSE(name_size);
-        current_name = std::string(buffer);
+      if (!lists.top().first) {
+        list_mode = false;
+
+        lists.pop();
+        current = std::move(opened_elements.top());
+        opened_elements.pop();
+        fmt::print(stdout, "Added List {}\n", current.get_name());
+        opened_elements.top()[current.get_name()] = std::move(current);
       }
-
-      opened_elements.push(NBT(NBT::tag_compound_t(), current_name));
-    }
     }
   }
 
   return opened_elements.top();
+}
+
+static NBT parse(std::filesystem::path file) {
+  gzFile f;
+
+  if (!(f = gzopen(file.c_str(), "r"))) {
+    return NBT();
+  }
+
+  return matryoshka(f);
 }
 
 } // namespace nbt
