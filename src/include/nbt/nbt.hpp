@@ -8,8 +8,6 @@
 #include <stdexcept>
 #include <stdint.h>
 #include <string>
-#include <type_traits>
-#include <utility>
 #include <vector>
 
 #define _NTOHS(ptr) (int16_t(((ptr)[0] << 8) + (ptr)[1]))
@@ -486,21 +484,18 @@ public:
                             std::string(type_name())));
   }
 
-  NBT &operator=(NBT &other) noexcept {
-    using std::swap;
-    swap(type, other.type);
-    swap(name, other.name);
-    swap(content, other.content);
+  NBT &operator=(const NBT &other) noexcept {
+    type = other.type;
+    name = other.name;
+    content = other.content;
 
     return *this;
   }
 
   NBT &operator=(NBT &&other) noexcept {
-    type = other.type;
-    name = std::move(other.name);
-    content = std::move(other.content);
-
-    other.type = tag_type::tag_end;
+    std::swap(type, other.type);
+    std::swap(name, other.name);
+    std::swap(content, other.content);
 
     return *this;
   }
