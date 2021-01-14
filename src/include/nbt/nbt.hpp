@@ -160,7 +160,7 @@ public:
       break;
     }
     case tag_type::tag_double: {
-      content = other.content.float_n;
+      content = other.content.double_n;
       break;
     }
     case tag_type::tag_byte_array: {
@@ -243,14 +243,14 @@ public:
 
     case tag_type::tag_float: {
       assertSize(data, end, 4);
-      content.int_n = float(_NTOHI(data));
+      content.int_n = _NTOHI(data);
       data += 4;
       break;
     }
 
     case tag_type::tag_double: {
       assertSize(data, end, 8);
-      content.long_n = double(_NTOHL(data));
+      content.long_n = _NTOHL(data);
       data += 8;
       break;
     }
