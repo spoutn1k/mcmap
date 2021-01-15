@@ -39,7 +39,7 @@ void to_json(json &j, const NBT &nbt) {
     break;
   }
   case tag_type::tag_compound: {
-    json contents;
+    json contents({});
 
     const std::map<std::string, NBT> *subs =
         nbt.get<const std::map<std::string, NBT> *>();

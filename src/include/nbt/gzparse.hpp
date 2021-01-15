@@ -25,40 +25,52 @@ inline bool gz_parse_type(gzFile f, nbt::tag_type *type) {
 #define PARSE(LEN)                                                             \
   if (gzread(f, buffer, (LEN)) < LEN) {                                        \
     fmt::print(stderr, "Read error, wrapping up\n");                           \
-    done = true;                                                               \
+    error = true;                                                              \
     break;                                                                     \
   }
 
+#define LIST (context.size() && context.top().first)
+
 namespace nbt {
 
-static NBT matryoshka(gzFile &f, NBT &destination) {
-  bool done = false;
-  tag_type current_type, list_type;
+static bool matryoshka(gzFile &f, NBT &destination) {
+  bool error = false;
 
   uint8_t buffer[MAXELEMENTSIZE];
 
   NBT current;
+  tag_type current_type, list_type;
 
   int name_size;
   std::string current_name;
   uint32_t elements, list_elements;
 
+  // The stack with open containers. When a container is found, it is pushed on
+  // this stack; when an element is finished, it is pushed in the container on
+  // top of the stack, or returned if the stack is empty.
   std::stack<NBT> opened_elements;
-  std::stack<std::pair<uint32_t, bool>> lists;
+
+  // The context stack. All was well until the NBT lists came along that changed
+  // the element format (no type/name). This stack tracks every element on the
+  // stack. Its contents follow the format:
+  // <uint32_t content_left, tag_type list_type>
+  // If content left > 0, it is assumed to be a NBT list. This changes the
+  // behaviour of the parser accordingly. When pushing/popping containers, the
+  // second element gets the type of the current list.
+  std::stack<std::pair<uint32_t, tag_type>> context;
 
   do {
     current_name = "";
-
-#define LIST (lists.size() && lists.top().first)
 
     // Get the type, if not in a list
     if (!LIST) {
       if (!gz_parse_type(f, &current_type)) {
         // Error getting the type
-        done = true;
+        error = true;
       }
     } else {
-      current_type = list_type;
+      // Grab the type from the list's context
+      current_type = context.top().second;
     }
 
     // If the tag has a possible name, parse it
@@ -79,7 +91,7 @@ static NBT matryoshka(gzFile &f, NBT &destination) {
       opened_elements.pop();
 
       // Remove its context
-      lists.pop();
+      context.pop();
 
       // Continue to the end to merge the compound to the previous element of
       // the stack
@@ -91,7 +103,7 @@ static NBT matryoshka(gzFile &f, NBT &destination) {
       opened_elements.push(NBT(NBT::tag_compound_t(), current_name));
 
       // Add a context
-      lists.push({0, false});
+      context.push({0, tag_type::tag_compound});
 
       // Start again
       continue;
@@ -111,13 +123,13 @@ static NBT matryoshka(gzFile &f, NBT &destination) {
       opened_elements.push(NBT(NBT::tag_list_t(), current_name));
 
       // Add a context
-      lists.push({list_elements, true});
+      context.push({list_elements, list_type});
 
       if (!list_elements) {
         // No elements -> close the list immediately
         current = std::move(opened_elements.top());
         opened_elements.pop();
-        lists.pop();
+        context.pop();
       } else {
 
         // Start again
@@ -242,17 +254,17 @@ static NBT matryoshka(gzFile &f, NBT &destination) {
     // If not in a list
     if (!LIST) {
       // Add the current element to the previous compound
-      if (opened_elements.size()) {
+      if (opened_elements.size())
         opened_elements.top()[current.get_name()] = std::move(current);
-      }
+
     } else {
       // We in a list
       // Grab the array
       NBT::tag_list_t *array = opened_elements.top().get<NBT::tag_list_t *>();
-      array->insert(array->begin(), std::move(current));
+      array->insert(array->end(), std::move(current));
 
       // Decrement the element counter
-      lists.top().first = std::max(uint32_t(0), lists.top().first - 1);
+      context.top().first = std::max(uint32_t(0), context.top().first - 1);
 
       // If this was the last element
       if (!LIST) {
@@ -261,31 +273,32 @@ static NBT matryoshka(gzFile &f, NBT &destination) {
         opened_elements.pop();
 
         // Pop the context
-        lists.pop();
+        context.pop();
 
         // Add the list to the englobing compound
         if (opened_elements.size())
           opened_elements.top()[current.get_name()] = std::move(current);
       }
     }
-  } while (!done && opened_elements.size());
+  } while (!error && opened_elements.size());
 
   destination = std::move(current);
-  return current;
+  return !error;
 }
 
 static NBT parse(std::filesystem::path file) {
   gzFile f;
+  bool status = false;
 
   NBT parsed;
 
   if ((f = gzopen(file.c_str(), "r"))) {
-    matryoshka(f, parsed);
+    status = matryoshka(f, parsed);
 
     gzclose(f);
   }
 
-  return parsed;
+  return status ? parsed : NBT();
 }
 
 } // namespace nbt
