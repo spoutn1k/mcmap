@@ -2,6 +2,7 @@
 #ifndef NBT_HPP_
 #define NBT_HPP_
 
+#include <fmt/core.h>
 #include <map>
 #include <nbt/iterators.hpp>
 #include <nbt/tag_types.hpp>
@@ -429,8 +430,9 @@ public:
       return content.compound->operator[](key);
     }
     throw(std::domain_error(
-        "Cannot use operator[] with a string argument on tag of type " +
-        std::string(type_name())));
+        fmt::format("Cannot use operator[] with a string argument on tag of "
+                    "type {} (NBT: {}/key: {})",
+                    type_name(), get_name(), key)));
   }
 
   const_reference operator[](const std::string &key) const {

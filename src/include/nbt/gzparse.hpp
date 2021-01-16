@@ -11,7 +11,7 @@
 #define MAXELEMENTSIZE                                                         \
   65025 // Max size of a single element to read in memory (string)
 
-#define LIST (context.size() && context.top().first)
+#define LIST (context.size() && context.top().second < tag_type::tag_long_array)
 
 struct ByteStream {
   enum BufferType { MEMORY, GZFILE };
@@ -68,7 +68,7 @@ static bool matryoshka(ByteStream &b, NBT &destination) {
   uint8_t buffer[MAXELEMENTSIZE];
 
   NBT current;
-  tag_type current_type, list_type;
+  tag_type current_type = tag_type::tag_end, list_type;
 
   std::string current_name;
   uint32_t elements, list_elements, name_size;
@@ -76,7 +76,7 @@ static bool matryoshka(ByteStream &b, NBT &destination) {
   // The stack with open containers. When a container is found, it is pushed
   // on this stack; when an element is finished, it is pushed in the container
   // on top of the stack, or returned if the stack is empty.
-  std::stack<NBT> opened_elements;
+  std::stack<NBT> opened_elements = {};
 
   // The context stack. All was well until the NBT lists came along that
   // changed the element format (no type/name). This stack tracks every
@@ -85,7 +85,7 @@ static bool matryoshka(ByteStream &b, NBT &destination) {
   // be a NBT list. This changes the behaviour of the parser accordingly. When
   // pushing/popping containers, the second element gets the type of the
   // current list.
-  std::stack<std::pair<uint32_t, tag_type>> context;
+  std::stack<std::pair<uint32_t, tag_type>> context = {};
 
   do {
     current_name = "";
@@ -123,16 +123,18 @@ static bool matryoshka(ByteStream &b, NBT &destination) {
     }
 
     // If end tag -> Close the last compound
-    if (current_type == tag_type::tag_end) {
-      // Grab the compound from the stack
+    if (current_type == tag_type::tag_end ||
+        (LIST && context.top().first == 0)) {
+      // Grab the container from the stack
       current = std::move(opened_elements.top());
       opened_elements.pop();
 
       // Remove its context
       context.pop();
 
-      // Continue to the end to merge the compound to the previous element of
+      // Continue to the end to merge the container to the previous element of
       // the stack
+      current_type = tag_type::tag_end;
     }
 
     // Compound tag -> Open a compound
@@ -141,7 +143,7 @@ static bool matryoshka(ByteStream &b, NBT &destination) {
       opened_elements.push(NBT(NBT::tag_compound_t(), current_name));
 
       // Add a context
-      context.push({0, tag_type::tag_compound});
+      context.push({0, tag_type(0xff)});
 
       // Start again
       continue;
@@ -169,16 +171,8 @@ static bool matryoshka(ByteStream &b, NBT &destination) {
       // Add a context
       context.push({list_elements, list_type});
 
-      if (!list_elements) {
-        // No elements -> close the list immediately
-        current = std::move(opened_elements.top());
-        opened_elements.pop();
-        context.pop();
-      } else {
-
-        // Start again
-        continue;
-      }
+      // Start again
+      continue;
     }
 
     switch (current_type) {
@@ -262,7 +256,7 @@ static bool matryoshka(ByteStream &b, NBT &destination) {
       }
       elements = _NTOHI(buffer);
 
-      std::vector<uint8_t> bytes(elements);
+      std::vector<int8_t> bytes(elements);
 
       for (uint32_t i = 0; i < elements; i++) {
         if (!b.read(1, buffer)) {
@@ -283,7 +277,7 @@ static bool matryoshka(ByteStream &b, NBT &destination) {
       }
       elements = _NTOHI(buffer);
 
-      std::vector<uint32_t> ints(elements);
+      std::vector<int32_t> ints(elements);
 
       for (uint32_t i = 0; i < elements; i++) {
         if (!b.read(4, buffer)) {
@@ -304,7 +298,7 @@ static bool matryoshka(ByteStream &b, NBT &destination) {
       }
       elements = _NTOHI(buffer);
 
-      std::vector<uint32_t> longs(elements);
+      std::vector<int64_t> longs(elements);
 
       for (uint32_t i = 0; i < elements; i++) {
         if (!b.read(8, buffer)) {
@@ -351,20 +345,6 @@ static bool matryoshka(ByteStream &b, NBT &destination) {
 
       // Decrement the element counter
       context.top().first = std::max(uint32_t(0), context.top().first - 1);
-
-      // If this was the last element
-      if (!LIST) {
-        // Pop the list
-        current = std::move(opened_elements.top());
-        opened_elements.pop();
-
-        // Pop the context
-        context.pop();
-
-        // Add the list to the englobing compound
-        if (opened_elements.size())
-          opened_elements.top()[current.get_name()] = std::move(current);
-      }
     }
   } while (!error && opened_elements.size());
 
@@ -392,6 +372,18 @@ static NBT parse(std::filesystem::path file) {
   return status ? parsed : NBT();
 }
 
+static NBT parse(uint8_t *buffer, size_t size) {
+  bool status = false;
+
+  NBT parsed;
+
+  ByteStream mem(buffer, size);
+  status = matryoshka(mem, parsed);
+  if (!status)
+    fmt::print(stderr, "Error reading file\n");
+
+  return status ? parsed : NBT();
+}
 } // namespace nbt
 
 #endif
