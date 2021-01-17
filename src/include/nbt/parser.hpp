@@ -325,11 +325,9 @@ static bool parse(const std::filesystem::path &file, NBT &container) {
   gzFile f;
   bool status = false;
 
-  NBT parsed;
-
   if ((f = gzopen(file.c_str(), "rb"))) {
     ByteStream gz(f);
-    status = matryoshka(gz, parsed);
+    status = matryoshka(gz, container);
     if (!status)
       logger::error("Error reading file {}\n", file.string());
 
@@ -339,7 +337,6 @@ static bool parse(const std::filesystem::path &file, NBT &container) {
                   strerror(errno));
   }
 
-  container = (status ? std::move(parsed) : NBT());
   return status;
 }
 
@@ -349,14 +346,11 @@ template <
 static bool parse(uint8_t *buffer, size_t size, NBT &container) {
   bool status = false;
 
-  NBT parsed;
-
   ByteStream mem(buffer, size);
-  status = matryoshka(mem, parsed);
+  status = matryoshka(mem, container);
   if (!status)
     logger::error("Error reading NBT data\n");
 
-  container = (status ? std::move(parsed) : NBT());
   return status;
 }
 } // namespace nbt
