@@ -293,8 +293,9 @@ public:
 
   const_reference operator[](const std::string &key) const {
     if (is_compound()) {
-      if (content.compound->find(key) != content.compound->end()) {
-        return content.compound->find(key)->second;
+      auto query = content.compound->find(key);
+      if (query != content.compound->end()) {
+        return query->second;
       } else
         throw(std::out_of_range("Key " + key + " not found"));
     }
@@ -459,7 +460,7 @@ public:
   }
 
   bool contains(std::string &&key) const {
-    return is_compound() and
+    return is_compound() &&
            content.compound->find(std::forward<std::string>(key)) !=
                content.compound->end();
   }

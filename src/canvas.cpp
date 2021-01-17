@@ -383,7 +383,7 @@ void IsometricCanvas::renderSection() {
 
         renderBlock(section.colors[block_index], (chunkX << 4) + x,
                     (chunkZ << 4) + z, (yPos << 4) + y,
-                    section.palette[block_index]);
+                    section.palette->operator[](block_index));
 
         if (block_index == section.beaconIndex) {
           beams[beamNo++] = Beam(orientedX, orientedZ, &beaconBeam);

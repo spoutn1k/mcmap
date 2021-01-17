@@ -163,7 +163,7 @@ class TestNBTParse : public ::testing::Test {
 protected:
   nbt::NBT level;
 
-  TestNBTParse() { level = nbt::parse(NBT_FILE); }
+  TestNBTParse() { nbt::parse(NBT_FILE, level); }
 };
 
 TEST_F(TestNBTParse, TestParse) {

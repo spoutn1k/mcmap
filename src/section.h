@@ -5,7 +5,7 @@
 struct Section {
   uint8_t max_colors, beaconIndex;
   uint8_t blocks[4096];
-  std::vector<nbt::NBT> palette;
+  const std::vector<nbt::NBT> *palette;
   const Colors::Block *colors[256];
 
   Section() : max_colors(0), beaconIndex(std::numeric_limits<uint8_t>::max()){};
