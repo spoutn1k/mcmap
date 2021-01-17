@@ -8,12 +8,35 @@
 #include <stack>
 #include <zlib.h>
 
-#define MAXELEMENTSIZE                                                         \
-  65025 // Max size of a single element to read in memory (string)
+#define _NTOHS(ptr) (int16_t(((ptr)[0] << 8) + (ptr)[1]))
+#define _NTOHI(ptr)                                                            \
+  ((uint32_t((ptr)[0]) << 24) + (uint32_t((ptr)[1]) << 16) +                   \
+   (uint32_t((ptr)[2]) << 8) + uint32_t((ptr)[3]))
+#define _NTOHL(ptr)                                                            \
+  ((uint64_t((ptr)[0]) << 56) + (uint64_t((ptr)[1]) << 48) +                   \
+   (uint64_t((ptr)[2]) << 40) + (uint64_t((ptr)[3]) << 32) +                   \
+   (uint64_t((ptr)[4]) << 24) + (uint64_t((ptr)[5]) << 16) +                   \
+   (uint64_t((ptr)[6]) << 8) + uint64_t((ptr)[7]))
 
+// Max size of a single element to read in memory (string)
+#define MAXELEMENTSIZE 65025
+
+// Check if the context indicates a being in a list
 #define LIST (context.size() && context.top().second < tag_type::tag_long_array)
 
+union FloatTranslator {
+  // See this union as an uint8_t[8] array. Put an integer in the buffer, get
+  // its byte reinterpretation in floating point, WITHOUT THE WARNINGS !
+  uint64_t buffer;
+  float _float;
+  double _double;
+
+  FloatTranslator(uint32_t float_bytes) : buffer(float_bytes){};
+  FloatTranslator(uint64_t double_bytes) : buffer(double_bytes){};
+};
+
 struct ByteStream {
+  // Adapter for the matryoshkas to work with both files and memory buffers
   enum BufferType { MEMORY, GZFILE };
 
   union Source {
@@ -232,9 +255,9 @@ static bool matryoshka(ByteStream &b, NBT &destination) {
         error = true;
         continue;
       }
-      int32_t _float = _NTOHI(buffer);
+      FloatTranslator bytes(_NTOHI(buffer));
 
-      current = NBT(*((float *)&_float), current_name);
+      current = NBT(bytes._float, current_name);
       break;
     }
 
@@ -243,9 +266,9 @@ static bool matryoshka(ByteStream &b, NBT &destination) {
         error = true;
         continue;
       }
-      int64_t _double = _NTOHL(buffer);
+      FloatTranslator bytes(_NTOHL(buffer));
 
-      current = NBT(*((double *)&_double), current_name);
+      current = NBT(bytes._double, current_name);
       break;
     }
 
@@ -352,7 +375,12 @@ static bool matryoshka(ByteStream &b, NBT &destination) {
   return !error;
 }
 
-static NBT parse(std::filesystem::path file) {
+// This completely useless template gets rid of "Function defined but never
+// used" warnings.
+template <
+    typename NBT_Type = NBT,
+    typename std::enable_if<std::is_same<NBT_Type, NBT>::value, int>::type = 0>
+static NBT parse(const std::filesystem::path &file) {
   gzFile f;
   bool status = false;
 
@@ -372,6 +400,9 @@ static NBT parse(std::filesystem::path file) {
   return status ? parsed : NBT();
 }
 
+template <
+    typename NBT_Type = NBT,
+    typename std::enable_if<std::is_same<NBT_Type, NBT>::value, int>::type = 0>
 static NBT parse(uint8_t *buffer, size_t size) {
   bool status = false;
 
