@@ -110,11 +110,11 @@ void Terrain::Data::stripChunk(vector<NBT> *sections) {
 
 void Terrain::Data::cacheColors(vector<NBT> *sections) {
   // Complete the cache, to determine the colors to load
-  for (auto section : *sections) {
+  for (auto &section : *sections) {
     if (section.is_end() || !section.contains("Palette"))
       continue;
 
-    for (auto block : *section["Palette"].get<vector<NBT> *>())
+    for (auto &block : *section["Palette"].get<vector<NBT> *>())
       cache.push_back(block["Name"].get<string>());
   }
 }
