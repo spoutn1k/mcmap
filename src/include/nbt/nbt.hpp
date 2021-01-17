@@ -2,7 +2,7 @@
 #ifndef NBT_HPP_
 #define NBT_HPP_
 
-#include <fmt/core.h>
+#include <logger.hpp>
 #include <map>
 #include <nbt/iterators.hpp>
 #include <nbt/tag_types.hpp>

@@ -3,7 +3,6 @@
 #define NBT_GZ_PARSE_HPP_
 
 #include <filesystem>
-#include <fmt/core.h>
 #include <nbt/nbt.hpp>
 #include <stack>
 #include <zlib.h>
@@ -54,12 +53,13 @@ struct ByteStream {
   ByteStream(uint8_t *address, size_t size)
       : type(MEMORY), source(address, size){};
 
-  bool read(size_t num, uint8_t *buffer) {
+  void read(size_t num, uint8_t *buffer, bool *error) {
     switch (type) {
     case GZFILE: {
       if (size_t(gzread(source.file, buffer, num)) < num) {
-        fmt::print(stderr, "Unexpected EOF\n");
-        return false;
+        logger::error("Unexpected EOF\n");
+        *error = true;
+        memset(buffer, 0, num);
       }
 
       break;
@@ -67,8 +67,9 @@ struct ByteStream {
 
     case MEMORY: {
       if (source.array.second < num) {
-        fmt::print(stderr, "Not enough data in memory buffer\n");
-        return false;
+        logger::error("Not enough data in memory buffer\n");
+        *error = true;
+        memset(buffer, 0, num);
       }
 
       memcpy(buffer, source.array.first, num);
@@ -79,7 +80,7 @@ struct ByteStream {
     }
     }
 
-    return true;
+    *error = (*error || false);
   }
 };
 
@@ -115,11 +116,8 @@ static bool matryoshka(ByteStream &b, NBT &destination) {
 
     // Get the type, if not in a list
     if (!LIST) {
-      if (!b.read(1, buffer)) {
-        error = true;
-      } else {
-        current_type = tag_type(buffer[0]);
-      }
+      b.read(1, buffer, &error);
+      current_type = tag_type(buffer[0]);
 
     } else {
       // Grab the type from the list's context
@@ -128,18 +126,11 @@ static bool matryoshka(ByteStream &b, NBT &destination) {
 
     // If the tag has a possible name, parse it
     if (!LIST && current_type != tag_type::tag_end) {
-      if (!b.read(2, buffer)) {
-        error = true;
-        continue;
-      }
-
+      b.read(2, buffer, &error);
       name_size = _NTOHS(buffer);
 
       if (name_size) {
-        if (!b.read(name_size, buffer)) {
-          error = true;
-          continue;
-        }
+        b.read(name_size, buffer, &error);
 
         current_name = std::string((char *)buffer, name_size);
       }
@@ -175,17 +166,11 @@ static bool matryoshka(ByteStream &b, NBT &destination) {
     // List tag -> Read type and length
     if (current_type == tag_type::tag_list) {
       // Grab the type
-      if (!b.read(1, buffer)) {
-        error = true;
-        continue;
-      }
+      b.read(1, buffer, &error);
       list_type = nbt::tag_type(buffer[0]);
 
       // Grab the length
-      if (!b.read(4, buffer)) {
-        error = true;
-        continue;
-      }
+      b.read(4, buffer, &error);
       list_elements = _NTOHI(buffer);
 
       // Push an empty list on the stack
@@ -207,10 +192,7 @@ static bool matryoshka(ByteStream &b, NBT &destination) {
 
     case tag_type::tag_byte: {
       // Byte -> Read name and a byte
-      if (!b.read(1, buffer)) {
-        error = true;
-        continue;
-      }
+      b.read(1, buffer, &error);
       uint8_t byte = buffer[0];
 
       current = NBT(byte, current_name);
@@ -218,10 +200,7 @@ static bool matryoshka(ByteStream &b, NBT &destination) {
     }
 
     case tag_type::tag_short: {
-      if (!b.read(2, buffer)) {
-        error = true;
-        continue;
-      }
+      b.read(2, buffer, &error);
       int16_t _short = _NTOHS(buffer);
 
       current = NBT(_short, current_name);
@@ -229,10 +208,7 @@ static bool matryoshka(ByteStream &b, NBT &destination) {
     }
 
     case tag_type::tag_int: {
-      if (!b.read(4, buffer)) {
-        error = true;
-        continue;
-      }
+      b.read(4, buffer, &error);
       int32_t _int = _NTOHI(buffer);
 
       current = NBT(_int, current_name);
@@ -240,10 +216,7 @@ static bool matryoshka(ByteStream &b, NBT &destination) {
     }
 
     case tag_type::tag_long: {
-      if (!b.read(8, buffer)) {
-        error = true;
-        continue;
-      }
+      b.read(8, buffer, &error);
       int64_t _long = _NTOHL(buffer);
 
       current = NBT(_long, current_name);
@@ -251,10 +224,7 @@ static bool matryoshka(ByteStream &b, NBT &destination) {
     }
 
     case tag_type::tag_float: {
-      if (!b.read(4, buffer)) {
-        error = true;
-        continue;
-      }
+      b.read(4, buffer, &error);
       FloatTranslator bytes(_NTOHI(buffer));
 
       current = NBT(bytes._float, current_name);
@@ -262,10 +232,7 @@ static bool matryoshka(ByteStream &b, NBT &destination) {
     }
 
     case tag_type::tag_double: {
-      if (!b.read(8, buffer)) {
-        error = true;
-        continue;
-      }
+      b.read(8, buffer, &error);
       FloatTranslator bytes(_NTOHL(buffer));
 
       current = NBT(bytes._double, current_name);
@@ -273,19 +240,13 @@ static bool matryoshka(ByteStream &b, NBT &destination) {
     }
 
     case tag_type::tag_byte_array: {
-      if (!b.read(4, buffer)) {
-        error = true;
-        continue;
-      }
+      b.read(4, buffer, &error);
       elements = _NTOHI(buffer);
 
       std::vector<int8_t> bytes(elements);
 
       for (uint32_t i = 0; i < elements; i++) {
-        if (!b.read(1, buffer)) {
-          error = true;
-          continue;
-        }
+        b.read(1, buffer, &error);
         bytes[i] = buffer[0];
       }
 
@@ -294,19 +255,13 @@ static bool matryoshka(ByteStream &b, NBT &destination) {
     }
 
     case tag_type::tag_int_array: {
-      if (!b.read(4, buffer)) {
-        error = true;
-        continue;
-      }
+      b.read(4, buffer, &error);
       elements = _NTOHI(buffer);
 
       std::vector<int32_t> ints(elements);
 
       for (uint32_t i = 0; i < elements; i++) {
-        if (!b.read(4, buffer)) {
-          error = true;
-          continue;
-        }
+        b.read(4, buffer, &error);
         ints[i] = _NTOHI(buffer);
       }
 
@@ -315,19 +270,12 @@ static bool matryoshka(ByteStream &b, NBT &destination) {
     }
 
     case tag_type::tag_long_array: {
-      if (!b.read(4, buffer)) {
-        error = true;
-        continue;
-      }
+      b.read(4, buffer, &error);
       elements = _NTOHI(buffer);
 
       std::vector<int64_t> longs(elements);
-
       for (uint32_t i = 0; i < elements; i++) {
-        if (!b.read(8, buffer)) {
-          error = true;
-          continue;
-        }
+        b.read(8, buffer, &error);
         longs[i] = _NTOHL(buffer);
       }
 
@@ -336,17 +284,10 @@ static bool matryoshka(ByteStream &b, NBT &destination) {
     }
 
     case tag_type::tag_string: {
-      if (!b.read(2, buffer)) {
-        error = true;
-        continue;
-      }
+      b.read(2, buffer, &error);
       uint16_t string_size = _NTOHS(buffer);
 
-      if (!b.read(string_size, buffer)) {
-        error = true;
-        continue;
-      }
-
+      b.read(string_size, buffer, &error);
       std::string content((char *)buffer, string_size);
 
       current = NBT(std::move(content), current_name);
@@ -380,7 +321,7 @@ static bool matryoshka(ByteStream &b, NBT &destination) {
 template <
     typename NBT_Type = NBT,
     typename std::enable_if<std::is_same<NBT_Type, NBT>::value, int>::type = 0>
-static NBT parse(const std::filesystem::path &file) {
+static bool parse(const std::filesystem::path &file, NBT &container) {
   gzFile f;
   bool status = false;
 
@@ -390,20 +331,22 @@ static NBT parse(const std::filesystem::path &file) {
     ByteStream gz(f);
     status = matryoshka(gz, parsed);
     if (!status)
-      fmt::print(stderr, "Error reading file\n");
+      logger::error("Error reading file {}\n", file.string());
 
     gzclose(f);
   } else {
-    fmt::print(stderr, "{}\n", strerror(errno));
+    logger::error("Error opening file '{}': {}\n", file.string(),
+                  strerror(errno));
   }
 
-  return status ? parsed : NBT();
+  container = (status ? std::move(parsed) : NBT());
+  return status;
 }
 
 template <
     typename NBT_Type = NBT,
     typename std::enable_if<std::is_same<NBT_Type, NBT>::value, int>::type = 0>
-static NBT parse(uint8_t *buffer, size_t size) {
+static bool parse(uint8_t *buffer, size_t size, NBT &container) {
   bool status = false;
 
   NBT parsed;
@@ -411,9 +354,10 @@ static NBT parse(uint8_t *buffer, size_t size) {
   ByteStream mem(buffer, size);
   status = matryoshka(mem, parsed);
   if (!status)
-    fmt::print(stderr, "Error reading file\n");
+    logger::error("Error reading NBT data\n");
 
-  return status ? parsed : NBT();
+  container = (status ? std::move(parsed) : NBT());
+  return status;
 }
 } // namespace nbt
 

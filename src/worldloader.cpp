@@ -212,9 +212,9 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
       !decompressChunk(offset, regionHandle, chunkBuffer, &length, filename))
     return;
 
-  NBT chunk = nbt::parse(chunkBuffer, length);
+  NBT chunk;
 
-  if (!assertChunk(chunk))
+  if (!nbt::parse(chunkBuffer, length, chunk) || !assertChunk(chunk))
     return;
 
   filterLevel(chunk["Level"]);

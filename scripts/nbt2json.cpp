@@ -35,9 +35,10 @@ int main(int argc, char **argv) {
   size_t length = gzread(f, buffer, sizeof(uint8_t) * BUFFERSIZE);
   gzclose(f);
 
-  json data = nbt::parse(buffer, length);
+  nbt::NBT data;
+  nbt::parse(buffer, length, data);
 
-  logger::info("{}", data.dump());
+  logger::info("{}", json(data).dump());
 
   return 0;
 }

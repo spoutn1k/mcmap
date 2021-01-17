@@ -6,7 +6,6 @@
 #include <zlib.h>
 
 namespace fs = std::filesystem;
-using namespace nbt;
 
 SETUP_LOGGER;
 
@@ -43,14 +42,15 @@ int main(int argc, char **argv) {
   level = root / "level.dat";
 
   if (!assert_save(root)) {
-    logger::error("File '{}' is not a save folder\n", root.string());
+    // logger::error("File '{}' is not a save folder\n", root.string());
     return 1;
   }
 
-  NBT data = parse(level)["Data"];
+  nbt::NBT data;
+  nbt::parse(level, data);
 
-  logger::info("Name: {}\n", data["LevelName"].get<std::string>());
-  logger::info("Last played: {}\n", data["LastPlayed"].get<long>());
+  logger::info("Name: {}\n", data["Data"]["LevelName"].get<std::string>());
+  logger::info("Last played: {}\n", data["Data"]["LastPlayed"].get<long>());
 
   return 0;
 }
