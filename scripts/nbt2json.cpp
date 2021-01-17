@@ -1,6 +1,7 @@
 #include <filesystem>
 #include <json.hpp>
 #include <logger.hpp>
+#include <nbt/parser.hpp>
 #include <nbt/to_json.hpp>
 #include <zlib.h>
 
@@ -34,7 +35,7 @@ int main(int argc, char **argv) {
   size_t length = gzread(f, buffer, sizeof(uint8_t) * BUFFERSIZE);
   gzclose(f);
 
-  json data = nbt::NBT::parse(buffer, length);
+  json data = nbt::parse(buffer, length);
 
   logger::info("{}", data.dump());
 

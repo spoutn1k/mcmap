@@ -198,6 +198,8 @@ void filterLevel(NBT &level) {
     level.erase(key);
 }
 
+#include <nbt/parser.hpp>
+
 void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
                               const int chunkX, const int chunkZ,
                               const std::filesystem::path &filename) {
@@ -210,7 +212,7 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
       !decompressChunk(offset, regionHandle, chunkBuffer, &length, filename))
     return;
 
-  NBT chunk = NBT::parse(chunkBuffer, length);
+  NBT chunk = nbt::parse(chunkBuffer, length);
 
   if (!assertChunk(chunk))
     return;
@@ -336,7 +338,7 @@ Terrain::Chunk &Terrain::Data::chunkAt(int64_t xPos, int64_t zPos) {
   int32_t rX = REGION(xPos), rZ = REGION(zPos), cX = xPos & 0x1f,
           cZ = zPos & 0x1f;
   std::filesystem::path regionFile = std::filesystem::path(regionDir) /=
-      "r." + std::to_string(rX) + "." + std::to_string(rZ) + ".mca";
+      fmt::format("r.{}.{}.mca", rX, rZ);
 
   if (!std::filesystem::exists(regionFile)) {
     logger::deep_debug("Region file r.{}.{}.mca does not exist, skipping ..\n",
