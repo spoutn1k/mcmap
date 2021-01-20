@@ -86,6 +86,33 @@ struct ByteStream {
 
 namespace nbt {
 
+static bool format_check(ByteStream &b) {
+  // Check the byte stream begins with a non-end tag and contains a valid UTF-8
+  // name
+  uint8_t buffer[MAXELEMENTSIZE];
+  uint16_t name_length = 0;
+  bool error = false;
+
+  b.read(1, buffer, &error);
+  if (error || !buffer[0] || buffer[0] > 13)
+    return false;
+
+  b.read(2, buffer, &error);
+  if (error)
+    return false;
+
+  b.read((name_length = _NTOHS(buffer)), buffer, &error);
+  if (error)
+    return false;
+
+  for (uint16_t i = 0; i < name_length; i++) {
+    if (i < 0x21 || i > 0x7e)
+      return false;
+  }
+
+  return true;
+}
+
 static bool matryoshka(ByteStream &b, NBT &destination) {
   bool error = false;
 
@@ -314,6 +341,38 @@ static bool matryoshka(ByteStream &b, NBT &destination) {
 
   destination = std::move(current);
   return !error;
+}
+
+template <typename Bool_Type = bool,
+          typename std::enable_if<std::is_same<Bool_Type, bool>::value,
+                                  int>::type = 0>
+static bool assert_NBT(const std::filesystem::path &file) {
+  gzFile f;
+  bool status = false;
+
+  if ((f = gzopen(file.c_str(), "rb"))) {
+    ByteStream gz(f);
+    status = format_check(gz);
+
+    gzclose(f);
+  } else {
+    logger::error("Error opening file '{}': {}\n", file.string(),
+                  strerror(errno));
+  }
+
+  return status;
+}
+
+template <typename Bool_Type = bool,
+          typename std::enable_if<std::is_same<Bool_Type, bool>::value,
+                                  int>::type = 0>
+static bool assert_NBT(uint8_t *buffer, size_t size) {
+  bool status = false;
+
+  ByteStream mem(buffer, size);
+  status = format_check(mem);
+
+  return status;
 }
 
 // This completely useless template gets rid of "Function defined but never
