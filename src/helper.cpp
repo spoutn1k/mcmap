@@ -72,3 +72,5 @@ bool prepare_cache(const std::filesystem::path &cache) {
 
   return true;
 }
+
+std::string getHome() { return std::string(getenv("HOME")); }

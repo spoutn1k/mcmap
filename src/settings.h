@@ -3,13 +3,13 @@
 
 #include "./colors.h"
 #include "./helper.h"
+#include "./savefile.h"
 #include "./worldloader.h"
 #include <cstdint>
 #include <filesystem>
 #include <string>
-#define UNDEFINED 0x7FFFFFFF
 
-#include "savefile.h"
+#define UNDEFINED 0x7FFFFFFF
 
 namespace Settings {
 
@@ -20,11 +20,11 @@ struct WorldOptions {
   int mode;
 
   // Files to use
-  std::filesystem::path saveName, outFile, colorFile;
+  std::filesystem::path outFile, colorFile;
 
   // Map boundaries
+  SaveFile save;
   Dimension dim;
-  std::string customDim;
   Terrain::Coordinates boundaries;
 
   // Image settings
@@ -39,8 +39,9 @@ struct WorldOptions {
   size_t mem_limit;
   size_t tile_size;
 
-  WorldOptions() : mode(RENDER), saveName(""), colorFile(""), dim("overworld") {
-    outFile = "output.png";
+  WorldOptions()
+      : mode(RENDER), outFile("output.png"), colorFile(""), save(),
+        dim("overworld") {
 
     boundaries.setUndefined();
     boundaries.minY = 0;
@@ -55,7 +56,7 @@ struct WorldOptions {
     tile_size = 1024;
   }
 
-  std::filesystem::path regionDir() { return dim.regionDir(saveName); }
+  fs::path regionDir();
 };
 
 bool parseArgs(int argc, char **argv, Settings::WorldOptions *opts);

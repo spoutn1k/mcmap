@@ -27,6 +27,8 @@ uint32_t _ntohl(uint8_t *val);
 size_t memory_capacity(size_t, size_t, size_t, size_t);
 bool prepare_cache(const std::filesystem::path &);
 
+std::string getHome();
+
 enum Orientation {
   NW = 0,
   SW,
@@ -61,6 +63,13 @@ struct Coordinates {
   bool isUndefined() {
     return (minX == minZ && minX == std::numeric_limits<Integer>::max() &&
             maxX == maxZ && maxX == std::numeric_limits<Integer>::min());
+  }
+
+  void setMaximum() {
+    setUndefined();
+    std::swap(minX, maxX);
+    std::swap(minZ, maxZ);
+    std::swap(minY, maxY);
   }
 
   void crop(const Coordinates &boundaries) {

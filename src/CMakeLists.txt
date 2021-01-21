@@ -15,6 +15,7 @@ SET(SOURCES ${SOURCES}
     colors.cpp
     helper.cpp
     png.cpp
+    savefile.cpp
     section.cpp
     settings.cpp
     worldloader.cpp

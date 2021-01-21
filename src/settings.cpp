@@ -117,12 +117,7 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
     } else if (strcmp(option, "-vv") == 0) {
       logger::level = logger::levels::DEEP_DEBUG;
     } else {
-      opts->saveName = std::filesystem::path(option);
-      if (!ISPATH(opts->saveName)) {
-        logger::error("Error: File {} does not exist\n",
-                      opts->saveName.c_str());
-        return false;
-      }
+      opts->save = SaveFile(option);
     }
   }
 
@@ -131,19 +126,15 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
     // as the world path can be given after the dimension name, which messes up
     // regionDir()
     // TODO Check permissions and make ISPATH a real function
-    if (!ISPATH(opts->regionDir())) {
-      logger::error(
-          "Cannot render dimension '{}' of world '{}': file '{}' does "
-          "not exist\n",
-          opts->dim.to_string(), opts->saveName.c_str(),
-          opts->regionDir().c_str());
+    if (!opts->save.valid()) {
+      logger::error("Given folder does not seem to be a save file\n");
       return false;
     }
 
     // Scan the region directory and map the existing terrain in this set of
     // coordinates
     Terrain::Coordinates existingWorld;
-    Terrain::scanWorldDirectory(opts->regionDir(), &existingWorld);
+    Terrain::scanWorldDirectory(opts->save.folder, &existingWorld);
 
     if (opts->boundaries.isUndefined()) {
       // No boundaries were defined, import the whole existing world
@@ -177,3 +168,5 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
 
   return true;
 }
+
+fs::path Settings::WorldOptions::regionDir() { return save.region(dim); }

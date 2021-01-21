@@ -874,8 +874,8 @@ public:
       return static_cast<ArithmeticType>(*get_ptr<const tag_double_t *>());
 
     default:
-      throw(std::invalid_argument("Not available for " +
-                                  std::string(type_name())));
+      throw(std::invalid_argument(fmt::format(
+          "Operation not available for tags of type `{}`", type_name())));
     }
   }
 
@@ -886,8 +886,8 @@ public:
     if (get_type() == tag_type::tag_string)
       return static_cast<StringType>(*get_ptr<const tag_string_t *>());
 
-    throw(
-        std::invalid_argument("Not available for " + std::string(type_name())));
+    throw(std::invalid_argument(fmt::format(
+        "Operation not available for tags of type `{}`", type_name())));
   }
 };
 

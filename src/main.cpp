@@ -75,7 +75,6 @@ int main(int argc, char **argv) {
 
   // Get the relevant options from the options parsed
   Terrain::Coordinates coords = options.boundaries;
-  const std::filesystem::path regionDir = options.regionDir();
 
   // Overwrite water if asked to
   // TODO expand this to other blocks
@@ -120,7 +119,7 @@ int main(int argc, char **argv) {
 
       // Load the minecraft terrain to render
       Terrain::Data world(tiles[i]);
-      world.load(regionDir);
+      world.load(options.regionDir());
 
       // Cap the height to avoid having a ridiculous image height
       tiles[i].minY = std::max(tiles[i].minY, world.minHeight());
