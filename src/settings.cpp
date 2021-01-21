@@ -125,7 +125,6 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
     // Check if the given save posesses the required dimension, must be done now
     // as the world path can be given after the dimension name, which messes up
     // regionDir()
-    // TODO Check permissions and make ISPATH a real function
     if (!opts->save.valid()) {
       logger::error("Given folder does not seem to be a save file\n");
       return false;
@@ -134,7 +133,7 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
     // Scan the region directory and map the existing terrain in this set of
     // coordinates
     Terrain::Coordinates existingWorld;
-    Terrain::scanWorldDirectory(opts->save.folder, &existingWorld);
+    Terrain::scanWorldDirectory(opts->regionDir(), &existingWorld);
 
     if (opts->boundaries.isUndefined()) {
       // No boundaries were defined, import the whole existing world
@@ -150,7 +149,7 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
 
     if (opts->boundaries.maxX < opts->boundaries.minX ||
         opts->boundaries.maxZ < opts->boundaries.minZ) {
-      logger::debug("{}\n", opts->boundaries.to_string());
+      logger::debug("Processed boundaries: {}\n", opts->boundaries.to_string());
       logger::error("Nothing to render: -from X Z has to be <= -to X Z\n");
       return false;
     }
@@ -169,4 +168,4 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
   return true;
 }
 
-fs::path Settings::WorldOptions::regionDir() { return save.region(dim); }
+fs::path Settings::WorldOptions::regionDir() const { return save.region(dim); }

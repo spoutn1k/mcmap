@@ -14,6 +14,7 @@ SET(SOURCES ${SOURCES}
     canvas.cpp
     colors.cpp
     helper.cpp
+    mcmap.cpp
     png.cpp
     savefile.cpp
     section.cpp

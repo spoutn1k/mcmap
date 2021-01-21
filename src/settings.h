@@ -56,7 +56,7 @@ struct WorldOptions {
     tile_size = 1024;
   }
 
-  fs::path regionDir();
+  fs::path regionDir() const;
 };
 
 bool parseArgs(int argc, char **argv, Settings::WorldOptions *opts);
