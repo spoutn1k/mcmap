@@ -985,5 +985,7 @@
 
     "minecraft:dripstone_block": [136, 110, 94, 255],
     "minecraft:pointed_dripstone": { "type": "Rod", "color": [132, 106, 91, 255] },
-    "minecraft:sculk_sensor": { "type": "Slab", "color": [16, 72, 86, 255] }
+    "minecraft:sculk_sensor": { "type": "Slab", "color": [16, 72, 86, 255] },
+     
+    "minecraft:glow_lichen": { "type": "Plant", "color": [110, 130, 122, 255] }
 }
