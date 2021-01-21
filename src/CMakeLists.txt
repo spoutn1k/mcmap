@@ -26,7 +26,7 @@ ADD_LIBRARY(mcmap_core STATIC ${SOURCES})
 
 LINK_LIBRARIES(format mcmap_core ZLIB::ZLIB PNG::PNG)
 
-ADD_EXECUTABLE(mcmap main.cpp)
+ADD_EXECUTABLE(mcmap cli.cpp)
 
 IF (OpenMP_FOUND)
     TARGET_LINK_LIBRARIES(mcmap OpenMP::OpenMP_CXX)
