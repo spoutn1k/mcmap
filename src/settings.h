@@ -9,41 +9,11 @@
 #include <string>
 #define UNDEFINED 0x7FFFFFFF
 
+#include "savefile.h"
+
 namespace Settings {
 
-struct Dimension {
-  string ns, id;
-
-  Dimension(string ns, string id) : ns(ns), id(id){};
-  Dimension(string _id) : ns("minecraft") {
-    size_t sep = _id.find_first_of(':');
-
-    if (sep == std::string::npos) {
-      // If there is no ':', this is just an id
-      id = _id;
-    } else {
-      // If not, add each part separately
-      ns = _id.substr(0, sep);
-      id = _id.substr(sep + 1);
-    }
-  };
-
-  std::filesystem::path regionDir(std::filesystem::path savePath) {
-    if (id == "overworld")
-      return savePath /= std::filesystem::path("region");
-    else if (id == "the_nether")
-      return savePath /= std::filesystem::path("DIM-1/region");
-    else if (id == "the_end")
-      return savePath /= std::filesystem::path("DIM1/region");
-    else
-      return savePath /= std::filesystem::path(
-                 fmt::format("dimensions/{}/{}/region", ns, id));
-  };
-
-  string to_string() { return fmt::format("{}:{}", ns, id); };
-};
-
-enum actions { RENDER, DUMPCOLORS };
+enum actions { RENDER, DUMPCOLORS, HELP };
 
 struct WorldOptions {
   // Execution mode

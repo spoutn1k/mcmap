@@ -110,6 +110,7 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
       }
       opts->tile_size = atoi(NEXTARG);
     } else if (strcmp(option, "-help") == 0 || strcmp(option, "-h") == 0) {
+      opts->mode = Settings::HELP;
       return false;
     } else if (strcmp(option, "-verbose") == 0 || strcmp(option, "-v") == 0) {
       logger::level = logger::levels::DEBUG;
