@@ -17,7 +17,6 @@ using std::string;
 #define PGREEN 1
 #define PBLUE 2
 #define PALPHA 3
-#define PNOISE 4
 
 inline void blend(uint8_t *const destination, const uint8_t *const source) {
   if (!source[PALPHA])
@@ -76,10 +75,10 @@ const std::map<string, list<int>> markerColors = {
 };
 
 struct Color {
-  uint8_t R, G, B;
-  uint8_t ALPHA, NOISE, BRIGHTNESS;
+  // Red, Green, Blue, Transparency
+  uint8_t R, G, B, ALPHA;
 
-  Color() { R = G = B = ALPHA = NOISE = BRIGHTNESS = 0; }
+  Color() { R = G = B = ALPHA = 0; }
 
   Color(list<int> values) : Color() {
     uint8_t index = 0;
@@ -122,9 +121,9 @@ struct Color {
 };
 
 struct Block {
-  Colors::Color primary, secondary; // 12 bytes
+  Colors::Color primary, secondary; // 8 bytes
   Colors::BlockTypes type;
-  Colors::Color light, dark; // 12 bytes
+  Colors::Color light, dark; // 8 bytes
 
   Block() : primary(), secondary() { type = Colors::BlockTypes::FULL; }
 
@@ -136,10 +135,8 @@ struct Block {
   }
 
   Block(const Colors::BlockTypes &bt, list<int> c1, list<int> c2)
-      : primary(c1), secondary(c2), light(c1), dark(c1) {
-    type = bt;
-    light.modColor(-17);
-    dark.modColor(-27);
+      : Block(bt, c1) {
+    secondary = c2;
   }
 
   Block operator+(const Block &other) const {
@@ -152,7 +149,21 @@ struct Block {
   }
 
   bool operator==(const Block &other) const {
-    return (primary == other.primary);
+    return memcmp(this, &other, 12) == 0;
+  }
+
+  bool operator!=(const Block &other) const { return !operator==(other); }
+
+  Block shade(float fsub) const __attribute__((noinline)) {
+    Block shaded;
+    int sub = int(fsub * (float(primary.brightness()) / 323.0f + .21f));
+
+    shaded.primary.modColor(sub);
+    shaded.dark.modColor(sub);
+    shaded.light.modColor(sub);
+    shaded.secondary.modColor(sub);
+
+    return shaded;
   }
 };
 
@@ -160,27 +171,25 @@ typedef map<string, Colors::Block> Palette;
 
 struct Marker {
   int64_t x, z;
-  string color_name;
   Block color;
 
-  Marker() : color_name("white") {
+  Marker() {
     x = std::numeric_limits<int64_t>::max();
     z = std::numeric_limits<int64_t>::max();
   }
 
-  Marker(int64_t x, int64_t z, string c) : x(x), z(z), color_name(c) {
-    auto marker = markerColors.find(color_name);
-    if (marker == markerColors.end()) {
-      fprintf(stderr, "Invalid marker color: %s\n", color_name.c_str());
-      color_name = "white";
+  Marker(int64_t x, int64_t z, string c) : x(x), z(z) {
+    if (markerColors.find(c) == markerColors.end()) {
+      logger::error("Invalid marker color: {}\n", c);
+      c = "white";
     }
 
-    color = Block(BlockTypes::drawBeam, markerColors.find(color_name)->second);
+    color = Block(BlockTypes::drawBeam, markerColors.find(c)->second);
   };
 };
 
+bool load(Palette *);
 bool load(const std::filesystem::path &, Palette *);
-void filter(const Palette &, const std::vector<string> &filter, Palette *);
 
 void to_json(json &j, const Block &b);
 void from_json(const json &j, Block &b);

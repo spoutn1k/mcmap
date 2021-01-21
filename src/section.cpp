@@ -11,10 +11,10 @@ Section::Section(const nbt::NBT &raw_section, const int dataVersion,
     return;
   }
 
-  palette = *raw_section["Palette"].get<const std::vector<NBT> *>();
+  palette = raw_section["Palette"].get<const std::vector<NBT> *>();
 
   const uint32_t blockBitLength =
-      std::max(uint32_t(ceil(log2(palette.size()))), uint32_t(4));
+      std::max(uint32_t(ceil(log2(palette->size()))), uint32_t(4));
 
   const std::vector<int64_t> *blockStates =
       raw_section["BlockStates"].get<const std::vector<int64_t> *>();
@@ -32,7 +32,7 @@ Section::Section(const nbt::NBT &raw_section, const int dataVersion,
 }
 
 void Section::pickColors(const Colors::Palette &all) {
-  for (auto &color : palette) {
+  for (auto &color : *palette) {
     const string namespacedId = color["Name"].get<string>();
     auto defined = all.find(namespacedId);
 

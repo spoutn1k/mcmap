@@ -1,27 +1,15 @@
 #pragma once
-#include <stdexcept>
-#include <type_traits>
 #ifndef NBT_HPP_
 #define NBT_HPP_
 
-#include "./iterators.hpp"
-#include "./tag_types.hpp"
-#include <fmt/core.h>
+#include <logger.hpp>
 #include <map>
+#include <nbt/iterators.hpp>
+#include <nbt/tag_types.hpp>
+#include <stdexcept>
 #include <stdint.h>
 #include <string>
-#include <utility>
 #include <vector>
-
-#define _NTOHS(ptr) (int16_t(((ptr)[0] << 8) + (ptr)[1]))
-#define _NTOHI(ptr)                                                            \
-  ((uint32_t((ptr)[0]) << 24) + (uint32_t((ptr)[1]) << 16) +                   \
-   (uint32_t((ptr)[2]) << 8) + uint32_t((ptr)[3]))
-#define _NTOHL(ptr)                                                            \
-  ((uint64_t((ptr)[0]) << 56) + (uint64_t((ptr)[1]) << 48) +                   \
-   (uint64_t((ptr)[2]) << 40) + (uint64_t((ptr)[3]) << 32) +                   \
-   (uint64_t((ptr)[4]) << 24) + (uint64_t((ptr)[5]) << 16) +                   \
-   (uint64_t((ptr)[6]) << 8) + uint64_t((ptr)[7]))
 
 namespace nbt {
 
@@ -163,7 +151,7 @@ public:
       break;
     }
     case tag_type::tag_double: {
-      content = other.content.float_n;
+      content = other.content.double_n;
       break;
     }
     case tag_type::tag_byte_array: {
@@ -204,139 +192,6 @@ public:
   }
 
   ~NBT() { content.destroy(type); }
-
-  static NBT parse(uint8_t *data, size_t size) {
-    return NBT(data, data + size);
-  }
-
-  void assertSize(uint8_t *data, uint8_t *end, size_t length) {
-    if (uint64_t(end - data) < length)
-      throw(std::domain_error("NBT file ends too soon"));
-  }
-
-  void parse(uint8_t *&data, uint8_t *end) {
-    switch (type) {
-    case tag_type::tag_byte: {
-      assertSize(data, end, 1);
-      content.byte = int8_t(*data);
-      data++;
-      break;
-    }
-
-    case tag_type::tag_short: {
-      assertSize(data, end, 2);
-      content.short_n = _NTOHS(data);
-      data += 2;
-      break;
-    }
-
-    case tag_type::tag_int: {
-      assertSize(data, end, 4);
-      content.int_n = _NTOHI(data);
-      data += 4;
-      break;
-    }
-
-    case tag_type::tag_long: {
-      assertSize(data, end, 8);
-      content.long_n = _NTOHL(data);
-      data += 8;
-      break;
-    }
-
-    case tag_type::tag_float: {
-      assertSize(data, end, 4);
-      content.int_n = float(_NTOHI(data));
-      data += 4;
-      break;
-    }
-
-    case tag_type::tag_double: {
-      assertSize(data, end, 8);
-      content.long_n = double(_NTOHL(data));
-      data += 8;
-      break;
-    }
-
-    case tag_type::tag_byte_array: {
-      assertSize(data, end, 4);
-      uint32_t len = _NTOHI(data);
-      content = tag_content(tag_type::tag_byte_array);
-
-      assertSize(data + 4, end, len);
-      for (size_t i = 0; i < len; i++)
-        content.byte_array->push_back(*(data + 4 + i));
-
-      data += (len + 4);
-      break;
-    }
-
-    case tag_type::tag_string: {
-      assertSize(data, end, 4);
-      uint16_t len = _NTOHS(data);
-
-      assertSize(data + 2, end, len);
-      content = tag_string_t((char *)(data + 2), len);
-
-      data += (len + 2);
-      break;
-    }
-
-    case tag_type::tag_list: {
-      assertSize(data, end, 1);
-      tag_type chid_type = tag_type(data[0]);
-
-      assertSize(data + 1, end, 4);
-      uint32_t len = _NTOHI(data + 1);
-
-      data += 5;
-      content = tag_content(tag_type::tag_list);
-
-      for (size_t i = 0; i < len; i++)
-        content.list->push_back(NBT(data, end, chid_type));
-      break;
-    }
-
-    case tag_type::tag_compound: {
-      content = tag_content(tag_type::tag_compound);
-      while (data[0]) {
-        NBT child(data, end);
-        content.compound->emplace(std::make_pair(child.name, std::move(child)));
-      }
-      data++;
-      break;
-    }
-
-    case tag_type::tag_int_array: {
-      assertSize(data, end, 4);
-      uint32_t len = _NTOHI(data);
-      content = tag_content(tag_type::tag_int_array);
-
-      assertSize(data + 4, end, 4 * len);
-      for (size_t i = 0; i < len; i++)
-        content.int_array->push_back(_NTOHI(data + 4 * (i + 1)));
-
-      data += (len * 4 + 4);
-      break;
-    }
-
-    case tag_type::tag_long_array: {
-      assertSize(data, end, 4);
-      uint32_t len = _NTOHI(data);
-      content = tag_content(tag_type::tag_long_array);
-
-      assertSize(data + 4, end, 8 * len);
-      for (size_t i = 0; i < len; i++)
-        content.long_array->push_back(_NTOHL(data + i * 8 + 4));
-
-      data += (len * 8 + 4);
-      break;
-    }
-
-    default:
-      break;
-    }
-  }
 
   void set_name(const std::string &name_) { name = name_; };
   std::string get_name() const { return name; };
@@ -431,15 +286,16 @@ public:
     if (is_compound()) {
       return content.compound->operator[](key);
     }
-    throw(std::domain_error(
-        "Cannot use operator[] with a string argument on tag of type " +
-        std::string(type_name())));
+    throw(std::domain_error(fmt::format(
+        "Cannot use operator[] with a string argument on tag of type {}",
+        type_name())));
   }
 
   const_reference operator[](const std::string &key) const {
     if (is_compound()) {
-      if (content.compound->find(key) != content.compound->end()) {
-        return content.compound->find(key)->second;
+      auto query = content.compound->find(key);
+      if (query != content.compound->end()) {
+        return query->second;
       } else
         throw(std::out_of_range("Key " + key + " not found"));
     }
@@ -487,10 +343,18 @@ public:
                             std::string(type_name())));
   }
 
-  NBT &operator=(NBT other) noexcept {
-    using std::swap;
-    swap(type, other.type);
-    swap(content, other.content);
+  NBT &operator=(const NBT &other) noexcept {
+    type = other.type;
+    name = other.name;
+    content = other.content;
+
+    return *this;
+  }
+
+  NBT &operator=(NBT &&other) noexcept {
+    std::swap(type, other.type);
+    std::swap(name, other.name);
+    std::swap(content, other.content);
 
     return *this;
   }
@@ -596,7 +460,7 @@ public:
   }
 
   bool contains(std::string &&key) const {
-    return is_compound() and
+    return is_compound() &&
            content.compound->find(std::forward<std::string>(key)) !=
                content.compound->end();
   }
@@ -755,11 +619,10 @@ private:
       long_array = new tag_long_array_t(std::move(value));
     }
 
-    tag_content(const tag_string_t &value) { string = new tag_string_t(value); }
+    tag_content(const tag_string_t &value) : string(new tag_string_t(value)) {}
 
-    tag_content(tag_string_t &&value) {
-      string = new tag_string_t(std::move(value));
-    }
+    tag_content(tag_string_t &&value)
+        : string(new tag_string_t(std::move(value))) {}
 
     tag_content(const tag_list_t &value) : list(new tag_list_t(value)) {}
 
@@ -827,27 +690,6 @@ private:
       }
     }
   };
-
-  NBT(uint8_t *&data, uint8_t *end) : NBT() {
-    assertSize(data, end, 1);
-    type = tag_type(data[0]);
-    if (type == tag_type::tag_end)
-      return;
-
-    assertSize(data + 1, end, 2);
-    uint16_t len = _NTOHS(data + 1);
-
-    assertSize(data + 3, end, len);
-    name = std::string((char *)(data + 3), len);
-    data += len + 3;
-
-    this->parse(data, end);
-  }
-
-  NBT(uint8_t *&data, uint8_t *end, tag_type t) {
-    type = t;
-    this->parse(data, end);
-  }
 
   tag_type type = tag_type::tag_end;
   tag_content content = {};
@@ -1015,14 +857,19 @@ public:
     switch (get_type()) {
     case tag_type::tag_byte:
       return static_cast<ArithmeticType>(*get_ptr<const tag_byte_t *>());
+
     case tag_type::tag_short:
       return static_cast<ArithmeticType>(*get_ptr<const tag_short_t *>());
+
     case tag_type::tag_int:
       return static_cast<ArithmeticType>(*get_ptr<const tag_int_t *>());
+
     case tag_type::tag_long:
       return static_cast<ArithmeticType>(*get_ptr<const tag_long_t *>());
+
     case tag_type::tag_float:
       return static_cast<ArithmeticType>(*get_ptr<const tag_float_t *>());
+
     case tag_type::tag_double:
       return static_cast<ArithmeticType>(*get_ptr<const tag_double_t *>());
 

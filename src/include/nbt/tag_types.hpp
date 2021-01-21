@@ -2,6 +2,7 @@
 #include <cstdint>
 
 namespace nbt {
+
 enum class tag_type : uint8_t {
   tag_end = 0,
   tag_byte,
@@ -17,4 +18,5 @@ enum class tag_type : uint8_t {
   tag_int_array,
   tag_long_array,
 };
+
 }

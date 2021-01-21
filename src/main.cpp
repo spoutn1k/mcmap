@@ -58,7 +58,12 @@ int main(int argc, char **argv) {
     return ERROR;
   }
 
-  Colors::load(options.colorFile, &colors);
+  // Load colors from the text segment
+  Colors::load(&colors);
+
+  // If requested, load colors from file
+  if (!options.colorFile.empty())
+    Colors::load(options.colorFile, &colors);
 
   if (options.mode == Settings::DUMPCOLORS) {
     logger::info("{}", json(colors).dump());
@@ -86,9 +91,10 @@ int main(int argc, char **argv) {
 
   // This value represents the amount of canvasses that can fit in memory at
   // once to avoid going over the limit of RAM
-  Counter<size_t> capacity;
-  if (!(capacity = memory_capacity(options.mem_limit, tiles[0].footprint(),
-                                   tiles.size(), THREADS)))
+  Counter<size_t> capacity = memory_capacity(
+      options.mem_limit, tiles[0].footprint(), tiles.size(), THREADS);
+
+  if (!capacity)
     return ERROR;
 
   logger::debug("Memory capacity: {} tiles - {} tiles scheduled\n",
@@ -99,11 +105,11 @@ int main(int argc, char **argv) {
     if (!prepare_cache(CACHE))
       return ERROR;
 
-#ifndef DISABLE_OMP
+#ifdef _OPENMP
 #pragma omp parallel shared(fragments, capacity)
 #endif
   {
-#ifndef DISABLE_OMP
+#ifdef _OPENMP
 #pragma omp for ordered schedule(dynamic)
 #endif
     for (std::vector<Terrain::Coordinates>::size_type i = 0; i < tiles.size();

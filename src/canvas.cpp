@@ -383,7 +383,7 @@ void IsometricCanvas::renderSection() {
 
         renderBlock(section.colors[block_index], (chunkX << 4) + x,
                     (chunkZ << 4) + z, (yPos << 4) + y,
-                    section.palette[block_index]);
+                    section.palette->operator[](block_index));
 
         if (block_index == section.beaconIndex) {
           beams[beamNo++] = Beam(orientedX, orientedZ, &beaconBeam);
@@ -545,20 +545,7 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
   const Colors::Block *colorPtr = color;
 
   if (shading) {
-    // Make a local copy of the color
-    localColor = *colorPtr;
-
-    // Get the target shading from the profile
-    float fsub = brightnessLookup[y];
-    int sub = int(fsub * (float(color->primary.brightness()) / 323.0f + .21f));
-
-    // Modify the colors
-    localColor.primary.modColor(sub);
-    localColor.dark.modColor(sub);
-    localColor.light.modColor(sub);
-    localColor.secondary.modColor(sub);
-
-    // Make sure the local color is used later
+    localColor = color->shade(brightnessLookup[y]);
     colorPtr = &localColor;
   }
 

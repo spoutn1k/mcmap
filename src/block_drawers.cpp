@@ -105,17 +105,23 @@ void drawPlant(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
 }
 
 void drawUnderwaterPlant(IsometricCanvas *canvas, const uint32_t x,
-                         const uint32_t y, const NBT &metadata,
-                         const Colors::Block *block) {
+                         const uint32_t y, const NBT &,
+                         const Colors::Block *color) {
   /* Print a plant-like block
    * |    |
    * |WXWX|
    * |WWXW|
    * |WXWW| */
-  nbt::NBT tweaked(metadata);
-  tweaked.insert({"UnderWater", nbt::NBT("true")});
+  Colors::Block *fill = &canvas->water;
 
-  drawPlant(canvas, x, y, tweaked, block);
+  const Colors::Color *sprite[3][4] = {{FILL_, PRIME, FILL_, PRIME},
+                                       {FILL_, FILL_, PRIME, FILL_},
+                                       {FILL_, PRIME, FILL_, FILL_}};
+
+  uint8_t *pos = canvas->pixel(x, y);
+  for (uint8_t j = 0; j < 3; ++j, pos = canvas->pixel(x, y + j))
+    for (uint8_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
+      blend(pos, (uint8_t *)sprite[j][i]);
 }
 
 void drawFire(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
@@ -145,7 +151,7 @@ void drawOre(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
    * |DSLS|
    * |SDLL| */
 
-  int sub = (float(color->primary.BRIGHTNESS) / 323.0f + .21f);
+  int sub = (float(color->primary.brightness()) / 323.0f + .21f);
 
   Colors::Color secondaryLight(color->secondary);
   Colors::Color secondaryDark(color->secondary);
@@ -173,7 +179,7 @@ void drawGrown(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
 
   // First determine how much the color has to be lightened up or darkened
   // The brighter the color, the stronger the impact
-  int sub = (float(color->primary.BRIGHTNESS) / 323.0f + .21f);
+  int sub = (float(color->primary.brightness()) / 323.0f + .21f);
 
   Colors::Color secondaryLight(color->secondary);
   Colors::Color secondaryDark(color->secondary);
@@ -296,7 +302,7 @@ void drawLog(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
              const NBT &metadata, const Colors::Block *color) {
 
   string axis = "y";
-  int sub = (float(color->primary.BRIGHTNESS) / 323.0f + .21f);
+  int sub = (float(color->primary.brightness()) / 323.0f + .21f);
 
   Colors::Color secondaryLight(color->secondary);
   Colors::Color secondaryDark(color->secondary);

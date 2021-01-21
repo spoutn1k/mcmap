@@ -1,7 +1,7 @@
-#include "fmt/color.h"
 #include <filesystem>
-#include <fmt/core.h>
 #include <json.hpp>
+#include <logger.hpp>
+#include <nbt/parser.hpp>
 #include <nbt/to_json.hpp>
 #include <zlib.h>
 
@@ -11,9 +11,11 @@ using nlohmann::json;
 using std::filesystem::exists;
 using std::filesystem::path;
 
+SETUP_LOGGER;
+
 int main(int argc, char **argv) {
   if (argc > 2 || (argc == 2 && !exists(path(argv[1])))) {
-    fmt::print(stderr, "Usage: {} [NBT file]\n", argv[0]);
+    logger::error("Usage: {} [NBT file]\n", argv[0]);
     return 1;
   }
 
@@ -25,7 +27,7 @@ int main(int argc, char **argv) {
     f = gzopen(argv[1], "r");
 
   if (!f) {
-    fmt::print(stderr, "Error opening file: {}\n", strerror(errno));
+    logger::error("Error opening file: {}\n", strerror(errno));
     return 1;
   }
 
@@ -33,9 +35,10 @@ int main(int argc, char **argv) {
   size_t length = gzread(f, buffer, sizeof(uint8_t) * BUFFERSIZE);
   gzclose(f);
 
-  json data = nbt::NBT::parse(buffer, length);
+  nbt::NBT data;
+  nbt::parse(buffer, length, data);
 
-  fmt::print("{}", data.dump());
+  logger::info("{}", json(data).dump());
 
   return 0;
 }

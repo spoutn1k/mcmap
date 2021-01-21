@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <logger.hpp>
 #include <nbt/nbt.hpp>
+#include <nbt/parser.hpp>
 #include <zlib.h>
 
 #define BUFFERSIZE 2000000
@@ -160,24 +161,9 @@ TEST(TestNBT, TestCreateLongArray) {
 
 class TestNBTParse : public ::testing::Test {
 protected:
-  std::vector<uint8_t> buffer;
-  size_t length;
   nbt::NBT level;
 
-  TestNBTParse() {
-
-    buffer.reserve(BUFFERSIZE);
-
-    gzFile f;
-    f = gzopen(NBT_FILE, "r");
-
-    if (!f) {
-      logger::error("Error opening " NBT_FILE ": {}\n", strerror(errno));
-    } else {
-      length = gzread(f, &buffer[0], sizeof(uint8_t) * BUFFERSIZE);
-      level = nbt::NBT::parse(&buffer[0], length);
-    }
-  }
+  TestNBTParse() { nbt::parse(NBT_FILE, level); }
 };
 
 TEST_F(TestNBTParse, TestParse) {
