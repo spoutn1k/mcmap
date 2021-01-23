@@ -4,4 +4,8 @@
 
 #define CACHE "cache"
 
+namespace mcmap {
+
 int render(const Settings::WorldOptions &, const Colors::Palette &);
+
+}

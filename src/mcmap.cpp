@@ -6,6 +6,8 @@
 #define THREADS 1
 #endif
 
+namespace mcmap {
+
 int render(const Settings::WorldOptions &options,
            const Colors::Palette &colors) {
   logger::debug("Rendering {} with {}\n", options.save.name,
@@ -91,3 +93,5 @@ int render(const Settings::WorldOptions &options,
   logger::info("Job complete.\n");
   return true;
 }
+
+} // namespace mcmap

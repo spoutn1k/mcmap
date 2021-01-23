@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
   if (options.hideBeacons)
     colors["mcmap:beacon_beam"] = Colors::Block();
 
-  if (!render(options, colors)) {
+  if (!mcmap::render(options, colors)) {
     logger::error("Error rendering terrain.\n");
     return ERROR;
   }
