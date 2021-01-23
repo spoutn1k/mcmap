@@ -4,9 +4,10 @@
 #include <QMessageBox>
 #include <QStatusBar>
 
-#include "../settings.h"
+#include "../mcmap.h"
 
 Settings::WorldOptions options;
+extern Colors::Palette color_palette;
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
@@ -14,12 +15,6 @@ MainWindow::MainWindow(QWidget *parent)
 }
 
 MainWindow::~MainWindow() { delete ui; }
-
-void MainWindow::on_renderButton_clicked() {
-  QMessageBox message;
-  message.setText(QString("mcmap "));
-  message.exec();
-}
 
 bool convert(int &dest, const QString &arg, MainWindow *parent) {
   try {
@@ -190,6 +185,7 @@ void MainWindow::on_dimensionSelectDropDown_currentIndexChanged(int index) {
   ui->maxX->setValidator(horizontal);
   ui->minZ->setValidator(horizontal);
   ui->maxZ->setValidator(horizontal);
+
   ui->minY->setValidator(vertical);
   ui->maxY->setValidator(vertical);
 
@@ -203,24 +199,74 @@ void MainWindow::on_dimensionSelectDropDown_currentIndexChanged(int index) {
   ui->renderButton->setEnabled(true);
 }
 
-void MainWindow::on_minX_textEdited(const QString &arg1) {
-  bool status = convert(options.boundaries.minX, arg1, this);
+void check(QLineEdit *min, QLineEdit *max, int &min_dest, int &max_dest,
+           MainWindow *parent) {
+  bool min_status = convert(min_dest, min->displayText(), parent);
+  bool max_status = convert(max_dest, max->displayText(), parent);
 
-  if (status)
-    ok(ui->minX);
+  ok(min);
+  ok(max);
+
+  if (min_status)
+    ok(min);
   else
-    error(ui->minX);
+    error(min);
 
-  ui->renderButton->setEnabled(status);
+  if (max_status)
+    ok(max);
+  else
+    error(max);
+
+  if (min_dest > max_dest) {
+    error(min);
+    error(max);
+  }
 }
 
-void MainWindow::on_maxX_textEdited(const QString &arg1) {
-  bool status = convert(options.boundaries.maxX, arg1, this);
+void MainWindow::on_minX_textEdited(const QString &) {
+  check(ui->minX, ui->maxX, options.boundaries.minX, options.boundaries.maxX,
+        this);
+}
 
-  if (status)
-    ok(ui->maxX);
-  else
-    error(ui->maxX);
+void MainWindow::on_maxX_textEdited(const QString &) {
+  check(ui->minX, ui->maxX, options.boundaries.minX, options.boundaries.maxX,
+        this);
+}
 
-  ui->renderButton->setEnabled(status);
+void MainWindow::on_minZ_textEdited(const QString &) {
+  check(ui->minZ, ui->maxZ, options.boundaries.minZ, options.boundaries.maxZ,
+        this);
+}
+
+void MainWindow::on_maxZ_textEdited(const QString &) {
+  check(ui->minZ, ui->maxZ, options.boundaries.minZ, options.boundaries.maxZ,
+        this);
+}
+
+void MainWindow::on_minY_textEdited(const QString &) {
+  int min, max;
+  check(ui->minY, ui->maxY, min, max, this);
+
+  options.boundaries.minY = min;
+  options.boundaries.maxY = max;
+}
+
+void MainWindow::on_maxY_textEdited(const QString &) {
+  int min, max;
+  check(ui->minY, ui->maxY, min, max, this);
+
+  options.boundaries.minY = min;
+  options.boundaries.maxY = max;
+}
+
+void MainWindow::on_paddingValue_valueChanged(int arg1) {
+  options.padding = arg1;
+}
+
+void MainWindow::on_renderButton_clicked() {
+  // QMessageBox message;
+  // message.setText(QString(json(options).dump().c_str()));
+  // message.exec();
+
+  mcmap::render(options, color_palette);
 }

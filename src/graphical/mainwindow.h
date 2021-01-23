@@ -27,8 +27,14 @@ private slots:
 
   void on_dimensionSelectDropDown_currentIndexChanged(int index);
 
-  void on_minX_textEdited(const QString &arg1);
-  void on_maxX_textEdited(const QString &arg1);
+  void on_minX_textEdited(const QString &);
+  void on_maxX_textEdited(const QString &);
+  void on_minZ_textEdited(const QString &);
+  void on_maxZ_textEdited(const QString &);
+  void on_minY_textEdited(const QString &);
+  void on_maxY_textEdited(const QString &);
+
+  void on_paddingValue_valueChanged(int arg1);
 
 private:
   Ui::MainWindow *ui;
