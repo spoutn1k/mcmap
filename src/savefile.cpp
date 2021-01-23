@@ -34,7 +34,7 @@ fs::path Dimension::suffix() const {
     return fs::path(fmt::format("dimensions/{}/{}/region", ns, id));
 }
 
-bool assert_save(fs::path root) {
+bool assert_save(const fs::path &root) {
   fs::path level = root / "level.dat", region = root / "region";
 
   std::map<fs::path, fs::file_type> requirements = {
@@ -80,10 +80,10 @@ void SaveFile::getDimensions() {
     dimensions.push_back(Dimension("overworld"));
 
   if (VALID(folder / "DIM1/region"))
-    dimensions.push_back(Dimension("end"));
+    dimensions.push_back(Dimension("the_end"));
 
   if (VALID(folder / "DIM-1/region"))
-    dimensions.push_back(Dimension("nether"));
+    dimensions.push_back(Dimension("the_nether"));
 #undef VALID
 
   // TODO Parse dimension folders for custom dimensions
