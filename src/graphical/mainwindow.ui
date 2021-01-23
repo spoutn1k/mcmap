@@ -265,7 +265,7 @@
       </layout>
      </item>
      <item>
-      <widget class="QCheckBox" name="checkBox_3">
+      <widget class="QCheckBox" name="shading">
        <property name="text">
         <string>Shading</string>
        </property>

@@ -7,7 +7,8 @@
 #include "../mcmap.h"
 
 Settings::WorldOptions options;
-extern Colors::Palette color_palette;
+extern Colors::Palette default_palette;
+Colors::Palette custom_palette;
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
@@ -20,8 +21,8 @@ bool convert(int &dest, const QString &arg, MainWindow *parent) {
   try {
     dest = std::stol(arg.toStdString());
   } catch (const std::exception &err) {
-    parent->statusBar()->showMessage(
-        parent->tr("Could not convert value to integer"), 2000);
+    parent->statusBar()->showMessage("Could not convert value to integer",
+                                     2000);
     return false;
   }
 
@@ -263,6 +264,30 @@ void MainWindow::on_paddingValue_valueChanged(int arg1) {
   options.padding = arg1;
 }
 
+void MainWindow::on_shading_stateChanged(int checked) {
+  options.shading = checked;
+}
+
+void MainWindow::on_hideWater_stateChanged(int checked) {
+  std::string water_id = "minecraft:water";
+
+  if (checked) {
+    custom_palette.insert_or_assign(water_id, Colors::Block());
+  } else {
+    custom_palette.erase(water_id);
+  }
+}
+
+void MainWindow::on_hideBeacons_stateChanged(int checked) {
+  std::string beam_id = "mcmap:beacon_beam";
+
+  if (checked) {
+    custom_palette.insert_or_assign(beam_id, Colors::Block());
+  } else {
+    custom_palette.erase(beam_id);
+  }
+}
+
 void MainWindow::on_renderButton_clicked() {
 #ifdef DEBUG
   QMessageBox message;
@@ -270,5 +295,8 @@ void MainWindow::on_renderButton_clicked() {
   message.exec();
 #endif
 
-  mcmap::render(options, color_palette);
+  Colors::Palette instance_palette = custom_palette;
+  instance_palette.merge(Colors::Palette(default_palette));
+
+  mcmap::render(options, instance_palette);
 }

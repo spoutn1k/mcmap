@@ -36,6 +36,10 @@ private slots:
 
   void on_paddingValue_valueChanged(int arg1);
 
+  void on_shading_stateChanged(int);
+  void on_hideWater_stateChanged(int);
+  void on_hideBeacons_stateChanged(int);
+
 private:
   Ui::MainWindow *ui;
 };

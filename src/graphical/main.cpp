@@ -5,10 +5,10 @@
 
 SETUP_LOGGER;
 
-Colors::Palette color_palette;
+Colors::Palette default_palette;
 
 int main(int argc, char *argv[]) {
-  Colors::load(&color_palette);
+  Colors::load(&default_palette);
 
   QApplication a(argc, argv);
   MainWindow w;
