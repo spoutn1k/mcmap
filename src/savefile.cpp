@@ -98,3 +98,14 @@ SaveFile::region(const Dimension dim = std::string("overworld")) const {
 
   return folder / dim.suffix();
 }
+
+void to_json(json &j, const Dimension &d) {
+  j = fmt::format("{}:{}", d.ns, d.id);
+}
+
+void to_json(json &j, const SaveFile &s) {
+  j["name"] = s.name;
+  j["last_played"] = s.last_played;
+  j["folder"] = s.folder.string();
+  j["dimensions"] = s.dimensions;
+}

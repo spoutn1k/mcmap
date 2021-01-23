@@ -264,9 +264,11 @@ void MainWindow::on_paddingValue_valueChanged(int arg1) {
 }
 
 void MainWindow::on_renderButton_clicked() {
-  // QMessageBox message;
-  // message.setText(QString(json(options).dump().c_str()));
-  // message.exec();
+#ifdef DEBUG
+  QMessageBox message;
+  message.setText(QString(json(options).dump().c_str()));
+  message.exec();
+#endif
 
   mcmap::render(options, color_palette);
 }

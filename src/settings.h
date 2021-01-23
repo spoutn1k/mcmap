@@ -61,6 +61,8 @@ struct WorldOptions {
 
 bool parseArgs(int argc, char **argv, Settings::WorldOptions *opts);
 
+void to_json(json &j, const WorldOptions &o);
+
 } // namespace Settings
 
 #endif // OPTIONS_H_

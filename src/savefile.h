@@ -1,9 +1,11 @@
 #include <ctime>
 #include <filesystem>
+#include <json.hpp>
 #include <logger.hpp>
 #include <map>
 #include <nbt/parser.hpp>
 
+using nlohmann::json;
 namespace fs = std::filesystem;
 
 extern std::vector<fs::path> save_folders;
@@ -37,3 +39,6 @@ struct SaveFile {
 };
 
 bool assert_save(const fs::path &root);
+
+void to_json(json &, const Dimension &);
+void to_json(json &, const SaveFile &);
