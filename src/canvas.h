@@ -310,6 +310,8 @@ struct CompositeCanvas : public Canvas {
   // +-------------------+
 
   CompositeCanvas(std::vector<Canvas> &&);
+
+  bool empty() const;
 };
 
 #endif

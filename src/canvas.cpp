@@ -586,3 +586,11 @@ CompositeCanvas::CompositeCanvas(std::vector<Canvas> &&parts)
   std::sort(drawing.canvas_buffer->begin(), drawing.canvas_buffer->end(),
             compare);
 }
+
+bool CompositeCanvas::empty() const {
+  for (const auto &canvas : *drawing.canvas_buffer)
+    if (canvas.type != EMPTY)
+      return false;
+
+  return true;
+}

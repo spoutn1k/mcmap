@@ -80,9 +80,13 @@ int render(const Settings::WorldOptions &options,
   CompositeCanvas merged(std::move(fragments));
   logger::debug("{}\n", merged.to_string());
 
-  if (!merged.save(options.outFile, options.padding)) {
+  if (merged.empty()) {
+    logger::error("Canvas is empty !\n");
     return false;
   }
+
+  if (!merged.save(options.outFile, options.padding))
+    return false;
 
   logger::info("Job complete.\n");
   return true;
