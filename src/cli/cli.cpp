@@ -1,5 +1,5 @@
-#include "./VERSION"
-#include "./mcmap.h"
+#include "../VERSION"
+#include "../mcmap.h"
 
 SETUP_LOGGER
 
