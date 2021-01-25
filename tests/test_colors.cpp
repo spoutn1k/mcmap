@@ -11,7 +11,7 @@ TEST(TestColor, TestCreate) {
 
   ASSERT_FALSE(water.empty());
   ASSERT_EQ(water.R, 7);
-  ASSERT_EQ(water.G, 52);
+  ASSERT_EQ(water.G, 67);
   ASSERT_EQ(water.B, 200);
   ASSERT_EQ(water.ALPHA, 50);
 }
