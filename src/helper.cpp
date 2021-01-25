@@ -60,13 +60,13 @@ bool prepare_cache(const std::filesystem::path &cache) {
   fs::perms required = fs::perms::owner_all;
 
   if (cache_status.type() != fs::file_type::directory) {
-    logger::error("Cache directory '{}' is not a directory\n", cache.c_str());
+    logger::error("Cache directory `{}` is not a directory\n", cache.string());
     return false;
   }
 
   if ((cache_status.permissions() & required) != required) {
-    logger::error("Cache directory '{}' does not have the right permissions\n",
-                  cache.c_str());
+    logger::error("Cache directory `{}` does not have the right permissions\n",
+                  cache.string());
     return false;
   }
 

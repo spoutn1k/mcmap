@@ -350,7 +350,7 @@ static bool assert_NBT(const std::filesystem::path &file) {
   gzFile f;
   bool status = false;
 
-  if ((f = gzopen(file.c_str(), "rb"))) {
+  if ((f = gzopen(file.string().c_str(), "rb"))) {
     ByteStream gz(f);
     status = format_check(gz);
 
@@ -384,7 +384,7 @@ static bool parse(const std::filesystem::path &file, NBT &container) {
   gzFile f;
   bool status = false;
 
-  if ((f = gzopen(file.c_str(), "rb"))) {
+  if ((f = gzopen(file.string().c_str(), "rb"))) {
     ByteStream gz(f);
     status = matryoshka(gz, container);
     if (!status)

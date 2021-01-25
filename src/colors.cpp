@@ -26,16 +26,16 @@ bool Colors::load(const std::filesystem::path &color_file, Palette *colors) {
   Palette colors_j;
 
   if (color_file.empty() || !std::filesystem::exists(color_file)) {
-    logger::error("Could not open color file `{}`\n", color_file.c_str());
+    logger::error("Could not open color file `{}`\n", color_file.string());
     return false;
   }
 
-  FILE *f = fopen(color_file.c_str(), "r");
+  FILE *f = fopen(color_file.string().c_str(), "r");
 
   try {
     colors_j = json::parse(f).get<Colors::Palette>();
   } catch (const nlohmann::detail::parse_error &err) {
-    logger::error("Parsing color file {} failed: {}\n", color_file.c_str(),
+    logger::error("Parsing color file `{}` failed: {}\n", color_file.string(),
                   err.what());
     fclose(f);
     return false;

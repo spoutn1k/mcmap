@@ -109,7 +109,7 @@ void write_text(png_structp pngPtr, png_infop pngInfoPtr,
 }
 
 void PNGWriter::_open() {
-  if (!(super::imageHandle = fopen(file.c_str(), "wb"))) {
+  if (!(super::imageHandle = fopen(file.string().c_str(), "wb"))) {
     throw(std::runtime_error("Error opening '" + file.string() +
                              "' for writing: " + std::string(strerror(errno))));
   }
@@ -206,7 +206,7 @@ void PNGReader::_close() {
 }
 
 void PNGReader::_open() {
-  if (!(super::imageHandle = fopen(file.c_str(), "rb"))) {
+  if (!(super::imageHandle = fopen(file.string().c_str(), "rb"))) {
     throw(std::runtime_error("Error opening '" + file.string() +
                              "' for reading: " + std::string(strerror(errno))));
   }

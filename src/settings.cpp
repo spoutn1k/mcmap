@@ -76,7 +76,7 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
       }
       opts->colorFile = NEXTARG;
       if (!ISPATH(opts->colorFile)) {
-        logger::error("File {} does not exist\n", opts->colorFile.c_str());
+        logger::error("File {} does not exist\n", opts->colorFile.string());
         return false;
       }
     } else if (strcmp(option, "-dumpcolors") == 0) {

@@ -14,7 +14,7 @@ void Terrain::scanWorldDirectory(const std::filesystem::path &regionDir,
     // This loop parses files with name 'r.x.y.mca', extracting x and y. This is
     // done by creating a string stream and using `getline` with '.' as a
     // delimiter.
-    std::stringstream ss(region.path().filename().c_str());
+    std::stringstream ss(region.path().filename().string());
     std::getline(ss, index, delimiter); // This removes the 'r.'
     std::getline(ss, index, delimiter);
 
@@ -352,8 +352,8 @@ Terrain::Chunk &Terrain::Data::chunkAt(int64_t xPos, int64_t zPos) {
   FILE *regionHandle;
   uint8_t regionHeader[REGION_HEADER_SIZE];
 
-  if (!(regionHandle = fopen(regionFile.c_str(), "rb"))) {
-    logger::error("Opening region file {} failed: {}\n", regionFile.c_str(),
+  if (!(regionHandle = fopen(regionFile.string().c_str(), "rb"))) {
+    logger::error("Opening region file `{}` failed: {}\n", regionFile.string(),
                   strerror(errno));
     return empty;
   }
@@ -361,7 +361,7 @@ Terrain::Chunk &Terrain::Data::chunkAt(int64_t xPos, int64_t zPos) {
   // Then, we read the header (of size 4K) storing the chunks locations
   if (fread(regionHeader, sizeof(uint8_t), REGION_HEADER_SIZE, regionHandle) !=
       REGION_HEADER_SIZE) {
-    logger::error("Region header too short in {}\n", regionFile.c_str());
+    logger::error("Region header too short in `{}`\n", regionFile.string());
     fclose(regionHandle);
     return empty;
   }
