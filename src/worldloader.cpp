@@ -1,4 +1,5 @@
 #include "worldloader.h"
+#include <sstream>
 
 NBT minecraft_air(nbt::tag_type::tag_end);
 
