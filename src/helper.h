@@ -7,6 +7,12 @@
 #include <stdint.h>
 #include <string>
 
+#if defined(__clang__) || defined(__GNUC__)
+#define NOINLINE __attribute__((noinline))
+#else
+#define NOINLINE
+#endif
+
 #define CHUNKSIZE 16
 #define REGIONSIZE 32
 #define MIN_TERRAIN_HEIGHT 0

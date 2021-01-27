@@ -171,7 +171,7 @@ struct Block {
 
   bool operator!=(const Block &other) const { return !operator==(other); }
 
-  Block shade(float fsub) const __attribute__((noinline)) {
+  Block shade(float fsub) const NOINLINE {
     Block shaded;
     int sub = int(fsub * (float(primary.brightness()) / 323.0f + .21f));
 
