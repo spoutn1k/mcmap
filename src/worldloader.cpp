@@ -139,7 +139,7 @@ bool decompressChunk(const uint32_t offset, FILE *regionHandle,
                      const std::filesystem::path &filename) {
   uint8_t zData[COMPRESSED_BUFFER];
 
-  if (0 != fseek(regionHandle, offset, SEEK_SET)) {
+  if (0 != FSEEK(regionHandle, offset, SEEK_SET)) {
     logger::debug("Accessing chunk data in file {} failed: {}\n",
                   filename.string(), strerror(errno));
     return false;
@@ -207,6 +207,7 @@ void filterLevel(NBT &level) {
 void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
                               const int chunkX, const int chunkZ,
                               const std::filesystem::path &filename) {
+
   uint64_t length, chunkPos = chunkIndex(chunkX, chunkZ);
 
   // Buffers for chunk read from MCA files and decompression.

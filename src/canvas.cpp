@@ -197,10 +197,8 @@ void IsometricCanvas::setMap(const Terrain::Coordinates &_map) {
 
   height = sizeX + sizeZ + (map.maxY - map.minY + 1) * BLOCKHEIGHT - 1;
 
-  size_t size = size_t(width * height * BYTESPERPIXEL);
-  drawing.bytes_buffer->reserve(size);
-
-  memset(&(*drawing.bytes_buffer)[0], 0, size);
+  size_t size = size_t((width + 1) * (height + 1) * BYTESPERPIXEL);
+  drawing.bytes_buffer->resize(size, 0);
 }
 
 // ____                     _

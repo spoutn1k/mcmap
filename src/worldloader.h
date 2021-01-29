@@ -2,6 +2,7 @@
 #define WORLDLOADER_H_
 
 #include "./colors.h"
+#include "./compat.h"
 #include "./helper.h"
 #include <cstdlib>
 #include <filesystem>

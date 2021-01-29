@@ -42,8 +42,7 @@ int render(const Settings::WorldOptions &options,
 #ifdef _OPENMP
 #pragma omp for ordered schedule(dynamic)
 #endif
-    for (std::vector<Terrain::Coordinates>::size_type i = 0; i < tiles.size();
-         i++) {
+    for (OMP_FOR_INDEX i = 0; i < tiles.size(); i++) {
       IsometricCanvas canvas;
       canvas.setMap(tiles[i]);
       canvas.setColors(colors);
