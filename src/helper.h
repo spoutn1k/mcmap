@@ -66,7 +66,7 @@ struct Coordinates {
     maxY = std::numeric_limits<uint8_t>::min();
   }
 
-  bool isUndefined() {
+  bool isUndefined() const {
     return (minX == minZ && minX == std::numeric_limits<Integer>::max() &&
             maxX == maxZ && maxX == std::numeric_limits<Integer>::min());
   }
@@ -86,8 +86,24 @@ struct Coordinates {
   }
 
   std::string to_string() const {
-    return fmt::format("{}.{}.{} ~> {}.{}.{}", minX, minZ, minY, maxX, maxZ,
-                       maxY);
+    std::string str_orient = "ERROR";
+    switch (orientation) {
+    case NW:
+      str_orient = "North-West";
+      break;
+    case SW:
+      str_orient = "South-West";
+      break;
+    case SE:
+      str_orient = "South-East";
+      break;
+    case NE:
+      str_orient = "North-East";
+      break;
+    }
+
+    return fmt::format("{}.{}.{} ~> {}.{}.{} ({})", minX, minZ, minY, maxX,
+                       maxZ, maxY, str_orient);
   }
 
   void rotate() {
@@ -144,13 +160,14 @@ struct Coordinates {
     // This formula is thought around the top corner' position.
     //
     // The top corner's postition of the sub-map is influenced by its distance
-    // to the full map's top corner => we compare the minX and minZ coordinates
+    // to the full map's top corner => we compare the minX and minZ
+    // coordinates
     //
     // From there, the map's top corner is sizeZ pizels from the edge, and the
     // sub-canvasses' edge is at sizeZ' pixels from its top corner.
     //
-    // By adding up those elements we get the delta between the edge of the full
-    // image and the edge of the partial image.
+    // By adding up those elements we get the delta between the edge of the
+    // full image and the edge of the partial image.
     Coordinates<Integer> oriented = this->orient(Orientation::NW);
 
     return 2 * (referential.sizeZ() - oriented.sizeZ() -

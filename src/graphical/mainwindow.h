@@ -25,6 +25,11 @@ private slots:
   void on_outputSelectButton_clicked();
   void on_colorSelectButton_clicked();
 
+  void on_orientationNW_toggled(bool);
+  void on_orientationSW_toggled(bool);
+  void on_orientationSE_toggled(bool);
+  void on_orientationNE_toggled(bool);
+
   void on_dimensionSelectDropDown_currentIndexChanged(int index);
 
   void on_minX_textEdited(const QString &);
@@ -37,8 +42,6 @@ private slots:
   void on_paddingValue_valueChanged(int arg1);
 
   void on_shading_stateChanged(int);
-  void on_hideWater_stateChanged(int);
-  void on_hideBeacons_stateChanged(int);
 
 private:
   Ui::MainWindow *ui;

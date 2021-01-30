@@ -50,7 +50,7 @@
      <rect>
       <x>20</x>
       <y>20</y>
-      <width>511</width>
+      <width>521</width>
       <height>461</height>
      </rect>
     </property>
@@ -67,10 +67,13 @@
        <item>
         <widget class="QLabel" name="saveNameLabel">
          <property name="text">
-          <string>__Not selected.__</string>
+          <string>Not selected.</string>
          </property>
          <property name="textFormat">
-          <enum>Qt::MarkdownText</enum>
+          <enum>Qt::PlainText</enum>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
          </property>
         </widget>
        </item>
@@ -106,6 +109,48 @@
         <widget class="QPushButton" name="outputSelectButton">
          <property name="text">
           <string>Select</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="orientation">
+       <item>
+        <widget class="QLabel" name="orientationLabel">
+         <property name="text">
+          <string>Orientation</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="orientationNW">
+         <property name="text">
+          <string>North-West</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="orientationSW">
+         <property name="text">
+          <string>South-West</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="orientationSE">
+         <property name="text">
+          <string>South-East</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="orientationNE">
+         <property name="text">
+          <string>North-East</string>
          </property>
         </widget>
        </item>
@@ -247,7 +292,7 @@
       </layout>
      </item>
      <item>
-      <layout class="QHBoxLayout" name="horizontalLayout_8">
+      <layout class="QHBoxLayout" name="padding">
        <item>
         <widget class="QLabel" name="paddingFieldLabel">
          <property name="text">
@@ -265,14 +310,14 @@
       </layout>
      </item>
      <item>
-      <widget class="QCheckBox" name="shading">
-       <property name="text">
-        <string>Shading</string>
-       </property>
-      </widget>
-     </item>
-     <item>
       <layout class="QHBoxLayout" name="misc">
+       <item>
+        <widget class="QCheckBox" name="shading">
+         <property name="text">
+          <string>Shading</string>
+         </property>
+        </widget>
+       </item>
        <item>
         <widget class="QCheckBox" name="hideBeacons">
          <property name="text">
@@ -323,7 +368,7 @@
      <x>0</x>
      <y>0</y>
      <width>554</width>
-     <height>26</height>
+     <height>24</height>
     </rect>
    </property>
    <widget class="QMenu" name="menumcmap">
