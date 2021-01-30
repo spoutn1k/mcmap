@@ -1,9 +1,11 @@
-#include <ctime>
+#include "./helper.h"
 #include <filesystem>
+#include <fstream>
 #include <json.hpp>
 #include <logger.hpp>
-#include <map>
+#include <map.hpp>
 #include <nbt/parser.hpp>
+#include <sstream>
 
 using nlohmann::json;
 namespace fs = std::filesystem;
@@ -34,6 +36,7 @@ struct SaveFile {
   void getDimensions();
 
   fs::path region(const Dimension &) const;
+  World::Coordinates getWorld(const Dimension &);
 };
 
 bool assert_save(const fs::path &root);

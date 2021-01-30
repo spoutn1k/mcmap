@@ -81,7 +81,7 @@ void MainWindow::reset_selection() {
 void MainWindow::on_saveSelectButton_clicked() {
   QString filename = QFileDialog::getExistingDirectory(
       this, tr("Open Save Folder"),
-      fmt::format("{}/.minecraft/saves", getHome()).c_str());
+      fmt::format("{}/.minecraft/saves", getHome().string()).c_str());
 
   if (filename.isEmpty()) {
     statusBar()->showMessage(tr("No directory selected"), 2000);
@@ -163,7 +163,7 @@ void MainWindow::on_dimensionSelectDropDown_currentIndexChanged(int index) {
   options.dim = options.save.dimensions[index];
   statusBar()->showMessage(tr("Scanning ") + options.regionDir().c_str(), 2000);
 
-  Terrain::scanWorldDirectory(options.regionDir(), &options.boundaries);
+  options.boundaries = options.save.getWorld(options.dim);
 
   ui->minX->setEnabled(true);
   ui->minXLabel->setEnabled(true);
@@ -292,20 +292,20 @@ void MainWindow::on_renderButton_clicked() {
 
 void MainWindow::on_orientationNW_toggled(bool checked) {
   if (checked)
-    options.boundaries.orientation = Orientation::NW;
+    options.boundaries.orientation = Map::NW;
 }
 
 void MainWindow::on_orientationSW_toggled(bool checked) {
   if (checked)
-    options.boundaries.orientation = Orientation::SW;
+    options.boundaries.orientation = Map::SW;
 }
 
 void MainWindow::on_orientationSE_toggled(bool checked) {
   if (checked)
-    options.boundaries.orientation = Orientation::SE;
+    options.boundaries.orientation = Map::SE;
 }
 
 void MainWindow::on_orientationNE_toggled(bool checked) {
   if (checked)
-    options.boundaries.orientation = Orientation::NE;
+    options.boundaries.orientation = Map::NE;
 }

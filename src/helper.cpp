@@ -1,5 +1,5 @@
 #include "helper.h"
-#include <vector>
+#include <logger.hpp>
 
 uint32_t _ntohl(uint8_t *val) {
   return (uint32_t(val[0]) << 24) + (uint32_t(val[1]) << 16) +
@@ -73,4 +73,4 @@ bool prepare_cache(const std::filesystem::path &cache) {
   return true;
 }
 
-std::string getHome() { return std::string(getenv("HOME")); }
+fs::path getHome() { return std::string(getenv("HOME")); }

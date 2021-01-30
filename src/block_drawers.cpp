@@ -331,12 +331,14 @@ void drawLog(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
     axis = metadata["Properties"]["axis"].get<string>();
 
     if (axis == "x") {
-      if (canvas->map.orientation == NW || canvas->map.orientation == SE)
+      if (canvas->map.orientation == Map::NW ||
+          canvas->map.orientation == Map::SE)
         target = &spriteZ;
       else
         target = &spriteX;
     } else if (axis == "z") {
-      if (canvas->map.orientation == NW || canvas->map.orientation == SE)
+      if (canvas->map.orientation == Map::NW ||
+          canvas->map.orientation == Map::SE)
         target = &spriteX;
       else
         target = &spriteZ;

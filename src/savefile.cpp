@@ -109,3 +109,62 @@ void to_json(json &j, const SaveFile &s) {
   j["folder"] = s.folder.string();
   j["dimensions"] = s.dimensions;
 }
+
+World::Coordinates SaveFile::getWorld(const Dimension &dim) {
+  const char delimiter = '.';
+  std::string index;
+  char buffer[4];
+  int32_t regionX, regionZ;
+
+  World::Coordinates savedWorld;
+  savedWorld.setUndefined();
+
+  if (region(dim).empty())
+    return savedWorld;
+
+  for (auto &region : fs::directory_iterator(region(dim))) {
+    // This loop parses files with name 'r.x.y.mca', extracting x and y. This is
+    // done by creating a string stream and using `getline` with '.' as a
+    // delimiter.
+    std::stringstream ss(region.path().filename().string());
+    std::getline(ss, index, delimiter); // This removes the 'r.'
+    std::getline(ss, index, delimiter);
+
+    regionX = atoi(index.c_str());
+
+    std::getline(ss, index, delimiter);
+
+    regionZ = atoi(index.c_str());
+
+    std::ifstream regionData(region.path());
+    for (uint16_t chunk = 0; chunk < REGIONSIZE * REGIONSIZE; chunk++) {
+      regionData.read(buffer, 4);
+
+      if (*((uint32_t *)&buffer) == 0) {
+        continue;
+      }
+
+      savedWorld.minX =
+          std::min(savedWorld.minX, int32_t((regionX << 5) + (chunk & 0x1f)));
+      savedWorld.maxX =
+          std::max(savedWorld.maxX, int32_t((regionX << 5) + (chunk & 0x1f)));
+      savedWorld.minZ =
+          std::min(savedWorld.minZ, int32_t((regionZ << 5) + (chunk >> 5)));
+      savedWorld.maxZ =
+          std::max(savedWorld.maxZ, int32_t((regionZ << 5) + (chunk >> 5)));
+    }
+  }
+
+  // Convert region indexes to blocks
+  savedWorld.minX = savedWorld.minX << 4;
+  savedWorld.minZ = savedWorld.minZ << 4;
+  savedWorld.maxX = ((savedWorld.maxX + 1) << 4) - 1;
+  savedWorld.maxZ = ((savedWorld.maxZ + 1) << 4) - 1;
+
+  savedWorld.minY = 0;
+  savedWorld.maxY = 255;
+
+  logger::debug("World spans from {}\n", savedWorld.to_string());
+
+  return savedWorld;
+}

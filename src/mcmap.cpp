@@ -15,7 +15,7 @@ int render(const Settings::WorldOptions &options,
                 options.boundaries.to_string());
 
   // Split terrain according to tile size
-  std::vector<Terrain::Coordinates> tiles;
+  std::vector<World::Coordinates> tiles;
   options.boundaries.tile(tiles, options.tile_size);
 
   std::vector<Canvas> fragments(tiles.size());
@@ -53,10 +53,6 @@ int render(const Settings::WorldOptions &options,
       // Load the minecraft terrain to render
       Terrain::Data world(tiles[i]);
       world.load(options.regionDir());
-
-      // Cap the height to avoid having a ridiculous image height
-      tiles[i].minY = std::max(tiles[i].minY, world.minHeight());
-      tiles[i].maxY = std::min(tiles[i].maxY, world.maxHeight());
 
       // Draw the terrain fragment
       canvas.shading = options.shading;

@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <json.hpp>
 #include <list>
+#include <logger.hpp>
 #include <map>
 #include <string>
 

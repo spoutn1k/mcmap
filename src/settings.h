@@ -4,28 +4,28 @@
 #include "./colors.h"
 #include "./helper.h"
 #include "./savefile.h"
-#include "./worldloader.h"
 #include <cstdint>
 #include <filesystem>
+#include <map.hpp>
 #include <string>
 
 #define UNDEFINED 0x7FFFFFFF
 
 namespace Settings {
 
-enum actions { RENDER, DUMPCOLORS, HELP };
+enum Action { RENDER, DUMPCOLORS, HELP };
 
 struct WorldOptions {
   // Execution mode
-  int mode;
+  Action mode;
 
   // Files to use
-  std::filesystem::path outFile, colorFile;
+  fs::path outFile, colorFile;
 
   // Map boundaries
   SaveFile save;
   Dimension dim;
-  Terrain::Coordinates boundaries;
+  World::Coordinates boundaries;
 
   // Image settings
   uint16_t padding; // Should be enough

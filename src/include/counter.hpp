@@ -1,3 +1,7 @@
+#pragma once
+#include <limits>
+#include <type_traits>
+
 template <typename UInteger,
           std::enable_if_t<std::is_unsigned<UInteger>::value, int> = 0>
 struct Counter {
@@ -12,4 +16,3 @@ struct Counter {
 
   operator UInteger() { return counter; }
 };
-

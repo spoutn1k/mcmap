@@ -90,13 +90,13 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
       opts->markers[opts->totalMarkers++] =
           Colors::Marker(x, z, std::string(NEXTARG));
     } else if (strcmp(option, "-nw") == 0) {
-      opts->boundaries.orientation = NW;
+      opts->boundaries.orientation = Map::NW;
     } else if (strcmp(option, "-sw") == 0) {
-      opts->boundaries.orientation = SW;
+      opts->boundaries.orientation = Map::SW;
     } else if (strcmp(option, "-ne") == 0) {
-      opts->boundaries.orientation = NE;
+      opts->boundaries.orientation = Map::NE;
     } else if (strcmp(option, "-se") == 0) {
-      opts->boundaries.orientation = SE;
+      opts->boundaries.orientation = Map::SE;
     } else if (strcmp(option, "-mb") == 0) {
       if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
         logger::error("{} needs an integer\n", option);
@@ -132,8 +132,7 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
 
     // Scan the region directory and map the existing terrain in this set of
     // coordinates
-    Terrain::Coordinates existingWorld;
-    Terrain::scanWorldDirectory(opts->regionDir(), &existingWorld);
+    World::Coordinates existingWorld = opts->save.getWorld(opts->dim);
 
     if (opts->boundaries.isUndefined()) {
       // No boundaries were defined, import the whole existing world
