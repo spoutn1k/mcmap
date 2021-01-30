@@ -145,6 +145,7 @@ void IsometricCanvas::setColors(const Colors::Palette &colors) {
 
   // Set to true to use shading later on
   shading = false;
+
   // Precompute the shading profile. The values are arbitrary, and will go
   // through Colors::Color.modcolor further down the code. The 255 array
   // represents the entire world height. This profile is linear, going from

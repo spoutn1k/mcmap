@@ -172,7 +172,7 @@ struct Block {
   bool operator!=(const Block &other) const { return !operator==(other); }
 
   Block shade(float fsub) const NOINLINE {
-    Block shaded;
+    Block shaded = *this;
     int sub = int(fsub * (float(primary.brightness()) / 323.0f + .21f));
 
     shaded.primary.modColor(sub);
