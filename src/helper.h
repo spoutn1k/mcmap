@@ -11,6 +11,18 @@ namespace fs = std::filesystem;
 #define NOINLINE
 #endif
 
+#if defined(_OPENMP) && defined(_WINDOWS)
+#define OMP_FOR_INDEX int
+#else
+#define OMP_FOR_INDEX std::vector<World::Coordinates>::size_type
+#endif
+
+#ifdef _WINDOWS
+#define FSEEK fseek
+#else
+#define FSEEK fseeko
+#endif
+
 #define CHUNKSIZE 16
 #define REGIONSIZE 32
 #define MIN_TERRAIN_HEIGHT 0
