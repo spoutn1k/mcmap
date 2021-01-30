@@ -1,4 +1,5 @@
 #include "./mcmap.h"
+#include <counter.hpp>
 
 #ifdef _OPENMP
 #define THREADS omp_get_max_threads()

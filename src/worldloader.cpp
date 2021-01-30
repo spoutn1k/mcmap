@@ -53,8 +53,7 @@ void Terrain::scanWorldDirectory(const std::filesystem::path &regionDir,
   savedWorld->minY = 0;
   savedWorld->maxY = 255;
 
-  logger::debug("World spans from {}.{} to {}.{}\n", savedWorld->minX,
-                savedWorld->minZ, savedWorld->maxX, savedWorld->maxZ);
+  logger::debug("World spans from {}\n", savedWorld->to_string());
 }
 
 void Terrain::Data::load(const std::filesystem::path &regionDir) {

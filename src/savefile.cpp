@@ -1,11 +1,5 @@
 #include "./savefile.h"
 
-std::vector<fs::path> save_folders = {
-    "{}/.minecraft/saves",
-    "{}/Library/Application Support/minecraft/saves",
-    "/mnt/c/{}/AppData/Roaming/.minecraft/saves",
-};
-
 Dimension::Dimension(std::string _id) : ns("minecraft") {
   size_t sep = _id.find_first_of(':');
 
@@ -84,13 +78,19 @@ void SaveFile::getDimensions() {
 
   if (VALID(folder / "DIM-1/region"))
     dimensions.push_back(Dimension("the_nether"));
-#undef VALID
 
-  // TODO Parse dimension folders for custom dimensions
+  fs::path dim_folder = folder / "dimensions";
+
+  if (VALID(dim_folder))
+    for (auto &ns : fs::directory_iterator(dim_folder))
+      for (auto &id : fs::directory_iterator(ns.path()))
+        dimensions.push_back(Dimension(ns.path().filename().string(),
+                                       id.path().filename().string()));
+#undef VALID
 }
 
 fs::path
-SaveFile::region(const Dimension dim = std::string("overworld")) const {
+SaveFile::region(const Dimension &dim = std::string("overworld")) const {
   auto found = std::find(dimensions.begin(), dimensions.end(), dim);
 
   if (found == dimensions.end())

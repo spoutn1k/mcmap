@@ -8,8 +8,6 @@
 using nlohmann::json;
 namespace fs = std::filesystem;
 
-extern std::vector<fs::path> save_folders;
-
 struct Dimension {
   std::string ns, id;
 
@@ -35,7 +33,7 @@ struct SaveFile {
   bool valid() const { return last_played; }
   void getDimensions();
 
-  fs::path region(const Dimension) const;
+  fs::path region(const Dimension &) const;
 };
 
 bool assert_save(const fs::path &root);
