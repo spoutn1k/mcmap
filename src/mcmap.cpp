@@ -35,6 +35,7 @@ int render(const Settings::WorldOptions &options,
     if (!prepare_cache(CACHE))
       return false;
 
+  auto begin = std::chrono::high_resolution_clock::now();
 #ifdef _OPENMP
 #pragma omp parallel shared(fragments, capacity)
 #endif
@@ -43,6 +44,7 @@ int render(const Settings::WorldOptions &options,
 #pragma omp for ordered schedule(dynamic)
 #endif
     for (OMP_FOR_INDEX i = 0; i < tiles.size(); i++) {
+      logger::debug("Rendering {}\n", tiles[i].to_string());
       IsometricCanvas canvas;
       canvas.setMap(tiles[i]);
       canvas.setColors(colors);
@@ -78,6 +80,13 @@ int render(const Settings::WorldOptions &options,
     }
   }
 
+  auto end = std::chrono::high_resolution_clock::now();
+
+  logger::debug(
+      "Rendered in {}ms\n",
+      std::chrono::duration_cast<std::chrono::milliseconds>(end - begin)
+          .count());
+
   CompositeCanvas merged(std::move(fragments));
   logger::debug("{}\n", merged.to_string());
 
@@ -86,10 +95,16 @@ int render(const Settings::WorldOptions &options,
     return false;
   }
 
+  begin = std::chrono::high_resolution_clock::now();
   if (!merged.save(options.outFile, options.padding))
     return false;
+  end = std::chrono::high_resolution_clock::now();
 
-  logger::info("Job complete.\n");
+  logger::debug(
+      "Drawn PNG in {}ms\n",
+      std::chrono::duration_cast<std::chrono::milliseconds>(end - begin)
+          .count());
+
   return true;
 }
 

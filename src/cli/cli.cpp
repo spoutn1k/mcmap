@@ -68,5 +68,6 @@ int main(int argc, char **argv) {
     return ERROR;
   }
 
+  logger::info("Job complete.\n");
   return SUCCESS;
 }
