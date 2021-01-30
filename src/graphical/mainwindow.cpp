@@ -268,35 +268,44 @@ void MainWindow::on_shading_stateChanged(int checked) {
   options.shading = checked;
 }
 
-void MainWindow::on_hideWater_stateChanged(int checked) {
+void MainWindow::on_renderButton_clicked() {
   std::string water_id = "minecraft:water";
-
-  if (checked) {
-    custom_palette.insert_or_assign(water_id, Colors::Block());
-  } else {
-    custom_palette.erase(water_id);
-  }
-}
-
-void MainWindow::on_hideBeacons_stateChanged(int checked) {
   std::string beam_id = "mcmap:beacon_beam";
 
-  if (checked) {
-    custom_palette.insert_or_assign(beam_id, Colors::Block());
-  } else {
-    custom_palette.erase(beam_id);
-  }
-}
-
-void MainWindow::on_renderButton_clicked() {
-#ifdef DEBUG
-  QMessageBox message;
-  message.setText(QString(json(options).dump().c_str()));
-  message.exec();
-#endif
+  /*
+    QMessageBox message;
+    message.setText(QString(json(options).dump().c_str()));
+    message.exec();
+  */
 
   Colors::Palette instance_palette = custom_palette;
   instance_palette.merge(Colors::Palette(default_palette));
 
+  if (ui->hideWater->isChecked())
+    instance_palette.insert_or_assign(water_id, Colors::Block());
+
+  if (ui->hideBeacons->isChecked())
+    instance_palette.insert_or_assign(beam_id, Colors::Block());
+
   mcmap::render(options, instance_palette);
+}
+
+void MainWindow::on_orientationNW_toggled(bool checked) {
+  if (checked)
+    options.boundaries.orientation = Orientation::NW;
+}
+
+void MainWindow::on_orientationSW_toggled(bool checked) {
+  if (checked)
+    options.boundaries.orientation = Orientation::SW;
+}
+
+void MainWindow::on_orientationSE_toggled(bool checked) {
+  if (checked)
+    options.boundaries.orientation = Orientation::SE;
+}
+
+void MainWindow::on_orientationNE_toggled(bool checked) {
+  if (checked)
+    options.boundaries.orientation = Orientation::NE;
 }

@@ -3,7 +3,7 @@
 #include <QApplication>
 #include <logger.hpp>
 
-SETUP_LOGGER;
+SETUP_LOGGER
 
 Colors::Palette default_palette;
 
