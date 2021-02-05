@@ -79,8 +79,6 @@ struct ByteStream {
       break;
     }
     }
-
-    *error = (*error || false);
   }
 };
 
@@ -94,20 +92,30 @@ static bool format_check(ByteStream &b) {
   bool error = false;
 
   b.read(1, buffer, &error);
-  if (error || !buffer[0] || buffer[0] > 13)
+  if (error || !buffer[0] || buffer[0] > 13) {
+    logger::deep_debug("NBT format check error: Invalid type read\n");
     return false;
+  }
 
   b.read(2, buffer, &error);
-  if (error)
+  if (error) {
+    logger::deep_debug("NBT format check error: Invalid name size read\n");
     return false;
+  }
 
   b.read((name_length = _NTOHS(buffer)), buffer, &error);
-  if (error)
+  if (error) {
+    logger::deep_debug("NBT format check error: Invalid name read\n");
     return false;
+  }
 
   for (uint16_t i = 0; i < name_length; i++) {
-    if (i < 0x21 || i > 0x7e)
+    if (buffer[i] < 0x21 || buffer[i] > 0x7e) {
+      logger::deep_debug(
+          "NBT format check error: Invalid character read: {:02x}\n",
+          buffer[i]);
       return false;
+    }
   }
 
   return true;
