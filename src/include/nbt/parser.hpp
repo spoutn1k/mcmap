@@ -14,6 +14,8 @@
 // Check if the context indicates a being in a list
 #define LIST (context.size() && context.top().second < tag_type::tag_long_array)
 
+namespace fs = std::filesystem;
+
 namespace nbt {
 
 static bool format_check(io::ByteStreamReader &b) {
@@ -282,7 +284,7 @@ static bool matryoshka(io::ByteStreamReader &b, NBT &destination) {
 template <typename Bool_Type = bool,
           typename std::enable_if<std::is_same<Bool_Type, bool>::value,
                                   int>::type = 0>
-static bool assert_NBT(const std::filesystem::path &file) {
+static bool assert_NBT(const fs::path &file) {
   gzFile f;
   bool status = false;
 
@@ -316,7 +318,7 @@ static bool assert_NBT(uint8_t *buffer, size_t size) {
 template <
     typename NBT_Type = NBT,
     typename std::enable_if<std::is_same<NBT_Type, NBT>::value, int>::type = 0>
-static bool parse(const std::filesystem::path &file, NBT &container) {
+static bool parse(const fs::path &file, NBT &container) {
   gzFile f;
   bool status = false;
 

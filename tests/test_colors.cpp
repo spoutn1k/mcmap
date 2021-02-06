@@ -45,19 +45,32 @@ TEST(TestColor, TestOpacity) {
   ASSERT_TRUE(c.opaque());
 }
 
-TEST(TestBlock, TestCreate) {
+TEST(TestColor, TestJson) {
+  Colors::Color b = water, translated;
+  translated = nlohmann::json(b).get<Colors::Color>();
+
+  ASSERT_EQ(b, translated);
+}
+
+TEST(TestBlock, TestCreateDefault) {
   Colors::Block b;
 
   ASSERT_TRUE(b.type == Colors::FULL);
   ASSERT_TRUE(b.primary.empty());
   ASSERT_TRUE(b.secondary.empty());
+}
 
-  b = Colors::Block(Colors::drawSlab, dummy);
+TEST(TestBlock, TestCreateType) {
+  Colors::Block b = Colors::Block(Colors::drawSlab, dummy);
+
   ASSERT_TRUE(b.type == Colors::drawSlab);
   ASSERT_FALSE(b.primary.empty());
   ASSERT_TRUE(b.secondary.empty());
+}
 
-  b = Colors::Block(Colors::drawStair, dummy, dummy);
+TEST(TestBlock, TestCreateTypeAccent) {
+  Colors::Block b = Colors::Block(Colors::drawStair, dummy, dummy);
+
   ASSERT_TRUE(b.type == Colors::drawStair);
   ASSERT_FALSE(b.primary.empty());
   ASSERT_FALSE(b.secondary.empty());
@@ -90,20 +103,32 @@ TEST(TestPalette, TestJson) {
   ASSERT_EQ(p, translated);
 }
 
-TEST(TestPalette, TestLoad) {
+TEST(TestColorImport, TestLoadEmbedded) {
   Colors::Palette p;
 
   ASSERT_TRUE(Colors::load(&p));
   ASSERT_TRUE(p.size());
 }
 
-TEST(TestPalette, TestLoadFile) {
+TEST(TestColorImport, TestLoadFile) {
   Colors::Palette p;
 
-  ASSERT_TRUE(Colors::load(&p));
-  ASSERT_TRUE(p.size());
   ASSERT_TRUE(Colors::load("tests/nowater.json", &p));
   ASSERT_TRUE(p.size());
   ASSERT_TRUE(p.find("minecraft:water") != p.end());
   ASSERT_TRUE(p["minecraft:water"].primary.transparent());
+}
+
+TEST(TestColorImport, TestLoadNoFile) {
+  Colors::Palette p;
+
+  ASSERT_FALSE(Colors::load("/non-existent", &p));
+  ASSERT_FALSE(p.size());
+}
+
+TEST(TestColorImport, TestLoadBadFormat) {
+  Colors::Palette p;
+
+  ASSERT_FALSE(Colors::load("tests/bad.json", &p));
+  ASSERT_FALSE(p.size());
 }

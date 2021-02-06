@@ -79,9 +79,6 @@ public:
 template <typename NBTType> struct internal_iterator {
   typename NBTType::tag_compound_t::iterator compound_iterator{};
   typename NBTType::tag_list_t::iterator list_iterator{};
-  typename NBTType::tag_byte_array_t::iterator byte_iterator{};
-  typename NBTType::tag_int_array_t::iterator int_iterator{};
-  typename NBTType::tag_long_array_t::iterator long_iterator{};
   primitive_iterator_t primitive_iterator{};
 };
 
@@ -96,19 +93,13 @@ template <typename NBTType> class iter {
 
   using compound_t = typename NBTType::tag_compound_t;
   using list_t = typename NBTType::tag_list_t;
-  using byte_array_t = typename NBTType::tag_byte_array_t;
-  using int_array_t = typename NBTType::tag_int_array_t;
-  using long_array_t = typename NBTType::tag_long_array_t;
 
 public:
   using value_type = typename NBTType::value_type;
-
   using difference_type = typename NBTType::difference_type;
-
   using pointer = typename std::conditional<std::is_const<NBTType>::value,
                                             typename NBTType::const_pointer,
                                             typename NBTType::pointer>::type;
-
   using reference =
       typename std::conditional<std::is_const<NBTType>::value,
                                 typename NBTType::const_reference,
@@ -120,35 +111,15 @@ public:
     assert(content != nullptr);
 
     switch (content->type) {
-    case tag_type::tag_compound: {
+    case tag_type::tag_compound:
       it.compound_iterator = typename compound_t::iterator();
       break;
-    }
-
-    case tag_type::tag_list: {
+    case tag_type::tag_list:
       it.list_iterator = typename list_t::iterator();
       break;
-    }
-
-    case tag_type::tag_byte_array: {
-      it.byte_iterator = typename byte_array_t::iterator();
-      break;
-    }
-
-    case tag_type::tag_int_array: {
-      it.int_iterator = typename int_array_t::iterator();
-      break;
-    }
-
-    case tag_type::tag_long_array: {
-      it.long_iterator = typename long_array_t::iterator();
-      break;
-    }
-
-    default: {
+    default:
       it.primitive_iterator = primitive_iterator_t();
       break;
-    }
     }
   }
 
@@ -176,41 +147,19 @@ private:
     assert(content != nullptr);
 
     switch (content->type) {
-    case tag_type::tag_compound: {
+    case tag_type::tag_compound:
       it.compound_iterator = content->content.compound->begin();
       break;
-    }
-
-    case tag_type::tag_list: {
+    case tag_type::tag_list:
       it.list_iterator = content->content.list->begin();
       break;
-    }
-
-    case tag_type::tag_byte_array: {
-      it.byte_iterator = content->content.byte_array->begin();
-      break;
-    }
-
-    case tag_type::tag_int_array: {
-      it.int_iterator = content->content.int_array->begin();
-      break;
-    }
-
-    case tag_type::tag_long_array: {
-      it.long_iterator = content->content.long_array->begin();
-      break;
-    }
-
-    case tag_type::tag_end: {
+    case tag_type::tag_end:
       // set to end so begin()==end() is true: end is empty
       it.primitive_iterator.set_end();
       break;
-    }
-
-    default: {
+    default:
       it.primitive_iterator.set_begin();
       break;
-    }
     }
   }
 
@@ -218,35 +167,15 @@ private:
     assert(content != nullptr);
 
     switch (content->type) {
-    case tag_type::tag_compound: {
+    case tag_type::tag_compound:
       it.compound_iterator = content->content.compound->end();
       break;
-    }
-
-    case tag_type::tag_list: {
+    case tag_type::tag_list:
       it.list_iterator = content->content.list->end();
       break;
-    }
-
-    case tag_type::tag_byte_array: {
-      it.byte_iterator = content->content.byte_array->end();
-      break;
-    }
-
-    case tag_type::tag_int_array: {
-      it.int_iterator = content->content.int_array->end();
-      break;
-    }
-
-    case tag_type::tag_long_array: {
-      it.long_iterator = content->content.long_array->end();
-      break;
-    }
-
-    default: {
+    default:
       it.primitive_iterator.set_end();
       break;
-    }
     }
   }
 
@@ -255,41 +184,18 @@ public:
     assert(content != nullptr);
 
     switch (content->type) {
-    case tag_type::tag_compound: {
+    case tag_type::tag_compound:
       assert(it.compound_iterator != content->content.compound->end());
       return it.compound_iterator->second;
-    }
-    case tag_type::tag_list: {
+    case tag_type::tag_list:
       assert(it.list_iterator != content->content.list->end());
       return *it.list_iterator;
-    }
-
-      /*
-          case tag_type::tag_byte_array: {
-            assert(it.byte_iterator != content->content.byte_array->end());
-            return *it.byte_iterator;
-          }
-
-          case tag_type::tag_int_array: {
-            assert(it.int_iterator != content->content.int_array->end());
-            return *it.int_iterator;
-          }
-
-          case tag_type::tag_long_array: {
-            assert(it.long_iterator != content->content.long_array->end());
-            return *it.long_iterator;
-          }
-      */
     case tag_type::tag_end:
       throw(std::range_error("No values in end tag"));
-
-    default: {
-      if (it.primitive_iterator.is_begin()) {
+    default:
+      if (it.primitive_iterator.is_begin())
         return *content;
-      }
-
       throw(std::range_error("Cannot get value"));
-    }
     }
   }
 
@@ -297,26 +203,18 @@ public:
     assert(content != nullptr);
 
     switch (content->type) {
-    case tag_type::tag_compound: {
+    case tag_type::tag_compound:
       assert(it.compound_iterator != content->content.compound->end());
       return &(it.compound_iterator->second);
-    }
-
-    case tag_type::tag_list: {
+    case tag_type::tag_list:
       assert(it.list_iterator != content->content.list->end());
       return &*it.list_iterator;
-    }
-
     case tag_type::tag_end:
       throw(std::range_error("No values in end tag"));
-
-    default: {
-      if (it.primitive_iterator.is_begin()) {
+    default:
+      if (it.primitive_iterator.is_begin())
         return content;
-      }
-
       throw(std::range_error("Cannot get value"));
-    }
     }
   }
 
@@ -330,35 +228,15 @@ public:
     assert(content != nullptr);
 
     switch (content->type) {
-    case tag_type::tag_compound: {
+    case tag_type::tag_compound:
       std::advance(it.compound_iterator, 1);
       break;
-    }
-
-    case tag_type::tag_list: {
+    case tag_type::tag_list:
       std::advance(it.list_iterator, 1);
       break;
-    }
-
-    case tag_type::tag_byte_array: {
-      std::advance(it.byte_iterator, 1);
-      break;
-    }
-
-    case tag_type::tag_int_array: {
-      std::advance(it.int_iterator, 1);
-      break;
-    }
-
-    case tag_type::tag_long_array: {
-      std::advance(it.long_iterator, 1);
-      break;
-    }
-
-    default: {
+    default:
       ++it.primitive_iterator;
       break;
-    }
     }
 
     return *this;
@@ -374,35 +252,15 @@ public:
     assert(content != nullptr);
 
     switch (content->type) {
-    case tag_type::tag_compound: {
+    case tag_type::tag_compound:
       std::advance(it.compound_iterator, -1);
       break;
-    }
-
-    case tag_type::tag_list: {
+    case tag_type::tag_list:
       std::advance(it.list_iterator, -1);
       break;
-    }
-
-    case tag_type::tag_byte_array: {
-      std::advance(it.byte_iterator, -1);
-      break;
-    }
-
-    case tag_type::tag_int_array: {
-      std::advance(it.int_iterator, -1);
-      break;
-    }
-
-    case tag_type::tag_long_array: {
-      std::advance(it.long_iterator, -1);
-      break;
-    }
-
-    default: {
+    default:
       ++it.primitive_iterator;
       break;
-    }
     }
 
     return *this;
@@ -420,19 +278,8 @@ public:
     switch (content->type) {
     case tag_type::tag_compound:
       return (it.compound_iterator == other.it.compound_iterator);
-
     case tag_type::tag_list:
       return (it.list_iterator == other.it.list_iterator);
-
-    case tag_type::tag_byte_array:
-      return (it.byte_iterator == other.it.byte_iterator);
-
-    case tag_type::tag_int_array:
-      return (it.int_iterator == other.it.int_iterator);
-
-    case tag_type::tag_long_array:
-      return (it.long_iterator == other.it.long_iterator);
-
     default:
       return (it.primitive_iterator == other.it.primitive_iterator);
     }
@@ -454,12 +301,6 @@ public:
       throw(std::domain_error("Cannot compare compound types"));
     case tag_type::tag_list:
       return (it.list_iterator < other.it.list_iterator);
-    case tag_type::tag_byte_array:
-      return (it.byte_iterator < other.it.byte_iterator);
-    case tag_type::tag_int_array:
-      return (it.int_iterator < other.it.int_iterator);
-    case tag_type::tag_long_array:
-      return (it.long_iterator < other.it.long_iterator);
     default:
       return (it.primitive_iterator < other.it.primitive_iterator);
     }
@@ -481,16 +322,6 @@ public:
     case tag_type::tag_list:
       std::advance(it.list_iterator, i);
       break;
-    case tag_type::tag_byte_array:
-      std::advance(it.byte_iterator, i);
-      break;
-    case tag_type::tag_int_array:
-      std::advance(it.int_iterator, i);
-      break;
-    case tag_type::tag_long_array:
-      std::advance(it.long_iterator, i);
-      break;
-
     default: {
       it.primitive_iterator += i;
       break;
@@ -528,13 +359,6 @@ public:
       throw(std::domain_error("cannot use offsets with compound iterators"));
     case tag_type::tag_list:
       return (it.list_iterator - other.it.list_iterator);
-    case tag_type::tag_byte_array:
-      return (it.byte_iterator - other.it.byte_iterator);
-    case tag_type::tag_int_array:
-      return (it.int_iterator - other.it.int_iterator);
-    case tag_type::tag_long_array:
-      return (it.long_iterator - other.it.long_iterator);
-
     default:
       return it.primitive_iterator - other.it.primitive_iterator;
     }
@@ -546,16 +370,8 @@ public:
     switch (content->type) {
     case tag_type::tag_compound:
       throw(std::domain_error("cannot use operator[] with compound iterators"));
-
     case tag_type::tag_list:
       return *std::next(it.list_iterator, n);
-    case tag_type::tag_byte_array:
-      return *std::next(it.byte_iterator, n);
-    case tag_type::tag_int_array:
-      return *std::next(it.int_iterator, n);
-    case tag_type::tag_long_array:
-      return *std::next(it.long_iterator, n);
-
     case tag_type::tag_end:
       throw(std::domain_error("cannot get value from end tag"));
 

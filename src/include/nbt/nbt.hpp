@@ -391,12 +391,15 @@ public:
   }
 
   reference front() { return *begin(); }
+
   const_reference front() const { return *cbegin(); }
+
   reference back() {
     auto tmp = end();
     --tmp;
     return *tmp;
   }
+
   const_reference back() const {
     auto tmp = cend();
     --tmp;
@@ -857,22 +860,16 @@ public:
     switch (get_type()) {
     case tag_type::tag_byte:
       return static_cast<ArithmeticType>(*get_ptr<const tag_byte_t *>());
-
     case tag_type::tag_short:
       return static_cast<ArithmeticType>(*get_ptr<const tag_short_t *>());
-
     case tag_type::tag_int:
       return static_cast<ArithmeticType>(*get_ptr<const tag_int_t *>());
-
     case tag_type::tag_long:
       return static_cast<ArithmeticType>(*get_ptr<const tag_long_t *>());
-
     case tag_type::tag_float:
       return static_cast<ArithmeticType>(*get_ptr<const tag_float_t *>());
-
     case tag_type::tag_double:
       return static_cast<ArithmeticType>(*get_ptr<const tag_double_t *>());
-
     default:
       throw(std::invalid_argument(fmt::format(
           "Operation not available for tags of type `{}`", type_name())));

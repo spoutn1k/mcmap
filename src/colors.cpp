@@ -22,10 +22,10 @@ bool Colors::load(Palette *colors) {
 }
 
 // Load colors from file into the palette passed as an argument
-bool Colors::load(const std::filesystem::path &color_file, Palette *colors) {
+bool Colors::load(const fs::path &color_file, Palette *colors) {
   Palette colors_j;
 
-  if (color_file.empty() || !std::filesystem::exists(color_file)) {
+  if (color_file.empty() || !fs::exists(color_file)) {
     logger::error("Could not open color file `{}`\n", color_file.string());
     return false;
   }
@@ -35,6 +35,11 @@ bool Colors::load(const std::filesystem::path &color_file, Palette *colors) {
   try {
     colors_j = json::parse(f).get<Colors::Palette>();
   } catch (const nlohmann::detail::parse_error &err) {
+    logger::error("Parsing color file `{}` failed: {}\n", color_file.string(),
+                  err.what());
+    fclose(f);
+    return false;
+  } catch (const std::invalid_argument &err) {
     logger::error("Parsing color file `{}` failed: {}\n", color_file.string(),
                   err.what());
     fclose(f);
@@ -49,6 +54,10 @@ bool Colors::load(const std::filesystem::path &color_file, Palette *colors) {
   return true;
 }
 
+void Colors::to_json(json &data, const Color &c) {
+  data = fmt::format("{:c}", c);
+}
+
 void Colors::from_json(const json &data, Color &c) {
   if (data.is_string()) {
     c = Colors::Color(data.get<std::string>());
@@ -57,8 +66,6 @@ void Colors::from_json(const json &data, Color &c) {
   }
 }
 
-#define LIST(C)                                                                \
-  { (C).R, (C).G, (C).B, (C).ALPHA }
 void Colors::to_json(json &j, const Block &b) {
   if (b.type == Colors::BlockTypes::FULL) {
     j = json(fmt::format("{:c}", b.primary));
@@ -67,18 +74,11 @@ void Colors::to_json(json &j, const Block &b) {
 
   string type = typeToString.at(b.type);
 
-  if (!b.secondary.empty()) {
-    j = json{{"type", type},
-             {"color", fmt::format("{:c}", b.primary)},
-             {"accent", fmt::format("{:c}", b.secondary)}};
-  } else {
-    j = json{
-        {"type", type},
-        {"color", fmt::format("{:c}", b.primary)},
-    };
-  }
+  j = json{{"type", type}, {"color", b.primary}};
+
+  if (!b.secondary.empty())
+    j["accent"] = b.secondary;
 }
-#undef LIST
 
 void Colors::from_json(const json &data, Block &b) {
   string stype;
@@ -92,9 +92,9 @@ void Colors::from_json(const json &data, Block &b) {
 
   // If the definition is an object and there is no color, replace it with air
   if (data.find("color") == data.end()) {
-    logger::error("Wrong color format: no color attribute found\n");
     b = Block();
-    return;
+    throw(std::invalid_argument(fmt::format(
+        "Wrong color format: no color attribute found in `{}`", data.dump())));
   }
 
   // If the type is illegal, default it with a full block

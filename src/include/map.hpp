@@ -17,14 +17,11 @@ struct Coordinates {
   uint8_t minY, maxY;
   Orientation orientation;
 
-  Coordinates() {
-    minX = maxX = minZ = maxZ = minY = maxY = 0;
-    orientation = NW;
-  }
-
-  Coordinates(Integer init) : Coordinates() {
-    minX = maxX = minZ = maxZ = init;
-  }
+  Coordinates(Integer _minX = 0, uint8_t _minY = 0, Integer _minZ = 0,
+              Integer _maxX = 0, uint8_t _maxY = 0, Integer _maxZ = 0,
+              Orientation o = NW)
+      : minX(_minX), maxX(_maxX), minZ(_minZ), maxZ(_maxZ), minY(_minY),
+        maxY(_maxY), orientation(o) {}
 
   void setUndefined() {
     minX = minZ = std::numeric_limits<Integer>::max();
@@ -159,6 +156,14 @@ struct Coordinates {
     maxY = std::max(other.maxY, maxY);
 
     return *this;
+  }
+
+  template <typename Other,
+            std::enable_if_t<std::is_integral<Other>::value, int> = 0>
+  bool operator==(const Coordinates<Other> &other) const {
+    return (minX == other.minX && minZ == other.minZ && maxX == other.maxX &&
+            maxZ == other.maxZ && minY == other.minY && maxY == other.maxY &&
+            orientation == other.orientation);
   }
 };
 
