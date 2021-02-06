@@ -7,31 +7,70 @@
 #include <stack>
 #include <zlib.h>
 
-#define _NTOHS(ptr) (int16_t(((ptr)[0] << 8) + (ptr)[1]))
-#define _NTOHI(ptr)                                                            \
-  ((uint32_t((ptr)[0]) << 24) + (uint32_t((ptr)[1]) << 16) +                   \
-   (uint32_t((ptr)[2]) << 8) + uint32_t((ptr)[3]))
-#define _NTOHL(ptr)                                                            \
-  ((uint64_t((ptr)[0]) << 56) + (uint64_t((ptr)[1]) << 48) +                   \
-   (uint64_t((ptr)[2]) << 40) + (uint64_t((ptr)[3]) << 32) +                   \
-   (uint64_t((ptr)[4]) << 24) + (uint64_t((ptr)[5]) << 16) +                   \
-   (uint64_t((ptr)[6]) << 8) + uint64_t((ptr)[7]))
-
 // Max size of a single element to read in memory (string)
 #define MAXELEMENTSIZE 65025
 
 // Check if the context indicates a being in a list
 #define LIST (context.size() && context.top().second < tag_type::tag_long_array)
 
-union FloatTranslator {
-  // See this union as an uint8_t[8] array. Put an integer in the buffer, get
-  // its byte reinterpretation in floating point, WITHOUT THE WARNINGS !
+enum DataType { SHORT, INT, LONG, FLOAT, DOUBLE };
+
+union Translator {
   uint64_t buffer;
+  short _short;
+  int _int;
+  long _long;
   float _float;
   double _double;
 
-  FloatTranslator(uint32_t float_bytes) : buffer(float_bytes){};
-  FloatTranslator(uint64_t double_bytes) : buffer(double_bytes){};
+  Translator() : buffer(0){};
+  Translator(const uint8_t *bytes, DataType type) : buffer(0) {
+    switch (type) {
+    case SHORT:
+      ((uint8_t *)&buffer)[1] = bytes[0];
+      ((uint8_t *)&buffer)[0] = bytes[1];
+      break;
+
+    case INT:
+    case FLOAT:
+      for (uint8_t i = 0; i < 4; i++)
+        ((uint8_t *)&buffer)[i] = bytes[4 - i - 1];
+      break;
+
+    case LONG:
+    case DOUBLE:
+      for (uint8_t i = 0; i < 8; i++)
+        ((uint8_t *)&buffer)[i] = bytes[8 - i - 1];
+      break;
+    }
+  }
+
+  template <typename ArithmeticType,
+            typename std::enable_if<std::is_integral<ArithmeticType>::value,
+                                    int>::type = 0>
+  Translator(ArithmeticType value) : buffer(0) {
+    switch (std::alignment_of<ArithmeticType>()) {
+    case 1:
+      ((uint8_t *)&buffer)[0] = value;
+      break;
+
+    case 2:
+      for (uint8_t i = 0; i < 2; i++)
+        ((uint8_t *)&buffer)[i] = ((uint8_t *)&value)[2 - i - 1];
+      break;
+
+    case 3:
+    case 4:
+      for (uint8_t i = 0; i < 4; i++)
+        ((uint8_t *)&buffer)[i] = ((uint8_t *)&value)[4 - i - 1];
+      break;
+
+    default:
+      for (uint8_t i = 0; i < 8; i++)
+        ((uint8_t *)&buffer)[i] = ((uint8_t *)&value)[8 - i - 1];
+      break;
+    }
+  }
 };
 
 struct ByteStream {
@@ -85,8 +124,8 @@ struct ByteStream {
 namespace nbt {
 
 static bool format_check(ByteStream &b) {
-  // Check the byte stream begins with a non-end tag and contains a valid UTF-8
-  // name
+  // Check the byte stream begins with a non-end tag and contains a valid
+  // UTF-8 name
   uint8_t buffer[MAXELEMENTSIZE];
   uint16_t name_length = 0;
   bool error = false;
@@ -103,7 +142,8 @@ static bool format_check(ByteStream &b) {
     return false;
   }
 
-  b.read((name_length = _NTOHS(buffer)), buffer, &error);
+  name_length = Translator(buffer, SHORT)._short;
+  b.read(name_length, buffer, &error);
   if (error) {
     logger::deep_debug("NBT format check error: Invalid name read\n");
     return false;
@@ -162,7 +202,7 @@ static bool matryoshka(ByteStream &b, NBT &destination) {
     // If the tag has a possible name, parse it
     if (!LIST && current_type != tag_type::tag_end) {
       b.read(2, buffer, &error);
-      name_size = _NTOHS(buffer);
+      name_size = Translator(buffer, SHORT)._short;
 
       if (name_size) {
         b.read(name_size, buffer, &error);
@@ -206,7 +246,7 @@ static bool matryoshka(ByteStream &b, NBT &destination) {
 
       // Grab the length
       b.read(4, buffer, &error);
-      list_elements = _NTOHI(buffer);
+      list_elements = Translator(buffer, INT)._int;
 
       // Push an empty list on the stack
       opened_elements.push(NBT(NBT::tag_list_t(), current_name));
@@ -236,47 +276,42 @@ static bool matryoshka(ByteStream &b, NBT &destination) {
 
     case tag_type::tag_short: {
       b.read(2, buffer, &error);
-      int16_t _short = _NTOHS(buffer);
 
-      current = NBT(_short, current_name);
+      current = NBT(Translator(buffer, SHORT)._short, current_name);
       break;
     }
 
     case tag_type::tag_int: {
       b.read(4, buffer, &error);
-      int32_t _int = _NTOHI(buffer);
 
-      current = NBT(_int, current_name);
+      current = NBT(Translator(buffer, INT)._int, current_name);
       break;
     }
 
     case tag_type::tag_long: {
       b.read(8, buffer, &error);
-      int64_t _long = _NTOHL(buffer);
 
-      current = NBT(_long, current_name);
+      current = NBT(Translator(buffer, LONG)._long, current_name);
       break;
     }
 
     case tag_type::tag_float: {
       b.read(4, buffer, &error);
-      FloatTranslator bytes(_NTOHI(buffer));
 
-      current = NBT(bytes._float, current_name);
+      current = NBT(Translator(buffer, FLOAT)._float, current_name);
       break;
     }
 
     case tag_type::tag_double: {
       b.read(8, buffer, &error);
-      FloatTranslator bytes(_NTOHL(buffer));
 
-      current = NBT(bytes._double, current_name);
+      current = NBT(Translator(buffer, DOUBLE)._double, current_name);
       break;
     }
 
     case tag_type::tag_byte_array: {
       b.read(4, buffer, &error);
-      elements = _NTOHI(buffer);
+      elements = Translator(buffer, INT)._int;
 
       std::vector<int8_t> bytes(elements);
 
@@ -291,13 +326,13 @@ static bool matryoshka(ByteStream &b, NBT &destination) {
 
     case tag_type::tag_int_array: {
       b.read(4, buffer, &error);
-      elements = _NTOHI(buffer);
+      elements = Translator(buffer, INT)._int;
 
       std::vector<int32_t> ints(elements);
 
       for (uint32_t i = 0; i < elements; i++) {
         b.read(4, buffer, &error);
-        ints[i] = _NTOHI(buffer);
+        ints[i] = Translator(buffer, INT)._int;
       }
 
       current = NBT(ints, current_name);
@@ -306,12 +341,12 @@ static bool matryoshka(ByteStream &b, NBT &destination) {
 
     case tag_type::tag_long_array: {
       b.read(4, buffer, &error);
-      elements = _NTOHI(buffer);
+      elements = Translator(buffer, INT)._int;
 
       std::vector<int64_t> longs(elements);
       for (uint32_t i = 0; i < elements; i++) {
         b.read(8, buffer, &error);
-        longs[i] = _NTOHL(buffer);
+        longs[i] = Translator(buffer, LONG)._long;
       }
 
       current = NBT(longs, current_name);
@@ -320,7 +355,7 @@ static bool matryoshka(ByteStream &b, NBT &destination) {
 
     case tag_type::tag_string: {
       b.read(2, buffer, &error);
-      uint16_t string_size = _NTOHS(buffer);
+      uint16_t string_size = Translator(buffer, SHORT)._short;
 
       b.read(string_size, buffer, &error);
       std::string content((char *)buffer, string_size);
