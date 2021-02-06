@@ -4,8 +4,9 @@
 
 #include <filesystem>
 #include <nbt/nbt.hpp>
+#include <nbt/stream.hpp>
+#include <nbt/translator.hpp>
 #include <stack>
-#include <zlib.h>
 
 // Max size of a single element to read in memory (string)
 #define MAXELEMENTSIZE 65025
@@ -13,117 +14,9 @@
 // Check if the context indicates a being in a list
 #define LIST (context.size() && context.top().second < tag_type::tag_long_array)
 
-enum DataType { SHORT, INT, LONG, FLOAT, DOUBLE };
-
-union Translator {
-  uint64_t buffer;
-  short _short;
-  int _int;
-  long _long;
-  float _float;
-  double _double;
-
-  Translator() : buffer(0){};
-  Translator(const uint8_t *bytes, DataType type) : buffer(0) {
-    switch (type) {
-    case SHORT:
-      ((uint8_t *)&buffer)[1] = bytes[0];
-      ((uint8_t *)&buffer)[0] = bytes[1];
-      break;
-
-    case INT:
-    case FLOAT:
-      for (uint8_t i = 0; i < 4; i++)
-        ((uint8_t *)&buffer)[i] = bytes[4 - i - 1];
-      break;
-
-    case LONG:
-    case DOUBLE:
-      for (uint8_t i = 0; i < 8; i++)
-        ((uint8_t *)&buffer)[i] = bytes[8 - i - 1];
-      break;
-    }
-  }
-
-  template <typename ArithmeticType,
-            typename std::enable_if<std::is_integral<ArithmeticType>::value,
-                                    int>::type = 0>
-  Translator(ArithmeticType value) : buffer(0) {
-    switch (std::alignment_of<ArithmeticType>()) {
-    case 1:
-      ((uint8_t *)&buffer)[0] = value;
-      break;
-
-    case 2:
-      for (uint8_t i = 0; i < 2; i++)
-        ((uint8_t *)&buffer)[i] = ((uint8_t *)&value)[2 - i - 1];
-      break;
-
-    case 3:
-    case 4:
-      for (uint8_t i = 0; i < 4; i++)
-        ((uint8_t *)&buffer)[i] = ((uint8_t *)&value)[4 - i - 1];
-      break;
-
-    default:
-      for (uint8_t i = 0; i < 8; i++)
-        ((uint8_t *)&buffer)[i] = ((uint8_t *)&value)[8 - i - 1];
-      break;
-    }
-  }
-};
-
-struct ByteStream {
-  // Adapter for the matryoshkas to work with both files and memory buffers
-  enum BufferType { MEMORY, GZFILE };
-
-  union Source {
-    gzFile file;
-    std::pair<uint8_t *, size_t> array;
-
-    Source(gzFile f) : file(f){};
-    Source(uint8_t *address, size_t size) : array({address, size}){};
-  };
-
-  BufferType type;
-  Source source;
-
-  ByteStream(gzFile f) : type(GZFILE), source(f){};
-  ByteStream(uint8_t *address, size_t size)
-      : type(MEMORY), source(address, size){};
-
-  void read(size_t num, uint8_t *buffer, bool *error) {
-    switch (type) {
-    case GZFILE: {
-      if (size_t(gzread(source.file, buffer, num)) < num) {
-        logger::error("Unexpected EOF\n");
-        *error = true;
-        memset(buffer, 0, num);
-      }
-
-      break;
-    }
-
-    case MEMORY: {
-      if (source.array.second < num) {
-        logger::error("Not enough data in memory buffer\n");
-        *error = true;
-        memset(buffer, 0, num);
-      }
-
-      memcpy(buffer, source.array.first, num);
-      source.array.first += num;
-      source.array.second -= num;
-
-      break;
-    }
-    }
-  }
-};
-
 namespace nbt {
 
-static bool format_check(ByteStream &b) {
+static bool format_check(io::ByteStreamReader &b) {
   // Check the byte stream begins with a non-end tag and contains a valid
   // UTF-8 name
   uint8_t buffer[MAXELEMENTSIZE];
@@ -161,7 +54,7 @@ static bool format_check(ByteStream &b) {
   return true;
 }
 
-static bool matryoshka(ByteStream &b, NBT &destination) {
+static bool matryoshka(io::ByteStreamReader &b, NBT &destination) {
   bool error = false;
 
   uint8_t buffer[MAXELEMENTSIZE];
@@ -394,7 +287,7 @@ static bool assert_NBT(const std::filesystem::path &file) {
   bool status = false;
 
   if ((f = gzopen(file.string().c_str(), "rb"))) {
-    ByteStream gz(f);
+    io::ByteStreamReader gz(f);
     status = format_check(gz);
 
     gzclose(f);
@@ -412,7 +305,7 @@ template <typename Bool_Type = bool,
 static bool assert_NBT(uint8_t *buffer, size_t size) {
   bool status = false;
 
-  ByteStream mem(buffer, size);
+  io::ByteStreamReader mem(buffer, size);
   status = format_check(mem);
 
   return status;
@@ -428,7 +321,7 @@ static bool parse(const std::filesystem::path &file, NBT &container) {
   bool status = false;
 
   if ((f = gzopen(file.string().c_str(), "rb"))) {
-    ByteStream gz(f);
+    io::ByteStreamReader gz(f);
     status = matryoshka(gz, container);
     if (!status)
       logger::error("Error reading file {}\n", file.string());
@@ -448,7 +341,7 @@ template <
 static bool parse(uint8_t *buffer, size_t size, NBT &container) {
   bool status = false;
 
-  ByteStream mem(buffer, size);
+  io::ByteStreamReader mem(buffer, size);
   status = matryoshka(mem, container);
   if (!status)
     logger::error("Error reading NBT data\n");

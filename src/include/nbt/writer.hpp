@@ -4,68 +4,14 @@
 
 #include <filesystem>
 #include <nbt/nbt.hpp>
+#include <nbt/stream.hpp>
+#include <nbt/translator.hpp>
 #include <stack>
 #include <zlib.h>
 
-#define _NTOHS(ptr) (int16_t(((ptr)[0] << 8) + (ptr)[1]))
-#define _NTOHI(ptr)                                                            \
-  ((uint32_t((ptr)[0]) << 24) + (uint32_t((ptr)[1]) << 16) +                   \
-   (uint32_t((ptr)[2]) << 8) + uint32_t((ptr)[3]))
-#define _NTOHL(ptr)                                                            \
-  ((uint64_t((ptr)[0]) << 56) + (uint64_t((ptr)[1]) << 48) +                   \
-   (uint64_t((ptr)[2]) << 40) + (uint64_t((ptr)[3]) << 32) +                   \
-   (uint64_t((ptr)[4]) << 24) + (uint64_t((ptr)[5]) << 16) +                   \
-   (uint64_t((ptr)[6]) << 8) + uint64_t((ptr)[7]))
-
-struct ByteStreamWriter {
-  // Adapter for the matryoshkas to work with both files and memory buffers
-  enum BufferType { MEMORY, GZFILE };
-
-  union Source {
-    gzFile file;
-    std::pair<uint8_t *, size_t> array;
-
-    Source(gzFile f) : file(f){};
-    Source(uint8_t *address, size_t size) : array({address, size}){};
-  };
-
-  BufferType type;
-  Source source;
-
-  ByteStreamWriter(gzFile f) : type(GZFILE), source(f){};
-  ByteStreamWriter(uint8_t *address, size_t size)
-      : type(MEMORY), source(address, size){};
-
-  void write(size_t num, const uint8_t *buffer, bool *error) {
-    switch (type) {
-    case GZFILE: {
-      if (size_t(gzwrite(source.file, buffer, num)) < num) {
-        logger::error("Write error: not enough bytes written\n");
-        *error = true;
-      }
-
-      break;
-    }
-
-    case MEMORY: {
-      if (source.array.second < num) {
-        logger::error("Not enough space left in memory buffer\n");
-        *error = true;
-      }
-
-      memcpy(source.array.first, buffer, num);
-      source.array.first += num;
-      source.array.second -= num;
-
-      break;
-    }
-    }
-  }
-};
-
 namespace nbt {
 
-bool put(ByteStreamWriter &output, const NBT &data) {
+bool put(io::ByteStreamWriter &output, const NBT &data) {
   bool error = false;
   uint8_t buffer[65025];
 
@@ -74,7 +20,7 @@ bool put(ByteStreamWriter &output, const NBT &data) {
   parsing.push({data, data.begin()});
   logger::deep_debug("Pushing {} on stack\n", data.get_name());
 
-  while (!parsing.empty()) {
+  while (!error && !parsing.empty()) {
     const NBT &current = parsing.top().first;
     NBT::const_iterator position = parsing.top().second;
 
