@@ -72,19 +72,19 @@ The root contains a list of [block IDs](https://minecraft.gamepedia.com/Java_Edi
 
 #### Simple block
 
-To define a color for a simple, regular block, provide an entry with the following format:
+To define a color for a simple, regular block, provide an entry in a JSON file.
+The color format is a [hexadecimal color code](https://htmlcolorcodes.com/).
+If the alpha is not specified, it is assumed to be opaque.
 
 ```
-"namespace:block": [RED, GREEN, BLUE, ALPHA]
+"namespace:block": #rrggbbaa (or #rrggbb)
 ```
-
-All the fields must be integer values between 0 and 255.
 
 Examples:
 ```
 {
-    "minecraft:dirt":   [134, 96, 67, 255],
-    "minecraft:stone":  [128, 128, 128, 255],
+    "minecraft:dirt":   #7b573b,
+    "minecraft:ice":    #7dadff9f, 
     ...
 }
 ```
@@ -92,13 +92,13 @@ Examples:
 #### Complex block
 
 Some blocks are better looking when drawn in a specific way.
-To specify that a block has to be drawn differently, you have to provide a `json` structure with the fields:
+To specify that a block has to be drawn differently, you have to provide a `json` structure with the following fields:
 
 ```
 "namespace:block": {
     "type":     <BlockType>,
-    "color":    [RED, GREEN, BLUE, ALPHA],
-    "accent":   [RED, GREEN, BLUE, ALPHA] (Optional)
+    "color":    "#rrggbbaa",
+    "accent":   "#rrggbbaa" (Optional)
 }
 ```
 
@@ -130,16 +130,18 @@ Examples:
 
 ```
 {
-    "minecraft:dirt":   [134, 96, 67, 255],
+    "minecraft:dirt":   "#7b573b",  // Full block with solid color
+
     "minecraft:grass_block": {
-        "type":     "Grown",
-        "color":    [134, 96, 67, 255],
-        "accent":   [102, 142, 62, 255]
+        "type":     "Grown",        // Use a special block type
+        "accent":   "#4c7a40",      // Accent supported for `Grown`
+        "color":    "#7b573b"
     },
-    "minecraft:snow": {
-        "type":     "Thin",
-        "color":    [245, 246, 245, 254]
-    }
+
+    "minecraft:water": {
+        "type": "Clear"
+        "color": "#0734c832",       // Transparency enabled
+    },
 }
 ```
 

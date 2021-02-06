@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <json.hpp>
 #include <list>
+#include <logger.hpp>
 #include <map>
 #include <string>
 
@@ -80,6 +81,22 @@ struct Color {
 
   Color() { R = G = B = ALPHA = 0; }
 
+  Color(const std::string &code) : Color() {
+    if (code[0] != '#' || (code.size() != 7 && code.size() != 9))
+      throw std::invalid_argument(fmt::format("Invalid color code: {}", code));
+
+    R = std::stoi(code.substr(1, 2), NULL, 16);
+    G = std::stoi(code.substr(3, 2), NULL, 16);
+    B = std::stoi(code.substr(5, 2), NULL, 16);
+
+    if (code.size() == 9)
+      ALPHA = std::stoi(code.substr(7, 2), NULL, 16);
+    else
+      ALPHA = 255;
+  }
+
+  Color(const char *code) : Color(std::string(code)){};
+
   Color(list<int> values) : Color() {
     uint8_t index = 0;
     // Hacky hacky stuff
@@ -127,14 +144,15 @@ struct Block {
 
   Block() : primary(), secondary() { type = Colors::BlockTypes::FULL; }
 
-  Block(const Colors::BlockTypes &bt, list<int> c1)
+  Block(const Colors::BlockTypes &bt, const Colors::Color &c1)
       : primary(c1), secondary(), light(c1), dark(c1) {
     type = bt;
     light.modColor(-17);
     dark.modColor(-27);
   }
 
-  Block(const Colors::BlockTypes &bt, list<int> c1, list<int> c2)
+  Block(const Colors::BlockTypes &bt, const Colors::Color &c1,
+        const Colors::Color &c2)
       : Block(bt, c1) {
     secondary = c2;
   }
@@ -154,8 +172,8 @@ struct Block {
 
   bool operator!=(const Block &other) const { return !operator==(other); }
 
-  Block shade(float fsub) const __attribute__((noinline)) {
-    Block shaded;
+  Block shade(float fsub) const NOINLINE {
+    Block shaded = *this;
     int sub = int(fsub * (float(primary.brightness()) / 323.0f + .21f));
 
     shaded.primary.modColor(sub);
@@ -191,6 +209,8 @@ struct Marker {
 bool load(Palette *);
 bool load(const std::filesystem::path &, Palette *);
 
+void from_json(const json &j, Color &c);
+
 void to_json(json &j, const Block &b);
 void from_json(const json &j, Block &b);
 
@@ -198,5 +218,31 @@ void to_json(json &j, const Palette &p);
 void from_json(const json &j, Palette &p);
 
 } // namespace Colors
+
+template <> struct fmt::formatter<Colors::Color> {
+  char presentation = 'c';
+  constexpr auto parse(format_parse_context &ctx) {
+    auto it = ctx.begin(), end = ctx.end();
+
+    if (it != end && *it == 'c')
+      presentation = *it++;
+
+    // Check if reached the end of the range:
+    if (it != end && *it != '}')
+      throw format_error("invalid format");
+
+    // Return an iterator past the end of the parsed range:
+    return it;
+  }
+
+  template <typename FormatContext>
+  auto format(const Colors::Color &c, FormatContext &ctx) {
+    if (c.ALPHA == 0xff)
+      return format_to(ctx.out(), "#{:02x}{:02x}{:02x}", c.R, c.G, c.B);
+    else
+      return format_to(ctx.out(), "#{:02x}{:02x}{:02x}{:02x}", c.R, c.G, c.B,
+                       c.ALPHA);
+  }
+};
 
 #endif // COLORS_H_

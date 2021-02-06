@@ -1,8 +1,6 @@
 #include "./canvas.h"
 #include "VERSION"
-#include "fmt/color.h"
 #include "png.h"
-#include <vector>
 
 size_t Canvas::_get_line(const uint8_t *data, uint8_t *buffer, size_t bufSize,
                          uint64_t y) const {
@@ -145,6 +143,7 @@ void IsometricCanvas::setColors(const Colors::Palette &colors) {
 
   // Set to true to use shading later on
   shading = false;
+
   // Precompute the shading profile. The values are arbitrary, and will go
   // through Colors::Color.modcolor further down the code. The 255 array
   // represents the entire world height. This profile is linear, going from
@@ -158,32 +157,32 @@ void IsometricCanvas::setColors(const Colors::Palette &colors) {
     brightnessLookup[y] = -100 + 200 * float(y) / 255;
 }
 
-void IsometricCanvas::setMap(const Terrain::Coordinates &_map) {
+void IsometricCanvas::setMap(const World::Coordinates &_map) {
   map = _map;
 
   sizeX = map.maxX - map.minX + 1;
   sizeZ = map.maxZ - map.minZ + 1;
 
   switch (map.orientation) {
-  case NW:
+  case Map::NW:
     offsetX = map.minX & 0x0f;
     offsetZ = map.minZ & 0x0f;
     break;
-  case NE:
+  case Map::NE:
     offsetX = 15 - (map.maxX & 0x0f);
     offsetZ = map.minZ & 0x0f;
     break;
-  case SW:
+  case Map::SW:
     offsetX = map.minX & 0x0f;
     offsetZ = 15 - (map.maxZ & 0x0f);
     break;
-  case SE:
+  case Map::SE:
     offsetX = 15 - (map.maxX & 0x0f);
     offsetZ = 15 - (map.maxZ & 0x0f);
     break;
   }
 
-  if (map.orientation == NE || map.orientation == SW) {
+  if (map.orientation == Map::NE || map.orientation == Map::SW) {
     std::swap(sizeX, sizeZ);
     std::swap(offsetX, offsetZ);
   }
@@ -197,10 +196,8 @@ void IsometricCanvas::setMap(const Terrain::Coordinates &_map) {
 
   height = sizeX + sizeZ + (map.maxY - map.minY + 1) * BLOCKHEIGHT - 1;
 
-  size_t size = size_t(width * height * BYTESPERPIXEL);
-  drawing.bytes_buffer->reserve(size);
-
-  memset(&(*drawing.bytes_buffer)[0], 0, size);
+  size_t size = size_t((width + 1) * (height + 1) * BYTESPERPIXEL);
+  drawing.bytes_buffer->resize(size, 0);
 }
 
 // ____                     _
@@ -218,21 +215,21 @@ void IsometricCanvas::setMap(const Terrain::Coordinates &_map) {
 // y, they come out as the real coordinates.
 void IsometricCanvas::orientChunk(int32_t &x, int32_t &z) {
   switch (map.orientation) {
-  case NW:
+  case Map::NW:
     x = (map.minX >> 4) + x;
     z = (map.minZ >> 4) + z;
     break;
-  case SW:
+  case Map::SW:
     std::swap(x, z);
     x = (map.minX >> 4) + x;
     z = (map.maxZ >> 4) - z;
     break;
-  case NE:
+  case Map::NE:
     std::swap(x, z);
     x = (map.maxX >> 4) - x;
     z = (map.minZ >> 4) + z;
     break;
-  case SE:
+  case Map::SE:
     x = (map.maxX >> 4) - x;
     z = (map.maxZ >> 4) - z;
     break;
@@ -245,7 +242,7 @@ void IsometricCanvas::renderTerrain(Terrain::Data &world) {
   nXChunks = CHUNK(map.maxX) - CHUNK(map.minX) + 1;
   nZChunks = CHUNK(map.maxZ) - CHUNK(map.minZ) + 1;
 
-  if (map.orientation == NE || map.orientation == SW)
+  if (map.orientation == Map::NE || map.orientation == Map::SW)
     std::swap(nXChunks, nZChunks);
 
   // world is supposed to have the SAME set of coordinates as the canvas
@@ -313,17 +310,17 @@ void IsometricCanvas::renderChunk(Terrain::Data &terrain) {
 // plane ?
 inline void IsometricCanvas::orientSection(uint8_t &x, uint8_t &z) {
   switch (map.orientation) {
-  case NW:
+  case Map::NW:
     return;
-  case NE:
+  case Map::NE:
     std::swap(x, z);
     x = 15 - x;
     return;
-  case SW:
+  case Map::SW:
     std::swap(x, z);
     z = 15 - z;
     return;
-  case SE:
+  case Map::SE:
     x = 15 - x;
     z = 15 - z;
     return;
@@ -569,8 +566,8 @@ const Colors::Block *IsometricCanvas::nextBlock() {
 bool compare(const Canvas &p1, const Canvas &p2) {
   // This method is used to order a list of maps. The ordering is done by the
   // distance to the top-right corner of the map in North Western orientation.
-  Terrain::Coordinates c1 = p1.map.orient(Orientation::NW);
-  Terrain::Coordinates c2 = p2.map.orient(Orientation::NW);
+  World::Coordinates c1 = p1.map.orient(Map::NW);
+  World::Coordinates c2 = p2.map.orient(Map::NW);
 
   return (c1.minX + c1.minZ) > (c2.minX + c2.minZ);
 }
@@ -585,4 +582,12 @@ CompositeCanvas::CompositeCanvas(std::vector<Canvas> &&parts)
   // avoid overwriting too many blocks.
   std::sort(drawing.canvas_buffer->begin(), drawing.canvas_buffer->end(),
             compare);
+}
+
+bool CompositeCanvas::empty() const {
+  for (const auto &canvas : *drawing.canvas_buffer)
+    if (canvas.type != EMPTY)
+      return false;
+
+  return true;
 }

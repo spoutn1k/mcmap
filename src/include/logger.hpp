@@ -5,13 +5,10 @@
 #include <ctime>
 #include <fmt/color.h>
 #include <fmt/core.h>
+
+#ifndef _WINDOWS
 #include <unistd.h>
 
-namespace logger {
-
-// On linux, check wether the output is pretty-printable or not. If not, skip
-// color codes and progress bars on stdout. On windows, this is aliased to
-// false.
 #define SETUP_LOGGER                                                           \
   namespace logger {                                                           \
   bool prettyOut = isatty(STDOUT_FILENO);                                      \
@@ -21,6 +18,24 @@ namespace logger {
       std::chrono::high_resolution_clock::now();                               \
   }
 
+#else
+
+#define SETUP_LOGGER                                                           \
+  namespace logger {                                                           \
+  bool prettyOut = false;                                                      \
+  bool prettyErr = false;                                                      \
+  int level = logger::levels::INFO;                                            \
+  std::chrono::time_point<std::chrono::high_resolution_clock> last =           \
+      std::chrono::high_resolution_clock::now();                               \
+  }
+
+#endif
+
+namespace logger {
+
+// On linux, check wether the output is pretty-printable or not. If not, skip
+// color codes and progress bars on stdout. On windows, this is aliased to
+// false.
 enum levels {
   INFO = 0,
   WARNING,
@@ -39,8 +54,12 @@ template <typename... Args> void info(const char *format, const Args &...args) {
 
 template <typename... Args> void warn(const char *format, const Args &...args) {
   fmt::text_style warn =
+#ifndef _WINDOWS
       (isatty(STDOUT_FILENO) ? fmt::emphasis::bold | fg(fmt::color::orange)
                              : fmt::text_style());
+#else
+      fmt::text_style();
+#endif
 
   fmt::print(warn, "[Warning] ");
   fmt::vprint(format, fmt::make_format_args(args...));

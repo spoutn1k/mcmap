@@ -11,19 +11,22 @@ using nlohmann::json;
 using std::filesystem::exists;
 using std::filesystem::path;
 
-SETUP_LOGGER;
+SETUP_LOGGER
 
 int main(int argc, char **argv) {
-  if (argc > 2 || (argc == 2 && !exists(path(argv[1])))) {
+  if (argc > 2 || (argc == 2 && !exists(path(argv[1]))) ||
+      !nbt::assert_NBT(argv[1])) {
     logger::error("Usage: {} [NBT file]\n", argv[0]);
     return 1;
   }
 
   gzFile f;
 
+#ifndef _WINDOWS
   if (argc == 1)
     f = gzdopen(STDIN_FILENO, "r");
   else
+#endif
     f = gzopen(argv[1], "r");
 
   if (!f) {
@@ -36,9 +39,12 @@ int main(int argc, char **argv) {
   gzclose(f);
 
   nbt::NBT data;
-  nbt::parse(buffer, length, data);
 
-  logger::info("{}", json(data).dump());
+  if (!nbt::parse(buffer, length, data)) {
+    logger::error("Error parsing data !\n");
+    return 1;
+  } else
+    logger::info("{}", json(data).dump());
 
   return 0;
 }

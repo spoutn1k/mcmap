@@ -26,16 +26,16 @@ bool Colors::load(const std::filesystem::path &color_file, Palette *colors) {
   Palette colors_j;
 
   if (color_file.empty() || !std::filesystem::exists(color_file)) {
-    logger::error("Could not open color file `{}`\n", color_file.c_str());
+    logger::error("Could not open color file `{}`\n", color_file.string());
     return false;
   }
 
-  FILE *f = fopen(color_file.c_str(), "r");
+  FILE *f = fopen(color_file.string().c_str(), "r");
 
   try {
     colors_j = json::parse(f).get<Colors::Palette>();
   } catch (const nlohmann::detail::parse_error &err) {
-    logger::error("Parsing color file {} failed: {}\n", color_file.c_str(),
+    logger::error("Parsing color file `{}` failed: {}\n", color_file.string(),
                   err.what());
     fclose(f);
     return false;
@@ -49,11 +49,19 @@ bool Colors::load(const std::filesystem::path &color_file, Palette *colors) {
   return true;
 }
 
+void Colors::from_json(const json &data, Color &c) {
+  if (data.is_string()) {
+    c = Colors::Color(data.get<std::string>());
+  } else if (data.is_array()) {
+    c = Colors::Color(data.get<list<int>>());
+  }
+}
+
 #define LIST(C)                                                                \
   { (C).R, (C).G, (C).B, (C).ALPHA }
 void Colors::to_json(json &j, const Block &b) {
   if (b.type == Colors::BlockTypes::FULL) {
-    j = json(LIST(b.primary));
+    j = json(fmt::format("{:c}", b.primary));
     return;
   }
 
@@ -61,12 +69,12 @@ void Colors::to_json(json &j, const Block &b) {
 
   if (!b.secondary.empty()) {
     j = json{{"type", type},
-             {"color", LIST(b.primary)},
-             {"accent", LIST(b.secondary)}};
+             {"color", fmt::format("{:c}", b.primary)},
+             {"accent", fmt::format("{:c}", b.secondary)}};
   } else {
     j = json{
         {"type", type},
-        {"color", LIST(b.primary)},
+        {"color", fmt::format("{:c}", b.primary)},
     };
   }
 }
@@ -77,8 +85,8 @@ void Colors::from_json(const json &data, Block &b) {
 
   // If the definition is an array, the block is a full block with a single
   // color
-  if (data.is_array()) {
-    b = Block(BlockTypes::FULL, data.get<list<int>>());
+  if (data.is_string() || data.is_array()) {
+    b = Block(BlockTypes::FULL, data);
     return;
   }
 
@@ -91,8 +99,10 @@ void Colors::from_json(const json &data, Block &b) {
 
   // If the type is illegal, default it with a full block
   if (data.find("type") == data.end()) {
-    b = Block(BlockTypes::FULL, data["color"].get<list<int>>());
-    return;
+    if (data.is_string() || data.is_array()) {
+      b = Block(BlockTypes::FULL, data["color"]);
+      return;
+    }
   }
 
   stype = data["type"].get<string>();
@@ -105,17 +115,16 @@ void Colors::from_json(const json &data, Block &b) {
     } else
       pair->second++;
 
-    b = Block(BlockTypes::FULL, data["color"].get<list<int>>());
+    b = Block(BlockTypes::FULL, data["color"]);
     return;
   }
 
   BlockTypes type = stringToType.at(data["type"].get<string>());
 
   if (data.find("accent") != data.end())
-    b = Block(type, data["color"].get<list<int>>(),
-              data["accent"].get<list<int>>());
+    b = Block(type, data["color"], data["accent"]);
   else
-    b = Block(type, data["color"].get<list<int>>());
+    b = Block(type, data["color"]);
 }
 
 void Colors::to_json(json &j, const Palette &p) {

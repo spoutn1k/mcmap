@@ -3,59 +3,29 @@
 
 #include "./colors.h"
 #include "./helper.h"
-#include "./worldloader.h"
+#include "./savefile.h"
 #include <cstdint>
 #include <filesystem>
+#include <map.hpp>
 #include <string>
+
 #define UNDEFINED 0x7FFFFFFF
 
 namespace Settings {
 
-struct Dimension {
-  string ns, id;
-
-  Dimension(string ns, string id) : ns(ns), id(id){};
-  Dimension(string _id) : ns("minecraft") {
-    size_t sep = _id.find_first_of(':');
-
-    if (sep == std::string::npos) {
-      // If there is no ':', this is just an id
-      id = _id;
-    } else {
-      // If not, add each part separately
-      ns = _id.substr(0, sep);
-      id = _id.substr(sep + 1);
-    }
-  };
-
-  std::filesystem::path regionDir(std::filesystem::path savePath) {
-    if (id == "overworld")
-      return savePath /= std::filesystem::path("region");
-    else if (id == "the_nether")
-      return savePath /= std::filesystem::path("DIM-1/region");
-    else if (id == "the_end")
-      return savePath /= std::filesystem::path("DIM1/region");
-    else
-      return savePath /= std::filesystem::path(
-                 fmt::format("dimensions/{}/{}/region", ns, id));
-  };
-
-  string to_string() { return fmt::format("{}:{}", ns, id); };
-};
-
-enum actions { RENDER, DUMPCOLORS };
+enum Action { RENDER, DUMPCOLORS, HELP };
 
 struct WorldOptions {
   // Execution mode
-  int mode;
+  Action mode;
 
   // Files to use
-  std::filesystem::path saveName, outFile, colorFile;
+  fs::path outFile, colorFile;
 
   // Map boundaries
+  SaveFile save;
   Dimension dim;
-  std::string customDim;
-  Terrain::Coordinates boundaries;
+  World::Coordinates boundaries;
 
   // Image settings
   uint16_t padding; // Should be enough
@@ -69,8 +39,9 @@ struct WorldOptions {
   size_t mem_limit;
   size_t tile_size;
 
-  WorldOptions() : mode(RENDER), saveName(""), colorFile(""), dim("overworld") {
-    outFile = "output.png";
+  WorldOptions()
+      : mode(RENDER), outFile("output.png"), colorFile(""), save(),
+        dim("overworld") {
 
     boundaries.setUndefined();
     boundaries.minY = 0;
@@ -85,10 +56,12 @@ struct WorldOptions {
     tile_size = 1024;
   }
 
-  std::filesystem::path regionDir() { return dim.regionDir(saveName); }
+  fs::path regionDir() const;
 };
 
 bool parseArgs(int argc, char **argv, Settings::WorldOptions *opts);
+
+void to_json(json &j, const WorldOptions &o);
 
 } // namespace Settings
 

@@ -1,15 +1,17 @@
 #include "../src/colors.h"
 #include <gtest/gtest.h>
 
+Colors::Color water = "#0743c832";
+Colors::Color dummy = "#ffffff";
+
 TEST(TestColor, TestCreate) {
   Colors::Color c;
 
   ASSERT_TRUE(c.empty());
 
-  Colors::Color water({7, 52, 200, 50});
   ASSERT_FALSE(water.empty());
   ASSERT_EQ(water.R, 7);
-  ASSERT_EQ(water.G, 52);
+  ASSERT_EQ(water.G, 67);
   ASSERT_EQ(water.B, 200);
   ASSERT_EQ(water.ALPHA, 50);
 }
@@ -50,31 +52,31 @@ TEST(TestBlock, TestCreate) {
   ASSERT_TRUE(b.primary.empty());
   ASSERT_TRUE(b.secondary.empty());
 
-  b = Colors::Block(Colors::drawSlab, {1, 2, 3, 4});
+  b = Colors::Block(Colors::drawSlab, dummy);
   ASSERT_TRUE(b.type == Colors::drawSlab);
   ASSERT_FALSE(b.primary.empty());
   ASSERT_TRUE(b.secondary.empty());
 
-  b = Colors::Block(Colors::drawStair, {1, 2, 3, 4}, {5, 6, 7, 8});
+  b = Colors::Block(Colors::drawStair, dummy, dummy);
   ASSERT_TRUE(b.type == Colors::drawStair);
   ASSERT_FALSE(b.primary.empty());
   ASSERT_FALSE(b.secondary.empty());
 }
 
 TEST(TestBlock, TestEqualOperator) {
-  Colors::Block b1 = Colors::Block(Colors::drawBeam, {1, 2, 3, 4}), b2 = b1;
+  Colors::Block b1 = Colors::Block(Colors::drawBeam, dummy), b2 = b1;
 
   ASSERT_EQ(b1, b2);
   b1.type = Colors::drawTransparent;
   ASSERT_NE(b1, b2);
 
-  b2 = Colors::Block(Colors::drawTransparent, {1, 2, 3, 4}, {5, 6, 7, 8});
+  b2 = Colors::Block(Colors::drawTransparent, dummy, dummy);
   ASSERT_NE(b1, b2);
 }
 
 TEST(TestBlock, TestJson) {
   Colors::Block b, translated;
-  b = Colors::Block(Colors::drawStair, {1, 2, 3, 4}, {5, 6, 7, 8});
+  b = Colors::Block(Colors::drawStair, dummy, dummy);
   translated = nlohmann::json(b).get<Colors::Block>();
 
   ASSERT_EQ(b, translated);
@@ -82,8 +84,7 @@ TEST(TestBlock, TestJson) {
 
 TEST(TestPalette, TestJson) {
   Colors::Palette p, translated;
-  p.insert(std::pair("minecraft:water",
-                     Colors::Block(Colors::FULL, {7, 52, 200, 50})));
+  p.insert(std::pair("minecraft:water", Colors::Block(Colors::FULL, water)));
   translated = nlohmann::json(p).get<Colors::Palette>();
 
   ASSERT_EQ(p, translated);

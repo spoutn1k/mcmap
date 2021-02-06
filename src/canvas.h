@@ -6,7 +6,7 @@
 #include "./section.h"
 #include "./worldloader.h"
 #include <filesystem>
-#include <vector>
+#include <map.hpp>
 
 #define CHANSPERPIXEL 4
 #define BYTESPERCHAN 1
@@ -41,7 +41,7 @@ struct Beam {
 struct Canvas {
   enum BufferType { BYTES, CANVAS, IMAGE, EMPTY };
 
-  Terrain::Coordinates map; // The coordinates describing the 3D map
+  World::Coordinates map; // The coordinates describing the 3D map
 
   inline size_t width() const {
     if (type != EMPTY)
@@ -159,12 +159,12 @@ struct Canvas {
     // Determine the size of the virtual map
     // All the maps are oriented as NW to simplify the process
     for (auto &fragment : *drawing.canvas_buffer) {
-      Terrain::Coordinates oriented = fragment.map.orient(Orientation::NW);
+      World::Coordinates oriented = fragment.map.orient(Map::NW);
       map += oriented;
     }
   }
 
-  Canvas(const Terrain::Coordinates &map, const std::filesystem::path &file)
+  Canvas(const World::Coordinates &map, const fs::path &file)
       : map(map), type(IMAGE), drawing(file) {
     assert(width() == drawing.image_buffer->get_width());
     assert(height() == drawing.image_buffer->get_height());
@@ -208,8 +208,7 @@ struct Canvas {
 struct ImageCanvas : Canvas {
   const std::filesystem::path file;
 
-  ImageCanvas(const Terrain::Coordinates &map,
-              const std::filesystem::path &file)
+  ImageCanvas(const World::Coordinates &map, const fs::path &file)
       : Canvas(map, file), file(file) {}
 };
 
@@ -255,7 +254,7 @@ struct IsometricCanvas : Canvas {
   inline bool empty() const { return !rendered; }
 
   void setColors(const Colors::Palette &);
-  void setMap(const Terrain::Coordinates &);
+  void setMap(const World::Coordinates &);
   void setMarkers(uint8_t n, Colors::Marker (*array)[256]) {
     totalMarkers = n;
     markers = array;
@@ -310,6 +309,8 @@ struct CompositeCanvas : public Canvas {
   // +-------------------+
 
   CompositeCanvas(std::vector<Canvas> &&);
+
+  bool empty() const;
 };
 
 #endif

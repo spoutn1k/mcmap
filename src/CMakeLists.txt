@@ -14,30 +14,21 @@ SET(SOURCES ${SOURCES}
     canvas.cpp
     colors.cpp
     helper.cpp
+    mcmap.cpp
     png.cpp
+    savefile.cpp
     section.cpp
     settings.cpp
     worldloader.cpp
     VERSION)
 
 ADD_LIBRARY(mcmap_core STATIC ${SOURCES})
-
-LINK_LIBRARIES(format mcmap_core ZLIB::ZLIB PNG::PNG)
-
-ADD_EXECUTABLE(mcmap main.cpp)
+TARGET_LINK_LIBRARIES(mcmap_core format ZLIB::ZLIB PNG::PNG)
 
 IF (OpenMP_FOUND)
-    TARGET_LINK_LIBRARIES(mcmap OpenMP::OpenMP_CXX)
-ELSE()
-    ADD_DEFINITIONS(-DDISABLE_OMP)
+    TARGET_LINK_LIBRARIES(mcmap_core OpenMP::OpenMP_CXX)
 ENDIF()
 
-IF (DEBUG_BUILD)
-	ADD_DEFINITIONS(-O0 -g3)
-ELSE()
-	ADD_DEFINITIONS(-O3)
-	SET_TARGET_PROPERTIES(mcmap PROPERTIES LINK_FLAGS -s)
-ENDIF()
-
-ADD_DEFINITIONS(-Wall -pedantic -D_FILE_OFFSET_BITS=64)
-ADD_LINK_OPTIONS(-lstdc++fs)
+ADD_SUBDIRECTORY(cli)
+ADD_SUBDIRECTORY(graphical)
+ADD_SUBDIRECTORY(include/fmt)

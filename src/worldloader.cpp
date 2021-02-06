@@ -2,57 +2,6 @@
 
 NBT minecraft_air(nbt::tag_type::tag_end);
 
-void Terrain::scanWorldDirectory(const std::filesystem::path &regionDir,
-                                 Terrain::Coordinates *savedWorld) {
-  const char delimiter = '.';
-  std::string index;
-  char buffer[4];
-  int32_t regionX, regionZ;
-  savedWorld->setUndefined();
-
-  for (auto &region : std::filesystem::directory_iterator(regionDir)) {
-    // This loop parses files with name 'r.x.y.mca', extracting x and y. This is
-    // done by creating a string stream and using `getline` with '.' as a
-    // delimiter.
-    std::stringstream ss(region.path().filename().c_str());
-    std::getline(ss, index, delimiter); // This removes the 'r.'
-    std::getline(ss, index, delimiter);
-
-    regionX = atoi(index.c_str());
-
-    std::getline(ss, index, delimiter);
-
-    regionZ = atoi(index.c_str());
-
-    std::ifstream regionData(region.path());
-    for (uint16_t chunk = 0; chunk < REGIONSIZE * REGIONSIZE; chunk++) {
-      regionData.read(buffer, 4);
-
-      if (*((uint32_t *)&buffer) == 0) {
-        continue;
-      }
-
-      savedWorld->minX =
-          std::min(savedWorld->minX, int32_t((regionX << 5) + (chunk & 0x1f)));
-      savedWorld->maxX =
-          std::max(savedWorld->maxX, int32_t((regionX << 5) + (chunk & 0x1f)));
-      savedWorld->minZ =
-          std::min(savedWorld->minZ, int32_t((regionZ << 5) + (chunk >> 5)));
-      savedWorld->maxZ =
-          std::max(savedWorld->maxZ, int32_t((regionZ << 5) + (chunk >> 5)));
-    }
-  }
-
-  // Convert region indexes to blocks
-  savedWorld->minX = savedWorld->minX << 4;
-  savedWorld->minZ = savedWorld->minZ << 4;
-  savedWorld->maxX = ((savedWorld->maxX + 1) << 4) - 1;
-  savedWorld->maxZ = ((savedWorld->maxZ + 1) << 4) - 1;
-
-  logger::debug("World spans from {}.{} to {}.{}\n", savedWorld->minX,
-                savedWorld->minZ, savedWorld->maxX, savedWorld->maxZ);
-}
-
 void Terrain::Data::load(const std::filesystem::path &regionDir) {
   this->regionDir = regionDir;
 }
@@ -135,7 +84,7 @@ bool decompressChunk(const uint32_t offset, FILE *regionHandle,
                      const std::filesystem::path &filename) {
   uint8_t zData[COMPRESSED_BUFFER];
 
-  if (0 != fseek(regionHandle, offset, SEEK_SET)) {
+  if (0 != FSEEK(regionHandle, offset, SEEK_SET)) {
     logger::debug("Accessing chunk data in file {} failed: {}\n",
                   filename.string(), strerror(errno));
     return false;
@@ -203,6 +152,7 @@ void filterLevel(NBT &level) {
 void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
                               const int chunkX, const int chunkZ,
                               const std::filesystem::path &filename) {
+
   uint64_t length, chunkPos = chunkIndex(chunkX, chunkZ);
 
   // Buffers for chunk read from MCA files and decompression.
@@ -349,8 +299,8 @@ Terrain::Chunk &Terrain::Data::chunkAt(int64_t xPos, int64_t zPos) {
   FILE *regionHandle;
   uint8_t regionHeader[REGION_HEADER_SIZE];
 
-  if (!(regionHandle = fopen(regionFile.c_str(), "rb"))) {
-    logger::error("Opening region file {} failed: {}\n", regionFile.c_str(),
+  if (!(regionHandle = fopen(regionFile.string().c_str(), "rb"))) {
+    logger::error("Opening region file `{}` failed: {}\n", regionFile.string(),
                   strerror(errno));
     return empty;
   }
@@ -358,7 +308,7 @@ Terrain::Chunk &Terrain::Data::chunkAt(int64_t xPos, int64_t zPos) {
   // Then, we read the header (of size 4K) storing the chunks locations
   if (fread(regionHeader, sizeof(uint8_t), REGION_HEADER_SIZE, regionHandle) !=
       REGION_HEADER_SIZE) {
-    logger::error("Region header too short in {}\n", regionFile.c_str());
+    logger::error("Region header too short in `{}`\n", regionFile.string());
     fclose(regionHandle);
     return empty;
   }

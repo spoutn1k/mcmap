@@ -5,11 +5,9 @@
 #include "./helper.h"
 #include <cstdlib>
 #include <filesystem>
-#include <fstream>
+#include <map.hpp>
 #include <nbt/nbt.hpp>
-#include <stdint.h>
 #include <string>
-#include <vector>
 #include <zlib.h>
 
 using nbt::NBT;
@@ -21,14 +19,10 @@ namespace Terrain {
 typedef NBT Chunk;
 typedef Chunk *ChunkList;
 
-using Coordinates = Coordinates<int32_t>;
-
-void scanWorldDirectory(const std::filesystem::path &, Coordinates *);
-
 struct Data {
   // The coordinates of the loaded chunks. This coordinates maps
   // the CHUNKS loaded, not the blocks
-  Coordinates map;
+  World::Coordinates map;
 
   // The internal list of chunks, of size chunkLen
   ChunkList chunks;
@@ -45,11 +39,11 @@ struct Data {
 
   vector<string> cache;
 
-  std::filesystem::path regionDir;
+  fs::path regionDir;
   Chunk empty;
 
   // Default constructor
-  explicit Data(const Terrain::Coordinates &coords) : heightBounds(0) {
+  explicit Data(const World::Coordinates &coords) : heightBounds(0) {
     map.minX = CHUNK(coords.minX);
     map.minZ = CHUNK(coords.minZ);
     map.maxX = CHUNK(coords.maxX);
@@ -68,11 +62,11 @@ struct Data {
   }
 
   // Chunk loading methods - only load should be useful
-  void load(const std::filesystem::path &regionDir);
-  void loadRegion(const std::filesystem::path &regionFile, const int regionX,
+  void load(const fs::path &regionDir);
+  void loadRegion(const fs::path &regionFile, const int regionX,
                   const int regionZ);
   void loadChunk(const uint32_t offset, FILE *regionHandle, const int chunkX,
-                 const int chunkZ, const std::filesystem::path &filename);
+                 const int chunkZ, const fs::path &filename);
 
   // Chunk analysis methods - using the list of sections
   void stripChunk(vector<NBT> *);

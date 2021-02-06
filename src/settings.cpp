@@ -76,7 +76,7 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
       }
       opts->colorFile = NEXTARG;
       if (!ISPATH(opts->colorFile)) {
-        logger::error("File {} does not exist\n", opts->colorFile.c_str());
+        logger::error("File {} does not exist\n", opts->colorFile.string());
         return false;
       }
     } else if (strcmp(option, "-dumpcolors") == 0) {
@@ -90,13 +90,13 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
       opts->markers[opts->totalMarkers++] =
           Colors::Marker(x, z, std::string(NEXTARG));
     } else if (strcmp(option, "-nw") == 0) {
-      opts->boundaries.orientation = NW;
+      opts->boundaries.orientation = Map::NW;
     } else if (strcmp(option, "-sw") == 0) {
-      opts->boundaries.orientation = SW;
+      opts->boundaries.orientation = Map::SW;
     } else if (strcmp(option, "-ne") == 0) {
-      opts->boundaries.orientation = NE;
+      opts->boundaries.orientation = Map::NE;
     } else if (strcmp(option, "-se") == 0) {
-      opts->boundaries.orientation = SE;
+      opts->boundaries.orientation = Map::SE;
     } else if (strcmp(option, "-mb") == 0) {
       if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
         logger::error("{} needs an integer\n", option);
@@ -110,18 +110,14 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
       }
       opts->tile_size = atoi(NEXTARG);
     } else if (strcmp(option, "-help") == 0 || strcmp(option, "-h") == 0) {
+      opts->mode = Settings::HELP;
       return false;
     } else if (strcmp(option, "-verbose") == 0 || strcmp(option, "-v") == 0) {
       logger::level = logger::levels::DEBUG;
     } else if (strcmp(option, "-vv") == 0) {
       logger::level = logger::levels::DEEP_DEBUG;
     } else {
-      opts->saveName = std::filesystem::path(option);
-      if (!ISPATH(opts->saveName)) {
-        logger::error("Error: File {} does not exist\n",
-                      opts->saveName.c_str());
-        return false;
-      }
+      opts->save = SaveFile(option);
     }
   }
 
@@ -129,20 +125,14 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
     // Check if the given save posesses the required dimension, must be done now
     // as the world path can be given after the dimension name, which messes up
     // regionDir()
-    // TODO Check permissions and make ISPATH a real function
-    if (!ISPATH(opts->regionDir())) {
-      logger::error(
-          "Cannot render dimension '{}' of world '{}': file '{}' does "
-          "not exist\n",
-          opts->dim.to_string(), opts->saveName.c_str(),
-          opts->regionDir().c_str());
+    if (!opts->save.valid()) {
+      logger::error("Given folder does not seem to be a save file\n");
       return false;
     }
 
     // Scan the region directory and map the existing terrain in this set of
     // coordinates
-    Terrain::Coordinates existingWorld;
-    Terrain::scanWorldDirectory(opts->regionDir(), &existingWorld);
+    World::Coordinates existingWorld = opts->save.getWorld(opts->dim);
 
     if (opts->boundaries.isUndefined()) {
       // No boundaries were defined, import the whole existing world
@@ -158,7 +148,7 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
 
     if (opts->boundaries.maxX < opts->boundaries.minX ||
         opts->boundaries.maxZ < opts->boundaries.minZ) {
-      logger::debug("{}\n", opts->boundaries.to_string());
+      logger::debug("Processed boundaries: {}\n", opts->boundaries.to_string());
       logger::error("Nothing to render: -from X Z has to be <= -to X Z\n");
       return false;
     }
@@ -175,4 +165,25 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
   }
 
   return true;
+}
+
+fs::path Settings::WorldOptions::regionDir() const { return save.region(dim); }
+
+void Settings::to_json(json &j, const Settings::WorldOptions &o) {
+  j["mode"] = o.mode;
+  j["output"] = o.outFile.string();
+  j["colors"] = o.colorFile.string();
+
+  j["save"] = o.save;
+  j["dimension"] = o.dim;
+
+  j["coordinates"] = o.boundaries.to_string();
+  j["padding"] = o.padding;
+
+  j["hideWater"] = o.hideWater;
+  j["hideBeacons"] = o.hideBeacons;
+  j["shading"] = o.shading;
+
+  j["memory"] = o.mem_limit;
+  j["tile"] = o.tile_size;
 }
