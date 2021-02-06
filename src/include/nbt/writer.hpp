@@ -18,7 +18,6 @@ bool put(io::ByteStreamWriter &output, const NBT &data) {
   std::stack<std::pair<const NBT &, NBT::const_iterator>> parsing;
 
   parsing.push({data, data.begin()});
-  logger::deep_debug("Pushing {} on stack\n", data.get_name());
 
   while (!error && !parsing.empty()) {
     const NBT &current = parsing.top().first;
@@ -33,10 +32,8 @@ bool put(io::ByteStreamWriter &output, const NBT &data) {
       buffer[0] = static_cast<uint8_t>(current.get_type());
       output.write(1, buffer, &error);
 
-      uint16_t name_size = current.get_name().size();
-      buffer[0] = ((uint8_t *)&name_size)[1];
-      buffer[1] = ((uint8_t *)&name_size)[0];
-      output.write(2, buffer, &error);
+      uint16_t name_size = static_cast<uint16_t>(current.get_name().size());
+      output.write(2, Translator(name_size).bytes(), &error);
 
       output.write(name_size, (uint8_t *)current.get_name().c_str(), &error);
     }
@@ -65,11 +62,7 @@ bool put(io::ByteStreamWriter &output, const NBT &data) {
         output.write(1, buffer, &error);
 
         uint32_t size = current.size();
-        buffer[0] = ((uint8_t *)&size)[3];
-        buffer[1] = ((uint8_t *)&size)[2];
-        buffer[2] = ((uint8_t *)&size)[1];
-        buffer[3] = ((uint8_t *)&size)[0];
-        output.write(4, buffer, &error);
+        output.write(4, Translator(size).bytes(), &error);
       }
 
       if (position != current.end()) {
@@ -86,68 +79,38 @@ bool put(io::ByteStreamWriter &output, const NBT &data) {
 
     case nbt::tag_type::tag_short: {
       uint16_t value = current.get<short>();
-      buffer[0] = ((uint8_t *)&value)[1];
-      buffer[1] = ((uint8_t *)&value)[0];
-      output.write(2, buffer, &error);
+      output.write(2, Translator(value).bytes(), &error);
       break;
     }
 
     case nbt::tag_type::tag_int: {
       uint32_t value = current.get<int>();
-      buffer[0] = ((uint8_t *)&value)[3];
-      buffer[1] = ((uint8_t *)&value)[2];
-      buffer[2] = ((uint8_t *)&value)[1];
-      buffer[3] = ((uint8_t *)&value)[0];
-      output.write(4, buffer, &error);
+      output.write(4, Translator(value).bytes(), &error);
       break;
     }
 
     case nbt::tag_type::tag_long: {
       uint64_t value = current.get<long>();
-      buffer[0] = ((uint8_t *)&value)[7];
-      buffer[1] = ((uint8_t *)&value)[6];
-      buffer[2] = ((uint8_t *)&value)[5];
-      buffer[3] = ((uint8_t *)&value)[4];
-      buffer[4] = ((uint8_t *)&value)[3];
-      buffer[5] = ((uint8_t *)&value)[2];
-      buffer[6] = ((uint8_t *)&value)[1];
-      buffer[7] = ((uint8_t *)&value)[0];
-      output.write(8, buffer, &error);
+      output.write(8, Translator(value).bytes(), &error);
       break;
     }
 
     case nbt::tag_type::tag_float: {
       float value = current.get<float>();
-      buffer[0] = ((uint8_t *)&value)[3];
-      buffer[1] = ((uint8_t *)&value)[2];
-      buffer[2] = ((uint8_t *)&value)[1];
-      buffer[3] = ((uint8_t *)&value)[0];
-      output.write(4, buffer, &error);
+      output.write(4, Translator(value).bytes(), &error);
       break;
     }
 
     case nbt::tag_type::tag_double: {
       double value = current.get<double>();
-      buffer[0] = ((uint8_t *)&value)[7];
-      buffer[1] = ((uint8_t *)&value)[6];
-      buffer[2] = ((uint8_t *)&value)[5];
-      buffer[3] = ((uint8_t *)&value)[4];
-      buffer[4] = ((uint8_t *)&value)[3];
-      buffer[5] = ((uint8_t *)&value)[2];
-      buffer[6] = ((uint8_t *)&value)[1];
-      buffer[7] = ((uint8_t *)&value)[0];
-      output.write(8, buffer, &error);
+      output.write(8, Translator(value).bytes(), &error);
       break;
     }
 
     case nbt::tag_type::tag_byte_array: {
       auto values = current.get<const NBT::tag_byte_array_t *>();
       uint32_t size = values->size();
-      buffer[0] = ((uint8_t *)&size)[3];
-      buffer[1] = ((uint8_t *)&size)[2];
-      buffer[2] = ((uint8_t *)&size)[1];
-      buffer[3] = ((uint8_t *)&size)[0];
-      output.write(4, buffer, &error);
+      output.write(4, Translator(size).bytes(), &error);
 
       for (int8_t value : *values) {
         buffer[0] = value;
@@ -159,41 +122,21 @@ bool put(io::ByteStreamWriter &output, const NBT &data) {
     case nbt::tag_type::tag_int_array: {
       auto values = current.get<const NBT::tag_int_array_t *>();
       uint32_t size = values->size();
-      buffer[0] = ((uint8_t *)&size)[3];
-      buffer[1] = ((uint8_t *)&size)[2];
-      buffer[2] = ((uint8_t *)&size)[1];
-      buffer[3] = ((uint8_t *)&size)[0];
-      output.write(4, buffer, &error);
+      output.write(4, Translator(size).bytes(), &error);
 
-      for (int32_t value : *values) {
-        buffer[0] = ((uint8_t *)&value)[3];
-        buffer[1] = ((uint8_t *)&value)[2];
-        buffer[2] = ((uint8_t *)&value)[1];
-        buffer[3] = ((uint8_t *)&value)[0];
-        output.write(4, buffer, &error);
-      }
+      for (int32_t value : *values)
+        output.write(4, Translator(value).bytes(), &error);
+
       break;
     }
 
     case nbt::tag_type::tag_long_array: {
       auto values = current.get<const NBT::tag_long_array_t *>();
       uint32_t size = values->size();
-      buffer[0] = ((uint8_t *)&size)[3];
-      buffer[1] = ((uint8_t *)&size)[2];
-      buffer[2] = ((uint8_t *)&size)[1];
-      buffer[3] = ((uint8_t *)&size)[0];
-      output.write(4, buffer, &error);
+      output.write(4, Translator(size).bytes(), &error);
 
       for (int64_t value : *values) {
-        buffer[0] = ((uint8_t *)&value)[7];
-        buffer[1] = ((uint8_t *)&value)[6];
-        buffer[2] = ((uint8_t *)&value)[5];
-        buffer[3] = ((uint8_t *)&value)[4];
-        buffer[4] = ((uint8_t *)&value)[3];
-        buffer[5] = ((uint8_t *)&value)[2];
-        buffer[6] = ((uint8_t *)&value)[1];
-        buffer[7] = ((uint8_t *)&value)[0];
-        output.write(8, buffer, &error);
+        output.write(8, Translator(value).bytes(), &error);
       }
       break;
     }
@@ -201,9 +144,7 @@ bool put(io::ByteStreamWriter &output, const NBT &data) {
     case nbt::tag_type::tag_string: {
       auto value = current.get<std::string>();
       uint16_t size = static_cast<uint16_t>(value.size());
-      buffer[0] = ((uint8_t *)&size)[1];
-      buffer[1] = ((uint8_t *)&size)[0];
-      output.write(2, buffer, &error);
+      output.write(2, Translator(size).bytes(), &error);
 
       output.write(size, (uint8_t *)value.c_str(), &error);
       break;
