@@ -487,34 +487,21 @@ public:
 
   size_type size() const noexcept {
     switch (type) {
-    case tag_type::tag_end: {
+    case tag_type::tag_end:
       return 0;
-    }
-
-    case tag_type::tag_byte_array: {
+    case tag_type::tag_byte_array:
       return content.byte_array->size();
-    }
-
-    case tag_type::tag_list: {
+    case tag_type::tag_list:
       return content.list->size();
-    }
-
-    case tag_type::tag_compound: {
+    case tag_type::tag_compound:
       return content.compound->size();
-    }
-
-    case tag_type::tag_int_array: {
+    case tag_type::tag_int_array:
       return content.int_array->size();
-    }
-
-    case tag_type::tag_long_array: {
+    case tag_type::tag_long_array:
       return content.long_array->size();
-    }
-
-    default: {
+    default:
       // all other types have size 1
       return 1;
-    }
     }
   }
 
