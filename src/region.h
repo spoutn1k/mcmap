@@ -22,7 +22,7 @@ struct Location {
   uint8_t size() const { return raw_data & 0xff; }
 
   static bool order(const Location &lhs, const Location &rhs) {
-    return lhs.offset() > rhs.offset();
+    return lhs.offset() < rhs.offset();
   }
 };
 
@@ -64,10 +64,28 @@ struct Region {
     regionData.close();
   }
 
-  void fragment() {
-    std::array<Location, REGIONSIZE *REGIONSIZE> temporary = locations;
+  size_t get_offset(uint8_t max_size) {
+    std::array<Location, REGIONSIZE *REGIONSIZE> sorted = locations;
 
-    std::sort(temporary.begin(), temporary.end(), Location::order);
+    std::sort(sorted.begin(), sorted.end(), Location::order);
+
+    size_t block = 2;
+    auto it = sorted.begin();
+
+    while (it != sorted.end()) {
+      if (it->offset() != block) {
+        logger::deep_debug("Empty region of size {} at offset {}\n",
+                           it->offset() - block, block);
+        if (it->offset() - block >= max_size)
+          break;
+      }
+
+      block = it->offset() + it->size();
+
+      it++;
+    }
+
+    return block;
   }
 };
 
