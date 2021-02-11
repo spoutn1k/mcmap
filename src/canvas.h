@@ -236,7 +236,7 @@ struct IsometricCanvas : Canvas {
 
   std::vector<float> brightnessLookup;
 
-  Section sections[16];
+  std::vector<Section> sections;
 
   // In-chunk variables
   uint32_t chunkX;
@@ -274,7 +274,7 @@ struct IsometricCanvas : Canvas {
   void renderSection();
   // Draw a block from virtual coords in the canvas
   void renderBlock(const Colors::Block *, const uint32_t, const uint32_t,
-                   const uint32_t, const NBT &metadata);
+                   const int32_t, const NBT &metadata);
 
   // Empty section with only beams
   void renderBeamSection(const int64_t, const int64_t, const uint8_t);

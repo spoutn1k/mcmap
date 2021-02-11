@@ -14,7 +14,7 @@ template <typename Integer,
           std::enable_if_t<std::is_integral<Integer>::value, int> = 0>
 struct Coordinates {
   Integer minX, maxX, minZ, maxZ;
-  uint8_t minY, maxY;
+  short minY, maxY;
   Orientation orientation;
 
   Coordinates() {
@@ -29,8 +29,8 @@ struct Coordinates {
   void setUndefined() {
     minX = minZ = std::numeric_limits<Integer>::max();
     maxX = maxZ = std::numeric_limits<Integer>::min();
-    minY = std::numeric_limits<uint8_t>::max();
-    maxY = std::numeric_limits<uint8_t>::min();
+    minY = 319;
+    maxY = -64;
   }
 
   bool isUndefined() const {

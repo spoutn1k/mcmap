@@ -339,8 +339,9 @@ public:
       return content.compound->operator[](key);
     }
 
-    throw(std::domain_error("Cannot use operator[] with type" +
-                            std::string(type_name())));
+    throw(std::domain_error(
+        fmt::format("Cannot use operator[] with type `{}` (key `{}` on `{}`)",
+                    type_name(), key, get_name())));
   }
 
   NBT &operator=(const NBT &other) noexcept {

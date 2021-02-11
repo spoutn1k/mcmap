@@ -31,7 +31,7 @@ struct Data {
   // An array of bytes, one for each chunk
   // the first 8 bits are the highest block to render,
   // the latter the lowest section number
-  uint16_t *heightMap;
+  std::vector<std::pair<short, short>> heightMap;
 
   // The global version of the values above. The first 8 bits indicate the
   // highest block to render, the last 8 the lowest block
@@ -53,13 +53,10 @@ struct Data {
         uint64_t(map.maxX - map.minX + 1) * uint64_t(map.maxZ - map.minZ + 1);
 
     chunks = new Terrain::Chunk[chunkLen];
-    heightMap = new uint16_t[chunkLen];
+    heightMap.reserve(chunkLen);
   }
 
-  ~Data() {
-    delete[] heightMap;
-    delete[] chunks;
-  }
+  ~Data() { delete[] chunks; }
 
   // Chunk loading methods - only load should be useful
   void load(const fs::path &regionDir);
@@ -71,7 +68,7 @@ struct Data {
   // Chunk analysis methods - using the list of sections
   void stripChunk(vector<NBT> *);
   void cacheColors(vector<NBT> *);
-  uint16_t importHeight(vector<NBT> *);
+  std::pair<short, short> importHeight(vector<NBT> *);
   void inflateChunk(vector<NBT> *);
 
   uint64_t chunkIndex(int64_t x, int64_t z) const {
@@ -80,15 +77,15 @@ struct Data {
 
   NBT &chunkAt(int64_t xPos, int64_t zPos);
 
-  uint8_t maxHeight() const { return 255; }
-  uint8_t minHeight() const { return 0; }
+  short maxHeight() const { return 319; }
+  short minHeight() const { return -64; }
 
-  uint8_t maxHeight(const int64_t x, const int64_t z) const {
-    return heightMap[chunkIndex(x, z)] >> 8;
+  short maxHeight(const int64_t x, const int64_t z) const {
+    return heightMap[chunkIndex(x, z)].first;
   }
 
-  uint8_t minHeight(const int64_t x, const int64_t z) const {
-    return heightMap[chunkIndex(x, z)] & 0xff;
+  short minHeight(const int64_t x, const int64_t z) const {
+    return heightMap[chunkIndex(x, z)].second;
   }
 };
 

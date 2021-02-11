@@ -11,6 +11,8 @@ struct Section {
   Section() : max_colors(0), beaconIndex(std::numeric_limits<uint8_t>::max()){};
   Section(const nbt::NBT &, const int, const Colors::Palette &);
 
+  Section(Section &&other) { *this = std::move(other); }
+
   Section &operator=(Section &&other) {
     max_colors = other.max_colors;
     beaconIndex = other.beaconIndex;

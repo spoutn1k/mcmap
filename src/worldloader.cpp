@@ -12,7 +12,7 @@ void Terrain::Data::inflateChunk(vector<NBT> *sections) {
   // on the section index (key "Y"). This routine creates empty sections where
   // they should be, to save a lot of time when rendering.
   //
-  // This method ensure all sections from index 0 to the highest existing
+  // This method ensure all sections from index -4 to the highest existing
   // section are inside the vector. This allows us to bypass al lot of checks
   // inside the critical drawing loop.
 
@@ -20,17 +20,21 @@ void Terrain::Data::inflateChunk(vector<NBT> *sections) {
   // empty. This index is important and will be used later
   int8_t index = sections->front()["Y"].get<int8_t>();
 
+  uint8_t inserted = 0;
+
   // We use `tag_end` to avoid initalizing too much stuff
-  for (int i = index - 1; i > -1; i--)
+  for (int i = index - 1; i > -5; i--) {
     sections->insert(sections->begin(), NBT(nbt::tag_type::tag_end));
+    inserted++;
+  }
 
   // Then, go through the array and fill holes
   // As we check for the "Y" child in the compound, and did not add it
   // previously, the index MUST not change from the original first index
-  vector<NBT>::iterator it = sections->begin() + index, next = it + 1;
+  vector<NBT>::iterator it = sections->begin() + inserted, next = it + 1;
 
   while (it != sections->end() && next != sections->end()) {
-    uint8_t diff = next->operator[]("Y").get<int8_t>() - index - 1;
+    int8_t diff = next->operator[]("Y").get<int8_t>() - index - 1;
 
     if (diff) {
       while (diff--) {
@@ -46,15 +50,12 @@ void Terrain::Data::inflateChunk(vector<NBT> *sections) {
 }
 
 void Terrain::Data::stripChunk(vector<NBT> *sections) {
-  // Some chunks have a -1 section, we'll pop that real quick
-  if (!sections->empty() && sections->front()["Y"].get<int8_t>() == -1) {
+  while (!sections->empty() && !sections->front().contains("Palette"))
     sections->erase(sections->begin());
-  }
 
   // Pop all the empty top sections
-  while (!sections->empty() && !sections->back().contains("Palette")) {
+  while (!sections->empty() && !sections->back().contains("Palette"))
     sections->pop_back();
-  }
 }
 
 void Terrain::Data::cacheColors(vector<NBT> *sections) {
@@ -68,15 +69,15 @@ void Terrain::Data::cacheColors(vector<NBT> *sections) {
   }
 }
 
-uint16_t Terrain::Data::importHeight(vector<NBT> *sections) {
-  const uint8_t chunkMin = sections->front()["Y"].get<int8_t>() << 4;
-  const uint8_t chunkMax = (sections->back()["Y"].get<int8_t>() << 4) + 15;
+std::pair<short, short> Terrain::Data::importHeight(vector<NBT> *sections) {
+  const short chunkMin = sections->front()["Y"].get<int8_t>() << 4;
+  const short chunkMax = (sections->back()["Y"].get<int8_t>() << 4) + 15;
 
   // If the chunk's height is the highest found, record it
   if (chunkMax > maxHeight())
     heightBounds = (chunkMax << 8) | heightBounds;
 
-  return (chunkMax << 8) | chunkMin;
+  return {chunkMax, chunkMin};
 }
 
 bool decompressChunk(const uint32_t offset, FILE *regionHandle,
@@ -170,6 +171,7 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
   filterLevel(chunk["Level"]);
 
   chunks[chunkPos] = std::move(chunk);
+
   vector<NBT> *sections =
       chunks[chunkPos]["Level"]["Sections"].get<vector<NBT> *>();
 
@@ -177,7 +179,7 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
   stripChunk(sections);
 
   if (sections->empty()) {
-    heightMap[chunkPos] = 0;
+    heightMap[chunkPos] = {0, 0};
     return;
   }
 

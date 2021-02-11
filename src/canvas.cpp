@@ -262,12 +262,15 @@ void IsometricCanvas::renderChunk(Terrain::Data &terrain) {
   orientChunk(worldX, worldZ);
 
   NBT &chunk = terrain.chunkAt(worldX, worldZ);
-  const uint8_t minHeight = terrain.minHeight(worldX, worldZ),
-                maxHeight = terrain.maxHeight(worldX, worldZ);
+
+  const short minHeight = terrain.minHeight(worldX, worldZ),
+              maxHeight = terrain.maxHeight(worldX, worldZ);
 
   // If there is nothing to render
-  if (minHeight >= maxHeight || chunk.is_end())
+  if (minHeight >= maxHeight || chunk.is_end()) {
+    logger::deep_debug("Skipping chunk {} {}\n", minHeight, maxHeight);
     return;
+  }
 
   // This value is primordial: it states which version of minecraft the chunk
   // was created under, and we use it to know which interpreter to use later
@@ -282,17 +285,17 @@ void IsometricCanvas::renderChunk(Terrain::Data &terrain) {
     }
   }
 
-  minSection = std::max(map.minY, minHeight) >> 4;
-  maxSection = std::min(map.maxY, maxHeight) >> 4;
+  minSection = (std::max(map.minY, minHeight) >> 4) + 4;
+  maxSection = (std::min(map.maxY, maxHeight) >> 4) + 4;
+  logger::deep_debug("Min: {}/Max: {}\n", minSection, maxSection);
 
   for (yPos = minSection; yPos < maxSection + 1; yPos++) {
-    sections[yPos] =
-        Section(chunk["Level"]["Sections"][yPos], dataVersion, palette);
+    sections.push_back(
+        Section(chunk["Level"]["Sections"][yPos], dataVersion, palette));
   }
 
-  for (yPos = minSection; yPos < maxSection + 1; yPos++) {
+  for (yPos = minSection; yPos < maxSection + 1; yPos++)
     renderSection();
-  }
 
   if (beamNo)
     for (yPos = maxSection + 1; yPos < std::min(16, map.maxY >> 4) + 1;
@@ -302,7 +305,8 @@ void IsometricCanvas::renderChunk(Terrain::Data &terrain) {
 
   beamNo = 0;
 
-  chunk.erase("Level");
+  sections.clear();
+  chunk = NBT();
   rendered++;
 }
 
@@ -328,20 +332,26 @@ inline void IsometricCanvas::orientSection(uint8_t &x, uint8_t &z) {
 }
 
 void IsometricCanvas::renderSection() {
-  const Section &section = sections[yPos];
+  logger::deep_debug("Rendering section {}\n", yPos);
+  const Section &section = sections.at(yPos);
 
   bool beamColumn = false;
   uint8_t currentBeam = 0;
 
   // Return if the section is undrawable
-  if (section.empty() && !beamNo)
+  if (section.empty() && !beamNo) {
+    logger::deep_debug("NVM, skipping section {} ({} colors)\n", yPos,
+                       section.max_colors);
     return;
+  }
 
   uint8_t block_index;
   int32_t worldX = chunkX, worldZ = chunkZ;
 
-  uint8_t minY = std::max(0, map.minY - (yPos << 4));
-  uint8_t maxY = std::min(16, map.maxY - (yPos << 4) + 1);
+  // uint8_t minY = std::max(0, map.minY - (yPos << 4));
+  // uint8_t maxY = std::min(16, map.maxY - (yPos << 4) + 1);
+  uint8_t minY = 0, maxY = 16;
+  logger::deep_debug("Y from {} to {}\n", minY, maxY);
 
   // We need the real position of the section for bounds checking
   orientChunk(worldX, worldZ);
@@ -372,14 +382,16 @@ void IsometricCanvas::renderSection() {
 
       for (y = minY; y < maxY; y++) {
 
-        if (beamColumn)
+        /*
+          if (beamColumn)
           renderBlock(beams[currentBeam].color, (chunkX << 4) + x,
                       (chunkZ << 4) + z, (yPos << 4) + y, nbt::NBT());
+                      */
 
         block_index = section.blocks[y * 256 + orientedZ * 16 + orientedX];
 
         renderBlock(section.colors[block_index], (chunkX << 4) + x,
-                    (chunkZ << 4) + z, (yPos << 4) + y,
+                    (chunkZ << 4) + z, (yPos << 4) + y - 64,
                     section.palette->operator[](block_index));
 
         if (block_index == section.beaconIndex) {
@@ -458,7 +470,7 @@ drawer blockRenderers[] = {
 };
 
 inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
-                                         uint32_t z, const uint32_t y,
+                                         uint32_t z, const int32_t y,
                                          const NBT &metadata) {
   // If there is nothing to render, skip it
   if (color->primary.transparent())
