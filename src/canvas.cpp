@@ -261,7 +261,7 @@ void IsometricCanvas::renderChunk(Terrain::Data &terrain) {
   int32_t worldX = chunkX, worldZ = chunkZ;
   orientChunk(worldX, worldZ);
 
-  NBT &chunk = terrain.chunkAt(worldX, worldZ);
+  nbt::NBT &chunk = terrain.chunkAt(worldX, worldZ);
 
   // If there is nothing to render
   if (chunk.is_end() || chunk["Level"]["Sections"].empty()) {
@@ -300,7 +300,7 @@ void IsometricCanvas::renderChunk(Terrain::Data &terrain) {
   beamNo = 0;
 
   sections.clear();
-  chunk = NBT();
+  chunk = nbt::NBT();
   rendered++;
 }
 
@@ -455,7 +455,7 @@ drawer blockRenderers[] = {
 
 inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
                                          uint32_t z, const int32_t y,
-                                         const NBT &metadata) {
+                                         const nbt::NBT &metadata) {
   // If there is nothing to render, skip it
   if (color->primary.transparent())
     return;

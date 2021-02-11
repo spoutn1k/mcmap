@@ -273,7 +273,7 @@ struct IsometricCanvas : Canvas {
   void renderSection(const Section &);
   // Draw a block from virtual coords in the canvas
   void renderBlock(const Colors::Block *, const uint32_t, const uint32_t,
-                   const int32_t, const NBT &metadata);
+                   const int32_t, const nbt::NBT &metadata);
 
   // Empty section with only beams
   void renderBeamSection(const int64_t, const int64_t, const uint8_t);

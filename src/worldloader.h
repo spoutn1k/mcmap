@@ -10,13 +10,9 @@
 #include <string>
 #include <zlib.h>
 
-using nbt::NBT;
-using std::string;
-using std::vector;
-
 namespace Terrain {
 
-typedef NBT Chunk;
+typedef nbt::NBT Chunk;
 
 struct Data {
   // The coordinates of the loaded chunks. This coordinates maps
@@ -50,26 +46,17 @@ struct Data {
                  const int chunkZ, const fs::path &filename);
 
   // Chunk analysis methods - using the list of sections
-  void stripChunk(vector<NBT> *);
-  std::pair<short, short> importHeight(vector<NBT> *);
-  void inflateChunk(vector<NBT> *);
+  void stripChunk(std::vector<nbt::NBT> *);
+  void inflateChunk(std::vector<nbt::NBT> *);
 
   uint64_t chunkIndex(int64_t x, int64_t z) const {
     return (x - map.minX) + (z - map.minZ) * (map.maxX - map.minX + 1);
   }
 
-  NBT &chunkAt(int64_t xPos, int64_t zPos);
+  nbt::NBT &chunkAt(int64_t xPos, int64_t zPos);
 };
 
 } // namespace Terrain
 
-typedef void (*sectionInterpreter)(const uint64_t, const std::vector<int64_t> *,
-                                   std::array<uint8_t, 4096> &);
-
-void sectionAtPre116(const uint64_t, const std::vector<int64_t> *,
-                     std::array<uint8_t, 4096> &);
-void sectionAtPost116(const uint64_t, const std::vector<int64_t> *,
-                      std::array<uint8_t, 4096> &);
-
-bool assertChunk(const NBT &);
+bool assertChunk(const nbt::NBT &);
 #endif // WORLDLOADER_H_

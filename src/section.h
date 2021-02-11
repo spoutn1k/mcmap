@@ -1,12 +1,13 @@
 #include "./colors.h"
-#include "./worldloader.h"
 #include <nbt/nbt.hpp>
 
 struct Section {
+  using block_array = std::array<uint8_t, 4096>;
+
   int8_t Y;
 
   uint8_t beaconIndex;
-  std::array<uint8_t, 4096> blocks;
+  block_array blocks;
   std::vector<const Colors::Block *> colors;
   const std::vector<nbt::NBT> *palette;
 
@@ -45,3 +46,11 @@ struct Section {
     return palette->operator[](blocks[x + 16 * z + 16 * 16 * y]);
   }
 };
+
+typedef void (*sectionInterpreter)(const uint64_t, const std::vector<int64_t> *,
+                                   Section::block_array &);
+
+void sectionAtPre116(const uint64_t, const std::vector<int64_t> *,
+                     Section::block_array &);
+void sectionAtPost116(const uint64_t, const std::vector<int64_t> *,
+                      Section::block_array &);
