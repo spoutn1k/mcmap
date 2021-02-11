@@ -17,7 +17,6 @@ using std::vector;
 namespace Terrain {
 
 typedef NBT Chunk;
-typedef Chunk *ChunkList;
 
 struct Data {
   // The coordinates of the loaded chunks. This coordinates maps
@@ -25,18 +24,10 @@ struct Data {
   World::Coordinates map;
 
   // The internal list of chunks, of size chunkLen
-  ChunkList chunks;
+  std::vector<Chunk> chunks;
   uint64_t chunkLen;
 
-  // An array of bytes, one for each chunk
-  // the first 8 bits are the highest block to render,
-  // the latter the lowest section number
-  std::vector<std::pair<short, short>> heightMap;
-
-  vector<string> cache;
-
   fs::path regionDir;
-  Chunk empty;
 
   // Default constructor
   explicit Data(const World::Coordinates &coords) {
@@ -48,11 +39,8 @@ struct Data {
     chunkLen =
         uint64_t(map.maxX - map.minX + 1) * uint64_t(map.maxZ - map.minZ + 1);
 
-    chunks = new Terrain::Chunk[chunkLen];
-    heightMap.reserve(chunkLen);
+    chunks.resize(chunkLen);
   }
-
-  ~Data() { delete[] chunks; }
 
   // Chunk loading methods - only load should be useful
   void load(const fs::path &regionDir);
@@ -63,7 +51,6 @@ struct Data {
 
   // Chunk analysis methods - using the list of sections
   void stripChunk(vector<NBT> *);
-  void cacheColors(vector<NBT> *);
   std::pair<short, short> importHeight(vector<NBT> *);
   void inflateChunk(vector<NBT> *);
 

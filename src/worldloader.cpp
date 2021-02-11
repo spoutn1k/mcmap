@@ -1,5 +1,6 @@
 #include "worldloader.h"
 
+Terrain::Chunk empty_chunk;
 NBT minecraft_air(nbt::tag_type::tag_end);
 
 void Terrain::Data::load(const std::filesystem::path &regionDir) {
@@ -38,17 +39,6 @@ void Terrain::Data::stripChunk(vector<NBT> *sections) {
   // Pop all the empty top sections
   while (!sections->empty() && !sections->back().contains("Palette"))
     sections->pop_back();
-}
-
-void Terrain::Data::cacheColors(vector<NBT> *sections) {
-  // Complete the cache, to determine the colors to load
-  for (auto &section : *sections) {
-    if (section.is_end() || !section.contains("Palette"))
-      continue;
-
-    for (auto &block : *section["Palette"].get<vector<NBT> *>())
-      cache.push_back(block["Name"].get<string>());
-  }
 }
 
 std::pair<int16_t, int16_t> Terrain::Data::importHeight(vector<NBT> *sections) {
@@ -156,17 +146,8 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
   // Strip the chunk of pointless sections
   stripChunk(sections);
 
-  if (sections->empty()) {
-    heightMap[chunkPos] = {0, 0};
+  if (sections->empty())
     return;
-  }
-
-  // Cache the blocks contained in the chunks, to load only the necessary
-  // colors later on
-  cacheColors(sections);
-
-  // Analyze the sections vector for height info
-  heightMap[chunkPos] = importHeight(sections);
 
   // Fill the chunk's holes with empty sections
   inflateChunk(sections);
@@ -274,7 +255,7 @@ Terrain::Chunk &Terrain::Data::chunkAt(int64_t xPos, int64_t zPos) {
   if (!std::filesystem::exists(regionFile)) {
     logger::deep_debug("Region file r.{}.{}.mca does not exist, skipping ..\n",
                        rX, rZ);
-    return empty;
+    return empty_chunk;
   }
 
   FILE *regionHandle;
@@ -283,7 +264,7 @@ Terrain::Chunk &Terrain::Data::chunkAt(int64_t xPos, int64_t zPos) {
   if (!(regionHandle = fopen(regionFile.string().c_str(), "rb"))) {
     logger::error("Opening region file `{}` failed: {}\n", regionFile.string(),
                   strerror(errno));
-    return empty;
+    return empty_chunk;
   }
 
   // Then, we read the header (of size 4K) storing the chunks locations
@@ -291,7 +272,7 @@ Terrain::Chunk &Terrain::Data::chunkAt(int64_t xPos, int64_t zPos) {
       REGION_HEADER_SIZE) {
     logger::error("Region header too short in `{}`\n", regionFile.string());
     fclose(regionHandle);
-    return empty;
+    return empty_chunk;
   }
 
   const uint32_t offset =
