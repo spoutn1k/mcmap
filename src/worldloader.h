@@ -77,10 +77,12 @@ struct Data {
 } // namespace Terrain
 
 typedef void (*sectionInterpreter)(const uint64_t, const std::vector<int64_t> *,
-                                   uint8_t *);
+                                   std::array<uint8_t, 4096> &);
 
-void sectionAtPre116(const uint64_t, const std::vector<int64_t> *, uint8_t *);
-void sectionAtPost116(const uint64_t, const std::vector<int64_t> *, uint8_t *);
+void sectionAtPre116(const uint64_t, const std::vector<int64_t> *,
+                     std::array<uint8_t, 4096> &);
+void sectionAtPost116(const uint64_t, const std::vector<int64_t> *,
+                      std::array<uint8_t, 4096> &);
 
 bool assertChunk(const NBT &);
 #endif // WORLDLOADER_H_

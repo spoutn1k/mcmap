@@ -8,7 +8,7 @@ Section::Section(const nbt::NBT &raw_section, const int dataVersion,
   if (!raw_section.contains("Palette") ||
       !raw_section.contains("BlockStates")) {
     logger::deep_debug("Empty section: no Palette nor Blockstates !\n");
-    colors[max_colors++] = &_void;
+    colors.push_back(&_void);
     return;
   }
 
@@ -32,6 +32,13 @@ Section::Section(const nbt::NBT &raw_section, const int dataVersion,
   interpreter(blockBitLength, blockStates, blocks);
 
   pickColors(defined);
+
+  for (uint8_t &index : blocks) {
+    if (index > colors.size() - 1) {
+      logger::deep_debug("Malformed section: block is undefined in palette\n");
+      index = 0;
+    }
+  }
 }
 
 void Section::pickColors(const Colors::Palette &all) {
@@ -41,11 +48,11 @@ void Section::pickColors(const Colors::Palette &all) {
 
     if (defined == all.end()) {
       logger::error("Color of block {} not found\n", namespacedId);
-      colors[max_colors++] = &_void;
+      colors.push_back(&_void);
     } else {
-      colors[max_colors++] = &defined->second;
+      colors.push_back(&defined->second);
       if (namespacedId == "minecraft:beacon")
-        beaconIndex = max_colors - 1;
+        beaconIndex = colors.size() - 1;
     }
   }
 }

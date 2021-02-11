@@ -337,7 +337,6 @@ void IsometricCanvas::renderSection(const Section &section) {
   if ((section.Y << 4) > map.maxY || (section.Y << 4) + 15 < map.minY)
     return;
 
-  uint8_t block_index;
   int32_t worldX = chunkX, worldZ = chunkZ;
 
   uint8_t minY = std::max(0, map.minY - (section.Y << 4));
@@ -375,13 +374,11 @@ void IsometricCanvas::renderSection(const Section &section) {
           renderBlock(beams[currentBeam].color, (chunkX << 4) + x,
                       (chunkZ << 4) + z, (section.Y << 4) + y, nbt::NBT());
 
-        block_index = section.blocks[y * 256 + orientedZ * 16 + orientedX];
+        renderBlock(section.color_at(orientedX, y, orientedZ),
+                    (chunkX << 4) + x, (chunkZ << 4) + z, (section.Y << 4) + y,
+                    section.state_at(orientedX, y, orientedZ));
 
-        renderBlock(section.colors[block_index], (chunkX << 4) + x,
-                    (chunkZ << 4) + z, (section.Y << 4) + y,
-                    section.palette->operator[](block_index));
-
-        if (block_index == section.beaconIndex) {
+        if (section.block_at(orientedX, y, orientedZ) == section.beaconIndex) {
           beams[beamNo++] = Beam(orientedX, orientedZ, &beaconBeam);
           beamColumn = true;
           currentBeam = beamNo - 1;

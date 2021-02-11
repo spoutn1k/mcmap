@@ -174,7 +174,7 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
 
 void sectionAtPost116(const uint64_t index_length,
                       const std::vector<int64_t> *blockStates,
-                      uint8_t *buffer) {
+                      std::array<uint8_t, 4096> &buffer) {
   // NEW in 1.16, longs are padded by 0s when a block cannot fit, so no more
   // overflow to deal with !
 
@@ -199,7 +199,8 @@ void sectionAtPost116(const uint64_t index_length,
 }
 
 void sectionAtPre116(const uint64_t index_length,
-                     const std::vector<int64_t> *blockStates, uint8_t *buffer) {
+                     const std::vector<int64_t> *blockStates,
+                     std::array<uint8_t, 4096> &buffer) {
   // The `BlockStates` array contains data on the section's blocks. You have to
   // extract it by understanfing its structure.
   //
