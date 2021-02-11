@@ -14,7 +14,7 @@ template <typename Integer,
           std::enable_if_t<std::is_integral<Integer>::value, int> = 0>
 struct Coordinates {
   Integer minX, maxX, minZ, maxZ;
-  short minY, maxY;
+  int16_t minY, maxY;
   Orientation orientation;
 
   Coordinates() {

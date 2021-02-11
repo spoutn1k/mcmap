@@ -3,6 +3,8 @@
 #include <nbt/nbt.hpp>
 
 struct Section {
+  int8_t Y;
+
   uint8_t max_colors, beaconIndex;
   uint8_t blocks[4096];
   const std::vector<nbt::NBT> *palette;
@@ -14,6 +16,7 @@ struct Section {
   Section(Section &&other) { *this = std::move(other); }
 
   Section &operator=(Section &&other) {
+    Y = other.Y;
     max_colors = other.max_colors;
     beaconIndex = other.beaconIndex;
     memmove(blocks, other.blocks, 4096);

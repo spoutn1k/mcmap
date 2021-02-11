@@ -241,7 +241,6 @@ struct IsometricCanvas : Canvas {
   // In-chunk variables
   uint32_t chunkX;
   uint32_t chunkZ;
-  int8_t yPos, minSection, maxSection;
 
   // Beams in the chunk being rendered
   uint8_t beamNo = 0;
@@ -271,7 +270,7 @@ struct IsometricCanvas : Canvas {
   // Drawing entrypoints
   void renderTerrain(Terrain::Data &);
   void renderChunk(Terrain::Data &);
-  void renderSection();
+  void renderSection(const Section &);
   // Draw a block from virtual coords in the canvas
   void renderBlock(const Colors::Block *, const uint32_t, const uint32_t,
                    const int32_t, const NBT &metadata);

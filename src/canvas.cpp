@@ -263,12 +263,9 @@ void IsometricCanvas::renderChunk(Terrain::Data &terrain) {
 
   NBT &chunk = terrain.chunkAt(worldX, worldZ);
 
-  const short minHeight = terrain.minHeight(worldX, worldZ),
-              maxHeight = terrain.maxHeight(worldX, worldZ);
-
   // If there is nothing to render
-  if (minHeight >= maxHeight || chunk.is_end()) {
-    logger::deep_debug("Skipping chunk {} {}\n", minHeight, maxHeight);
+  if (chunk.is_end() || chunk["Level"]["Sections"].empty()) {
+    logger::deep_debug("Skipping chunk {} {}\n", chunkX, chunkZ);
     return;
   }
 
@@ -285,23 +282,20 @@ void IsometricCanvas::renderChunk(Terrain::Data &terrain) {
     }
   }
 
-  minSection = (std::max(map.minY, minHeight) >> 4) + 4;
-  maxSection = (std::min(map.maxY, maxHeight) >> 4) + 4;
-  logger::deep_debug("Min: {}/Max: {}\n", minSection, maxSection);
+  for (const auto &data : chunk["Level"]["Sections"])
+    sections.push_back(Section(data, dataVersion, palette));
 
-  for (yPos = minSection; yPos < maxSection + 1; yPos++) {
-    sections.push_back(
-        Section(chunk["Level"]["Sections"][yPos], dataVersion, palette));
-  }
+  for (const auto &section : sections)
+    renderSection(section);
 
-  for (yPos = minSection; yPos < maxSection + 1; yPos++)
-    renderSection();
-
-  if (beamNo)
+  /*
+  if (beamNo) {
     for (yPos = maxSection + 1; yPos < std::min(16, map.maxY >> 4) + 1;
          yPos++) {
       renderBeamSection(chunkX, chunkZ, yPos);
     }
+  }
+  */
 
   beamNo = 0;
 
@@ -331,27 +325,23 @@ inline void IsometricCanvas::orientSection(uint8_t &x, uint8_t &z) {
   }
 }
 
-void IsometricCanvas::renderSection() {
-  logger::deep_debug("Rendering section {}\n", yPos);
-  const Section &section = sections.at(yPos);
-
+void IsometricCanvas::renderSection(const Section &section) {
   bool beamColumn = false;
   uint8_t currentBeam = 0;
 
   // Return if the section is undrawable
-  if (section.empty() && !beamNo) {
-    logger::deep_debug("NVM, skipping section {} ({} colors)\n", yPos,
-                       section.max_colors);
+  if (section.empty() && !beamNo)
     return;
-  }
+
+  // Return if the section is oob
+  if ((section.Y << 4) > map.maxY || (section.Y << 4) + 15 < map.minY)
+    return;
 
   uint8_t block_index;
   int32_t worldX = chunkX, worldZ = chunkZ;
 
-  // uint8_t minY = std::max(0, map.minY - (yPos << 4));
-  // uint8_t maxY = std::min(16, map.maxY - (yPos << 4) + 1);
-  uint8_t minY = 0, maxY = 16;
-  logger::deep_debug("Y from {} to {}\n", minY, maxY);
+  uint8_t minY = std::max(0, map.minY - (section.Y << 4));
+  uint8_t maxY = std::min(16, map.maxY - (section.Y << 4) + 1);
 
   // We need the real position of the section for bounds checking
   orientChunk(worldX, worldZ);
@@ -381,17 +371,14 @@ void IsometricCanvas::renderSection() {
       }
 
       for (y = minY; y < maxY; y++) {
-
-        /*
-          if (beamColumn)
+        if (beamColumn)
           renderBlock(beams[currentBeam].color, (chunkX << 4) + x,
-                      (chunkZ << 4) + z, (yPos << 4) + y, nbt::NBT());
-                      */
+                      (chunkZ << 4) + z, (section.Y << 4) + y, nbt::NBT());
 
         block_index = section.blocks[y * 256 + orientedZ * 16 + orientedX];
 
         renderBlock(section.colors[block_index], (chunkX << 4) + x,
-                    (chunkZ << 4) + z, (yPos << 4) + y - 64,
+                    (chunkZ << 4) + z, (section.Y << 4) + y,
                     section.palette->operator[](block_index));
 
         if (block_index == section.beaconIndex) {
@@ -563,16 +550,19 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
 }
 
 const Colors::Block *IsometricCanvas::nextBlock() {
-  uint8_t sectionY = yPos + (y == 15 ? 1 : 0);
+  return &air;
+  /*
+uint8_t sectionY = yPos + (y == 15 ? 1 : 0);
 
-  if (sectionY > maxSection)
-    return &air;
+if (sectionY > maxSection)
+  return &air;
 
-  uint16_t index =
-      sections[sectionY]
-          .blocks[((y + 1) % 16) * 256 + orientedZ * 16 + orientedX];
+uint16_t index =
+    sections[sectionY]
+        .blocks[((y + 1) % 16) * 256 + orientedZ * 16 + orientedX];
 
-  return sections[sectionY].colors[index];
+return sections[sectionY].colors[index];
+*/
 }
 
 bool compare(const Canvas &p1, const Canvas &p2) {

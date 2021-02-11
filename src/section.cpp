@@ -12,6 +12,8 @@ Section::Section(const nbt::NBT &raw_section, const int dataVersion,
     return;
   }
 
+  Y = raw_section["Y"].get<int8_t>();
+
   palette = raw_section["Palette"].get<const std::vector<NBT> *>();
 
   const uint32_t blockBitLength =

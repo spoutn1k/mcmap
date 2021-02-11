@@ -11,27 +11,9 @@ void Terrain::Data::inflateChunk(vector<NBT> *sections) {
   // Internally, minecraft does not store those empty sections, instead relying
   // on the section index (key "Y"). This routine creates empty sections where
   // they should be, to save a lot of time when rendering.
-  //
-  // This method ensure all sections from index -4 to the highest existing
-  // section are inside the vector. This allows us to bypass al lot of checks
-  // inside the critical drawing loop.
 
-  // First of all, pad the beginning of the array if the lowest sections are
-  // empty. This index is important and will be used later
   int8_t index = sections->front()["Y"].get<int8_t>();
-
-  uint8_t inserted = 0;
-
-  // We use `tag_end` to avoid initalizing too much stuff
-  for (int i = index - 1; i > -5; i--) {
-    sections->insert(sections->begin(), NBT(nbt::tag_type::tag_end));
-    inserted++;
-  }
-
-  // Then, go through the array and fill holes
-  // As we check for the "Y" child in the compound, and did not add it
-  // previously, the index MUST not change from the original first index
-  vector<NBT>::iterator it = sections->begin() + inserted, next = it + 1;
+  vector<NBT>::iterator it = sections->begin(), next = it + 1;
 
   while (it != sections->end() && next != sections->end()) {
     int8_t diff = next->operator[]("Y").get<int8_t>() - index - 1;
@@ -43,13 +25,13 @@ void Terrain::Data::inflateChunk(vector<NBT> *sections) {
       }
     }
 
-    // Increment both iterators
     next = ++it + 1;
     index++;
   }
 }
 
 void Terrain::Data::stripChunk(vector<NBT> *sections) {
+  // Remove sections with no blocks from the edges of the map
   while (!sections->empty() && !sections->front().contains("Palette"))
     sections->erase(sections->begin());
 
@@ -69,15 +51,11 @@ void Terrain::Data::cacheColors(vector<NBT> *sections) {
   }
 }
 
-std::pair<short, short> Terrain::Data::importHeight(vector<NBT> *sections) {
-  const short chunkMin = sections->front()["Y"].get<int8_t>() << 4;
-  const short chunkMax = (sections->back()["Y"].get<int8_t>() << 4) + 15;
+std::pair<int16_t, int16_t> Terrain::Data::importHeight(vector<NBT> *sections) {
+  const int16_t bottom_section = sections->front()["Y"].get<int8_t>();
+  const int16_t top_section = sections->back()["Y"].get<int8_t>();
 
-  // If the chunk's height is the highest found, record it
-  if (chunkMax > maxHeight())
-    heightBounds = (chunkMax << 8) | heightBounds;
-
-  return {chunkMax, chunkMin};
+  return {top_section, bottom_section};
 }
 
 bool decompressChunk(const uint32_t offset, FILE *regionHandle,

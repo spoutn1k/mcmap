@@ -33,17 +33,13 @@ struct Data {
   // the latter the lowest section number
   std::vector<std::pair<short, short>> heightMap;
 
-  // The global version of the values above. The first 8 bits indicate the
-  // highest block to render, the last 8 the lowest block
-  uint16_t heightBounds;
-
   vector<string> cache;
 
   fs::path regionDir;
   Chunk empty;
 
   // Default constructor
-  explicit Data(const World::Coordinates &coords) : heightBounds(0) {
+  explicit Data(const World::Coordinates &coords) {
     map.minX = CHUNK(coords.minX);
     map.minZ = CHUNK(coords.minZ);
     map.maxX = CHUNK(coords.maxX);
@@ -76,17 +72,6 @@ struct Data {
   }
 
   NBT &chunkAt(int64_t xPos, int64_t zPos);
-
-  short maxHeight() const { return 319; }
-  short minHeight() const { return -64; }
-
-  short maxHeight(const int64_t x, const int64_t z) const {
-    return heightMap[chunkIndex(x, z)].first;
-  }
-
-  short minHeight(const int64_t x, const int64_t z) const {
-    return heightMap[chunkIndex(x, z)].second;
-  }
 };
 
 } // namespace Terrain
