@@ -58,5 +58,4 @@ struct Data {
 
 } // namespace Terrain
 
-bool assertChunk(const nbt::NBT &);
 #endif // WORLDLOADER_H_

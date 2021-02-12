@@ -42,6 +42,8 @@ Section::Section(const nbt::NBT &raw_section, const int dataVersion,
 }
 
 void Section::pickColors(const Colors::Palette &all) {
+  colors.reserve(palette->size());
+
   for (auto &color : *palette) {
     const string namespacedId = color["Name"].get<string>();
     auto defined = all.find(namespacedId);
