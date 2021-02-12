@@ -285,8 +285,11 @@ void IsometricCanvas::renderChunk(Terrain::Data &terrain) {
   for (const auto &data : chunk["Level"]["Sections"])
     sections.push_back(Section(data, dataVersion, palette));
 
-  for (const auto &section : sections)
-    renderSection(section);
+  current_section = sections.begin();
+  while (current_section != sections.end()) {
+    renderSection(*current_section);
+    current_section++;
+  }
 
   /*
   if (beamNo) {
@@ -547,19 +550,13 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
 }
 
 const Colors::Block *IsometricCanvas::nextBlock() {
-  return &air;
-  /*
-uint8_t sectionY = yPos + (y == 15 ? 1 : 0);
+  std::vector<Section>::const_iterator lookup =
+      current_section + (y == 15 ? 1 : 0);
 
-if (sectionY > maxSection)
-  return &air;
+  if (lookup == sections.end())
+    return &air;
 
-uint16_t index =
-    sections[sectionY]
-        .blocks[((y + 1) % 16) * 256 + orientedZ * 16 + orientedX];
-
-return sections[sectionY].colors[index];
-*/
+  return lookup->color_at(orientedX, (y + 1) % 16, orientedZ);
 }
 
 bool compare(const Canvas &p1, const Canvas &p2) {
