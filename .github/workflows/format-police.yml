@@ -7,5 +7,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Run clang-format
-      uses: spoutn1k/clang-format-action@master
-
+      uses: spoutn1k/clang-format-action@blacklist
+      with:
+        clang-format-version: '11'
+        ignore-path: 'src/include/json.hpp src/include/fmt'

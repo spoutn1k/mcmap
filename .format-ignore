@@ -1,6 +1,0 @@
-# File used in the format check. Paths specified here will not be checked
-# for adherence to the global project format. Common use is to only specify
-# headers from other projects.
-
-src/include/json.hpp
-src/include/fmt
