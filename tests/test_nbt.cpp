@@ -1,11 +1,8 @@
+#include "./sample_level.h"
 #include <gtest/gtest.h>
-#include <logger.hpp>
-#include <nbt/nbt.hpp>
 #include <nbt/parser.hpp>
-#include <zlib.h>
 
 #define BUFFERSIZE 2000000
-#define NBT_FILE "tests/level.dat"
 
 TEST(TestNBT, TestCreateName) {
   nbt::NBT test;
@@ -163,7 +160,7 @@ class TestNBTParse : public ::testing::Test {
 protected:
   nbt::NBT level;
 
-  TestNBTParse() { nbt::parse(NBT_FILE, level); }
+  TestNBTParse() { nbt::parse(level_nbt, level_nbt_len, level); }
 };
 
 TEST_F(TestNBTParse, TestParse) {
