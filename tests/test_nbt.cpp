@@ -223,3 +223,125 @@ TEST_F(TestNBTParse, TestListIterator) {
   ASSERT_NE(find(angles.begin(), angles.end(), 0), angles.end());
   ASSERT_NE(find(angles.begin(), angles.end(), 1), angles.end());
 }
+
+TEST(TestNBTIterator, TestEndIterator) {
+  nbt::NBT end;
+
+  ASSERT_EQ(end.begin(), end.end());
+}
+
+TEST(TestNBTIterator, TestByteIterator) {
+  auto value = std::numeric_limits<uint8_t>::max();
+  nbt::NBT container(value);
+
+  auto it = container.begin();
+
+  ASSERT_NE(it, container.end());
+  ASSERT_EQ(it->get<uint8_t>(), value);
+  ASSERT_EQ(++it, container.end());
+}
+
+TEST(TestNBTIterator, TestShortIterator) {
+  auto value = std::numeric_limits<uint16_t>::max();
+  nbt::NBT container(value);
+
+  auto it = container.begin();
+
+  ASSERT_NE(it, container.end());
+  ASSERT_EQ(it->get<uint16_t>(), value);
+  ASSERT_EQ(++it, container.end());
+}
+
+TEST(TestNBTIterator, TestIntIterator) {
+  auto value = std::numeric_limits<uint32_t>::max();
+  nbt::NBT container(value);
+
+  auto it = container.begin();
+
+  ASSERT_NE(it, container.end());
+  ASSERT_EQ(it->get<uint32_t>(), value);
+  ASSERT_EQ(++it, container.end());
+}
+
+TEST(TestNBTIterator, TestLongIterator) {
+  auto value = std::numeric_limits<uint64_t>::max();
+  nbt::NBT container(value);
+
+  auto it = container.begin();
+
+  ASSERT_NE(it, container.end());
+  ASSERT_EQ(it->get<uint64_t>(), value);
+  ASSERT_EQ(++it, container.end());
+}
+
+TEST(TestNBTIterator, TestFloatIterator) {
+  auto value = 1.62786728f;
+  nbt::NBT container(value);
+
+  auto it = container.begin();
+
+  ASSERT_NE(it, container.end());
+  ASSERT_FLOAT_EQ(it->get<float>(), value);
+  ASSERT_EQ(++it, container.end());
+}
+
+TEST(TestNBTIterator, TestDoubleIterator) {
+  auto value = 1.62786728;
+  nbt::NBT container(value);
+
+  auto it = container.begin();
+
+  ASSERT_NE(it, container.end());
+  ASSERT_DOUBLE_EQ(it->get<double>(), value);
+  ASSERT_EQ(++it, container.end());
+}
+
+TEST(TestNBTIterator, TestStringIterator) {
+  auto value = "This is a nice string.";
+  nbt::NBT container(value);
+
+  auto it = container.begin();
+
+  ASSERT_NE(it, container.end());
+  ASSERT_EQ(it->get<nbt::NBT::tag_string_t>(), value);
+  ASSERT_EQ(++it, container.end());
+}
+
+TEST(TestNBTIterator, TestByteArrayIterator) {
+  std::vector<int8_t> value = {0, 1, 2, 3, 4};
+  nbt::NBT container(value);
+
+  auto it = container.begin();
+
+  ASSERT_NE(it, container.end());
+  std::vector<int8_t> data = *it->get<std::vector<int8_t> *>();
+  for (std::vector<int8_t>::size_type i = 0; i < value.size(); i++)
+    ASSERT_EQ(data[i], value[i]);
+  ASSERT_EQ(++it, container.end());
+}
+
+TEST(TestNBTIterator, TestIntArrayIterator) {
+  std::vector<int32_t> value = {0, 1, 2, 3, 4};
+  nbt::NBT container(value);
+
+  auto it = container.begin();
+
+  ASSERT_NE(it, container.end());
+  std::vector<int32_t> data = *it->get<std::vector<int32_t> *>();
+  for (std::vector<int32_t>::size_type i = 0; i < value.size(); i++)
+    ASSERT_EQ(data[i], value[i]);
+  ASSERT_EQ(++it, container.end());
+}
+
+TEST(TestNBTIterator, TestLongArrayIterator) {
+  std::vector<int64_t> value = {0, 1, 2, 3, 4};
+  nbt::NBT container(value);
+
+  auto it = container.begin();
+
+  ASSERT_NE(it, container.end());
+  std::vector<int64_t> data = *it->get<std::vector<int64_t> *>();
+  for (std::vector<int64_t>::size_type i = 0; i < value.size(); i++)
+    ASSERT_EQ(data[i], value[i]);
+  ASSERT_EQ(++it, container.end());
+}

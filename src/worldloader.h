@@ -40,8 +40,6 @@ struct Data {
 
   // Chunk loading methods - only load should be useful
   void load(const fs::path &regionDir);
-  void loadRegion(const fs::path &regionFile, const int regionX,
-                  const int regionZ);
   void loadChunk(const uint32_t offset, FILE *regionHandle, const int chunkX,
                  const int chunkZ, const fs::path &filename);
 

@@ -209,7 +209,8 @@ struct Marker {
 bool load(Palette *);
 bool load(const std::filesystem::path &, Palette *);
 
-void from_json(const json &j, Color &c);
+void to_json(json &, const Color &);
+void from_json(const json &, Color &);
 
 void to_json(json &j, const Block &b);
 void from_json(const json &j, Block &b);

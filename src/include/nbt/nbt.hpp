@@ -333,12 +333,15 @@ public:
   }
 
   reference front() { return *begin(); }
+
   const_reference front() const { return *cbegin(); }
+
   reference back() {
     auto tmp = end();
     --tmp;
     return *tmp;
   }
+
   const_reference back() const {
     auto tmp = cend();
     --tmp;
@@ -426,34 +429,21 @@ public:
 
   size_type size() const noexcept {
     switch (type) {
-    case tag_type::tag_end: {
+    case tag_type::tag_end:
       return 0;
-    }
-
-    case tag_type::tag_byte_array: {
+    case tag_type::tag_byte_array:
       return content.byte_array->size();
-    }
-
-    case tag_type::tag_list: {
+    case tag_type::tag_list:
       return content.list->size();
-    }
-
-    case tag_type::tag_compound: {
+    case tag_type::tag_compound:
       return content.compound->size();
-    }
-
-    case tag_type::tag_int_array: {
+    case tag_type::tag_int_array:
       return content.int_array->size();
-    }
-
-    case tag_type::tag_long_array: {
+    case tag_type::tag_long_array:
       return content.long_array->size();
-    }
-
-    default: {
+    default:
       // all other types have size 1
       return 1;
-    }
     }
   }
 
@@ -832,22 +822,16 @@ public:
     switch (get_type()) {
     case tag_type::tag_byte:
       return static_cast<ArithmeticType>(*get_ptr<const tag_byte_t *>());
-
     case tag_type::tag_short:
       return static_cast<ArithmeticType>(*get_ptr<const tag_short_t *>());
-
     case tag_type::tag_int:
       return static_cast<ArithmeticType>(*get_ptr<const tag_int_t *>());
-
     case tag_type::tag_long:
       return static_cast<ArithmeticType>(*get_ptr<const tag_long_t *>());
-
     case tag_type::tag_float:
       return static_cast<ArithmeticType>(*get_ptr<const tag_float_t *>());
-
     case tag_type::tag_double:
       return static_cast<ArithmeticType>(*get_ptr<const tag_double_t *>());
-
     default:
       throw(std::invalid_argument(fmt::format(
           "Operation not available for tags of type `{}`", type_name())));
