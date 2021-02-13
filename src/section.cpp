@@ -2,14 +2,24 @@
 
 const Colors::Block _void;
 
+Section::Section() : colors{&_void}, palette(nullptr) {
+  // The `colors` array needs to contain at least a color to have a defined
+  // behavious when uninitialized. `color_at` is called 4096x per section, it is
+  // critical for it to avoid if-elses.
+
+  // This is set to the maximum index available as not to trigger a beacon
+  // detection by error
+  beaconIndex = std::numeric_limits<block_array::value_type>::max();
+
+  // Make sure all the blocks are air - thanks to the default value in `colors`
+  blocks.fill(std::numeric_limits<block_array::value_type>::min());
+}
+
 Section::Section(const nbt::NBT &raw_section, const int dataVersion,
                  const Colors::Palette &defined)
     : Section() {
   if (!raw_section.contains("Palette") ||
       !raw_section.contains("BlockStates")) {
-    // If the section is empty or invalid, make sure all the blocks are air
-    colors.push_back(&_void);
-    blocks.fill(0);
     return;
   }
 
@@ -19,15 +29,18 @@ Section::Section(const nbt::NBT &raw_section, const int dataVersion,
   const std::vector<int64_t> *blockStates =
       raw_section["BlockStates"].get<const std::vector<int64_t> *>();
 
+  // Remove the air that is default-constructed
+  colors.clear();
   // Anticipate the color input from the palette's size
   colors.reserve(palette->size());
 
   // The length in bits of a block is the log2 of the palette's size or 4,
-  // whichever is greatest.
-  const uint32_t blockBitLength =
-      std::max(uint32_t(ceil(log2(palette->size()))), uint32_t(4));
+  // whichever is greatest. Ranges from 4 to 12.
+  const uint8_t blockBitLength =
+      std::max(uint8_t(ceil(log2(palette->size()))), uint8_t(4));
 
   // Parse the blockstates for block info
+  // TODO make a more reliable dataversion to algorithm detection
   if (dataVersion < 2534)
     sectionAtPre116(blockBitLength, blockStates, blocks);
   else
@@ -49,7 +62,7 @@ Section::Section(const nbt::NBT &raw_section, const int dataVersion,
   }
 
   // Iron out potential corruption errors
-  for (uint8_t &index : blocks) {
+  for (block_array::reference index : blocks) {
     if (index > colors.size() - 1) {
       logger::deep_debug("Malformed section: block is undefined in palette\n");
       index = 0;
@@ -57,9 +70,9 @@ Section::Section(const nbt::NBT &raw_section, const int dataVersion,
   }
 }
 
-void sectionAtPost116(const uint64_t index_length,
+void sectionAtPost116(const uint8_t index_length,
                       const std::vector<int64_t> *blockStates,
-                      std::array<uint8_t, 4096> &buffer) {
+                      Section::block_array &buffer) {
   // NEW in 1.16, longs are padded by 0s when a block cannot fit, so no more
   // overflow to deal with !
 
@@ -83,9 +96,9 @@ void sectionAtPost116(const uint64_t index_length,
   }
 }
 
-void sectionAtPre116(const uint64_t index_length,
+void sectionAtPre116(const uint8_t index_length,
                      const std::vector<int64_t> *blockStates,
-                     std::array<uint8_t, 4096> &buffer) {
+                     Section::block_array &buffer) {
   // The `BlockStates` array contains data on the section's blocks. You have to
   // extract it by understanfing its structure.
   //
