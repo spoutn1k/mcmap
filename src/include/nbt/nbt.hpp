@@ -128,68 +128,9 @@ public:
   NBT(const tag_compound_t &data, key_type name_ = "")
       : type(tag_type::tag_compound), content(data), name(name_){};
 
-  NBT(const NBT &other) : type(other.type), name(other.name) {
-    switch (type) {
-    case tag_type::tag_byte: {
-      content = other.content.byte;
-      break;
-    }
-    case tag_type::tag_short: {
-      content = other.content.short_n;
-      break;
-    }
-    case tag_type::tag_int: {
-      content = other.content.int_n;
-      break;
-    }
-    case tag_type::tag_long: {
-      content = other.content.long_n;
-      break;
-    }
-    case tag_type::tag_float: {
-      content = other.content.float_n;
-      break;
-    }
-    case tag_type::tag_double: {
-      content = other.content.double_n;
-      break;
-    }
-    case tag_type::tag_byte_array: {
-      content = *other.content.byte_array;
-      break;
-    }
-    case tag_type::tag_string: {
-      content = *other.content.string;
-      break;
-    }
-    case tag_type::tag_list: {
-      content = *other.content.list;
-      break;
-    }
-    case tag_type::tag_compound: {
-      content = *other.content.compound;
-      break;
-    }
-    case tag_type::tag_int_array: {
-      content = *other.content.int_array;
-      break;
-    }
-    case tag_type::tag_long_array: {
-      content = *other.content.long_array;
-      break;
-    }
-    default:
-      break;
-    }
-  }
+  NBT(const NBT &other) { *this = other; }
 
-  NBT(NBT &&other)
-  noexcept
-      : type(other.type), content(std::move(other.content)), name(other.name) {
-    other.name = "";
-    other.type = tag_type::tag_end;
-    other.content = {};
-  }
+  NBT(NBT &&other) noexcept { *this = std::move(other); }
 
   ~NBT() { content.destroy(type); }
 
@@ -347,7 +288,7 @@ public:
   NBT &operator=(const NBT &other) noexcept {
     type = other.type;
     name = other.name;
-    content = other.content;
+    content = other.content.clone(type);
 
     return *this;
   }
@@ -635,7 +576,38 @@ private:
     tag_content(tag_compound_t &&value)
         : compound(new tag_compound_t(std::move(value))) {}
 
-    void destroy(tag_type t) {
+    tag_content clone(tag_type t) const {
+      switch (t) {
+      case tag_type::tag_byte:
+        return tag_content(byte);
+      case tag_type::tag_short:
+        return tag_content(short_n);
+      case tag_type::tag_int:
+        return tag_content(int_n);
+      case tag_type::tag_long:
+        return tag_content(long_n);
+      case tag_type::tag_float:
+        return tag_content(float_n);
+      case tag_type::tag_double:
+        return tag_content(double_n);
+      case tag_type::tag_string:
+        return tag_content(*string);
+      case tag_type::tag_byte_array:
+        return tag_content(*byte_array);
+      case tag_type::tag_int_array:
+        return tag_content(*int_array);
+      case tag_type::tag_long_array:
+        return tag_content(*long_array);
+      case tag_type::tag_compound:
+        return tag_content(*compound);
+      case tag_type::tag_list:
+        return tag_content(*list);
+      default:
+        return tag_content(tag_type::tag_end);
+      }
+    }
+
+    void destroy(tag_type &t) {
       std::vector<NBT> stack;
 
       if (t == tag_type::tag_compound) {
@@ -689,6 +661,8 @@ private:
       default:
         break;
       }
+
+      t = tag_type::tag_end;
     }
   };
 
