@@ -24,8 +24,6 @@ struct Section {
     return *this;
   }
 
-  void pickColors(const Colors::Palette &);
-
   inline bool empty() const {
     // The palette's first block is always air, even if no air is present.
     // Checking if it is empty is then as simple as checking if another block is

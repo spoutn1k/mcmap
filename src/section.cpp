@@ -7,54 +7,52 @@ Section::Section(const nbt::NBT &raw_section, const int dataVersion,
     : Section() {
   if (!raw_section.contains("Palette") ||
       !raw_section.contains("BlockStates")) {
-    logger::deep_debug("Empty section: no Palette nor Blockstates !\n");
+    // If the section is empty or invalid, make sure all the blocks are air
     colors.push_back(&_void);
+    blocks.fill(0);
     return;
   }
 
+  // Get data from the NBT
   Y = raw_section["Y"].get<int8_t>();
-
   palette = raw_section["Palette"].get<const std::vector<nbt::NBT> *>();
-
-  const uint32_t blockBitLength =
-      std::max(uint32_t(ceil(log2(palette->size()))), uint32_t(4));
-
   const std::vector<int64_t> *blockStates =
       raw_section["BlockStates"].get<const std::vector<int64_t> *>();
 
-  sectionInterpreter interpreter;
+  // Anticipate the color input from the palette's size
+  colors.reserve(palette->size());
 
+  // The length in bits of a block is the log2 of the palette's size or 4,
+  // whichever is greatest.
+  const uint32_t blockBitLength =
+      std::max(uint32_t(ceil(log2(palette->size()))), uint32_t(4));
+
+  // Parse the blockstates for block info
   if (dataVersion < 2534)
-    interpreter = sectionAtPre116;
+    sectionAtPre116(blockBitLength, blockStates, blocks);
   else
-    interpreter = sectionAtPost116;
+    sectionAtPost116(blockBitLength, blockStates, blocks);
 
-  interpreter(blockBitLength, blockStates, blocks);
+  // Pick the colors from the Palette
+  for (auto &color : *palette) {
+    const string namespacedId = color["Name"].get<string>();
+    auto query = defined.find(namespacedId);
 
-  pickColors(defined);
+    if (query == defined.end()) {
+      logger::error("Color of block {} not found\n", namespacedId);
+      colors.push_back(&_void);
+    } else {
+      colors.push_back(&query->second);
+      if (namespacedId == "minecraft:beacon")
+        beaconIndex = colors.size() - 1;
+    }
+  }
 
+  // Iron out potential corruption errors
   for (uint8_t &index : blocks) {
     if (index > colors.size() - 1) {
       logger::deep_debug("Malformed section: block is undefined in palette\n");
       index = 0;
-    }
-  }
-}
-
-void Section::pickColors(const Colors::Palette &all) {
-  colors.reserve(palette->size());
-
-  for (auto &color : *palette) {
-    const string namespacedId = color["Name"].get<string>();
-    auto defined = all.find(namespacedId);
-
-    if (defined == all.end()) {
-      logger::error("Color of block {} not found\n", namespacedId);
-      colors.push_back(&_void);
-    } else {
-      colors.push_back(&defined->second);
-      if (namespacedId == "minecraft:beacon")
-        beaconIndex = colors.size() - 1;
     }
   }
 }
