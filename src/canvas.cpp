@@ -291,14 +291,10 @@ void IsometricCanvas::renderChunk(Terrain::Data &terrain) {
     current_section++;
   }
 
-  /*
-  if (beamNo) {
-    for (yPos = maxSection + 1; yPos < std::min(16, map.maxY >> 4) + 1;
-         yPos++) {
+  if (beamNo)
+    for (uint8_t yPos = sections.back().Y + 1;
+         yPos < std::min(20, map.maxY >> 4) + 1; yPos++)
       renderBeamSection(chunkX, chunkZ, yPos);
-    }
-  }
-  */
 
   beamNo = 0;
 
