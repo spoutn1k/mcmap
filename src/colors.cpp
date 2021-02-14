@@ -2,28 +2,37 @@
 
 std::map<string, int> erroneous;
 
+namespace Colors {
 // Embedded colors, as a byte array. This array is created by compiling
 // `colors.json` into `colors.bson`, using `json2bson`, then included here. The
 // json library can then interpret it into a usable `Palette` object
-std::vector<uint8_t> default_colors =
+const std::vector<uint8_t> default_colors =
 #include "colors.bson"
     ;
+} // namespace Colors
 
-// Load embedded colors into the palette passed as an argument
-bool Colors::load(Palette *colors) {
+bool Colors::load(Palette *colors, const json &data) {
+  Palette defined;
+
   try {
-    *colors = json::from_bson(default_colors).get<Colors::Palette>();
+    defined = data.get<Colors::Palette>();
   } catch (const nlohmann::detail::parse_error &err) {
-    logger::error("Error loading embedded colors: {}", err.what());
+    logger::error("Parsing JSON data failed: {}\n", err.what());
+    return false;
+  } catch (const std::invalid_argument &err) {
+    logger::error("Parsing JSON data failed: {}\n", err.what());
     return false;
   }
+
+  for (const auto &overriden : defined)
+    colors->insert_or_assign(overriden.first, overriden.second);
 
   return true;
 }
 
 // Load colors from file into the palette passed as an argument
-bool Colors::load(const fs::path &color_file, Palette *colors) {
-  Palette colors_j;
+bool Colors::load(Palette *colors, const fs::path &color_file) {
+  json colors_j;
 
   if (color_file.empty() || !fs::exists(color_file)) {
     logger::error("Could not open color file `{}`\n", color_file.string());
@@ -33,23 +42,19 @@ bool Colors::load(const fs::path &color_file, Palette *colors) {
   FILE *f = fopen(color_file.string().c_str(), "r");
 
   try {
-    colors_j = json::parse(f).get<Colors::Palette>();
+    colors_j = json::parse(f);
   } catch (const nlohmann::detail::parse_error &err) {
     logger::error("Parsing color file `{}` failed: {}\n", color_file.string(),
                   err.what());
     fclose(f);
     return false;
-  } catch (const std::invalid_argument &err) {
-    logger::error("Parsing color file `{}` failed: {}\n", color_file.string(),
-                  err.what());
-    fclose(f);
-    return false;
   }
-
   fclose(f);
 
-  for (const auto &overriden : colors_j)
-    colors->insert_or_assign(overriden.first, overriden.second);
+  bool status = load(colors, colors_j);
+
+  if (!status)
+    logger::error("From file `{}`\n", color_file.string());
 
   return true;
 }

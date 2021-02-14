@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
 
   // If requested, load colors from file
   if (!options.colorFile.empty())
-    Colors::load(options.colorFile, &colors);
+    Colors::load(&colors, options.colorFile);
 
   if (options.mode == Settings::DUMPCOLORS) {
     logger::info("{}", json(colors).dump());

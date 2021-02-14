@@ -206,8 +206,10 @@ struct Marker {
   };
 };
 
-bool load(Palette *);
-bool load(const std::filesystem::path &, Palette *);
+extern const std::vector<uint8_t> default_colors;
+
+bool load(Palette *, const json & = json::from_bson(default_colors));
+bool load(Palette *, const fs::path &);
 
 void to_json(json &, const Color &);
 void from_json(const json &, Color &);

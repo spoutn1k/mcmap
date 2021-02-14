@@ -113,7 +113,7 @@ TEST(TestColorImport, TestLoadEmbedded) {
 TEST(TestColorImport, TestLoadFile) {
   Colors::Palette p;
 
-  ASSERT_TRUE(Colors::load("tests/nowater.json", &p));
+  ASSERT_TRUE(Colors::load(&p, fs::path("tests/nowater.json")));
   ASSERT_TRUE(p.size());
   ASSERT_TRUE(p.find("minecraft:water") != p.end());
   ASSERT_TRUE(p["minecraft:water"].primary.transparent());
@@ -122,13 +122,13 @@ TEST(TestColorImport, TestLoadFile) {
 TEST(TestColorImport, TestLoadNoFile) {
   Colors::Palette p;
 
-  ASSERT_FALSE(Colors::load("/non-existent", &p));
+  ASSERT_FALSE(Colors::load(&p, fs::path("/non-existent")));
   ASSERT_FALSE(p.size());
 }
 
 TEST(TestColorImport, TestLoadBadFormat) {
   Colors::Palette p;
 
-  ASSERT_FALSE(Colors::load("tests/bad.json", &p));
+  ASSERT_FALSE(Colors::load(&p, fs::path("tests/bad.json")));
   ASSERT_FALSE(p.size());
 }
