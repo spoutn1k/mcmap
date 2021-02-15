@@ -22,22 +22,17 @@ struct Location {
   uint8_t size() const { return raw_data & 0xff; }
 
   static bool order(const Location &lhs, const Location &rhs) {
-    return lhs.offset() > rhs.offset();
+    return lhs.offset() < rhs.offset();
   }
 };
 
 struct Region {
-  fs::path file;
-  int16_t rX, rZ;
-  std::array<Location, REGIONSIZE * REGIONSIZE> locations;
-
-  Region(const fs::path &_file) : file(_file) {
-    locations.fill(Location());
-
+  static std::pair<int32_t, int32_t> coordinates(const fs::path &_file) {
+    int16_t rX, rZ;
     std::string buffer;
     const char delimiter = '.';
 
-    std::stringstream ss(file.filename().string());
+    std::stringstream ss(_file.filename().string());
     std::getline(ss, buffer, delimiter); // This removes the 'r.'
     std::getline(ss, buffer, delimiter); // X in r.X.Z.mca
 
@@ -46,6 +41,17 @@ struct Region {
     std::getline(ss, buffer, delimiter); // Z in r.X.Z.mca
 
     rZ = atoi(buffer.c_str());
+
+    return {rX, rZ};
+  }
+
+  fs::path file;
+  std::array<Location, REGIONSIZE * REGIONSIZE> locations;
+
+  Region() { locations.fill(Location()); }
+
+  Region(const fs::path &_file) : file(_file) {
+    locations.fill(Location());
 
     std::ifstream regionData(file, std::ifstream::binary);
 
@@ -64,10 +70,42 @@ struct Region {
     regionData.close();
   }
 
-  void fragment() {
-    std::array<Location, REGIONSIZE *REGIONSIZE> temporary = locations;
+  void write(const fs::path &_file) {
+    std::ofstream out(_file.c_str(), std::ofstream::binary);
 
-    std::sort(temporary.begin(), temporary.end(), Location::order);
+    for (uint16_t chunk = 0; chunk < REGIONSIZE * REGIONSIZE; chunk++) {
+      uint32_t bytes = _ntohi((uint8_t *)&locations[chunk].raw_data);
+      out.write((char *)&bytes, 4);
+    }
+
+    std::array<char, 4 * REGIONSIZE * REGIONSIZE> timestamps;
+    timestamps.fill(0);
+
+    out.write(&timestamps[0], 4 * REGIONSIZE * REGIONSIZE);
+  }
+
+  size_t get_offset(uint8_t max_size) {
+    // Get an offset at which the first empty 4K bytes blocks are free
+    std::array<Location, REGIONSIZE *REGIONSIZE> sorted = locations;
+    std::sort(sorted.begin(), sorted.end(), Location::order);
+
+    size_t block = 2;
+    auto it = sorted.begin();
+
+    while (it != sorted.end()) {
+      if (it->offset() != block) {
+        logger::deep_debug("Empty region of size {} at offset {}\n",
+                           it->offset() - block, block);
+        if (it->offset() - block >= max_size)
+          break;
+      }
+
+      block = it->offset() + it->size();
+
+      it++;
+    }
+
+    return block;
   }
 };
 
