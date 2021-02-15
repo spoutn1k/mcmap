@@ -17,9 +17,13 @@ struct Coordinates {
   int16_t minY, maxY;
   Orientation orientation;
 
-  Coordinates(Integer _minX = 0, uint8_t _minY = 0, Integer _minZ = 0,
-              Integer _maxX = 0, uint8_t _maxY = 0, Integer _maxZ = 0,
-              Orientation o = NW)
+  Coordinates() {
+    setUndefined();
+    orientation = NW;
+  }
+
+  Coordinates(Integer _minX, int16_t _minY, Integer _minZ, Integer _maxX,
+              int16_t _maxY, Integer _maxZ, Orientation o = NW)
       : minX(_minX), maxX(_maxX), minZ(_minZ), maxZ(_maxZ), minY(_minY),
         maxY(_maxY), orientation(o) {}
 
