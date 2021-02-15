@@ -1,7 +1,7 @@
 #include "../src/canvas.h"
 #include <gtest/gtest.h>
 
-TEST(TestCanvas, TestCreate) {
+TEST(TestCanvas, TestCreateDefault) {
   Canvas c1;
 
   ASSERT_TRUE(c1.type == Canvas::EMPTY);

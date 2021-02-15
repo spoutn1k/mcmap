@@ -37,20 +37,20 @@ struct Beam {
 };
 
 // Canvas
-// Common features of both canvas types.
+// Common features of all canvas types.
 struct Canvas {
   enum BufferType { BYTES, CANVAS, IMAGE, EMPTY };
 
   World::Coordinates map; // The coordinates describing the 3D map
 
   inline size_t width() const {
-    if (type != EMPTY)
+    if (type != EMPTY && !map.isUndefined())
       return (map.sizeX() + map.sizeZ()) * 2;
     return 0;
   }
 
   inline size_t height() const {
-    if (type != EMPTY)
+    if (type != EMPTY && !map.isUndefined())
       return map.sizeX() + map.sizeZ() +
              (map.maxY - map.minY + 1) * BLOCKHEIGHT - 1;
     return 0;
