@@ -30,8 +30,8 @@ struct Coordinates {
   void setUndefined() {
     minX = minZ = std::numeric_limits<Integer>::max();
     maxX = maxZ = std::numeric_limits<Integer>::min();
-    minY = 319;
-    maxY = -64;
+    minY = std::numeric_limits<int16_t>::max();
+    maxY = std::numeric_limits<int16_t>::min();
   }
 
   bool isUndefined() const {

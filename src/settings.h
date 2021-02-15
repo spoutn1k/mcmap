@@ -44,8 +44,8 @@ struct WorldOptions {
         dim("overworld") {
 
     boundaries.setUndefined();
-    boundaries.minY = -64;
-    boundaries.maxY = 319;
+    boundaries.minY = mcmap::constants::min_y;
+    boundaries.maxY = mcmap::constants::max_y;
 
     hideWater = hideBeacons = shading = false;
     padding = 5;

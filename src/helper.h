@@ -25,8 +25,14 @@ namespace fs = std::filesystem;
 
 #define CHUNKSIZE 16
 #define REGIONSIZE 32
-#define MIN_TERRAIN_HEIGHT 0
-#define MAX_TERRAIN_HEIGHT 255
+
+namespace mcmap {
+namespace constants {
+const int16_t min_y = -64;
+const int16_t max_y = 319;
+const uint16_t terrain_height = max_y - min_y + 1;
+} // namespace constants
+} // namespace mcmap
 
 #define REGION_HEADER_SIZE REGIONSIZE *REGIONSIZE * 4
 #define DECOMPRESSED_BUFFER 1000 * 1024

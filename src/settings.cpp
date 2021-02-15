@@ -31,7 +31,7 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
       }
       const int height = atoi(NEXTARG);
       opts->boundaries.maxY =
-          (height > MAX_TERRAIN_HEIGHT ? MAX_TERRAIN_HEIGHT : height);
+          std::min(height, static_cast<int>(mcmap::constants::max_y));
     } else if (strcmp(option, "-min") == 0) {
       if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
         logger::error("{} needs an integer argument\n", option);
@@ -39,7 +39,7 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
       }
       const int height = atoi(NEXTARG);
       opts->boundaries.minY =
-          (height < MIN_TERRAIN_HEIGHT ? MIN_TERRAIN_HEIGHT : height);
+          std::max(height, static_cast<int>(mcmap::constants::min_y));
     } else if (strcmp(option, "-padding") == 0) {
       if (!MOREARGS(1) || !isNumeric(POLLARG(1)) || atoi(POLLARG(1)) < 0) {
         logger::error("{} needs an positive integer argument\n", option);

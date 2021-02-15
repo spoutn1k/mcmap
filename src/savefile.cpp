@@ -161,8 +161,8 @@ World::Coordinates SaveFile::getWorld(const Dimension &dim) {
   savedWorld.maxX = ((savedWorld.maxX + 1) << 4) - 1;
   savedWorld.maxZ = ((savedWorld.maxZ + 1) << 4) - 1;
 
-  savedWorld.minY = -64;
-  savedWorld.maxY = 319;
+  savedWorld.minY = mcmap::constants::min_y;
+  savedWorld.maxY = mcmap::constants::max_y;
 
   logger::debug("World spans from {}\n", savedWorld.to_string());
 
