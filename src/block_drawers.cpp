@@ -52,7 +52,7 @@ void drawTransparent(IsometricCanvas *canvas, const uint32_t x,
                      const Colors::Block *color) {
   uint8_t top = 0;
 
-  if (*canvas->nextBlock() == *color)
+  if (canvas->nextBlock()->primary.ALPHA == color->primary.ALPHA)
     top = 1;
 
   const Colors::Color *sprite[4][4] = {{PRIME, PRIME, PRIME, PRIME},
