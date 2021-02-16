@@ -128,68 +128,9 @@ public:
   NBT(const tag_compound_t &data, key_type name_ = "")
       : type(tag_type::tag_compound), content(data), name(name_){};
 
-  NBT(const NBT &other) : type(other.type), name(other.name) {
-    switch (type) {
-    case tag_type::tag_byte: {
-      content = other.content.byte;
-      break;
-    }
-    case tag_type::tag_short: {
-      content = other.content.short_n;
-      break;
-    }
-    case tag_type::tag_int: {
-      content = other.content.int_n;
-      break;
-    }
-    case tag_type::tag_long: {
-      content = other.content.long_n;
-      break;
-    }
-    case tag_type::tag_float: {
-      content = other.content.float_n;
-      break;
-    }
-    case tag_type::tag_double: {
-      content = other.content.double_n;
-      break;
-    }
-    case tag_type::tag_byte_array: {
-      content = *other.content.byte_array;
-      break;
-    }
-    case tag_type::tag_string: {
-      content = *other.content.string;
-      break;
-    }
-    case tag_type::tag_list: {
-      content = *other.content.list;
-      break;
-    }
-    case tag_type::tag_compound: {
-      content = *other.content.compound;
-      break;
-    }
-    case tag_type::tag_int_array: {
-      content = *other.content.int_array;
-      break;
-    }
-    case tag_type::tag_long_array: {
-      content = *other.content.long_array;
-      break;
-    }
-    default:
-      break;
-    }
-  }
+  NBT(const NBT &other) { *this = other; }
 
-  NBT(NBT &&other)
-  noexcept
-      : type(other.type), content(std::move(other.content)), name(other.name) {
-    other.name = "";
-    other.type = tag_type::tag_end;
-    other.content = {};
-  }
+  NBT(NBT &&other) noexcept { *this = std::move(other); }
 
   ~NBT() { content.destroy(type); }
 
@@ -339,14 +280,15 @@ public:
       return content.compound->operator[](key);
     }
 
-    throw(std::domain_error("Cannot use operator[] with type" +
-                            std::string(type_name())));
+    throw(std::domain_error(
+        fmt::format("Cannot use operator[] with type `{}` (key `{}` on `{}`)",
+                    type_name(), key, get_name())));
   }
 
   NBT &operator=(const NBT &other) noexcept {
     type = other.type;
     name = other.name;
-    content = other.content;
+    content = other.content.clone(type);
 
     return *this;
   }
@@ -391,12 +333,15 @@ public:
   }
 
   reference front() { return *begin(); }
+
   const_reference front() const { return *cbegin(); }
+
   reference back() {
     auto tmp = end();
     --tmp;
     return *tmp;
   }
+
   const_reference back() const {
     auto tmp = cend();
     --tmp;
@@ -484,34 +429,21 @@ public:
 
   size_type size() const noexcept {
     switch (type) {
-    case tag_type::tag_end: {
+    case tag_type::tag_end:
       return 0;
-    }
-
-    case tag_type::tag_byte_array: {
+    case tag_type::tag_byte_array:
       return content.byte_array->size();
-    }
-
-    case tag_type::tag_list: {
+    case tag_type::tag_list:
       return content.list->size();
-    }
-
-    case tag_type::tag_compound: {
+    case tag_type::tag_compound:
       return content.compound->size();
-    }
-
-    case tag_type::tag_int_array: {
+    case tag_type::tag_int_array:
       return content.int_array->size();
-    }
-
-    case tag_type::tag_long_array: {
+    case tag_type::tag_long_array:
       return content.long_array->size();
-    }
-
-    default: {
+    default:
       // all other types have size 1
       return 1;
-    }
     }
   }
 
@@ -634,7 +566,38 @@ private:
     tag_content(tag_compound_t &&value)
         : compound(new tag_compound_t(std::move(value))) {}
 
-    void destroy(tag_type t) {
+    tag_content clone(tag_type t) const {
+      switch (t) {
+      case tag_type::tag_byte:
+        return tag_content(byte);
+      case tag_type::tag_short:
+        return tag_content(short_n);
+      case tag_type::tag_int:
+        return tag_content(int_n);
+      case tag_type::tag_long:
+        return tag_content(long_n);
+      case tag_type::tag_float:
+        return tag_content(float_n);
+      case tag_type::tag_double:
+        return tag_content(double_n);
+      case tag_type::tag_string:
+        return tag_content(*string);
+      case tag_type::tag_byte_array:
+        return tag_content(*byte_array);
+      case tag_type::tag_int_array:
+        return tag_content(*int_array);
+      case tag_type::tag_long_array:
+        return tag_content(*long_array);
+      case tag_type::tag_compound:
+        return tag_content(*compound);
+      case tag_type::tag_list:
+        return tag_content(*list);
+      default:
+        return tag_content(tag_type::tag_end);
+      }
+    }
+
+    void destroy(tag_type &t) {
       std::vector<NBT> stack;
 
       if (t == tag_type::tag_compound) {
@@ -688,6 +651,8 @@ private:
       default:
         break;
       }
+
+      t = tag_type::tag_end;
     }
   };
 
@@ -857,22 +822,16 @@ public:
     switch (get_type()) {
     case tag_type::tag_byte:
       return static_cast<ArithmeticType>(*get_ptr<const tag_byte_t *>());
-
     case tag_type::tag_short:
       return static_cast<ArithmeticType>(*get_ptr<const tag_short_t *>());
-
     case tag_type::tag_int:
       return static_cast<ArithmeticType>(*get_ptr<const tag_int_t *>());
-
     case tag_type::tag_long:
       return static_cast<ArithmeticType>(*get_ptr<const tag_long_t *>());
-
     case tag_type::tag_float:
       return static_cast<ArithmeticType>(*get_ptr<const tag_float_t *>());
-
     case tag_type::tag_double:
       return static_cast<ArithmeticType>(*get_ptr<const tag_double_t *>());
-
     default:
       throw(std::invalid_argument(fmt::format(
           "Operation not available for tags of type `{}`", type_name())));

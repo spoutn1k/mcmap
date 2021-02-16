@@ -11,7 +11,7 @@
 nbt::NBT empty;
 
 void drawHead(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
-              const NBT &, const Colors::Block *block) {
+              const nbt::NBT &, const Colors::Block *block) {
   /* Small block centered
    * |    |
    * |    |
@@ -27,7 +27,7 @@ void drawHead(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
 }
 
 void drawThin(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
-              const NBT &, const Colors::Block *block) {
+              const nbt::NBT &, const Colors::Block *block) {
   /* Overwrite the block below's top layer
    * |    |
    * |    |
@@ -42,17 +42,17 @@ void drawThin(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
   memcpy(pos + CHANSPERPIXEL, &block->light, BYTESPERPIXEL);
 }
 
-void drawHidden(IsometricCanvas *, const uint32_t, const uint32_t, const NBT &,
-                const Colors::Block *) {
+void drawHidden(IsometricCanvas *, const uint32_t, const uint32_t,
+                const nbt::NBT &, const Colors::Block *) {
   return;
 }
 
 void drawTransparent(IsometricCanvas *canvas, const uint32_t x,
-                     const uint32_t y, const NBT &,
+                     const uint32_t y, const nbt::NBT &,
                      const Colors::Block *color) {
   uint8_t top = 0;
 
-  if (*canvas->nextBlock() == *color)
+  if (canvas->nextBlock()->primary.ALPHA == color->primary.ALPHA)
     top = 1;
 
   const Colors::Color *sprite[4][4] = {{PRIME, PRIME, PRIME, PRIME},
@@ -68,7 +68,7 @@ void drawTransparent(IsometricCanvas *canvas, const uint32_t x,
 }
 
 void drawTorch(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
-               const NBT &, const Colors::Block *block) {
+               const nbt::NBT &, const Colors::Block *block) {
   /* TODO Callback to handle the orientation
    * Print the secondary on top of two primary
    * |    |
@@ -81,7 +81,7 @@ void drawTorch(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
 }
 
 void drawPlant(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
-               const NBT &metadata, const Colors::Block *color) {
+               const nbt::NBT &metadata, const Colors::Block *color) {
   /* Print a plant-like block
    * TODO Make that nicer ?
    * |    |
@@ -105,7 +105,7 @@ void drawPlant(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
 }
 
 void drawUnderwaterPlant(IsometricCanvas *canvas, const uint32_t x,
-                         const uint32_t y, const NBT &,
+                         const uint32_t y, const nbt::NBT &,
                          const Colors::Block *color) {
   /* Print a plant-like block
    * |    |
@@ -125,7 +125,7 @@ void drawUnderwaterPlant(IsometricCanvas *canvas, const uint32_t x,
 }
 
 void drawFire(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
-              const NBT &, const Colors::Block *const color) {
+              const nbt::NBT &, const Colors::Block *const color) {
   // This basically just leaves out a few canvas->pixels
   // Top row
   uint8_t *pos = canvas->pixel(x, y);
@@ -144,7 +144,7 @@ void drawFire(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
 }
 
 void drawOre(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
-             const NBT &, const Colors::Block *color) {
+             const nbt::NBT &, const Colors::Block *color) {
   /* Print a vein with the secondary in the block
    * |PSPP|
    * |DDSL|
@@ -170,7 +170,7 @@ void drawOre(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
 }
 
 void drawGrown(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
-               const NBT &, const Colors::Block *color) {
+               const nbt::NBT &, const Colors::Block *color) {
   /* Print the secondary color on top
    * |SSSS|
    * |DSSL|
@@ -198,7 +198,7 @@ void drawGrown(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
 }
 
 void drawRod(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
-             const NBT &metadata, const Colors::Block *const color) {
+             const nbt::NBT &metadata, const Colors::Block *const color) {
   /* A full fat rod
    * | PP |
    * | DL |
@@ -227,7 +227,7 @@ void drawRod(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
 }
 
 void drawBeam(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
-              const NBT &, const Colors::Block *const color) {
+              const nbt::NBT &, const Colors::Block *const color) {
   /* No top to make it look more continuous
    * |    |
    * | DL |
@@ -241,7 +241,7 @@ void drawBeam(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
 }
 
 void drawSlab(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
-              const NBT &metadata, const Colors::Block *color) {
+              const nbt::NBT &metadata, const Colors::Block *color) {
   /* This one has a hack to make it look like a gradual step up:
    * The second layer has primary colors to make the height difference
    * less obvious.
@@ -292,14 +292,14 @@ void drawSlab(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
 }
 
 void drawWire(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
-              const NBT &, const Colors::Block *color) {
+              const nbt::NBT &, const Colors::Block *color) {
   uint8_t *pos = canvas->pixel(x + 1, y + 3);
   memcpy(pos, &color->primary, BYTESPERPIXEL);
   memcpy(pos + CHANSPERPIXEL, &color->primary, BYTESPERPIXEL);
 }
 
 void drawLog(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
-             const NBT &metadata, const Colors::Block *color) {
+             const nbt::NBT &metadata, const Colors::Block *color) {
 
   string axis = "y";
   int sub = (float(color->primary.brightness()) / 323.0f + .21f);
@@ -352,7 +352,7 @@ void drawLog(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
 }
 
 void drawStair(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
-               const NBT &metadata, const Colors::Block *color) {
+               const nbt::NBT &metadata, const Colors::Block *color) {
 
   string facing = "north", half = "bottom", waterlogged = "false",
          shape = "straight";
@@ -441,7 +441,7 @@ void drawStair(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
 }
 
 void drawFull(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
-              const NBT &, const Colors::Block *color) {
+              const nbt::NBT &, const Colors::Block *color) {
   // Sets canvas->pixels around x,y where A is the anchor
   // T = given color, D = darker, L = lighter
   // A T T T

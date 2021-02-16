@@ -14,23 +14,24 @@ template <typename Integer,
           std::enable_if_t<std::is_integral<Integer>::value, int> = 0>
 struct Coordinates {
   Integer minX, maxX, minZ, maxZ;
-  uint8_t minY, maxY;
+  int16_t minY, maxY;
   Orientation orientation;
 
   Coordinates() {
-    minX = maxX = minZ = maxZ = minY = maxY = 0;
+    setUndefined();
     orientation = NW;
   }
 
-  Coordinates(Integer init) : Coordinates() {
-    minX = maxX = minZ = maxZ = init;
-  }
+  Coordinates(Integer _minX, int16_t _minY, Integer _minZ, Integer _maxX,
+              int16_t _maxY, Integer _maxZ, Orientation o = NW)
+      : minX(_minX), maxX(_maxX), minZ(_minZ), maxZ(_maxZ), minY(_minY),
+        maxY(_maxY), orientation(o) {}
 
   void setUndefined() {
     minX = minZ = std::numeric_limits<Integer>::max();
     maxX = maxZ = std::numeric_limits<Integer>::min();
-    minY = std::numeric_limits<uint8_t>::max();
-    maxY = std::numeric_limits<uint8_t>::min();
+    minY = std::numeric_limits<int16_t>::max();
+    maxY = std::numeric_limits<int16_t>::min();
   }
 
   bool isUndefined() const {
@@ -159,6 +160,14 @@ struct Coordinates {
     maxY = std::max(other.maxY, maxY);
 
     return *this;
+  }
+
+  template <typename Other,
+            std::enable_if_t<std::is_integral<Other>::value, int> = 0>
+  bool operator==(const Coordinates<Other> &other) const {
+    return (minX == other.minX && minZ == other.minZ && maxX == other.maxX &&
+            maxZ == other.maxZ && minY == other.minY && maxY == other.maxY &&
+            orientation == other.orientation);
   }
 };
 

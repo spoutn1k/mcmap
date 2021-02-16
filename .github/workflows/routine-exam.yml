@@ -1,0 +1,26 @@
+name: Routine Exam
+on: [push, pull_request]
+
+jobs:
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+    - name: Install gtest manually
+      run: sudo apt-get install libgtest-dev
+        && cd /usr/src/gtest
+        && CXX=g++-10 sudo cmake CMakeLists.txt
+        && sudo make -j
+        && sudo cp *.a /usr/lib
+        && sudo ln -s /usr/lib/libgtest.a /usr/local/lib/libgtest.a
+        && sudo ln -s /usr/lib/libgtest_main.a /usr/local/lib/libgtest_main.a
+    - uses: actions/checkout@v2
+    - name: Configure project
+      run: mkdir build
+        && cd build
+        && CXX=g++-10 cmake ..
+    - name: Build project
+      run: cd build
+        && make -j run_tests
+    - name: Run tests
+      run: ./build/bin/run_tests

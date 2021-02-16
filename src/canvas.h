@@ -37,20 +37,20 @@ struct Beam {
 };
 
 // Canvas
-// Common features of both canvas types.
+// Common features of all canvas types.
 struct Canvas {
   enum BufferType { BYTES, CANVAS, IMAGE, EMPTY };
 
   World::Coordinates map; // The coordinates describing the 3D map
 
   inline size_t width() const {
-    if (type != EMPTY)
+    if (type != EMPTY && !map.isUndefined())
       return (map.sizeX() + map.sizeZ()) * 2;
     return 0;
   }
 
   inline size_t height() const {
-    if (type != EMPTY)
+    if (type != EMPTY && !map.isUndefined())
       return map.sizeX() + map.sizeZ() +
              (map.maxY - map.minY + 1) * BLOCKHEIGHT - 1;
     return 0;
@@ -236,12 +236,12 @@ struct IsometricCanvas : Canvas {
 
   std::vector<float> brightnessLookup;
 
-  Section sections[16];
+  std::vector<Section> sections;
+  std::vector<Section>::const_iterator current_section;
 
   // In-chunk variables
   uint32_t chunkX;
   uint32_t chunkZ;
-  int8_t yPos, minSection, maxSection;
 
   // Beams in the chunk being rendered
   uint8_t beamNo = 0;
@@ -271,10 +271,10 @@ struct IsometricCanvas : Canvas {
   // Drawing entrypoints
   void renderTerrain(Terrain::Data &);
   void renderChunk(Terrain::Data &);
-  void renderSection();
+  void renderSection(const Section &);
   // Draw a block from virtual coords in the canvas
   void renderBlock(const Colors::Block *, const uint32_t, const uint32_t,
-                   const uint32_t, const NBT &metadata);
+                   const int32_t, const nbt::NBT &metadata);
 
   // Empty section with only beams
   void renderBeamSection(const int64_t, const int64_t, const uint8_t);

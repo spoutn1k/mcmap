@@ -4,6 +4,35 @@
 Colors::Color water = "#0743c832";
 Colors::Color dummy = "#ffffff";
 
+/* BSON representation of:
+{
+    "field1": 5,
+    "field2": {
+        "field3": {
+            "field4": [0]
+        }
+    }
+}
+*/
+const std::vector<uint8_t> bad_palette = {
+    0x3f, 0x0,  0x0,  0x0,  0x10, 0x66, 0x69, 0x65, 0x6c, 0x64, 0x31, 0x0,  0x5,
+    0x0,  0x0,  0x0,  0x3,  0x66, 0x69, 0x65, 0x6c, 0x64, 0x32, 0x0,  0x26, 0x0,
+    0x0,  0x0,  0x3,  0x66, 0x69, 0x65, 0x6c, 0x64, 0x33, 0x0,  0x19, 0x0,  0x0,
+    0x0,  0x4,  0x66, 0x69, 0x65, 0x6c, 0x64, 0x34, 0x0,  0xc,  0x0,  0x0,  0x0,
+    0x10, 0x30, 0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0};
+
+/* BSON representation of:
+{
+    "minecraft:water": [0, 0, 0, 0]
+}
+*/
+const std::vector<uint8_t> nowater_palette = {
+    0x37, 0x0,  0x0,  0x0,  0x4,  0x6d, 0x69, 0x6e, 0x65, 0x63, 0x72,
+    0x61, 0x66, 0x74, 0x3a, 0x77, 0x61, 0x74, 0x65, 0x72, 0x0,  0x21,
+    0x0,  0x0,  0x0,  0x10, 0x30, 0x0,  0x0,  0x0,  0x0,  0x0,  0x10,
+    0x31, 0x0,  0x0,  0x0,  0x0,  0x0,  0x10, 0x32, 0x0,  0x0,  0x0,
+    0x0,  0x0,  0x10, 0x33, 0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0};
+
 TEST(TestColor, TestCreate) {
   Colors::Color c;
 
@@ -45,19 +74,32 @@ TEST(TestColor, TestOpacity) {
   ASSERT_TRUE(c.opaque());
 }
 
-TEST(TestBlock, TestCreate) {
+TEST(TestColor, TestJson) {
+  Colors::Color b = water, translated;
+  translated = nlohmann::json(b).get<Colors::Color>();
+
+  ASSERT_EQ(b, translated);
+}
+
+TEST(TestBlock, TestCreateDefault) {
   Colors::Block b;
 
   ASSERT_TRUE(b.type == Colors::FULL);
   ASSERT_TRUE(b.primary.empty());
   ASSERT_TRUE(b.secondary.empty());
+}
 
-  b = Colors::Block(Colors::drawSlab, dummy);
+TEST(TestBlock, TestCreateType) {
+  Colors::Block b = Colors::Block(Colors::drawSlab, dummy);
+
   ASSERT_TRUE(b.type == Colors::drawSlab);
   ASSERT_FALSE(b.primary.empty());
   ASSERT_TRUE(b.secondary.empty());
+}
 
-  b = Colors::Block(Colors::drawStair, dummy, dummy);
+TEST(TestBlock, TestCreateTypeAccent) {
+  Colors::Block b = Colors::Block(Colors::drawStair, dummy, dummy);
+
   ASSERT_TRUE(b.type == Colors::drawStair);
   ASSERT_FALSE(b.primary.empty());
   ASSERT_FALSE(b.secondary.empty());
@@ -90,20 +132,32 @@ TEST(TestPalette, TestJson) {
   ASSERT_EQ(p, translated);
 }
 
-TEST(TestPalette, TestLoad) {
+TEST(TestColorImport, TestLoadEmbedded) {
   Colors::Palette p;
 
   ASSERT_TRUE(Colors::load(&p));
   ASSERT_TRUE(p.size());
 }
 
-TEST(TestPalette, TestLoadFile) {
+TEST(TestColorImport, TestLoadFile) {
   Colors::Palette p;
 
-  ASSERT_TRUE(Colors::load(&p));
-  ASSERT_TRUE(p.size());
-  ASSERT_TRUE(Colors::load("tests/nowater.json", &p));
+  ASSERT_TRUE(Colors::load(&p, json::from_bson(nowater_palette)));
   ASSERT_TRUE(p.size());
   ASSERT_TRUE(p.find("minecraft:water") != p.end());
   ASSERT_TRUE(p["minecraft:water"].primary.transparent());
+}
+
+TEST(TestColorImport, TestLoadNoFile) {
+  Colors::Palette p;
+
+  ASSERT_FALSE(Colors::load(&p, fs::path("/non-existent")));
+  ASSERT_FALSE(p.size());
+}
+
+TEST(TestColorImport, TestLoadBadFormat) {
+  Colors::Palette p;
+
+  ASSERT_FALSE(Colors::load(&p, json::from_bson(bad_palette)));
+  ASSERT_FALSE(p.size());
 }
