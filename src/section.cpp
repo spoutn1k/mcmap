@@ -13,6 +13,7 @@ Section::Section() : colors{&_void}, palette(nullptr) {
 
   // Make sure all the blocks are air - thanks to the default value in `colors`
   blocks.fill(std::numeric_limits<block_array::value_type>::min());
+  lights.fill(std::numeric_limits<light_array::value_type>::min());
 }
 
 Section::Section(const nbt::NBT &raw_section, const int dataVersion,
@@ -26,8 +27,20 @@ Section::Section(const nbt::NBT &raw_section, const int dataVersion,
   // Get data from the NBT
   Y = raw_section["Y"].get<int8_t>();
   palette = raw_section["Palette"].get<const std::vector<nbt::NBT> *>();
-  const std::vector<int64_t> *blockStates =
-      raw_section["BlockStates"].get<const std::vector<int64_t> *>();
+  const nbt::NBT::tag_long_array_t *blockStates =
+      raw_section["BlockStates"].get<const nbt::NBT::tag_long_array_t *>();
+
+  if (raw_section.contains("BlockLight")) {
+    const nbt::NBT::tag_byte_array_t *blockLights =
+        raw_section["BlockLight"].get<const nbt::NBT::tag_byte_array_t *>();
+
+    if (blockLights->size() == 2048) {
+      for (nbt::NBT::tag_byte_array_t::size_type i = 0; i < blockLights->size();
+           i++) {
+        lights[i] = blockLights->at(i);
+      }
+    }
+  }
 
   // Remove the air that is default-constructed
   colors.clear();
