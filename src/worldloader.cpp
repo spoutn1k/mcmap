@@ -92,7 +92,8 @@ bool assertChunk(const nbt::NBT &chunk) {
       || !chunk.contains("DataVersion")       // Dataversion is required
       || !chunk.contains("Level")             // Level data is required
       || !chunk["Level"].contains("Sections") // No sections mean no blocks
-  )
+      || !chunk["Level"].contains("Status") ||
+      chunk["Level"]["Status"].get<nbt::NBT::tag_string_t>() != "full")
     return false;
 
   return true;
