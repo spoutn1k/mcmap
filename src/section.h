@@ -2,9 +2,12 @@
 #include <nbt/nbt.hpp>
 
 struct Section {
-  // This statement makes the assumption a section contains at most 256
-  // different blocks - this may be prove to be bold.
-  using block_array = std::array<uint8_t, 4096>;
+  // Each block is encoded on 16 bits as an index in the palette - where only 12
+  // bits are necessary
+  using block_array = std::array<uint16_t, 4096>;
+
+  // Each index in the array above points to a block in the palette and a color
+  // in the following array
   using color_array = std::vector<const Colors::Block *>;
 
   // The vertical index of the section
