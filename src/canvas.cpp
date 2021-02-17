@@ -541,6 +541,42 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
     colorPtr = &localColor;
   }
 
+  colorPtr = &localColor;
+
+  uint8_t self_light = current_section->light_at(orientedX, y % 16, orientedZ);
+  if (self_light) {
+    localColor = color->shade(-75 + 8 * self_light);
+  } else {
+    std::vector<Section>::const_iterator lookup =
+        current_section + (y % 16 == 15 ? 1 : 0);
+
+    uint8_t top_light = lookup->light_at(orientedX, (y + 1) % 16, orientedZ);
+    localColor.primary = color->primary;
+    localColor.secondary = color->secondary;
+
+    localColor.primary.modColor(
+        (-75 + 8 * top_light) *
+        (float(localColor.primary.brightness()) / 323.0f + .21f));
+
+    localColor.secondary.modColor(
+        (-75 + 8 * top_light) *
+        (float(localColor.secondary.brightness()) / 323.0f + .21f));
+
+    uint8_t left_light =
+        current_section->light_at(orientedX, y % 16, orientedZ + 1);
+    localColor.dark = color->dark;
+    localColor.dark.modColor(
+        (-75 + 8 * left_light) *
+        (float(localColor.dark.brightness()) / 323.0f + .21f));
+
+    uint8_t right_light =
+        current_section->light_at(orientedX + 1, y % 16, orientedZ);
+    localColor.light = color->light;
+    localColor.light.modColor(
+        (-75 + 8 * right_light) *
+        (float(localColor.light.brightness()) / 323.0f + .21f));
+  }
+
   // Then call the function registered with the block's type
   blockRenderers[color->type](this, bmpPosX, bmpPosY, metadata, colorPtr);
 }
