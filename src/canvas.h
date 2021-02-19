@@ -217,6 +217,8 @@ struct ImageCanvas : Canvas {
 // created with a set of 3D coordinates, and translate every block drawn
 // into a 2D position.
 struct IsometricCanvas : Canvas {
+  using Chunk = mcmap::Chunk;
+
   bool shading;
   size_t rendered;
 
@@ -236,7 +238,7 @@ struct IsometricCanvas : Canvas {
 
   std::vector<float> brightnessLookup;
 
-  mcmap::Chunk::section_array_t::const_iterator current_section, last_section;
+  Chunk::section_array_t::const_iterator current_section, last_section;
 
   // In-chunk variables
   uint32_t chunkX;
@@ -270,15 +272,19 @@ struct IsometricCanvas : Canvas {
   // Drawing entrypoints
   void renderTerrain(Terrain::Data &);
   void renderChunk(Terrain::Data &);
-  void renderSection(const Section &);
+  void renderSection(const Section &, const Terrain::Data &);
   // Draw a block from virtual coords in the canvas
   void renderBlock(const Colors::Block *, const uint32_t, const uint32_t,
-                   const int32_t, const nbt::NBT &metadata);
+                   const int32_t, const nbt::NBT &metadata,
+                   const Terrain::Data &);
 
   // Empty section with only beams
-  void renderBeamSection(const int64_t, const int64_t, const uint8_t);
+  void renderBeamSection(const int64_t, const int64_t, const uint8_t,
+                         const Terrain::Data &);
 
   const Colors::Block *nextBlock();
+  Chunk::section_array_t::const_iterator section_left(const Terrain::Data &);
+  Chunk::section_array_t::const_iterator section_right(const Terrain::Data &);
 };
 
 struct CompositeCanvas : public Canvas {

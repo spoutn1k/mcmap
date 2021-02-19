@@ -160,10 +160,17 @@ void Data::loadChunk(const ChunkCoordinates coords) {
 }
 
 const Data::Chunk &Data::chunkAt(const ChunkCoordinates coords) {
-  loadChunk(coords);
+  ChunkCoordinates left = {coords.first, coords.second + 1};
+  ChunkCoordinates right = {coords.first + 1, coords.second};
+
+  if (chunks.find(coords) == chunks.end())
+    loadChunk(coords);
+  if (chunks.find(left) == chunks.end())
+    loadChunk(left);
+  if (chunks.find(right) == chunks.end())
+    loadChunk(right);
 
   auto query = chunks.find(coords);
-
   if (query == chunks.end())
     return empty_chunk;
 

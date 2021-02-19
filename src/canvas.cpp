@@ -261,7 +261,7 @@ void IsometricCanvas::renderChunk(Terrain::Data &terrain) {
   int32_t worldX = chunkX, worldZ = chunkZ;
   orientChunk(worldX, worldZ);
 
-  const Terrain::Data::Chunk &chunk = terrain.chunkAt({worldX, worldZ});
+  const Chunk &chunk = terrain.chunkAt({worldX, worldZ});
 
   // If there is nothing to render
   if (!chunk.valid()) {
@@ -281,7 +281,7 @@ void IsometricCanvas::renderChunk(Terrain::Data &terrain) {
   last_section = chunk.sections.end();
 
   while (current_section != chunk.sections.end()) {
-    renderSection(*current_section);
+    renderSection(*current_section, terrain);
     current_section++;
   }
 
@@ -289,7 +289,7 @@ void IsometricCanvas::renderChunk(Terrain::Data &terrain) {
     // TODO use height constants
     for (uint8_t yPos = chunk.sections.back().Y + 1;
          yPos < std::min(20, map.maxY >> 4) + 1; yPos++)
-      renderBeamSection(chunkX, chunkZ, yPos);
+      renderBeamSection(chunkX, chunkZ, yPos, terrain);
 
   beamNo = 0;
 
@@ -318,7 +318,8 @@ inline void IsometricCanvas::orientSection(uint8_t &x, uint8_t &z) {
   }
 }
 
-void IsometricCanvas::renderSection(const Section &section) {
+void IsometricCanvas::renderSection(const Section &section,
+                                    const Terrain::Data &terrain) {
   bool beamColumn = false;
   uint8_t currentBeam = 0;
 
@@ -365,11 +366,12 @@ void IsometricCanvas::renderSection(const Section &section) {
       for (y = minY; y < maxY; y++) {
         if (beamColumn)
           renderBlock(beams[currentBeam].color, (chunkX << 4) + x,
-                      (chunkZ << 4) + z, (section.Y << 4) + y, nbt::NBT());
+                      (chunkZ << 4) + z, (section.Y << 4) + y, nbt::NBT(),
+                      terrain);
 
         renderBlock(section.color_at(orientedX, y, orientedZ),
                     (chunkX << 4) + x, (chunkZ << 4) + z, (section.Y << 4) + y,
-                    section.state_at(orientedX, y, orientedZ));
+                    section.state_at(orientedX, y, orientedZ), terrain);
 
         if (section.block_at(orientedX, y, orientedZ) == section.beaconIndex) {
           beams[beamNo++] = Beam(orientedX, orientedZ, &beaconBeam);
@@ -384,7 +386,8 @@ void IsometricCanvas::renderSection(const Section &section) {
 }
 
 void IsometricCanvas::renderBeamSection(const int64_t xPos, const int64_t zPos,
-                                        const uint8_t yPos) {
+                                        const uint8_t yPos,
+                                        const Terrain::Data &terrain) {
   bool beamColumn = false;
   uint8_t currentBeam = 0;
 
@@ -421,7 +424,7 @@ void IsometricCanvas::renderBeamSection(const int64_t xPos, const int64_t zPos,
       for (uint8_t y = minY; y < maxY; y++) {
         if (beamColumn)
           renderBlock(beams[currentBeam].color, (xPos << 4) + x,
-                      (zPos << 4) + z, (yPos << 4) + y, nbt::NBT());
+                      (zPos << 4) + z, (yPos << 4) + y, nbt::NBT(), terrain);
       }
     }
   }
@@ -448,7 +451,8 @@ drawer blockRenderers[] = {
 
 inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
                                          uint32_t z, const int32_t y,
-                                         const nbt::NBT &metadata) {
+                                         const nbt::NBT &metadata,
+                                         const Terrain::Data &terrain) {
   // If there is nothing to render, skip it
   if (color->primary.transparent())
     return;
@@ -545,6 +549,10 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
         current_section + (y % 16 == 15 ? 1 : 0);
 
     uint8_t top_light = lookup->light_at(orientedX, (y + 1) % 16, orientedZ);
+
+    if (lookup == last_section)
+      top_light = 0;
+
     localColor.primary = color->primary;
     localColor.secondary = color->secondary;
 
@@ -556,19 +564,29 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
         (-75 + 8 * top_light) *
         (float(localColor.secondary.brightness()) / 323.0f + .21f));
 
-    uint8_t left_light =
-        current_section->light_at(orientedX, y % 16, orientedZ + 1);
-    localColor.dark = color->dark;
-    localColor.dark.modColor(
-        (-75 + 8 * left_light) *
-        (float(localColor.dark.brightness()) / 323.0f + .21f));
+    Chunk::section_array_t::const_iterator left =
+        (orientedZ + 1) % 16 ? current_section : section_left(terrain);
 
-    uint8_t right_light =
-        current_section->light_at(orientedX + 1, y % 16, orientedZ);
-    localColor.light = color->light;
-    localColor.light.modColor(
-        (-75 + 8 * right_light) *
-        (float(localColor.light.brightness()) / 323.0f + .21f));
+    if (left != last_section) {
+      uint8_t left_light =
+          left->light_at(orientedX, y % 16, (orientedZ + 1) % 16);
+      localColor.dark = color->dark;
+      localColor.dark.modColor(
+          (-75 + 8 * left_light) *
+          (float(localColor.dark.brightness()) / 323.0f + .21f));
+    }
+
+    Chunk::section_array_t::const_iterator right =
+        (orientedX + 1) % 16 ? current_section : section_right(terrain);
+
+    if (right != last_section) {
+      uint8_t right_light =
+          right->light_at((orientedX + 1) % 16, y % 16, orientedZ);
+      localColor.light = color->light;
+      localColor.light.modColor(
+          (-75 + 8 * right_light) *
+          (float(localColor.light.brightness()) / 323.0f + .21f));
+    }
   }
 
   // Then call the function registered with the block's type
@@ -576,13 +594,51 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
 }
 
 const Colors::Block *IsometricCanvas::nextBlock() {
-  std::vector<Section>::const_iterator lookup =
+  Chunk::section_array_t::const_iterator lookup =
       current_section + (y == 15 ? 1 : 0);
 
   if (lookup == last_section)
     return &air;
 
   return lookup->color_at(orientedX, (y + 1) % 16, orientedZ);
+}
+
+IsometricCanvas::Chunk::section_array_t::const_iterator
+IsometricCanvas::section_left(const Terrain::Data &terrain) {
+  int32_t worldX = chunkX, worldZ = chunkZ + 1;
+  orientChunk(worldX, worldZ);
+
+  const auto &chunk_left = terrain.chunks.find({worldX, worldZ});
+
+  if (chunk_left == terrain.chunks.end())
+    return last_section;
+
+  for (Chunk::section_array_t::const_iterator section =
+           chunk_left->second.sections.begin();
+       section != chunk_left->second.sections.end(); section++)
+    if (section->Y == current_section->Y)
+      return section;
+
+  return last_section;
+}
+
+IsometricCanvas::Chunk::section_array_t::const_iterator
+IsometricCanvas::section_right(const Terrain::Data &terrain) {
+  int32_t worldX = chunkX + 1, worldZ = chunkZ;
+  orientChunk(worldX, worldZ);
+
+  const auto &chunk_right = terrain.chunks.find({worldX, worldZ});
+
+  if (chunk_right == terrain.chunks.end())
+    return last_section;
+
+  for (Chunk::section_array_t::const_iterator section =
+           chunk_right->second.sections.begin();
+       section != chunk_right->second.sections.end(); section++)
+    if (section->Y == current_section->Y)
+      return section;
+
+  return last_section;
 }
 
 bool compare(const Canvas &p1, const Canvas &p2) {
