@@ -1,6 +1,6 @@
 #include "worldloader.h"
 
-Terrain::Chunk empty_chunk;
+Terrain::Data::Chunk empty_chunk;
 nbt::NBT minecraft_air(nbt::tag_type::tag_end);
 
 void Terrain::Data::load(const std::filesystem::path &regionDir) {
@@ -111,9 +111,9 @@ void filterLevel(nbt::NBT &level) {
 
 #include <nbt/parser.hpp>
 
-void Terrain::Data::loadChunk(const int chunkX, const int chunkZ) {
-  int32_t regionX = REGION(chunkX), regionZ = REGION(chunkZ),
-          cX = chunkX & 0x1f, cZ = chunkZ & 0x1f;
+void Terrain::Data::loadChunk(const ChunkCoordinates coords) {
+  int32_t regionX = REGION(coords.first), regionZ = REGION(coords.second),
+          cX = coords.first & 0x1f, cZ = coords.second & 0x1f;
 
   std::filesystem::path regionFile = std::filesystem::path(regionDir) /=
       fmt::format("r.{}.{}.mca", regionX, regionZ);
@@ -178,11 +178,16 @@ void Terrain::Data::loadChunk(const int chunkX, const int chunkZ) {
   // Fill the chunk's holes with empty sections
   inflateChunk(sections);
 
-  chunks[chunkIndex(chunkX, chunkZ)] = std::move(chunk);
+  chunks[coords] = std::move(chunk);
 }
 
-Terrain::Chunk &Terrain::Data::chunkAt(int64_t xPos, int64_t zPos) {
-  loadChunk(xPos, zPos);
+Terrain::Data::Chunk &Terrain::Data::chunkAt(const ChunkCoordinates coords) {
+  loadChunk(coords);
 
-  return chunks[chunkIndex(xPos, zPos)];
+  auto query = chunks.find(coords);
+
+  if (query == chunks.end())
+    return empty_chunk;
+
+  return query->second;
 }

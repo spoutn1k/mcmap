@@ -12,16 +12,17 @@
 
 namespace Terrain {
 
-typedef nbt::NBT Chunk;
-
 struct Data {
+  using Chunk = nbt::NBT;
+  using ChunkCoordinates = std::pair<int32_t, int32_t>;
+  using ChunkStore = std::map<ChunkCoordinates, Chunk>;
+
   // The coordinates of the loaded chunks. This coordinates maps
   // the CHUNKS loaded, not the blocks
   World::Coordinates map;
 
-  // The internal list of chunks, of size chunkLen
-  std::vector<Chunk> chunks;
-  uint64_t chunkLen;
+  // The loaded chunks, organized as a map of coordinatesxchunk
+  ChunkStore chunks;
 
   fs::path regionDir;
 
@@ -31,26 +32,17 @@ struct Data {
     map.minZ = CHUNK(coords.minZ);
     map.maxX = CHUNK(coords.maxX);
     map.maxZ = CHUNK(coords.maxZ);
-
-    chunkLen =
-        uint64_t(map.maxX - map.minX + 1) * uint64_t(map.maxZ - map.minZ + 1);
-
-    chunks.resize(chunkLen);
   }
 
   // Chunk loading methods - only load should be useful
   void load(const fs::path &regionDir);
-  void loadChunk(const int chunkX, const int chunkZ);
+  void loadChunk(const ChunkCoordinates);
 
   // Chunk analysis methods - using the list of sections
   void stripChunk(std::vector<nbt::NBT> *);
   void inflateChunk(std::vector<nbt::NBT> *);
 
-  uint64_t chunkIndex(int64_t x, int64_t z) const {
-    return (x - map.minX) + (z - map.minZ) * (map.maxX - map.minX + 1);
-  }
-
-  nbt::NBT &chunkAt(int64_t xPos, int64_t zPos);
+  Chunk &chunkAt(const ChunkCoordinates);
 };
 
 } // namespace Terrain

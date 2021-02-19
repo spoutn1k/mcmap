@@ -261,7 +261,7 @@ void IsometricCanvas::renderChunk(Terrain::Data &terrain) {
   int32_t worldX = chunkX, worldZ = chunkZ;
   orientChunk(worldX, worldZ);
 
-  nbt::NBT &chunk = terrain.chunkAt(worldX, worldZ);
+  nbt::NBT &chunk = terrain.chunkAt({worldX, worldZ});
 
   // If there is nothing to render
   if (chunk.is_end() || chunk["Level"]["Sections"].empty()) {
