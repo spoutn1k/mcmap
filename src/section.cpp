@@ -2,7 +2,7 @@
 
 const Colors::Block _void;
 
-Section::Section() : colors{&_void}, palette(nullptr) {
+Section::Section() : colors{&_void} {
   // The `colors` array needs to contain at least a color to have a defined
   // behavious when uninitialized. `color_at` is called 4096x per section, it is
   // critical for it to avoid if-elses.
@@ -26,7 +26,7 @@ Section::Section(const nbt::NBT &raw_section, const int dataVersion,
 
   // Get data from the NBT
   Y = raw_section["Y"].get<int8_t>();
-  palette = raw_section["Palette"].get<const std::vector<nbt::NBT> *>();
+  palette = *raw_section["Palette"].get<const std::vector<nbt::NBT> *>();
   const nbt::NBT::tag_long_array_t *blockStates =
       raw_section["BlockStates"].get<const nbt::NBT::tag_long_array_t *>();
 
@@ -45,12 +45,12 @@ Section::Section(const nbt::NBT &raw_section, const int dataVersion,
   // Remove the air that is default-constructed
   colors.clear();
   // Anticipate the color input from the palette's size
-  colors.reserve(palette->size());
+  colors.reserve(palette.size());
 
   // The length in bits of a block is the log2 of the palette's size or 4,
   // whichever is greatest. Ranges from 4 to 12.
   const uint8_t blockBitLength =
-      std::max(uint8_t(ceil(log2(palette->size()))), uint8_t(4));
+      std::max(uint8_t(ceil(log2(palette.size()))), uint8_t(4));
 
   // Parse the blockstates for block info
   // TODO make a more reliable dataversion to algorithm detection
@@ -60,7 +60,7 @@ Section::Section(const nbt::NBT &raw_section, const int dataVersion,
     sectionAtPost116(blockBitLength, blockStates, blocks);
 
   // Pick the colors from the Palette
-  for (auto &color : *palette) {
+  for (const auto &color : palette) {
     const string namespacedId = color["Name"].get<string>();
     auto query = defined.find(namespacedId);
 

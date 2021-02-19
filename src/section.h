@@ -1,3 +1,5 @@
+#pragma once
+
 #include "./colors.h"
 #include <nbt/nbt.hpp>
 
@@ -14,7 +16,7 @@ struct Section {
   block_array blocks;
   color_array colors;
   light_array lights;
-  const std::vector<nbt::NBT> *palette;
+  std::vector<nbt::NBT> palette;
 
   block_array::value_type beaconIndex;
 
@@ -30,7 +32,7 @@ struct Section {
     blocks = std::move(other.blocks);
     lights = std::move(other.lights);
     colors = std::move(other.colors);
-    palette = other.palette;
+    palette = std::move(other.palette);
     return *this;
   }
 
@@ -60,7 +62,7 @@ struct Section {
   }
 
   inline const nbt::NBT &state_at(uint8_t x, uint8_t y, uint8_t z) const {
-    return palette->operator[](blocks[x + 16 * z + 16 * 16 * y]);
+    return palette[blocks[x + 16 * z + 16 * 16 * y]];
   }
 };
 

@@ -86,28 +86,6 @@ bool decompressChunk(const uint32_t offset, FILE *regionHandle,
   return true;
 }
 
-bool assertChunk(const nbt::NBT &chunk) {
-  if (chunk.is_end()                          // Catch uninitialized chunks
-      || !chunk.contains("DataVersion")       // Dataversion is required
-      || !chunk.contains("Level")             // Level data is required
-      || !chunk["Level"].contains("Sections") // No sections mean no blocks
-  )
-    return false;
-
-  return true;
-}
-
-void filterLevel(nbt::NBT &level) {
-  // Erase unused NBT tags to save memory
-  std::vector<std::string> blacklist = {
-      "Entities",          "Structures",  "TileEntities",
-      "TileTicks",         "LiquidTicks", "Lights",
-      "LiquidsToBeTicked", "ToBeTicked",  "PostProcessing"};
-
-  for (auto key : blacklist)
-    level.erase(key);
-}
-
 void Data::loadChunk(const ChunkCoordinates coords) {
   int32_t regionX = REGION(coords.first), regionZ = REGION(coords.second),
           cX = coords.first & 0x1f, cZ = coords.second & 0x1f;
@@ -152,19 +130,20 @@ void Data::loadChunk(const ChunkCoordinates coords) {
     return;
   }
 
-  nbt::NBT chunk;
+  nbt::NBT data;
 
-  if (!nbt::parse(chunkBuffer, length, chunk) || !assertChunk(chunk)) {
+  if (!nbt::parse(chunkBuffer, length, data)) {
     fclose(regionHandle);
     return;
   }
 
   fclose(regionHandle);
 
-  filterLevel(chunk["Level"]);
+  //-------------------------------------
+  // Add to mcmap::Chunk
 
   std::vector<nbt::NBT> *sections =
-      chunk["Level"]["Sections"].get<std::vector<nbt::NBT> *>();
+      data["Level"]["Sections"].get<std::vector<nbt::NBT> *>();
 
   // Strip the chunk of pointless sections
   stripChunk(sections);
@@ -175,7 +154,9 @@ void Data::loadChunk(const ChunkCoordinates coords) {
   // Fill the chunk's holes with empty sections
   inflateChunk(sections);
 
-  chunks[coords] = std::move(chunk);
+  //-------------------------------------
+
+  chunks[coords] = Chunk(data, palette);
 }
 
 const Data::Chunk &Data::chunkAt(const ChunkCoordinates coords) {

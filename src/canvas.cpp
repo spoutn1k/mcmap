@@ -1,6 +1,6 @@
 #include "./canvas.h"
-#include "VERSION"
-#include "png.h"
+#include "./VERSION"
+#include "./png.h"
 
 size_t Canvas::_get_line(const uint8_t *data, uint8_t *buffer, size_t bufSize,
                          uint64_t y) const {
@@ -264,15 +264,10 @@ void IsometricCanvas::renderChunk(Terrain::Data &terrain) {
   const Terrain::Data::Chunk &chunk = terrain.chunkAt({worldX, worldZ});
 
   // If there is nothing to render
-  if (chunk.is_end() || chunk["Level"]["Sections"].empty()) {
+  if (!chunk.valid()) {
     logger::deep_debug("Skipping chunk {} {}\n", chunkX, chunkZ);
     return;
   }
-
-  // This value is primordial: it states which version of minecraft the chunk
-  // was created under, and we use it to know which interpreter to use later
-  // in the sections
-  const int dataVersion = chunk["DataVersion"].get<int>();
 
   // Setup the markers
   for (uint8_t i = 0; i < totalMarkers; i++) {
@@ -282,24 +277,22 @@ void IsometricCanvas::renderChunk(Terrain::Data &terrain) {
     }
   }
 
-  for (const auto &data : chunk["Level"]["Sections"])
-    sections.push_back(Section(data, dataVersion, palette));
+  current_section = chunk.sections.begin();
+  last_section = chunk.sections.end();
 
-  current_section = sections.begin();
-  while (current_section != sections.end()) {
+  while (current_section != chunk.sections.end()) {
     renderSection(*current_section);
     current_section++;
   }
 
   if (beamNo)
     // TODO use height constants
-    for (uint8_t yPos = sections.back().Y + 1;
+    for (uint8_t yPos = chunk.sections.back().Y + 1;
          yPos < std::min(20, map.maxY >> 4) + 1; yPos++)
       renderBeamSection(chunkX, chunkZ, yPos);
 
   beamNo = 0;
 
-  sections.clear();
   terrain.free_chunk({worldX, worldZ});
   rendered++;
 }
@@ -586,7 +579,7 @@ const Colors::Block *IsometricCanvas::nextBlock() {
   std::vector<Section>::const_iterator lookup =
       current_section + (y == 15 ? 1 : 0);
 
-  if (lookup == sections.end())
+  if (lookup == last_section)
     return &air;
 
   return lookup->color_at(orientedX, (y + 1) % 16, orientedZ);

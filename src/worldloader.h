@@ -1,6 +1,7 @@
 #ifndef WORLDLOADER_H_
 #define WORLDLOADER_H_
 
+#include "./chunk.h"
 #include "./helper.h"
 #include <filesystem>
 #include <map.hpp>
@@ -9,7 +10,7 @@
 namespace Terrain {
 
 struct Data {
-  using Chunk = nbt::NBT;
+  using Chunk = mcmap::Chunk;
   using ChunkCoordinates = std::pair<int32_t, int32_t>;
   using ChunkStore = std::map<ChunkCoordinates, Chunk>;
 
@@ -21,11 +22,12 @@ struct Data {
   ChunkStore chunks;
 
   fs::path regionDir;
+  const Colors::Palette &palette;
 
   // Default constructor
   explicit Data(const World::Coordinates &coords,
-                const std::filesystem::path &dir)
-      : regionDir(dir) {
+                const std::filesystem::path &dir, const Colors::Palette &p)
+      : regionDir(dir), palette(p) {
     map.minX = CHUNK(coords.minX);
     map.minZ = CHUNK(coords.minZ);
     map.maxX = CHUNK(coords.maxX);

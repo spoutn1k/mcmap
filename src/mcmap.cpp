@@ -51,7 +51,7 @@ int render(const Settings::WorldOptions &options,
       canvas.setColors(colors);
 
       // Load the minecraft terrain to render
-      Terrain::Data world(tiles[i], options.regionDir());
+      Terrain::Data world(tiles[i], options.regionDir(), colors);
 
       // Draw the terrain fragment
       canvas.shading = options.shading;

@@ -236,8 +236,7 @@ struct IsometricCanvas : Canvas {
 
   std::vector<float> brightnessLookup;
 
-  std::vector<Section> sections;
-  std::vector<Section>::const_iterator current_section;
+  mcmap::Chunk::section_array_t::const_iterator current_section, last_section;
 
   // In-chunk variables
   uint32_t chunkX;
