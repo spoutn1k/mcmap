@@ -40,8 +40,7 @@ struct Data {
 
   // Chunk loading methods - only load should be useful
   void load(const fs::path &regionDir);
-  void loadChunk(const uint32_t offset, FILE *regionHandle, const int chunkX,
-                 const int chunkZ, const fs::path &filename);
+  void loadChunk(const int chunkX, const int chunkZ);
 
   // Chunk analysis methods - using the list of sections
   void stripChunk(std::vector<nbt::NBT> *);

@@ -111,30 +111,63 @@ void filterLevel(nbt::NBT &level) {
 
 #include <nbt/parser.hpp>
 
-void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
-                              const int chunkX, const int chunkZ,
-                              const std::filesystem::path &filename) {
+void Terrain::Data::loadChunk(const int chunkX, const int chunkZ) {
+  int32_t regionX = REGION(chunkX), regionZ = REGION(chunkZ),
+          cX = chunkX & 0x1f, cZ = chunkZ & 0x1f;
 
-  uint64_t length, chunkPos = chunkIndex(chunkX, chunkZ);
+  std::filesystem::path regionFile = std::filesystem::path(regionDir) /=
+      fmt::format("r.{}.{}.mca", regionX, regionZ);
+
+  if (!std::filesystem::exists(regionFile)) {
+    logger::deep_debug("Region file r.{}.{}.mca does not exist, skipping ..\n",
+                       regionX, regionZ);
+    return;
+  }
+
+  FILE *regionHandle;
+  uint8_t regionHeader[REGION_HEADER_SIZE];
+
+  if (!(regionHandle = fopen(regionFile.string().c_str(), "rb"))) {
+    logger::error("Opening region file `{}` failed: {}\n", regionFile.string(),
+                  strerror(errno));
+    return;
+  }
+
+  // Then, we read the header (of size 4K) storing the chunks locations
+  if (fread(regionHeader, sizeof(uint8_t), REGION_HEADER_SIZE, regionHandle) !=
+      REGION_HEADER_SIZE) {
+    logger::error("Region header too short in `{}`\n", regionFile.string());
+    fclose(regionHandle);
+    return;
+  }
+
+  const uint32_t offset =
+      (_ntohl(regionHeader + ((cZ << 5) + cX) * 4) >> 8) * 4096;
+
+  uint64_t length;
 
   // Buffers for chunk read from MCA files and decompression.
   uint8_t chunkBuffer[DECOMPRESSED_BUFFER];
 
-  if (!offset ||
-      !decompressChunk(offset, regionHandle, chunkBuffer, &length, filename))
+  if (!offset || !decompressChunk(offset, regionHandle, chunkBuffer, &length,
+                                  regionFile)) {
+    fclose(regionHandle);
     return;
+  }
 
   nbt::NBT chunk;
 
-  if (!nbt::parse(chunkBuffer, length, chunk) || !assertChunk(chunk))
+  if (!nbt::parse(chunkBuffer, length, chunk) || !assertChunk(chunk)) {
+    fclose(regionHandle);
     return;
+  }
+
+  fclose(regionHandle);
 
   filterLevel(chunk["Level"]);
 
-  chunks[chunkPos] = std::move(chunk);
-
   std::vector<nbt::NBT> *sections =
-      chunks[chunkPos]["Level"]["Sections"].get<std::vector<nbt::NBT> *>();
+      chunk["Level"]["Sections"].get<std::vector<nbt::NBT> *>();
 
   // Strip the chunk of pointless sections
   stripChunk(sections);
@@ -144,43 +177,12 @@ void Terrain::Data::loadChunk(const uint32_t offset, FILE *regionHandle,
 
   // Fill the chunk's holes with empty sections
   inflateChunk(sections);
+
+  chunks[chunkIndex(chunkX, chunkZ)] = std::move(chunk);
 }
 
 Terrain::Chunk &Terrain::Data::chunkAt(int64_t xPos, int64_t zPos) {
-  int32_t rX = REGION(xPos), rZ = REGION(zPos), cX = xPos & 0x1f,
-          cZ = zPos & 0x1f;
-  std::filesystem::path regionFile = std::filesystem::path(regionDir) /=
-      fmt::format("r.{}.{}.mca", rX, rZ);
-
-  if (!std::filesystem::exists(regionFile)) {
-    logger::deep_debug("Region file r.{}.{}.mca does not exist, skipping ..\n",
-                       rX, rZ);
-    return empty_chunk;
-  }
-
-  FILE *regionHandle;
-  uint8_t regionHeader[REGION_HEADER_SIZE];
-
-  if (!(regionHandle = fopen(regionFile.string().c_str(), "rb"))) {
-    logger::error("Opening region file `{}` failed: {}\n", regionFile.string(),
-                  strerror(errno));
-    return empty_chunk;
-  }
-
-  // Then, we read the header (of size 4K) storing the chunks locations
-  if (fread(regionHeader, sizeof(uint8_t), REGION_HEADER_SIZE, regionHandle) !=
-      REGION_HEADER_SIZE) {
-    logger::error("Region header too short in `{}`\n", regionFile.string());
-    fclose(regionHandle);
-    return empty_chunk;
-  }
-
-  const uint32_t offset =
-      (_ntohl(regionHeader + ((cZ << 5) + cX) * 4) >> 8) * 4096;
-
-  loadChunk(offset, regionHandle, xPos, zPos, regionFile);
-
-  fclose(regionHandle);
+  loadChunk(xPos, zPos);
 
   return chunks[chunkIndex(xPos, zPos)];
 }
