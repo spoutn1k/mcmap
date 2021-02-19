@@ -1,14 +1,10 @@
 #ifndef WORLDLOADER_H_
 #define WORLDLOADER_H_
 
-#include "./colors.h"
 #include "./helper.h"
-#include <cstdlib>
 #include <filesystem>
 #include <map.hpp>
 #include <nbt/nbt.hpp>
-#include <string>
-#include <zlib.h>
 
 namespace Terrain {
 
@@ -27,22 +23,28 @@ struct Data {
   fs::path regionDir;
 
   // Default constructor
-  explicit Data(const World::Coordinates &coords) {
+  explicit Data(const World::Coordinates &coords,
+                const std::filesystem::path &dir)
+      : regionDir(dir) {
     map.minX = CHUNK(coords.minX);
     map.minZ = CHUNK(coords.minZ);
     map.maxX = CHUNK(coords.maxX);
     map.maxZ = CHUNK(coords.maxZ);
   }
 
-  // Chunk loading methods - only load should be useful
-  void load(const fs::path &regionDir);
-  void loadChunk(const ChunkCoordinates);
-
-  // Chunk analysis methods - using the list of sections
+  // Chunk pre-processing methods
   void stripChunk(std::vector<nbt::NBT> *);
   void inflateChunk(std::vector<nbt::NBT> *);
 
-  Chunk &chunkAt(const ChunkCoordinates);
+  // Chunk loading - should never be used, called by chunkAt in case of chunk
+  // fault
+  void loadChunk(const ChunkCoordinates);
+
+  // Access a chunk from the save file
+  const Chunk &chunkAt(const ChunkCoordinates);
+
+  // Mark a chunk as done and ready for deletion
+  void free_chunk(const ChunkCoordinates);
 };
 
 } // namespace Terrain

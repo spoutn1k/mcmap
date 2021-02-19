@@ -1,13 +1,12 @@
-#include "worldloader.h"
+#include "./worldloader.h"
+#include <nbt/parser.hpp>
+#include <zlib.h>
 
-Terrain::Data::Chunk empty_chunk;
-nbt::NBT minecraft_air(nbt::tag_type::tag_end);
+namespace Terrain {
 
-void Terrain::Data::load(const std::filesystem::path &regionDir) {
-  this->regionDir = regionDir;
-}
+Data::Chunk empty_chunk;
 
-void Terrain::Data::inflateChunk(std::vector<nbt::NBT> *sections) {
+void Data::inflateChunk(std::vector<nbt::NBT> *sections) {
   // Some chunks are "hollow", empty sections being present between blocks.
   // Internally, minecraft does not store those empty sections, instead relying
   // on the section index (key "Y"). This routine creates empty sections where
@@ -31,7 +30,7 @@ void Terrain::Data::inflateChunk(std::vector<nbt::NBT> *sections) {
   }
 }
 
-void Terrain::Data::stripChunk(std::vector<nbt::NBT> *sections) {
+void Data::stripChunk(std::vector<nbt::NBT> *sections) {
   // Remove sections with no blocks from the edges of the map
   while (!sections->empty() && !sections->front().contains("Palette"))
     sections->erase(sections->begin());
@@ -109,9 +108,7 @@ void filterLevel(nbt::NBT &level) {
     level.erase(key);
 }
 
-#include <nbt/parser.hpp>
-
-void Terrain::Data::loadChunk(const ChunkCoordinates coords) {
+void Data::loadChunk(const ChunkCoordinates coords) {
   int32_t regionX = REGION(coords.first), regionZ = REGION(coords.second),
           cX = coords.first & 0x1f, cZ = coords.second & 0x1f;
 
@@ -181,7 +178,7 @@ void Terrain::Data::loadChunk(const ChunkCoordinates coords) {
   chunks[coords] = std::move(chunk);
 }
 
-Terrain::Data::Chunk &Terrain::Data::chunkAt(const ChunkCoordinates coords) {
+const Data::Chunk &Data::chunkAt(const ChunkCoordinates coords) {
   loadChunk(coords);
 
   auto query = chunks.find(coords);
@@ -191,3 +188,12 @@ Terrain::Data::Chunk &Terrain::Data::chunkAt(const ChunkCoordinates coords) {
 
   return query->second;
 }
+
+void Data::free_chunk(const ChunkCoordinates coords) {
+  auto query = chunks.find(coords);
+
+  if (query != chunks.end())
+    chunks.erase(query);
+}
+
+} // namespace Terrain

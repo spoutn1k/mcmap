@@ -261,7 +261,7 @@ void IsometricCanvas::renderChunk(Terrain::Data &terrain) {
   int32_t worldX = chunkX, worldZ = chunkZ;
   orientChunk(worldX, worldZ);
 
-  nbt::NBT &chunk = terrain.chunkAt({worldX, worldZ});
+  const Terrain::Data::Chunk &chunk = terrain.chunkAt({worldX, worldZ});
 
   // If there is nothing to render
   if (chunk.is_end() || chunk["Level"]["Sections"].empty()) {
@@ -292,6 +292,7 @@ void IsometricCanvas::renderChunk(Terrain::Data &terrain) {
   }
 
   if (beamNo)
+    // TODO use height constants
     for (uint8_t yPos = sections.back().Y + 1;
          yPos < std::min(20, map.maxY >> 4) + 1; yPos++)
       renderBeamSection(chunkX, chunkZ, yPos);
@@ -299,7 +300,7 @@ void IsometricCanvas::renderChunk(Terrain::Data &terrain) {
   beamNo = 0;
 
   sections.clear();
-  chunk = nbt::NBT();
+  terrain.free_chunk({worldX, worldZ});
   rendered++;
 }
 
