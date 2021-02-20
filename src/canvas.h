@@ -220,7 +220,7 @@ struct ImageCanvas : Canvas {
 struct IsometricCanvas : Canvas {
   using Chunk = mcmap::Chunk;
 
-  bool shading;
+  bool shading, lighting;
   size_t rendered;
 
   size_t width, height;

@@ -29,7 +29,7 @@ struct WorldOptions {
 
   // Image settings
   uint16_t padding; // Should be enough
-  bool hideWater, hideBeacons, shading;
+  bool hideWater, hideBeacons, shading, lighting;
 
   // Marker storage
   uint8_t totalMarkers;
@@ -47,7 +47,7 @@ struct WorldOptions {
     boundaries.minY = mcmap::constants::min_y;
     boundaries.maxY = mcmap::constants::max_y;
 
-    hideWater = hideBeacons = shading = false;
+    hideWater = hideBeacons = shading = lighting = false;
     padding = 5;
 
     totalMarkers = 0;

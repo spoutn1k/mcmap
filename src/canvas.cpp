@@ -146,8 +146,8 @@ void IsometricCanvas::setColors(const Colors::Palette &colors) {
   if (airColor != colors.end())
     air = airColor->second;
 
-  // Set to true to use shading later on
-  shading = false;
+  // Set to true to use later on
+  shading = lighting = false;
 
   // Precompute the shading profile. The values are arbitrary, and will go
   // through Colors::Color.modcolor further down the code. The 255 array
@@ -266,7 +266,8 @@ void IsometricCanvas::renderChunk(Terrain::Data &terrain) {
   int32_t worldX = chunkX, worldZ = chunkZ;
   orientChunk(worldX, worldZ);
 
-  const Chunk &chunk = terrain.chunkAt({worldX, worldZ}, map.orientation);
+  const Chunk &chunk =
+      terrain.chunkAt({worldX, worldZ}, map.orientation, lighting);
 
   // If there is nothing to render
   if (!chunk.valid())
@@ -284,8 +285,10 @@ void IsometricCanvas::renderChunk(Terrain::Data &terrain) {
   last_section = chunk.sections.end();
 
   while (current_section != chunk.sections.end()) {
-    right_section = section_right(terrain);
-    left_section = section_left(terrain);
+    if (lighting) {
+      right_section = section_right(terrain);
+      left_section = section_left(terrain);
+    }
 
     renderSection(*current_section);
     current_section++;
@@ -541,51 +544,54 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
     colorPtr = &localColor;
   }
 
-  colorPtr = &localColor;
+  if (lighting) {
+    colorPtr = &localColor;
 
-  uint8_t self_light = current_section->light_at(orientedX, y % 16, orientedZ);
-  if (self_light) {
-    localColor = color->shade(-75 + 8 * self_light);
-  } else {
-    Chunk::coordinates offset = {16, 16}, current = {orientedX, orientedZ};
-    Chunk::coordinates left_coords =
-        (current + left_in(map.orientation) + offset) % 16;
-    Chunk::coordinates right_coords =
-        (current + right_in(map.orientation) + offset) % 16;
+    uint8_t self_light =
+        current_section->light_at(orientedX, y % 16, orientedZ);
+    if (self_light) {
+      localColor = color->shade(-75 + 8 * self_light);
+    } else {
+      Chunk::coordinates offset = {16, 16}, current = {orientedX, orientedZ};
+      Chunk::coordinates left_coords =
+          (current + left_in(map.orientation) + offset) % 16;
+      Chunk::coordinates right_coords =
+          (current + right_in(map.orientation) + offset) % 16;
 
-    Chunk::section_array_t::const_iterator top =
-        (y % 16 == 15 ? section_up() : current_section);
-    Chunk::section_array_t::const_iterator left = current_section;
-    Chunk::section_array_t::const_iterator right = current_section;
+      Chunk::section_array_t::const_iterator top =
+          (y % 16 == 15 ? section_up() : current_section);
+      Chunk::section_array_t::const_iterator left = current_section;
+      Chunk::section_array_t::const_iterator right = current_section;
 
-    if (current + left_in(map.orientation) != left_coords)
-      left = left_section;
+      if (current + left_in(map.orientation) != left_coords)
+        left = left_section;
 
-    if (current + right_in(map.orientation) != right_coords)
-      right = right_section;
+      if (current + right_in(map.orientation) != right_coords)
+        right = right_section;
 
-    uint8_t top_light = top->light_at(orientedX, (y + 1) % 16, orientedZ);
-    uint8_t left_light = left->light_at(left_coords.x, y % 16, left_coords.z);
-    uint8_t right_light =
-        right->light_at(right_coords.x, y % 16, right_coords.z);
+      uint8_t top_light = top->light_at(orientedX, (y + 1) % 16, orientedZ);
+      uint8_t left_light = left->light_at(left_coords.x, y % 16, left_coords.z);
+      uint8_t right_light =
+          right->light_at(right_coords.x, y % 16, right_coords.z);
 
-    localColor.primary = color->primary;
-    localColor.secondary = color->secondary;
-    localColor.dark = color->dark;
-    localColor.light = color->light;
+      localColor.primary = color->primary;
+      localColor.secondary = color->secondary;
+      localColor.dark = color->dark;
+      localColor.light = color->light;
 
-    localColor.primary.modColor(
-        (-75 + 8 * top_light) *
-        (float(localColor.primary.brightness()) / 323.0f + .21f));
-    localColor.secondary.modColor(
-        (-75 + 8 * top_light) *
-        (float(localColor.secondary.brightness()) / 323.0f + .21f));
-    localColor.dark.modColor(
-        (-75 + 8 * left_light) *
-        (float(localColor.dark.brightness()) / 323.0f + .21f));
-    localColor.light.modColor(
-        (-75 + 8 * right_light) *
-        (float(localColor.light.brightness()) / 323.0f + .21f));
+      localColor.primary.modColor(
+          (-75 + 8 * top_light) *
+          (float(localColor.primary.brightness()) / 323.0f + .21f));
+      localColor.secondary.modColor(
+          (-75 + 8 * top_light) *
+          (float(localColor.secondary.brightness()) / 323.0f + .21f));
+      localColor.dark.modColor(
+          (-75 + 8 * left_light) *
+          (float(localColor.dark.brightness()) / 323.0f + .21f));
+      localColor.light.modColor(
+          (-75 + 8 * right_light) *
+          (float(localColor.light.brightness()) / 323.0f + .21f));
+    }
   }
 
   // Then call the function registered with the block's type

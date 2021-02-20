@@ -43,7 +43,7 @@ struct Data {
   void loadChunk(const ChunkCoordinates);
 
   // Access a chunk from the save file
-  const Chunk &chunkAt(const ChunkCoordinates, const Map::Orientation);
+  const Chunk &chunkAt(const ChunkCoordinates, const Map::Orientation, bool);
 
   // Mark a chunk as done and ready for deletion
   void free_chunk(const ChunkCoordinates);

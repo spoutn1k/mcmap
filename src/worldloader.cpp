@@ -109,16 +109,19 @@ void Data::loadChunk(const ChunkCoordinates coords) {
 }
 
 const Data::Chunk &Data::chunkAt(const ChunkCoordinates coords,
-                                 const Map::Orientation o) {
-  ChunkCoordinates left = coords + left_in(o);
-  ChunkCoordinates right = coords + right_in(o);
-
+                                 const Map::Orientation o, bool surround) {
   if (chunks.find(coords) == chunks.end())
     loadChunk(coords);
-  if (chunks.find(left) == chunks.end())
-    loadChunk(left);
-  if (chunks.find(right) == chunks.end())
-    loadChunk(right);
+
+  if (surround) {
+    ChunkCoordinates left = coords + left_in(o);
+    ChunkCoordinates right = coords + right_in(o);
+
+    if (chunks.find(left) == chunks.end())
+      loadChunk(left);
+    if (chunks.find(right) == chunks.end())
+      loadChunk(right);
+  }
 
   auto query = chunks.find(coords);
   if (query == chunks.end())
