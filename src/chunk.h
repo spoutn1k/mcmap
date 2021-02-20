@@ -18,7 +18,8 @@ struct Coordinates {
   }
 
   bool operator<(const Coordinates &other) const {
-    return x < other.x && z < other.z;
+    // Code from <bits/stl_pair.h>
+    return x < other.x || (!(other.x < x) && z < other.z);
   }
 
   bool operator==(const Coordinates &other) const {

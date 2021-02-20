@@ -269,10 +269,8 @@ void IsometricCanvas::renderChunk(Terrain::Data &terrain) {
   const Chunk &chunk = terrain.chunkAt({worldX, worldZ}, map.orientation);
 
   // If there is nothing to render
-  if (!chunk.valid()) {
-    logger::deep_debug("Skipping chunk {} {}\n", chunkX, chunkZ);
+  if (!chunk.valid())
     return;
-  }
 
   // Setup the markers
   for (uint8_t i = 0; i < totalMarkers; i++) {
@@ -560,17 +558,11 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
     Chunk::section_array_t::const_iterator left = current_section;
     Chunk::section_array_t::const_iterator right = current_section;
 
-    if (current + left_in(map.orientation) != left_coords) {
-      logger::debug("EOC at {} {} ~> {} {}\n", current.x, current.z,
-                    left_coords.x, left_coords.z);
+    if (current + left_in(map.orientation) != left_coords)
       left = left_section;
-    }
 
-    if (current + right_in(map.orientation) != right_coords) {
-      logger::debug("EOC at {} {} ~> {} {}\n", current.x, current.z,
-                    right_coords.x, right_coords.z);
+    if (current + right_in(map.orientation) != right_coords)
       right = right_section;
-    }
 
     uint8_t top_light = top->light_at(orientedX, (y + 1) % 16, orientedZ);
     uint8_t left_light = left->light_at(left_coords.x, y % 16, left_coords.z);
