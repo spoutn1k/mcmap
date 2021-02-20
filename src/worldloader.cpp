@@ -6,41 +6,6 @@ namespace Terrain {
 
 Data::Chunk empty_chunk;
 
-void Data::inflateChunk(std::vector<nbt::NBT> *sections) {
-  // Some chunks are "hollow", empty sections being present between blocks.
-  // Internally, minecraft does not store those empty sections, instead relying
-  // on the section index (key "Y"). This routine creates empty sections where
-  // they should be, to save a lot of time when rendering.
-
-  int8_t index = sections->front()["Y"].get<int8_t>();
-  std::vector<nbt::NBT>::iterator it = sections->begin(), next = it + 1;
-
-  while (it != sections->end() && next != sections->end()) {
-    int8_t diff = next->operator[]("Y").get<int8_t>() - index - 1;
-
-    if (diff) {
-      while (diff--) {
-        it = sections->insert(it + 1, nbt::NBT(nbt::tag_type::tag_end));
-        ++index;
-      }
-    }
-
-    next = ++it + 1;
-    index++;
-  }
-}
-
-void Data::stripChunk(std::vector<nbt::NBT> *sections) {
-  // Remove sections with no blocks from the edges of the map
-  while (!sections->empty() && !sections->front().contains("Palette"))
-    sections->erase(sections->begin());
-
-  // Pop all the empty top sections
-  while (!sections->empty() && !sections->back().contains("Palette") &&
-         !sections->back().contains("BlockLight"))
-    sections->pop_back();
-}
-
 bool decompressChunk(const uint32_t offset, FILE *regionHandle,
                      uint8_t *chunkBuffer, uint64_t *length,
                      const std::filesystem::path &filename) {
@@ -139,23 +104,6 @@ void Data::loadChunk(const ChunkCoordinates coords) {
   }
 
   fclose(regionHandle);
-
-  //-------------------------------------
-  // Add to mcmap::Chunk
-
-  std::vector<nbt::NBT> *sections =
-      data["Level"]["Sections"].get<std::vector<nbt::NBT> *>();
-
-  // Strip the chunk of pointless sections
-  stripChunk(sections);
-
-  if (sections->empty())
-    return;
-
-  // Fill the chunk's holes with empty sections
-  inflateChunk(sections);
-
-  //-------------------------------------
 
   chunks[coords] = Chunk(data, palette);
 }
