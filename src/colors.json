@@ -666,7 +666,7 @@
   "minecraft:red_wall_banner": { "color": "#00000000", "type": "Hide" },
   "minecraft:red_wool": "#ad2c28",
   "minecraft:redstone_block": "#ab1906",
-  "minecraft:redstone_lamp": "#462b1a",
+  "minecraft:redstone_lamp": { "accent": "#d89b56", "color": "#8c532c", "type": "Lamp" },
   "minecraft:redstone_ore": { "accent": "#b30808", "color": "#7b7b7b", "type": "Ore"},
   "minecraft:redstone_torch": { "accent": "#ff0000fe", "color": "#a1814d", "type": "Torch"},
   "minecraft:redstone_wall_torch": { "accent": "#ff0000fe", "color": "#a1814d", "type": "Torch"},

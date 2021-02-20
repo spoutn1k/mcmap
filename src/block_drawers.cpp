@@ -467,3 +467,35 @@ void drawFull(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
         blend(pos, (uint8_t *)sprite[j][i]);
   }
 }
+
+void drawLamp(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
+              const nbt::NBT &metadata, const Colors::Block *color) {
+  int sub = (float(color->primary.brightness()) / 323.0f + .21f);
+
+  Colors::Color secondaryLight(color->secondary);
+  Colors::Color secondaryDark(color->secondary);
+  secondaryLight.modColor(sub - 15);
+  secondaryDark.modColor(sub - 25);
+
+  const Colors::Color *off[4][4] = {{PRIME, PRIME, PRIME, PRIME},
+                                    {DARK_, DARK_, LIGHT, LIGHT},
+                                    {DARK_, DARK_, LIGHT, LIGHT},
+                                    {DARK_, DARK_, LIGHT, LIGHT}};
+
+  const Colors::Color *on[4][4] = {{ALTER, ALTER, ALTER, ALTER},
+                                   {ALT_D, ALT_D, ALT_L, ALT_L},
+                                   {ALT_D, ALT_D, ALT_L, ALT_L},
+                                   {ALT_D, ALT_D, ALT_L, ALT_L}};
+
+  const Colors::Color *(*target)[4][4] = &off;
+
+  if (metadata.contains("Properties") &&
+      metadata["Properties"].contains("lit") &&
+      metadata["Properties"]["lit"].get<string>() == "true")
+    target = &on;
+
+  uint8_t *pos = canvas->pixel(x, y);
+  for (uint8_t j = 0; j < 4; ++j, pos = canvas->pixel(x, y + j))
+    for (uint8_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
+      memcpy(pos, (*target)[j][i], BYTESPERPIXEL);
+}

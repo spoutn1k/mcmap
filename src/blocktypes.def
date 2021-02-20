@@ -9,7 +9,7 @@ DEFINETYPE("Hide", drawHidden)       // Non-renderable (levers etc)
 DEFINETYPE("Head", drawHead)         // Small block, for heads but also sea-pickles, etc
 DEFINETYPE("Clear", drawTransparent) // See-through: clearer look when in large quantities.
 DEFINETYPE("Slab", drawSlab)         // Slab and half-blocks
-DEFINETYPE("Stair", drawStair)      // Not implemented yet.
+DEFINETYPE("Stair", drawStair)       // Stairs, rendered depending on orientation
 DEFINETYPE("Torch", drawTorch)       // Torch/end rod. Accent is the color of the flame.
 DEFINETYPE("Rod", drawRod)           // Fence and walls.
 DEFINETYPE("Ore", drawOre)           // Ores
@@ -20,4 +20,5 @@ DEFINETYPE("Thin", drawThin)         // Snow-like.
 DEFINETYPE("Grown", drawGrown)       // Grass-like blocks, accent is the color on top.
 DEFINETYPE("Fire", drawFire)         // Fire-like.
 DEFINETYPE("Log", drawLog)           // Axis-oriented block, accent is the color on top and bottom.
+DEFINETYPE("Lamp", drawLamp)         // Blocks that have a `lit` property. Accent is lit color.
 DEFINETYPE("Beam", drawBeam)         // Element of beacon beams and markers
