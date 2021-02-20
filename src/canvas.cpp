@@ -2,6 +2,11 @@
 #include "./VERSION"
 #include "./png.h"
 
+Terrain::Data::ChunkCoordinates sum(Terrain::Data::ChunkCoordinates lhs,
+                                    Terrain::Data::ChunkCoordinates rhs) {
+  return {lhs.x + rhs.x, lhs.z + rhs.z};
+}
+
 size_t Canvas::_get_line(const uint8_t *data, uint8_t *buffer, size_t bufSize,
                          uint64_t y) const {
   const uint8_t *start = data + y * width() * BYTESPERPIXEL;
@@ -261,7 +266,7 @@ void IsometricCanvas::renderChunk(Terrain::Data &terrain) {
   int32_t worldX = chunkX, worldZ = chunkZ;
   orientChunk(worldX, worldZ);
 
-  const Chunk &chunk = terrain.chunkAt({worldX, worldZ});
+  const Chunk &chunk = terrain.chunkAt({worldX, worldZ}, map.orientation);
 
   // If there is nothing to render
   if (!chunk.valid()) {
@@ -544,18 +549,33 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
   if (self_light) {
     localColor = color->shade(-75 + 8 * self_light);
   } else {
+    Chunk::coordinates offset = {16, 16}, current = {orientedX, orientedZ};
+    Chunk::coordinates left_coords =
+        (current + left_in(map.orientation) + offset) % 16;
+    Chunk::coordinates right_coords =
+        (current + right_in(map.orientation) + offset) % 16;
+
     Chunk::section_array_t::const_iterator top =
         (y % 16 == 15 ? section_up() : current_section);
-    Chunk::section_array_t::const_iterator left =
-        (orientedZ + 1) % 16 ? current_section : left_section;
-    Chunk::section_array_t::const_iterator right =
-        (orientedX + 1) % 16 ? current_section : right_section;
+    Chunk::section_array_t::const_iterator left = current_section;
+    Chunk::section_array_t::const_iterator right = current_section;
+
+    if (current + left_in(map.orientation) != left_coords) {
+      logger::debug("EOC at {} {} ~> {} {}\n", current.x, current.z,
+                    left_coords.x, left_coords.z);
+      left = left_section;
+    }
+
+    if (current + right_in(map.orientation) != right_coords) {
+      logger::debug("EOC at {} {} ~> {} {}\n", current.x, current.z,
+                    right_coords.x, right_coords.z);
+      right = right_section;
+    }
 
     uint8_t top_light = top->light_at(orientedX, (y + 1) % 16, orientedZ);
-    uint8_t left_light =
-        left->light_at(orientedX, y % 16, (orientedZ + 1) % 16);
+    uint8_t left_light = left->light_at(left_coords.x, y % 16, left_coords.z);
     uint8_t right_light =
-        right->light_at((orientedX + 1) % 16, y % 16, orientedZ);
+        right->light_at(right_coords.x, y % 16, right_coords.z);
 
     localColor.primary = color->primary;
     localColor.secondary = color->secondary;
@@ -599,10 +619,13 @@ IsometricCanvas::section_up() {
 
 IsometricCanvas::Chunk::section_array_t::const_iterator
 IsometricCanvas::section_left(const Terrain::Data &terrain) {
-  int32_t worldX = chunkX, worldZ = chunkZ + 1;
+  int32_t worldX = chunkX, worldZ = chunkZ;
   orientChunk(worldX, worldZ);
 
-  const auto &chunk_left = terrain.chunks.find({worldX, worldZ});
+  Chunk::coordinates left =
+      Chunk::coordinates({worldX, worldZ}) + left_in(map.orientation);
+
+  const auto &chunk_left = terrain.chunks.find({left.x, left.z});
 
   if (chunk_left == terrain.chunks.end())
     return empty_section.begin();
@@ -618,10 +641,13 @@ IsometricCanvas::section_left(const Terrain::Data &terrain) {
 
 IsometricCanvas::Chunk::section_array_t::const_iterator
 IsometricCanvas::section_right(const Terrain::Data &terrain) {
-  int32_t worldX = chunkX + 1, worldZ = chunkZ;
+  int32_t worldX = chunkX, worldZ = chunkZ;
   orientChunk(worldX, worldZ);
 
-  const auto &chunk_right = terrain.chunks.find({worldX, worldZ});
+  Chunk::coordinates right =
+      Chunk::coordinates({worldX, worldZ}) + right_in(map.orientation);
+
+  const auto &chunk_right = terrain.chunks.find({right.x, right.z});
 
   if (chunk_right == terrain.chunks.end())
     return empty_section.begin();

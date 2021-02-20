@@ -87,8 +87,8 @@ bool decompressChunk(const uint32_t offset, FILE *regionHandle,
 }
 
 void Data::loadChunk(const ChunkCoordinates coords) {
-  int32_t regionX = REGION(coords.first), regionZ = REGION(coords.second),
-          cX = coords.first & 0x1f, cZ = coords.second & 0x1f;
+  int32_t regionX = REGION(coords.x), regionZ = REGION(coords.z),
+          cX = coords.x & 0x1f, cZ = coords.z & 0x1f;
 
   std::filesystem::path regionFile = std::filesystem::path(regionDir) /=
       fmt::format("r.{}.{}.mca", regionX, regionZ);
@@ -159,9 +159,10 @@ void Data::loadChunk(const ChunkCoordinates coords) {
   chunks[coords] = Chunk(data, palette);
 }
 
-const Data::Chunk &Data::chunkAt(const ChunkCoordinates coords) {
-  ChunkCoordinates left = {coords.first, coords.second + 1};
-  ChunkCoordinates right = {coords.first + 1, coords.second};
+const Data::Chunk &Data::chunkAt(const ChunkCoordinates coords,
+                                 const Map::Orientation o) {
+  ChunkCoordinates left = coords + left_in(o);
+  ChunkCoordinates right = coords + right_in(o);
 
   if (chunks.find(coords) == chunks.end())
     loadChunk(coords);

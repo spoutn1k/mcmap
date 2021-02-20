@@ -39,3 +39,29 @@ bool Chunk::assert_chunk(const nbt::NBT &chunk) {
 }
 
 } // namespace mcmap
+
+mcmap::Chunk::coordinates left_in(Map::Orientation o) {
+  switch (o) {
+  case Map::NW:
+    return {0, 1};
+  case Map::SW:
+    return {1, 0};
+  case Map::SE:
+    return {0, -1};
+  case Map::NE:
+    return {-1, 0};
+  }
+}
+
+mcmap::Chunk::coordinates right_in(Map::Orientation o) {
+  switch (o) {
+  case Map::NW:
+    return {1, 0};
+  case Map::SW:
+    return {0, -1};
+  case Map::SE:
+    return {-1, 0};
+  case Map::NE:
+    return {0, 1};
+  }
+}

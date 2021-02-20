@@ -11,7 +11,7 @@ namespace Terrain {
 
 struct Data {
   using Chunk = mcmap::Chunk;
-  using ChunkCoordinates = std::pair<int32_t, int32_t>;
+  using ChunkCoordinates = mcmap::Chunk::coordinates;
   using ChunkStore = std::map<ChunkCoordinates, Chunk>;
 
   // The coordinates of the loaded chunks. This coordinates maps
@@ -43,7 +43,7 @@ struct Data {
   void loadChunk(const ChunkCoordinates);
 
   // Access a chunk from the save file
-  const Chunk &chunkAt(const ChunkCoordinates);
+  const Chunk &chunkAt(const ChunkCoordinates, const Map::Orientation);
 
   // Mark a chunk as done and ready for deletion
   void free_chunk(const ChunkCoordinates);
