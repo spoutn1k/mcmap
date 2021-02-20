@@ -112,6 +112,7 @@ struct Canvas {
 
       case IMAGE:
         logger::error("Default constructing image canvas not supported\n");
+        break;
 
       default: {
         null_buffer = long(0);

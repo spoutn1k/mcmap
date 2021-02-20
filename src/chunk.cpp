@@ -51,6 +51,8 @@ mcmap::Chunk::coordinates left_in(Map::Orientation o) {
   case Map::NE:
     return {-1, 0};
   }
+
+  return {0, 0};
 }
 
 mcmap::Chunk::coordinates right_in(Map::Orientation o) {
@@ -64,4 +66,6 @@ mcmap::Chunk::coordinates right_in(Map::Orientation o) {
   case Map::NE:
     return {0, 1};
   }
+
+  return {0, 0};
 }
