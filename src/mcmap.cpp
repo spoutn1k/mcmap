@@ -56,7 +56,7 @@ int render(const Settings::WorldOptions &options,
       // Draw the terrain fragment
       canvas.shading = options.shading;
       canvas.lighting = options.lighting;
-      // canvas.setMarkers(options.totalMarkers, &options.markers);
+      canvas.setMarkers(options.totalMarkers, options.markers);
       canvas.renderTerrain(world);
 
       if (!canvas.empty()) {

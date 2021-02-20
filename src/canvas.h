@@ -219,8 +219,9 @@ struct ImageCanvas : Canvas {
 // into a 2D position.
 struct IsometricCanvas : Canvas {
   using Chunk = mcmap::Chunk;
+  using marker_array_t = std::array<Colors::Marker, 256>;
 
-  bool shading, lighting;
+  bool shading, lighting, beamColumn;
   size_t rendered;
 
   size_t width, height;
@@ -235,7 +236,7 @@ struct IsometricCanvas : Canvas {
 
   // TODO bye bye
   uint8_t totalMarkers = 0;
-  Colors::Marker (*markers)[256];
+  marker_array_t markers;
 
   std::vector<float> brightnessLookup;
 
@@ -262,7 +263,7 @@ struct IsometricCanvas : Canvas {
 
   void setColors(const Colors::Palette &);
   void setMap(const World::Coordinates &);
-  void setMarkers(uint8_t n, Colors::Marker (*array)[256]) {
+  void setMarkers(uint8_t n, const marker_array_t array) {
     totalMarkers = n;
     markers = array;
   }
@@ -281,7 +282,7 @@ struct IsometricCanvas : Canvas {
   void renderSection(const Section &);
   // Draw a block from virtual coords in the canvas
   void renderBlock(const Colors::Block *, const uint32_t, const uint32_t,
-                   const int32_t, const nbt::NBT &metadata);
+                   const int32_t, const nbt::NBT &);
 
   // Empty section with only beams
   void renderBeamSection(const int64_t, const int64_t, const uint8_t);

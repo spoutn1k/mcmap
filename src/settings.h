@@ -33,7 +33,7 @@ struct WorldOptions {
 
   // Marker storage
   uint8_t totalMarkers;
-  Colors::Marker markers[256];
+  std::array<Colors::Marker, 256> markers;
 
   // Memory limits, legacy code for image splitting
   size_t mem_limit;

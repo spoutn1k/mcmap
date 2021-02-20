@@ -274,12 +274,10 @@ void IsometricCanvas::renderChunk(Terrain::Data &terrain) {
     return;
 
   // Setup the markers
-  for (uint8_t i = 0; i < totalMarkers; i++) {
-    if (CHUNK((*markers)[i].x) == worldX && CHUNK((*markers)[i].z) == worldZ) {
-      beams[beamNo++] = Beam((*markers)[i].x & 0x0f, (*markers)[i].z & 0x0f,
-                             &markers[i]->color);
-    }
-  }
+  for (uint8_t i = 0; i < totalMarkers; i++)
+    if (CHUNK(markers[i].x) == worldX && CHUNK(markers[i].z) == worldZ)
+      beams[beamNo++] =
+          Beam(markers[i].x & 0x0f, markers[i].z & 0x0f, &markers[i].color);
 
   current_section = chunk.sections.begin();
   last_section = chunk.sections.end();
@@ -328,7 +326,7 @@ inline void IsometricCanvas::orientSection(uint8_t &x, uint8_t &z) {
 }
 
 void IsometricCanvas::renderSection(const Section &section) {
-  bool beamColumn = false;
+  beamColumn = false;
   uint8_t currentBeam = 0;
 
   // Return if the section is undrawable
@@ -394,7 +392,7 @@ void IsometricCanvas::renderSection(const Section &section) {
 
 void IsometricCanvas::renderBeamSection(const int64_t xPos, const int64_t zPos,
                                         const uint8_t yPos) {
-  bool beamColumn = false;
+  beamColumn = false;
   uint8_t currentBeam = 0;
 
   int32_t chunkX = xPos, chunkZ = zPos;
@@ -411,12 +409,6 @@ void IsometricCanvas::renderBeamSection(const int64_t xPos, const int64_t zPos,
       // Orient the indexes for them to correspond to the orientation
       uint8_t xReal = x, zReal = z;
       orientSection(xReal, zReal);
-
-      // If we are oob, skip the line
-      if ((chunkX << 4) + xReal > map.maxX ||
-          (chunkX << 4) + xReal < map.minX ||
-          (chunkZ << 4) + zReal > map.maxZ || (chunkZ << 4) + zReal < map.minZ)
-        continue;
 
       for (uint8_t index = 0; index < beamNo; index++) {
         if (beams[index].column(xReal, zReal)) {
@@ -549,7 +541,10 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
 
     uint8_t self_light =
         current_section->light_at(orientedX, y % 16, orientedZ);
-    if (self_light) {
+
+    if (beamColumn) {
+      localColor = color->shade(45);
+    } else if (self_light) {
       localColor = color->shade(-75 + 8 * self_light);
     } else {
       Chunk::coordinates offset = {16, 16}, current = {orientedX, orientedZ};
