@@ -132,7 +132,7 @@ void Data::loadChunk(const ChunkCoordinates coords) {
 
   nbt::NBT data;
 
-  if (!nbt::parse(chunkBuffer, length, data)) {
+  if (!nbt::parse(chunkBuffer, length, data) || !Chunk::assert_chunk(data)) {
     fclose(regionHandle);
     return;
   }

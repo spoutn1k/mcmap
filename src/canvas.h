@@ -238,7 +238,8 @@ struct IsometricCanvas : Canvas {
 
   std::vector<float> brightnessLookup;
 
-  Chunk::section_array_t::const_iterator current_section, last_section;
+  Chunk::section_array_t::const_iterator current_section, last_section,
+      left_section, right_section;
 
   // In-chunk variables
   uint32_t chunkX;
@@ -250,7 +251,11 @@ struct IsometricCanvas : Canvas {
 
   uint8_t orientedX, orientedZ, y;
 
-  IsometricCanvas() : Canvas(BYTES), rendered(0) {}
+  // Section array with an empty section to return when a section is not
+  // available
+  Chunk::section_array_t empty_section;
+
+  IsometricCanvas() : Canvas(BYTES), rendered(0) { empty_section.resize(1); }
 
   inline bool empty() const { return !rendered; }
 
@@ -272,17 +277,16 @@ struct IsometricCanvas : Canvas {
   // Drawing entrypoints
   void renderTerrain(Terrain::Data &);
   void renderChunk(Terrain::Data &);
-  void renderSection(const Section &, const Terrain::Data &);
+  void renderSection(const Section &);
   // Draw a block from virtual coords in the canvas
   void renderBlock(const Colors::Block *, const uint32_t, const uint32_t,
-                   const int32_t, const nbt::NBT &metadata,
-                   const Terrain::Data &);
+                   const int32_t, const nbt::NBT &metadata);
 
   // Empty section with only beams
-  void renderBeamSection(const int64_t, const int64_t, const uint8_t,
-                         const Terrain::Data &);
+  void renderBeamSection(const int64_t, const int64_t, const uint8_t);
 
   const Colors::Block *nextBlock();
+  Chunk::section_array_t::const_iterator section_up();
   Chunk::section_array_t::const_iterator section_left(const Terrain::Data &);
   Chunk::section_array_t::const_iterator section_right(const Terrain::Data &);
 };
