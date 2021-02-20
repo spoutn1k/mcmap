@@ -36,7 +36,8 @@ void Data::stripChunk(std::vector<nbt::NBT> *sections) {
     sections->erase(sections->begin());
 
   // Pop all the empty top sections
-  while (!sections->empty() && !sections->back().contains("Palette"))
+  while (!sections->empty() && !sections->back().contains("Palette") &&
+         !sections->back().contains("BlockLight"))
     sections->pop_back();
 }
 
