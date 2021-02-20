@@ -234,7 +234,7 @@ struct IsometricCanvas : Canvas {
   uint8_t totalMarkers = 0;
   Colors::Marker (*markers)[256];
 
-  std::vector<float> brightnessLookup;
+  std::array<float, mcmap::constants::terrain_height> brightnessLookup;
 
   std::vector<Section> sections;
   std::vector<Section>::const_iterator current_section;

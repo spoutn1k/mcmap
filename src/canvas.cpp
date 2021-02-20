@@ -152,9 +152,9 @@ void IsometricCanvas::setColors(const Colors::Palette &colors) {
   // look weird in other dimensions.
   // Legacy formula: ((100.0f / (1.0f + exp(- (1.3f * (float(y) *
   // MIN(g_MapsizeY, 200) / g_MapsizeY) / 16.0f) + 6.0f))) - 91)
-  brightnessLookup = std::vector<float>(255);
-  for (int y = 0; y < 255; ++y)
-    brightnessLookup[y] = -100 + 200 * float(y) / 255;
+  for (int y = 0; y < mcmap::constants::terrain_height; ++y)
+    brightnessLookup[y] =
+        -100 + 200 * float(y) / mcmap::constants::terrain_height;
 }
 
 void IsometricCanvas::setMap(const World::Coordinates &_map) {
@@ -293,7 +293,8 @@ void IsometricCanvas::renderChunk(Terrain::Data &terrain) {
 
   if (beamNo)
     for (uint8_t yPos = sections.back().Y + 1;
-         yPos < std::min(20, map.maxY >> 4) + 1; yPos++)
+         yPos < std::min((mcmap::constants::max_y >> 4), map.maxY >> 4) + 1;
+         yPos++)
       renderBeamSection(chunkX, chunkZ, yPos);
 
   beamNo = 0;
@@ -537,7 +538,7 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
   const Colors::Block *colorPtr = color;
 
   if (shading) {
-    localColor = color->shade(brightnessLookup[y]);
+    localColor = color->shade(brightnessLookup[y - mcmap::constants::min_y]);
     colorPtr = &localColor;
   }
 
