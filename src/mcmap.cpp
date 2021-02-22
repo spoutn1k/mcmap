@@ -51,12 +51,12 @@ int render(const Settings::WorldOptions &options,
       canvas.setColors(colors);
 
       // Load the minecraft terrain to render
-      Terrain::Data world(tiles[i]);
-      world.load(options.regionDir());
+      Terrain::Data world(tiles[i], options.regionDir(), colors);
 
       // Draw the terrain fragment
       canvas.shading = options.shading;
-      // canvas.setMarkers(options.totalMarkers, &options.markers);
+      canvas.lighting = options.lighting;
+      canvas.setMarkers(options.totalMarkers, options.markers);
       canvas.renderTerrain(world);
 
       if (!canvas.empty()) {

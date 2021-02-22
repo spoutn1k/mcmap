@@ -42,6 +42,7 @@ A GUI is in the works, but needs to be compiled from sources.
 |`-nowater`      |do not render water|
 |`-nobeacons`      |do not render beacon beams|
 |`-shading`      |toggle shading (brightens blocks depending on height)|
+|`-lighting`      |toggle lighting (brightens blocks depending on light)|
 |`-nether`      |render the nether|
 |`-end`          |render the end|
 |`-dim[ension] [namespace:]id` |render a dimension by namespaced ID|
@@ -122,6 +123,7 @@ The available available block types are:
 |`Ore`|Block with veins of color. The vein is rendered with the accent color.|Yes|
 |`Grown`|Blocks that have a different layer on top. Grass, nylium, etc. The top layer is rendered with the accent color.|Yes|
 |`Log`|Directionnal block, to render logs/pillars as close as possible. The center of the pillar is rendered with the accent color. Used for logs, pillars, basalt.|Yes|
+|`Lamp`|Conditionnal block, to render redstone lamps. If lit, rendered with accent color.|Yes|
 
 __NOTE__: Waterlogged blocks will be rendered within water instead of air by default according to their blockstates. However, sea-grass and kelp are hardcoded to be underwater and their blockstates won't reflect this, so they have to be defined as `UnderwaterPlants`.
 

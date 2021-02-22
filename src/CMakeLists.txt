@@ -12,6 +12,7 @@ SET(SOURCES ${SOURCES}
     blocktypes.def
     block_drawers.cpp
     canvas.cpp
+    chunk.cpp
     colors.cpp
     helper.cpp
     mcmap.cpp

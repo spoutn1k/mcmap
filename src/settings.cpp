@@ -52,6 +52,8 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
       opts->hideBeacons = true;
     } else if (strcmp(option, "-shading") == 0) {
       opts->shading = true;
+    } else if (strcmp(option, "-lighting") == 0) {
+      opts->lighting = true;
     } else if (strcmp(option, "-nether") == 0) {
       opts->dim = Dimension("the_nether");
     } else if (strcmp(option, "-end") == 0) {
@@ -183,6 +185,7 @@ void Settings::to_json(json &j, const Settings::WorldOptions &o) {
   j["hideWater"] = o.hideWater;
   j["hideBeacons"] = o.hideBeacons;
   j["shading"] = o.shading;
+  j["lighting"] = o.lighting;
 
   j["memory"] = o.mem_limit;
   j["tile"] = o.tile_size;

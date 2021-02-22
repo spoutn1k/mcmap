@@ -31,6 +31,13 @@ namespace constants {
 const int16_t min_y = 0;
 const int16_t max_y = 255;
 const uint16_t terrain_height = max_y - min_y + 1;
+
+const int8_t color_offset_left = -27;
+const int8_t color_offset_right = -17;
+
+const int8_t lighting_dark = -75;
+const int8_t lighting_bright = 100;
+const int8_t lighting_delta = (lighting_bright - lighting_dark) >> 4;
 } // namespace constants
 } // namespace mcmap
 
