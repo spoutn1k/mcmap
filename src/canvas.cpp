@@ -450,8 +450,12 @@ drawer blockRenderers[] = {
 inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
                                          uint32_t z, const int32_t y,
                                          const nbt::NBT &metadata) {
+  // Pointer to the color to use, and local color buffer if changes are due
+  const Colors::Block *colorPtr = color;
+  Colors::Block localColor;
+
   // If there is nothing to render, skip it
-  if (color->primary.transparent())
+  if (colorPtr->primary.transparent())
     return;
 
   // Remove the offset from the first chunk, if it exists. The coordinates x
@@ -527,70 +531,89 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
     throw std::range_error(fmt::format("Invalid y: {}/{} (Block {}.{}.{})",
                                        bmpPosY, height, x, y, z));
 
-  // Pointer to the color to use, and local color copy if changes are due
-  Colors::Block localColor;
-  const Colors::Block *colorPtr = color;
-
-  if (shading) {
-    localColor = color->shade(brightnessLookup[y]);
-    colorPtr = &localColor;
-  }
-
   if (lighting) {
+    localColor = *colorPtr;
     colorPtr = &localColor;
 
     uint8_t self_light =
         current_section->light_at(orientedX, y % 16, orientedZ);
 
     if (beamColumn) {
-      localColor = color->shade(45);
+      // Ignore the rest as a beam, as it most likely is rendered without a
+      // section
+      localColor = localColor.shade(mcmap::constants::lighting_bright);
     } else if (self_light) {
-      localColor = color->shade(-75 + 8 * self_light);
+      // For light-emitting blocks, no need to check left or right
+      localColor =
+          localColor.shade(mcmap::constants::lighting_dark +
+                           mcmap::constants::lighting_delta * self_light);
     } else {
+      // For the rest, we calculate the coordinates of the top, left and right
+      // adjacent blocks, lookup their light and modify the color accordingly
+
+      // Calculate the coordinates of the blocks on top/left/right, depending on
+      // the orientation of the map. This says chunk coordinates but really is
+      // section coordinates, as it belongs in [|0, 15|]^2
       Chunk::coordinates offset = {16, 16}, current = {orientedX, orientedZ};
       Chunk::coordinates left_coords =
           (current + left_in(map.orientation) + offset) % 16;
       Chunk::coordinates right_coords =
           (current + right_in(map.orientation) + offset) % 16;
 
-      Chunk::section_array_t::const_iterator top =
-          (y % 16 == 15 ? section_up() : current_section);
-      Chunk::section_array_t::const_iterator left = current_section;
-      Chunk::section_array_t::const_iterator right = current_section;
+      // Get pointers to the correct sections if the adjacent block is in a
+      // different one
+      auto top = (y % 16 == 15 ? section_up() : current_section);
 
+      auto left = current_section;
       if (current + left_in(map.orientation) != left_coords)
         left = left_section;
 
+      auto right = current_section;
       if (current + right_in(map.orientation) != right_coords)
         right = right_section;
 
-      uint8_t top_light = top->light_at(orientedX, (y + 1) % 16, orientedZ);
-      uint8_t left_light = left->light_at(left_coords.x, y % 16, left_coords.z);
-      uint8_t right_light =
+      // Grab the lights from the iterators above
+      const uint8_t top_light =
+          top->light_at(orientedX, (y + 1) % 16, orientedZ);
+      const uint8_t left_light =
+          left->light_at(left_coords.x, y % 16, left_coords.z);
+      const uint8_t right_light =
           right->light_at(right_coords.x, y % 16, right_coords.z);
 
-      localColor.primary = color->primary;
-      localColor.secondary = color->secondary;
-      localColor.dark = color->dark;
-      localColor.light = color->light;
+      // Modify the block accordingdly
+      localColor.dark.modColor((mcmap::constants::lighting_dark +
+                                mcmap::constants::lighting_delta * left_light) *
+                               (localColor.dark.brightness() / 323.0f + .21f));
+
+      localColor.light.modColor(
+          (mcmap::constants::lighting_dark +
+           mcmap::constants::lighting_delta * right_light) *
+          (localColor.light.brightness() / 323.0f + .21f));
+
+      localColor.secondary.modColor(
+          (mcmap::constants::lighting_dark +
+           mcmap::constants::lighting_delta * top_light) *
+          (localColor.secondary.brightness() / 323.0f + .21f));
 
       localColor.primary.modColor(
-          (-75 + 8 * top_light) *
-          (float(localColor.primary.brightness()) / 323.0f + .21f));
-      localColor.secondary.modColor(
-          (-75 + 8 * top_light) *
-          (float(localColor.secondary.brightness()) / 323.0f + .21f));
-      localColor.dark.modColor(
-          (-75 + 8 * left_light) *
-          (float(localColor.dark.brightness()) / 323.0f + .21f));
-      localColor.light.modColor(
-          (-75 + 8 * right_light) *
-          (float(localColor.light.brightness()) / 323.0f + .21f));
+          (mcmap::constants::lighting_dark +
+           mcmap::constants::lighting_delta * top_light) *
+          (localColor.primary.brightness() / 323.0f + .21f));
     }
   }
 
+  if (shading) {
+    // Copy the color if it has not been done before
+    if (!lighting) {
+      localColor = *colorPtr;
+      colorPtr = &localColor;
+    }
+
+    localColor = localColor.shade(brightnessLookup[y]);
+  }
+
   // Then call the function registered with the block's type
-  blockRenderers[color->type](this, bmpPosX, bmpPosY, metadata, colorPtr);
+  blockRenderers[colorPtr->type](this, bmpPosX, bmpPosY, metadata, colorPtr);
 }
 
 const Colors::Block *IsometricCanvas::nextBlock() {
