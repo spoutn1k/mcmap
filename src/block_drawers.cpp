@@ -1,6 +1,8 @@
 #include "./block_drawers.h"
 
 #define FILL_ &fill->primary
+#define FILLD &fill->dark
+#define FILLL &fill->light
 #define DARK_ &color->dark
 #define LIGHT &color->light
 #define PRIME &color->primary
@@ -94,12 +96,12 @@ void drawPlant(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
     if (metadata["UnderWater"].get<string>() == "true")
       fill = &canvas->water;
 
-  const Colors::Color *sprite[3][4] = {{FILL_, PRIME, FILL_, PRIME},
-                                       {FILL_, FILL_, PRIME, FILL_},
-                                       {FILL_, PRIME, FILL_, FILL_}};
+  const Colors::Color *sprite[3][4] = {{FILLD, PRIME, FILLL, PRIME},
+                                       {FILLD, FILLD, PRIME, FILLL},
+                                       {FILLD, PRIME, FILLL, FILLL}};
 
-  uint8_t *pos = canvas->pixel(x, y);
-  for (uint8_t j = 0; j < 3; ++j, pos = canvas->pixel(x, y + j))
+  uint8_t *pos = canvas->pixel(x, y + 1);
+  for (uint8_t j = 0; j < 3; ++j, pos = canvas->pixel(x, y + j + 1))
     for (uint8_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
       blend(pos, (uint8_t *)sprite[j][i]);
 }
@@ -107,19 +109,19 @@ void drawPlant(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
 void drawUnderwaterPlant(IsometricCanvas *canvas, const uint32_t x,
                          const uint32_t y, const nbt::NBT &,
                          const Colors::Block *color) {
-  /* Print a plant-like block
-   * |    |
-   * |WXWX|
-   * |WWXW|
-   * |WXWW| */
   Colors::Block *fill = &canvas->water;
+  uint8_t top = 0;
 
-  const Colors::Color *sprite[3][4] = {{FILL_, PRIME, FILL_, PRIME},
-                                       {FILL_, FILL_, PRIME, FILL_},
-                                       {FILL_, PRIME, FILL_, FILL_}};
+  if (canvas->nextBlock()->primary.ALPHA == color->primary.ALPHA)
+    top = 1;
 
-  uint8_t *pos = canvas->pixel(x, y);
-  for (uint8_t j = 0; j < 3; ++j, pos = canvas->pixel(x, y + j))
+  const Colors::Color *sprite[4][4] = {{FILL_, FILL_, FILL_, FILL_},
+                                       {FILLD, PRIME, FILLL, PRIME},
+                                       {FILLD, FILLD, PRIME, FILLL},
+                                       {FILLD, PRIME, FILLL, FILLL}};
+
+  uint8_t *pos = canvas->pixel(x, y + top);
+  for (uint8_t j = top; j < 4; ++j, pos = canvas->pixel(x, y + j))
     for (uint8_t i = 0; i < 4; ++i, pos += CHANSPERPIXEL)
       blend(pos, (uint8_t *)sprite[j][i]);
 }
