@@ -5,7 +5,6 @@
 #include <filesystem>
 #include <nbt/nbt.hpp>
 #include <nbt/stream.hpp>
-#include <nbt/translator.hpp>
 #include <stack>
 #include <zlib.h>
 
@@ -33,7 +32,7 @@ bool put(io::ByteStreamWriter &output, const NBT &data) {
       output.write(1, buffer, &error);
 
       uint16_t name_size = static_cast<uint16_t>(current.get_name().size());
-      output.write(2, Translator(name_size).bytes(), &error);
+      // TODO output.write(2, Translator(name_size).bytes(), &error);
 
       output.write(name_size, (uint8_t *)current.get_name().c_str(), &error);
     }
@@ -62,7 +61,7 @@ bool put(io::ByteStreamWriter &output, const NBT &data) {
         output.write(1, buffer, &error);
 
         uint32_t size = current.size();
-        output.write(4, Translator(size).bytes(), &error);
+        // TODO output.write(4, Translator(size).bytes(), &error);
       }
 
       if (position != current.end()) {
@@ -79,38 +78,38 @@ bool put(io::ByteStreamWriter &output, const NBT &data) {
 
     case nbt::tag_type::tag_short: {
       uint16_t value = current.get<short>();
-      output.write(2, Translator(value).bytes(), &error);
+      // TODO output.write(2, Translator(value).bytes(), &error);
       break;
     }
 
     case nbt::tag_type::tag_int: {
       uint32_t value = current.get<int>();
-      output.write(4, Translator(value).bytes(), &error);
+      // TODO output.write(4, Translator(value).bytes(), &error);
       break;
     }
 
     case nbt::tag_type::tag_long: {
       uint64_t value = current.get<long>();
-      output.write(8, Translator(value).bytes(), &error);
+      // TODO output.write(8, Translator(value).bytes(), &error);
       break;
     }
 
     case nbt::tag_type::tag_float: {
       float value = current.get<float>();
-      output.write(4, Translator(value).bytes(), &error);
+      // TODO output.write(4, Translator(value).bytes(), &error);
       break;
     }
 
     case nbt::tag_type::tag_double: {
       double value = current.get<double>();
-      output.write(8, Translator(value).bytes(), &error);
+      // TODO output.write(8, Translator(value).bytes(), &error);
       break;
     }
 
     case nbt::tag_type::tag_byte_array: {
       auto values = current.get<const NBT::tag_byte_array_t *>();
       uint32_t size = values->size();
-      output.write(4, Translator(size).bytes(), &error);
+      // TODO output.write(4, Translator(size).bytes(), &error);
 
       for (int8_t value : *values) {
         buffer[0] = value;
@@ -122,21 +121,21 @@ bool put(io::ByteStreamWriter &output, const NBT &data) {
     case nbt::tag_type::tag_int_array: {
       auto values = current.get<const NBT::tag_int_array_t *>();
       uint32_t size = values->size();
-      output.write(4, Translator(size).bytes(), &error);
+      // TODO output.write(4, Translator(size).bytes(), &error);
 
       for (int32_t value : *values)
-        output.write(4, Translator(value).bytes(), &error);
+        // TODO output.write(4, Translator(value).bytes(), &error);
 
-      break;
+        break;
     }
 
     case nbt::tag_type::tag_long_array: {
       auto values = current.get<const NBT::tag_long_array_t *>();
       uint32_t size = values->size();
-      output.write(4, Translator(size).bytes(), &error);
+      // TODO output.write(4, Translator(size).bytes(), &error);
 
       for (int64_t value : *values) {
-        output.write(8, Translator(value).bytes(), &error);
+        // TODO output.write(8, Translator(value).bytes(), &error);
       }
       break;
     }
@@ -144,7 +143,7 @@ bool put(io::ByteStreamWriter &output, const NBT &data) {
     case nbt::tag_type::tag_string: {
       auto value = current.get<std::string>();
       uint16_t size = static_cast<uint16_t>(value.size());
-      output.write(2, Translator(size).bytes(), &error);
+      // TODO output.write(2, Translator(size).bytes(), &error);
 
       output.write(size, (uint8_t *)value.c_str(), &error);
       break;

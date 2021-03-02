@@ -1,5 +1,6 @@
 #include "./worldloader.h"
 #include <nbt/parser.hpp>
+#include <translator.hpp>
 #include <zlib.h>
 
 namespace Terrain {
@@ -24,7 +25,8 @@ bool decompressChunk(const uint32_t offset, FILE *regionHandle,
     return false;
   }
 
-  *length = _ntohl(zData);
+  // Read the size on the first 4 bytes, discard the type
+  *length = translate<uint32_t>(zData);
   (*length)--; // Sometimes the data is 1 byte smaller
 
   if (fread(zData, sizeof(uint8_t), *length, regionHandle) != *length) {
@@ -53,8 +55,11 @@ bool decompressChunk(const uint32_t offset, FILE *regionHandle,
 }
 
 void Data::loadChunk(const ChunkCoordinates coords) {
+  FILE *regionHandle;
+  uint8_t regionHeader[REGION_HEADER_SIZE], chunkBuffer[DECOMPRESSED_BUFFER];
   int32_t regionX = REGION(coords.x), regionZ = REGION(coords.z),
           cX = coords.x & 0x1f, cZ = coords.z & 0x1f;
+  uint64_t length;
 
   std::filesystem::path regionFile = std::filesystem::path(regionDir) /=
       fmt::format("r.{}.{}.mca", regionX, regionZ);
@@ -64,9 +69,6 @@ void Data::loadChunk(const ChunkCoordinates coords) {
                        regionX, regionZ);
     return;
   }
-
-  FILE *regionHandle;
-  uint8_t regionHeader[REGION_HEADER_SIZE];
 
   if (!(regionHandle = fopen(regionFile.string().c_str(), "rb"))) {
     logger::error("Opening region file `{}` failed: {}\n", regionFile.string(),
@@ -83,12 +85,7 @@ void Data::loadChunk(const ChunkCoordinates coords) {
   }
 
   const uint32_t offset =
-      (_ntohl(regionHeader + ((cZ << 5) + cX) * 4) >> 8) * 4096;
-
-  uint64_t length;
-
-  // Buffers for chunk read from MCA files and decompression.
-  uint8_t chunkBuffer[DECOMPRESSED_BUFFER];
+      (translate<uint32_t>(regionHeader + ((cZ << 5) + cX) * 4) >> 8) * 4096;
 
   if (!offset || !decompressChunk(offset, regionHandle, chunkBuffer, &length,
                                   regionFile)) {

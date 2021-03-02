@@ -5,8 +5,8 @@
 #include <filesystem>
 #include <nbt/nbt.hpp>
 #include <nbt/stream.hpp>
-#include <nbt/translator.hpp>
 #include <stack>
+#include <translator.hpp>
 
 // Max size of a single element to read in memory (string)
 #define MAXELEMENTSIZE 65025
@@ -37,7 +37,7 @@ static bool format_check(io::ByteStreamReader &b) {
     return false;
   }
 
-  name_length = Translator(buffer, SHORT)._short;
+  name_length = translate<uint16_t>(buffer);
   b.read(name_length, buffer, &error);
   if (error) {
     logger::deep_debug("NBT format check error: Invalid name read\n");
@@ -97,7 +97,7 @@ static bool matryoshka(io::ByteStreamReader &b, NBT &destination) {
     // If the tag has a possible name, parse it
     if (!LIST && current_type != tag_type::tag_end) {
       b.read(2, buffer, &error);
-      name_size = Translator(buffer, SHORT)._short;
+      name_size = translate<uint16_t>(buffer);
 
       if (name_size) {
         b.read(name_size, buffer, &error);
@@ -141,7 +141,7 @@ static bool matryoshka(io::ByteStreamReader &b, NBT &destination) {
 
       // Grab the length
       b.read(4, buffer, &error);
-      list_elements = Translator(buffer, INT)._int;
+      list_elements = translate<uint32_t>(buffer);
 
       // Push an empty list on the stack
       opened_elements.push(NBT(NBT::tag_list_t(), current_name));
@@ -172,41 +172,41 @@ static bool matryoshka(io::ByteStreamReader &b, NBT &destination) {
     case tag_type::tag_short: {
       b.read(2, buffer, &error);
 
-      current = NBT(Translator(buffer, SHORT)._short, current_name);
+      current = NBT(translate<NBT::tag_short_t>(buffer), current_name);
       break;
     }
 
     case tag_type::tag_int: {
       b.read(4, buffer, &error);
 
-      current = NBT(Translator(buffer, INT)._int, current_name);
+      current = NBT(translate<NBT::tag_int_t>(buffer), current_name);
       break;
     }
 
     case tag_type::tag_long: {
       b.read(8, buffer, &error);
 
-      current = NBT(Translator(buffer, LONG)._long, current_name);
+      current = NBT(translate<NBT::tag_long_t>(buffer), current_name);
       break;
     }
 
     case tag_type::tag_float: {
       b.read(4, buffer, &error);
 
-      current = NBT(Translator(buffer, FLOAT)._float, current_name);
+      current = NBT(translate<NBT::tag_float_t>(buffer), current_name);
       break;
     }
 
     case tag_type::tag_double: {
       b.read(8, buffer, &error);
 
-      current = NBT(Translator(buffer, DOUBLE)._double, current_name);
+      current = NBT(translate<NBT::tag_double_t>(buffer), current_name);
       break;
     }
 
     case tag_type::tag_byte_array: {
       b.read(4, buffer, &error);
-      elements = Translator(buffer, INT)._int;
+      elements = translate<uint32_t>(buffer);
 
       std::vector<int8_t> bytes(elements);
 
@@ -221,13 +221,13 @@ static bool matryoshka(io::ByteStreamReader &b, NBT &destination) {
 
     case tag_type::tag_int_array: {
       b.read(4, buffer, &error);
-      elements = Translator(buffer, INT)._int;
+      elements = translate<uint32_t>(buffer);
 
       std::vector<int32_t> ints(elements);
 
       for (uint32_t i = 0; i < elements; i++) {
         b.read(4, buffer, &error);
-        ints[i] = Translator(buffer, INT)._int;
+        ints[i] = translate<NBT::tag_int_array_t::value_type>(buffer);
       }
 
       current = NBT(ints, current_name);
@@ -236,12 +236,12 @@ static bool matryoshka(io::ByteStreamReader &b, NBT &destination) {
 
     case tag_type::tag_long_array: {
       b.read(4, buffer, &error);
-      elements = Translator(buffer, INT)._int;
+      elements = translate<uint32_t>(buffer);
 
       std::vector<int64_t> longs(elements);
       for (uint32_t i = 0; i < elements; i++) {
         b.read(8, buffer, &error);
-        longs[i] = Translator(buffer, LONG)._long;
+        longs[i] = translate<NBT::tag_long_array_t::value_type>(buffer);
       }
 
       current = NBT(longs, current_name);
@@ -250,7 +250,7 @@ static bool matryoshka(io::ByteStreamReader &b, NBT &destination) {
 
     case tag_type::tag_string: {
       b.read(2, buffer, &error);
-      uint16_t string_size = Translator(buffer, SHORT)._short;
+      uint16_t string_size = translate<uint16_t>(buffer);
 
       b.read(string_size, buffer, &error);
       std::string content((char *)buffer, string_size);
