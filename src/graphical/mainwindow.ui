@@ -100,9 +100,6 @@
          <property name="text">
           <string>output.png</string>
          </property>
-         <property name="textFormat">
-          <enum>Qt::MarkdownText</enum>
-         </property>
         </widget>
        </item>
        <item>
