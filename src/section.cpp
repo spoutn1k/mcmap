@@ -2,7 +2,7 @@
 
 const Colors::Block _void;
 
-Section::Section() : colors{&_void}, palette(nullptr) {
+Section::Section() : colors{&_void} {
   // The `colors` array needs to contain at least a color to have a defined
   // behavious when uninitialized. `color_at` is called 4096x per section, it is
   // critical for it to avoid if-elses.
@@ -13,59 +13,73 @@ Section::Section() : colors{&_void}, palette(nullptr) {
 
   // Make sure all the blocks are air - thanks to the default value in `colors`
   blocks.fill(std::numeric_limits<block_array::value_type>::min());
+  lights.fill(std::numeric_limits<light_array::value_type>::min());
 }
 
 Section::Section(const nbt::NBT &raw_section, const int dataVersion,
                  const Colors::Palette &defined)
     : Section() {
-  if (!raw_section.contains("Palette") ||
-      !raw_section.contains("BlockStates")) {
-    return;
-  }
-
   // Get data from the NBT
   Y = raw_section["Y"].get<int8_t>();
-  palette = raw_section["Palette"].get<const std::vector<nbt::NBT> *>();
-  const std::vector<int64_t> *blockStates =
-      raw_section["BlockStates"].get<const std::vector<int64_t> *>();
 
-  // Remove the air that is default-constructed
-  colors.clear();
-  // Anticipate the color input from the palette's size
-  colors.reserve(palette->size());
+  // Import block data if present
+  if (raw_section.contains("Palette") && raw_section.contains("BlockStates")) {
+    palette = *raw_section["Palette"].get<const std::vector<nbt::NBT> *>();
+    const nbt::NBT::tag_long_array_t *blockStates =
+        raw_section["BlockStates"].get<const nbt::NBT::tag_long_array_t *>();
 
-  // The length in bits of a block is the log2 of the palette's size or 4,
-  // whichever is greatest. Ranges from 4 to 12.
-  const uint8_t blockBitLength =
-      std::max(uint8_t(ceil(log2(palette->size()))), uint8_t(4));
+    // Remove the air that is default-constructed
+    colors.clear();
+    // Anticipate the color input from the palette's size
+    colors.reserve(palette.size());
 
-  // Parse the blockstates for block info
-  // TODO make a more reliable dataversion to algorithm detection
-  if (dataVersion < 2534)
-    sectionAtPre116(blockBitLength, blockStates, blocks);
-  else
-    sectionAtPost116(blockBitLength, blockStates, blocks);
+    // The length in bits of a block is the log2 of the palette's size or 4,
+    // whichever is greatest. Ranges from 4 to 12.
+    const uint8_t blockBitLength =
+        std::max(uint8_t(ceil(log2(palette.size()))), uint8_t(4));
 
-  // Pick the colors from the Palette
-  for (auto &color : *palette) {
-    const string namespacedId = color["Name"].get<string>();
-    auto query = defined.find(namespacedId);
+    // Parse the blockstates for block info
+    // TODO make a more reliable dataversion to algorithm detection
+    if (dataVersion < 2534)
+      sectionAtPre116(blockBitLength, blockStates, blocks);
+    else
+      sectionAtPost116(blockBitLength, blockStates, blocks);
 
-    if (query == defined.end()) {
-      logger::error("Color of block {} not found\n", namespacedId);
-      colors.push_back(&_void);
-    } else {
-      colors.push_back(&query->second);
-      if (namespacedId == "minecraft:beacon")
-        beaconIndex = colors.size() - 1;
+    // Pick the colors from the Palette
+    for (const auto &color : palette) {
+      const string namespacedId = color["Name"].get<string>();
+      auto query = defined.find(namespacedId);
+
+      if (query == defined.end()) {
+        logger::error("Color of block {} not found\n", namespacedId);
+        colors.push_back(&_void);
+      } else {
+        colors.push_back(&query->second);
+        if (namespacedId == "minecraft:beacon")
+          beaconIndex = colors.size() - 1;
+      }
+    }
+
+    // Iron out potential corruption errors
+    for (block_array::reference index : blocks) {
+      if (index > colors.size() - 1) {
+        logger::deep_debug(
+            "Malformed section: block is undefined in palette\n");
+        index = 0;
+      }
     }
   }
 
-  // Iron out potential corruption errors
-  for (block_array::reference index : blocks) {
-    if (index > colors.size() - 1) {
-      logger::deep_debug("Malformed section: block is undefined in palette\n");
-      index = 0;
+  // Import lighting data if present
+  if (raw_section.contains("BlockLight")) {
+    const nbt::NBT::tag_byte_array_t *blockLights =
+        raw_section["BlockLight"].get<const nbt::NBT::tag_byte_array_t *>();
+
+    if (blockLights->size() == 2048) {
+      for (nbt::NBT::tag_byte_array_t::size_type i = 0; i < blockLights->size();
+           i++) {
+        lights[i] = blockLights->at(i);
+      }
     }
   }
 }

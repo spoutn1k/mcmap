@@ -11,7 +11,7 @@ jobs:
         && cd /usr/src/gtest
         && CXX=g++-10 sudo cmake CMakeLists.txt
         && sudo make -j
-        && sudo cp *.a /usr/lib
+        && sudo cp lib/*a /usr/lib
         && sudo ln -s /usr/lib/libgtest.a /usr/local/lib/libgtest.a
         && sudo ln -s /usr/lib/libgtest_main.a /usr/local/lib/libgtest_main.a
     - uses: actions/checkout@v2

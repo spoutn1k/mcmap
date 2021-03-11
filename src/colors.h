@@ -117,10 +117,9 @@ struct Color {
   bool transparent() const { return !ALPHA; }
   bool opaque() const { return ALPHA == 255; }
 
-  uint8_t brightness() const {
-    return (uint8_t)sqrt(double(R) * double(R) * .2126 +
-                         double(G) * double(G) * .7152 +
-                         double(B) * double(B) * .0722);
+  float brightness() const {
+    return sqrt(double(R) * double(R) * .2126 + double(G) * double(G) * .7152 +
+                double(B) * double(B) * .0722);
   }
 
   Color operator+(const Color &other) const {
@@ -147,8 +146,8 @@ struct Block {
   Block(const Colors::BlockTypes &bt, const Colors::Color &c1)
       : primary(c1), secondary(), light(c1), dark(c1) {
     type = bt;
-    light.modColor(-17);
-    dark.modColor(-27);
+    light.modColor(mcmap::constants::color_offset_right);
+    dark.modColor(mcmap::constants::color_offset_left);
   }
 
   Block(const Colors::BlockTypes &bt, const Colors::Color &c1,
@@ -174,12 +173,11 @@ struct Block {
 
   Block shade(float fsub) const NOINLINE {
     Block shaded = *this;
-    int sub = int(fsub * (float(primary.brightness()) / 323.0f + .21f));
 
-    shaded.primary.modColor(sub);
-    shaded.dark.modColor(sub);
-    shaded.light.modColor(sub);
-    shaded.secondary.modColor(sub);
+    shaded.primary.modColor(fsub * (primary.brightness() / 323.0f + .21f));
+    shaded.secondary.modColor(fsub * (secondary.brightness() / 323.0f + .21f));
+    shaded.dark.modColor(fsub * (dark.brightness() / 323.0f + .21f));
+    shaded.light.modColor(fsub * (light.brightness() / 323.0f + .21f));
 
     return shaded;
   }

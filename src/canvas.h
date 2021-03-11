@@ -112,6 +112,7 @@ struct Canvas {
 
       case IMAGE:
         logger::error("Default constructing image canvas not supported\n");
+        break;
 
       default: {
         null_buffer = long(0);
@@ -217,7 +218,10 @@ struct ImageCanvas : Canvas {
 // created with a set of 3D coordinates, and translate every block drawn
 // into a 2D position.
 struct IsometricCanvas : Canvas {
-  bool shading;
+  using Chunk = mcmap::Chunk;
+  using marker_array_t = std::array<Colors::Marker, 256>;
+
+  bool shading, lighting, beamColumn;
   size_t rendered;
 
   size_t width, height;
@@ -232,12 +236,12 @@ struct IsometricCanvas : Canvas {
 
   // TODO bye bye
   uint8_t totalMarkers = 0;
-  Colors::Marker (*markers)[256];
+  marker_array_t markers;
 
-  std::vector<float> brightnessLookup;
+  std::array<float, mcmap::constants::terrain_height> brightnessLookup;
 
-  std::vector<Section> sections;
-  std::vector<Section>::const_iterator current_section;
+  Chunk::section_array_t::const_iterator current_section, last_section,
+      left_section, right_section;
 
   // In-chunk variables
   uint32_t chunkX;
@@ -249,13 +253,17 @@ struct IsometricCanvas : Canvas {
 
   uint8_t orientedX, orientedZ, y;
 
-  IsometricCanvas() : Canvas(BYTES), rendered(0) {}
+  // Section array with an empty section to return when a section is not
+  // available
+  Chunk::section_array_t empty_section;
+
+  IsometricCanvas() : Canvas(BYTES), rendered(0) { empty_section.resize(1); }
 
   inline bool empty() const { return !rendered; }
 
   void setColors(const Colors::Palette &);
   void setMap(const World::Coordinates &);
-  void setMarkers(uint8_t n, Colors::Marker (*array)[256]) {
+  void setMarkers(uint8_t n, const marker_array_t array) {
     totalMarkers = n;
     markers = array;
   }
@@ -274,12 +282,15 @@ struct IsometricCanvas : Canvas {
   void renderSection(const Section &);
   // Draw a block from virtual coords in the canvas
   void renderBlock(const Colors::Block *, const uint32_t, const uint32_t,
-                   const int32_t, const nbt::NBT &metadata);
+                   const int32_t, const nbt::NBT &);
 
   // Empty section with only beams
   void renderBeamSection(const int64_t, const int64_t, const uint8_t);
 
   const Colors::Block *nextBlock();
+  Chunk::section_array_t::const_iterator section_up();
+  Chunk::section_array_t::const_iterator section_left(const Terrain::Data &);
+  Chunk::section_array_t::const_iterator section_right(const Terrain::Data &);
 };
 
 struct CompositeCanvas : public Canvas {

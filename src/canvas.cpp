@@ -1,6 +1,11 @@
 #include "./canvas.h"
-#include "VERSION"
-#include "png.h"
+#include "./VERSION"
+#include "./png.h"
+
+Terrain::Data::ChunkCoordinates sum(Terrain::Data::ChunkCoordinates lhs,
+                                    Terrain::Data::ChunkCoordinates rhs) {
+  return {lhs.x + rhs.x, lhs.z + rhs.z};
+}
 
 size_t Canvas::_get_line(const uint8_t *data, uint8_t *buffer, size_t bufSize,
                          uint64_t y) const {
@@ -141,8 +146,8 @@ void IsometricCanvas::setColors(const Colors::Palette &colors) {
   if (airColor != colors.end())
     air = airColor->second;
 
-  // Set to true to use shading later on
-  shading = false;
+  // Set to true to use later on
+  shading = lighting = false;
 
   // Precompute the shading profile. The values are arbitrary, and will go
   // through Colors::Color.modcolor further down the code. The 255 array
@@ -152,9 +157,9 @@ void IsometricCanvas::setColors(const Colors::Palette &colors) {
   // look weird in other dimensions.
   // Legacy formula: ((100.0f / (1.0f + exp(- (1.3f * (float(y) *
   // MIN(g_MapsizeY, 200) / g_MapsizeY) / 16.0f) + 6.0f))) - 91)
-  brightnessLookup = std::vector<float>(255);
-  for (int y = 0; y < 255; ++y)
-    brightnessLookup[y] = -100 + 200 * float(y) / 255;
+  for (int y = 0; y < mcmap::constants::terrain_height; ++y)
+    brightnessLookup[y] =
+        -100 + 200 * float(y) / mcmap::constants::terrain_height;
 }
 
 void IsometricCanvas::setMap(const World::Coordinates &_map) {
@@ -261,45 +266,41 @@ void IsometricCanvas::renderChunk(Terrain::Data &terrain) {
   int32_t worldX = chunkX, worldZ = chunkZ;
   orientChunk(worldX, worldZ);
 
-  nbt::NBT &chunk = terrain.chunkAt(worldX, worldZ);
+  const Chunk &chunk =
+      terrain.chunkAt({worldX, worldZ}, map.orientation, lighting);
 
   // If there is nothing to render
-  if (chunk.is_end() || chunk["Level"]["Sections"].empty()) {
-    logger::deep_debug("Skipping chunk {} {}\n", chunkX, chunkZ);
+  if (!chunk.valid())
     return;
-  }
-
-  // This value is primordial: it states which version of minecraft the chunk
-  // was created under, and we use it to know which interpreter to use later
-  // in the sections
-  const int dataVersion = chunk["DataVersion"].get<int>();
 
   // Setup the markers
-  for (uint8_t i = 0; i < totalMarkers; i++) {
-    if (CHUNK((*markers)[i].x) == worldX && CHUNK((*markers)[i].z) == worldZ) {
-      beams[beamNo++] = Beam((*markers)[i].x & 0x0f, (*markers)[i].z & 0x0f,
-                             &markers[i]->color);
+  for (uint8_t i = 0; i < totalMarkers; i++)
+    if (CHUNK(markers[i].x) == worldX && CHUNK(markers[i].z) == worldZ)
+      beams[beamNo++] =
+          Beam(markers[i].x & 0x0f, markers[i].z & 0x0f, &markers[i].color);
+
+  current_section = chunk.sections.begin();
+  last_section = chunk.sections.end();
+
+  while (current_section != chunk.sections.end()) {
+    if (lighting) {
+      right_section = section_right(terrain);
+      left_section = section_left(terrain);
     }
-  }
 
-  for (const auto &data : chunk["Level"]["Sections"])
-    sections.push_back(Section(data, dataVersion, palette));
-
-  current_section = sections.begin();
-  while (current_section != sections.end()) {
     renderSection(*current_section);
     current_section++;
   }
 
   if (beamNo)
-    for (uint8_t yPos = sections.back().Y + 1;
-         yPos < std::min(20, map.maxY >> 4) + 1; yPos++)
+    for (uint8_t yPos = chunk.sections.back().Y + 1;
+         yPos < std::min((mcmap::constants::max_y >> 4), map.maxY >> 4) + 1;
+         yPos++)
       renderBeamSection(chunkX, chunkZ, yPos);
 
   beamNo = 0;
 
-  sections.clear();
-  chunk = nbt::NBT();
+  terrain.free_chunk({worldX, worldZ});
   rendered++;
 }
 
@@ -325,7 +326,7 @@ inline void IsometricCanvas::orientSection(uint8_t &x, uint8_t &z) {
 }
 
 void IsometricCanvas::renderSection(const Section &section) {
-  bool beamColumn = false;
+  beamColumn = false;
   uint8_t currentBeam = 0;
 
   // Return if the section is undrawable
@@ -391,7 +392,7 @@ void IsometricCanvas::renderSection(const Section &section) {
 
 void IsometricCanvas::renderBeamSection(const int64_t xPos, const int64_t zPos,
                                         const uint8_t yPos) {
-  bool beamColumn = false;
+  beamColumn = false;
   uint8_t currentBeam = 0;
 
   int32_t chunkX = xPos, chunkZ = zPos;
@@ -408,12 +409,6 @@ void IsometricCanvas::renderBeamSection(const int64_t xPos, const int64_t zPos,
       // Orient the indexes for them to correspond to the orientation
       uint8_t xReal = x, zReal = z;
       orientSection(xReal, zReal);
-
-      // If we are oob, skip the line
-      if ((chunkX << 4) + xReal > map.maxX ||
-          (chunkX << 4) + xReal < map.minX ||
-          (chunkZ << 4) + zReal > map.maxZ || (chunkZ << 4) + zReal < map.minZ)
-        continue;
 
       for (uint8_t index = 0; index < beamNo; index++) {
         if (beams[index].column(xReal, zReal)) {
@@ -455,8 +450,12 @@ drawer blockRenderers[] = {
 inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
                                          uint32_t z, const int32_t y,
                                          const nbt::NBT &metadata) {
+  // Pointer to the color to use, and local color buffer if changes are due
+  const Colors::Block *colorPtr = color;
+  Colors::Block localColor;
+
   // If there is nothing to render, skip it
-  if (color->primary.transparent())
+  if (colorPtr->primary.transparent())
     return;
 
   // Remove the offset from the first chunk, if it exists. The coordinates x
@@ -532,27 +531,151 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
     throw std::range_error(fmt::format("Invalid y: {}/{} (Block {}.{}.{})",
                                        bmpPosY, height, x, y, z));
 
-  // Pointer to the color to use, and local color copy if changes are due
-  Colors::Block localColor;
-  const Colors::Block *colorPtr = color;
+  if (lighting) {
+    localColor = *colorPtr;
+    colorPtr = &localColor;
+
+    uint8_t self_light =
+        current_section->light_at(orientedX, y % 16, orientedZ);
+
+    if (beamColumn) {
+      // Ignore the rest as a beam, as it most likely is rendered without a
+      // section
+      localColor = localColor.shade(mcmap::constants::lighting_bright);
+    } else if (self_light) {
+      // For light-emitting blocks, no need to check left or right
+      localColor =
+          localColor.shade(mcmap::constants::lighting_dark +
+                           mcmap::constants::lighting_delta * self_light);
+    } else {
+      // For the rest, we calculate the coordinates of the top, left and right
+      // adjacent blocks, lookup their light and modify the color accordingly
+
+      // Calculate the coordinates of the blocks on top/left/right, depending on
+      // the orientation of the map. This says chunk coordinates but really is
+      // section coordinates, as it belongs in [|0, 15|]^2
+      Chunk::coordinates offset = {16, 16}, current = {orientedX, orientedZ};
+      Chunk::coordinates left_coords =
+          (current + left_in(map.orientation) + offset) % 16;
+      Chunk::coordinates right_coords =
+          (current + right_in(map.orientation) + offset) % 16;
+
+      // Get pointers to the correct sections if the adjacent block is in a
+      // different one
+      auto top = (y % 16 == 15 ? section_up() : current_section);
+
+      auto left = current_section;
+      if (current + left_in(map.orientation) != left_coords)
+        left = left_section;
+
+      auto right = current_section;
+      if (current + right_in(map.orientation) != right_coords)
+        right = right_section;
+
+      // Grab the lights from the iterators above
+      const uint8_t top_light =
+          top->light_at(orientedX, (y + 1) % 16, orientedZ);
+      const uint8_t left_light =
+          left->light_at(left_coords.x, y % 16, left_coords.z);
+      const uint8_t right_light =
+          right->light_at(right_coords.x, y % 16, right_coords.z);
+
+      // Modify the block accordingdly
+      localColor.dark.modColor((mcmap::constants::lighting_dark +
+                                mcmap::constants::lighting_delta * left_light) *
+                               (localColor.dark.brightness() / 323.0f + .21f));
+
+      localColor.light.modColor(
+          (mcmap::constants::lighting_dark +
+           mcmap::constants::lighting_delta * right_light) *
+          (localColor.light.brightness() / 323.0f + .21f));
+
+      localColor.secondary.modColor(
+          (mcmap::constants::lighting_dark +
+           mcmap::constants::lighting_delta * top_light) *
+          (localColor.secondary.brightness() / 323.0f + .21f));
+
+      localColor.primary.modColor(
+          (mcmap::constants::lighting_dark +
+           mcmap::constants::lighting_delta * top_light) *
+          (localColor.primary.brightness() / 323.0f + .21f));
+    }
+  }
 
   if (shading) {
-    localColor = color->shade(brightnessLookup[y]);
-    colorPtr = &localColor;
+    // Copy the color if it has not been done before
+    if (!lighting) {
+      localColor = *colorPtr;
+      colorPtr = &localColor;
+    }
+
+    localColor =
+        localColor.shade(brightnessLookup[y - mcmap::constants::min_y]);
   }
 
   // Then call the function registered with the block's type
-  blockRenderers[color->type](this, bmpPosX, bmpPosY, metadata, colorPtr);
+  blockRenderers[colorPtr->type](this, bmpPosX, bmpPosY, metadata, colorPtr);
 }
 
 const Colors::Block *IsometricCanvas::nextBlock() {
-  std::vector<Section>::const_iterator lookup =
-      current_section + (y == 15 ? 1 : 0);
+  Chunk::section_array_t::const_iterator lookup = current_section;
 
-  if (lookup == sections.end())
-    return &air;
+  if (y % 16 == 15)
+    lookup = section_up();
 
   return lookup->color_at(orientedX, (y + 1) % 16, orientedZ);
+}
+
+IsometricCanvas::Chunk::section_array_t::const_iterator
+IsometricCanvas::section_up() {
+  if (current_section + 1 == last_section)
+    return empty_section.begin();
+
+  return current_section + 1;
+}
+
+IsometricCanvas::Chunk::section_array_t::const_iterator
+IsometricCanvas::section_left(const Terrain::Data &terrain) {
+  int32_t worldX = chunkX, worldZ = chunkZ;
+  orientChunk(worldX, worldZ);
+
+  Chunk::coordinates left =
+      Chunk::coordinates({worldX, worldZ}) + left_in(map.orientation);
+
+  const auto &chunk_left = terrain.chunks.find({left.x, left.z});
+
+  if (chunk_left == terrain.chunks.end())
+    return empty_section.begin();
+
+  for (Chunk::section_array_t::const_iterator section =
+           chunk_left->second.sections.begin();
+       section != chunk_left->second.sections.end(); section++)
+    if (section->Y == current_section->Y)
+      return section;
+
+  return empty_section.begin();
+}
+
+IsometricCanvas::Chunk::section_array_t::const_iterator
+IsometricCanvas::section_right(const Terrain::Data &terrain) {
+  int32_t worldX = chunkX, worldZ = chunkZ;
+  orientChunk(worldX, worldZ);
+
+  Chunk::coordinates right =
+      Chunk::coordinates({worldX, worldZ}) + right_in(map.orientation);
+
+  const auto &chunk_right = terrain.chunks.find({right.x, right.z});
+
+  if (chunk_right == terrain.chunks.end())
+    return empty_section.begin();
+
+  for (Chunk::section_array_t::const_iterator section =
+           chunk_right->second.sections.begin();
+       section != chunk_right->second.sections.end(); section++)
+    if (section->Y == current_section->Y)
+      return section;
+
+  return empty_section.begin();
 }
 
 bool compare(const Canvas &p1, const Canvas &p2) {

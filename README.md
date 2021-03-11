@@ -21,13 +21,12 @@ mcmap <options> path/to/<your save>
 The standard save path is different between OSes:
 - On Linux, it is `$HOME/.minecraft/saves`;
 - On macOS, under `~/Library/Application\ Support/minecraft/saves`;
-- On Windows, the standard path is `%AppData%\.minecraft\saves`. However as only [Ubuntu on Windows](https://ubuntu.com/tutorials/tutorial-ubuntu-on-windows#1-overview) is supported, the path to access the save folder is the following: `/mnt/c/<Your user>/AppData/Roaming/.minecraft/saves`.
+- On Windows, the standard path is `%AppData%\.minecraft\saves`. If using [Ubuntu on Windows](https://ubuntu.com/tutorials/tutorial-ubuntu-on-windows#1-overview), the path to access the save folder is the following: `/mnt/c/<Your user>/AppData/Roaming/.minecraft/saves`.
 
-#### Windows
-
-Native Windows is currently unsupported, but the program works using [Ubuntu on windows](https://ubuntu.com/tutorials/tutorial-ubuntu-on-windows#1-overview) to get a linux terminal and launch it from there, as on a linux platform.
-
-Most of the code uses `std::filesystem` to access files and from my understanding should be cross-platform. I have no experience nor interest in making a Windows GUI, but it should be pretty straightforward, as it [has been done before](https://www.minecraftforum.net/forums/mapping-and-modding-java-edition/minecraft-tools/1260568-minemapper-dynamic-mapping-for-windows). If anyone has the sources to that old viewer, sharing them to update them would be greatly appreciated.
+Native Windows is now supported.
+Pre-compiled binaries can be downloaded from the [releases page](https://github.com/spoutn1k/mcmap/releases).
+For now, the program can only be used via `terminal`/`powershell` on Linux/Macos or Windows respectively.
+A GUI is in the works, but needs to be compiled from sources.
 
 ### Options
 
@@ -43,6 +42,7 @@ Most of the code uses `std::filesystem` to access files and from my understandin
 |`-nowater`      |do not render water|
 |`-nobeacons`      |do not render beacon beams|
 |`-shading`      |toggle shading (brightens blocks depending on height)|
+|`-lighting`      |toggle lighting (brightens blocks depending on light)|
 |`-nether`      |render the nether|
 |`-end`          |render the end|
 |`-dim[ension] [namespace:]id` |render a dimension by namespaced ID|
@@ -123,6 +123,7 @@ The available available block types are:
 |`Ore`|Block with veins of color. The vein is rendered with the accent color.|Yes|
 |`Grown`|Blocks that have a different layer on top. Grass, nylium, etc. The top layer is rendered with the accent color.|Yes|
 |`Log`|Directionnal block, to render logs/pillars as close as possible. The center of the pillar is rendered with the accent color. Used for logs, pillars, basalt.|Yes|
+|`Lamp`|Conditionnal block, to render redstone lamps. If lit, rendered with accent color.|Yes|
 
 __NOTE__: Waterlogged blocks will be rendered within water instead of air by default according to their blockstates. However, sea-grass and kelp are hardcoded to be underwater and their blockstates won't reflect this, so they have to be defined as `UnderwaterPlants`.
 
@@ -168,8 +169,7 @@ make -j
 
 #### macOS
 
-In an Apple environment, you need to install the libraries. 
-You also need a developer toolkit recent enough, with the version of `g++ --version` superior to 10. 
+In an Apple environment, you need a developer toolkit recent enough, with the version of `g++ --version` superior to 10. 
 
 Using [`brew`](https://brew.sh/):
 ```
@@ -182,7 +182,11 @@ make -j
 
 #### Windows
 
-Download and set up [Ubuntu on windows](https://ubuntu.com/tutorials/tutorial-ubuntu-on-windows#1-overview) then the steps are the same as Linux/Ubuntu.
+`mcmap` was successfully compiled for Windows using Visual Studio/Visual C++ and MinGW.
+As there is no package manager on Windows, [`libpng`](http://www.libpng.org/pub/png/libpng.html) and [`zlib`](https://zlib.net/) need to be compiled/installed manually.
+If compiling the GUI version, you will also need [`Qt`](https://www.qt.io/download).
+
+You can also download and set up [Ubuntu on windows](https://ubuntu.com/tutorials/tutorial-ubuntu-on-windows#1-overview) then the steps are the same as Linux/Ubuntu.
 
 ## Troubleshooting
 
