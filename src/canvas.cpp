@@ -535,8 +535,8 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
     localColor = *colorPtr;
     colorPtr = &localColor;
 
-    uint8_t self_light =
-        current_section->light_at(orientedX, y % 16, orientedZ);
+    uint8_t self_light = current_section->light_at(
+        orientedX, (y + mcmap::constants::terrain_height) % 16, orientedZ);
 
     if (beamColumn) {
       // Ignore the rest as a beam, as it most likely is rendered without a
@@ -562,7 +562,9 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
 
       // Get pointers to the correct sections if the adjacent block is in a
       // different one
-      auto top = (y % 16 == 15 ? section_up() : current_section);
+      auto top =
+          ((y + mcmap::constants::terrain_height) % 16 == 15 ? section_up()
+                                                             : current_section);
 
       auto left = current_section;
       if (current + left_in(map.orientation) != left_coords)
@@ -573,12 +575,15 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
         right = right_section;
 
       // Grab the lights from the iterators above
-      const uint8_t top_light =
-          top->light_at(orientedX, (y + 1) % 16, orientedZ);
-      const uint8_t left_light =
-          left->light_at(left_coords.x, y % 16, left_coords.z);
-      const uint8_t right_light =
-          right->light_at(right_coords.x, y % 16, right_coords.z);
+      const uint8_t top_light = top->light_at(
+          orientedX, (y + mcmap::constants::terrain_height + 1) % 16,
+          orientedZ);
+      const uint8_t left_light = left->light_at(
+          left_coords.x, (y + mcmap::constants::terrain_height) % 16,
+          left_coords.z);
+      const uint8_t right_light = right->light_at(
+          right_coords.x, (y + mcmap::constants::terrain_height) % 16,
+          right_coords.z);
 
       // Modify the block accordingdly
       localColor.dark.modColor((mcmap::constants::lighting_dark +
@@ -620,10 +625,11 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
 const Colors::Block *IsometricCanvas::nextBlock() {
   Chunk::section_array_t::const_iterator lookup = current_section;
 
-  if (y % 16 == 15)
+  if ((y + mcmap::constants::terrain_height) % 16 == 15)
     lookup = section_up();
 
-  return lookup->color_at(orientedX, (y + 1) % 16, orientedZ);
+  return lookup->color_at(
+      orientedX, (y + mcmap::constants::terrain_height + 1) % 16, orientedZ);
 }
 
 IsometricCanvas::Chunk::section_array_t::const_iterator
