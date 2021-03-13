@@ -16,21 +16,21 @@ void to_json(json &j, const NBT &nbt) {
   case tag_type::tag_short:
   case tag_type::tag_int:
   case tag_type::tag_long:
-    j = json({{nbt.get_name(), nbt.get<long>()}});
+    j = json({{nbt.get_name(), nbt.get<NBT::tag_long_t>()}});
     break;
   case tag_type::tag_float:
   case tag_type::tag_double:
-    j = json({{nbt.get_name(), nbt.get<double>()}});
+    j = json({{nbt.get_name(), nbt.get<NBT::tag_double_t>()}});
     break;
   case tag_type::tag_byte_array:
-    j = json({{nbt.get_name(), *nbt.get<const std::vector<int8_t> *>()}});
+    j = json({{nbt.get_name(), *nbt.get<const NBT::tag_byte_array_t *>()}});
     break;
   case tag_type::tag_string:
-    j = json({{nbt.get_name(), nbt.get<std::string>()}});
+    j = json({{nbt.get_name(), nbt.get<NBT::tag_string_t>()}});
     break;
   case tag_type::tag_list: {
     std::vector<json> data;
-    const std::vector<NBT> *subs = nbt.get<const std::vector<NBT> *>();
+    const std::vector<NBT> *subs = nbt.get<const NBT::tag_list_t *>();
 
     for (auto el : *subs)
       data.emplace_back(json(el));
@@ -42,7 +42,7 @@ void to_json(json &j, const NBT &nbt) {
     json contents({});
 
     const std::map<std::string, NBT> *subs =
-        nbt.get<const std::map<std::string, NBT> *>();
+        nbt.get<const NBT::tag_compound_t *>();
 
     for (auto el : *subs)
       contents.update(json(el.second));
@@ -51,10 +51,10 @@ void to_json(json &j, const NBT &nbt) {
     break;
   }
   case tag_type::tag_int_array:
-    j = json({{nbt.get_name(), *nbt.get<const std::vector<int> *>()}});
+    j = json({{nbt.get_name(), *nbt.get<const NBT::tag_int_array_t *>()}});
     break;
   case tag_type::tag_long_array:
-    j = json({{nbt.get_name(), *nbt.get<const std::vector<long> *>()}});
+    j = json({{nbt.get_name(), *nbt.get<const NBT::tag_long_array_t *>()}});
     break;
   case tag_type::tag_end:
   default:
