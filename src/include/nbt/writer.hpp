@@ -6,6 +6,7 @@
 #include <nbt/nbt.hpp>
 #include <nbt/stream.hpp>
 #include <stack>
+#include <translator.hpp>
 #include <zlib.h>
 
 namespace nbt {
@@ -32,7 +33,8 @@ bool put(io::ByteStreamWriter &output, const NBT &data) {
       output.write(1, buffer, &error);
 
       uint16_t name_size = static_cast<uint16_t>(current.get_name().size());
-      // TODO output.write(2, Translator(name_size).bytes(), &error);
+      translate(buffer, name_size);
+      output.write(2, buffer, &error);
 
       output.write(name_size, (uint8_t *)current.get_name().c_str(), &error);
     }
@@ -61,7 +63,8 @@ bool put(io::ByteStreamWriter &output, const NBT &data) {
         output.write(1, buffer, &error);
 
         uint32_t size = current.size();
-        // TODO output.write(4, Translator(size).bytes(), &error);
+        translate(buffer, size);
+        output.write(4, buffer, &error);
       }
 
       if (position != current.end()) {
@@ -78,38 +81,44 @@ bool put(io::ByteStreamWriter &output, const NBT &data) {
 
     case nbt::tag_type::tag_short: {
       uint16_t value = current.get<short>();
-      // TODO output.write(2, Translator(value).bytes(), &error);
+      translate(buffer, value);
+      output.write(2, buffer, &error);
       break;
     }
 
     case nbt::tag_type::tag_int: {
       uint32_t value = current.get<int>();
-      // TODO output.write(4, Translator(value).bytes(), &error);
+      translate(buffer, value);
+      output.write(4, buffer, &error);
       break;
     }
 
     case nbt::tag_type::tag_long: {
       uint64_t value = current.get<long>();
-      // TODO output.write(8, Translator(value).bytes(), &error);
+      translate(buffer, value);
+      output.write(8, buffer, &error);
       break;
     }
 
     case nbt::tag_type::tag_float: {
       float value = current.get<float>();
-      // TODO output.write(4, Translator(value).bytes(), &error);
+      translate(buffer, value);
+      output.write(4, buffer, &error);
       break;
     }
 
     case nbt::tag_type::tag_double: {
       double value = current.get<double>();
-      // TODO output.write(8, Translator(value).bytes(), &error);
+      translate(buffer, value);
+      output.write(8, buffer, &error);
       break;
     }
 
     case nbt::tag_type::tag_byte_array: {
       auto values = current.get<const NBT::tag_byte_array_t *>();
       uint32_t size = values->size();
-      // TODO output.write(4, Translator(size).bytes(), &error);
+      translate(buffer, size);
+      output.write(4, buffer, &error);
 
       for (int8_t value : *values) {
         buffer[0] = value;
@@ -121,21 +130,25 @@ bool put(io::ByteStreamWriter &output, const NBT &data) {
     case nbt::tag_type::tag_int_array: {
       auto values = current.get<const NBT::tag_int_array_t *>();
       uint32_t size = values->size();
-      // TODO output.write(4, Translator(size).bytes(), &error);
+      translate(buffer, size);
+      output.write(4, buffer, &error);
 
       for (int32_t value : *values)
-        // TODO output.write(4, Translator(value).bytes(), &error);
+        translate(buffer, value);
+      output.write(4, buffer, &error);
 
-        break;
+      break;
     }
 
     case nbt::tag_type::tag_long_array: {
       auto values = current.get<const NBT::tag_long_array_t *>();
       uint32_t size = values->size();
-      // TODO output.write(4, Translator(size).bytes(), &error);
+      translate(buffer, size);
+      output.write(4, buffer, &error);
 
       for (int64_t value : *values) {
-        // TODO output.write(8, Translator(value).bytes(), &error);
+        translate(buffer, value);
+        output.write(8, buffer, &error);
       }
       break;
     }
@@ -143,7 +156,8 @@ bool put(io::ByteStreamWriter &output, const NBT &data) {
     case nbt::tag_type::tag_string: {
       auto value = current.get<std::string>();
       uint16_t size = static_cast<uint16_t>(value.size());
-      // TODO output.write(2, Translator(size).bytes(), &error);
+      translate(buffer, size);
+      output.write(2, buffer, &error);
 
       output.write(size, (uint8_t *)value.c_str(), &error);
       break;
