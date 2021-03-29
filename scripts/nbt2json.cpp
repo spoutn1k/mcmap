@@ -15,7 +15,7 @@ SETUP_LOGGER
 
 int main(int argc, char **argv) {
   if (argc > 2 || (argc == 2 && !exists(path(argv[1]))) ||
-      !nbt::assert_NBT(argv[1])) {
+      (argc > 2 && !nbt::assert_NBT(argv[1]))) {
     logger::error("Usage: {} [NBT file]\n", argv[0]);
     return 1;
   }
