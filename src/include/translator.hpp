@@ -51,3 +51,25 @@ ArithmeticType translate(const uint8_t *_bytes) {
 
   return *reinterpret_cast<ArithmeticType *>(buffer);
 }
+
+template <typename ArithmeticType,
+          typename std::enable_if<std::is_arithmetic<ArithmeticType>::value,
+                                  int>::type = 0>
+void translate(uint8_t *_bytes, const ArithmeticType value) {
+  const uint8_t *buffer = reinterpret_cast<const uint8_t *>(&value);
+  std::size_t bytes_n = std::alignment_of<ArithmeticType>();
+
+  switch (bytes_n) {
+  case 2:
+    swap16(buffer, _bytes);
+    break;
+
+  case 4:
+    swap32(buffer, _bytes);
+    break;
+
+  case 8:
+    swap64(buffer, _bytes);
+    break;
+  }
+}
