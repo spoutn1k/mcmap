@@ -14,6 +14,7 @@ template <typename Integer,
           std::enable_if_t<std::is_integral<Integer>::value, int> = 0>
 struct Coordinates {
   Integer minX, maxX, minZ, maxZ;
+  Integer cenX, cenZ, radius, rsqrd;
   int16_t minY, maxY;
   Orientation orientation;
 
@@ -32,11 +33,19 @@ struct Coordinates {
     maxX = maxZ = std::numeric_limits<Integer>::min();
     minY = std::numeric_limits<int16_t>::max();
     maxY = std::numeric_limits<int16_t>::min();
+    cenX = cenZ = radius = std::numeric_limits<Integer>::max();
   }
 
   bool isUndefined() const {
     return (minX == minZ && minX == std::numeric_limits<Integer>::max() &&
             maxX == maxZ && maxX == std::numeric_limits<Integer>::min());
+  }
+
+  // Only have a circle if we have all three parts.
+  bool circleDefined() const {
+    return (cenX != std::numeric_limits<Integer>::max() &&
+            cenZ != std::numeric_limits<Integer>::max() &&
+            radius != std::numeric_limits<Integer>::max());
   }
 
   void setMaximum() {

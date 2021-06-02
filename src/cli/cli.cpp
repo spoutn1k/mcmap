@@ -28,7 +28,9 @@ void printHelp(char *binary) {
       "  -padding int (=5)   padding to use around the image\n"
       "  -h[elp]             display an option summary\n"
       "  -v[erbose]          toggle debug mode (-vv for more)\n"
-      "  -dumpcolors         dump a json with all defined colors\n",
+      "  -dumpcolors         dump a json with all defined colors\n"
+      "  -radius VAL         radius of the circular render\n"
+      "  -centre|-center X Z coordinates of the centre of circular render\n",
       binary);
 }
 
