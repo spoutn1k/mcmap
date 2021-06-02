@@ -352,11 +352,21 @@ void IsometricCanvas::renderSection(const Section &section) {
       orientedX = x, orientedZ = z;
       orientSection(orientedX, orientedZ);
 
+      // These get used a few times; calculate them once.
+      int px = (worldX << 4) + orientedX;
+      int pz = (worldZ << 4) + orientedZ;
+
+      // If we want a circular render, ignore everything outside the radius.
+      if (map.circleDefined()) {
+        int dist = (px - map.cenX) * (px - map.cenX) +
+                   (pz - map.cenZ) * (pz - map.cenZ);
+        if (dist > map.rsqrd) {
+          continue;
+        }
+      }
+
       // If we are oob, skip the line
-      if ((worldX << 4) + orientedX > map.maxX ||
-          (worldX << 4) + orientedX < map.minX ||
-          (worldZ << 4) + orientedZ > map.maxZ ||
-          (worldZ << 4) + orientedZ < map.minZ)
+      if (px > map.maxX || px < map.minX || pz > map.maxZ || pz < map.minZ)
         continue;
 
       for (uint8_t index = 0; index < beamNo; index++) {
