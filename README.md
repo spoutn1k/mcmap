@@ -1,6 +1,6 @@
 # `mcmap` - Isometric map visualizer
 
-![](https://img.shields.io/badge/version-1.16.5-success) ![](https://img.shields.io/badge/version-21w10a-success)
+![](https://img.shields.io/badge/version-1.16.5-success) ![](https://img.shields.io/badge/version-1.17_pre3-success)
 
 *Original project by Simon Rettberg. All the credit goes to him for the idea and vision.*
 
@@ -34,6 +34,8 @@ A GUI is in the works, but needs to be compiled from sources.
 |--------------|------------------------------------------|
 |`-from X Z`     |sets the coordinates of the block to start rendering at|
 |`-to X Z`       |sets the coordinates of the block to end rendering at|
+|`-center X Z`   |sets the center of a circular render|
+|`-radius VAL`   |sets the radius of a circular render|
 |`-min/max VAL`  |minimum/maximum Y index (height) of blocks to render|
 |`-file NAME`    |sets the output filename to 'NAME'; default is `./output.png`|
 |`-colors NAME`    |sets the custom color file to 'NAME'|
@@ -53,7 +55,7 @@ A GUI is in the works, but needs to be compiled from sources.
 |`-v[erbose]`   |toggle debug mode|
 |`-dumpcolors`  |dump a json with all defined colors|
 
-*Note: Currently you need both -from and -to to define bounds.*
+*Note: Currently you need both `-from` and `-to` OR `-center` and `-radius` to define bounds.*
 
 #### Tips
 
