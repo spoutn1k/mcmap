@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QThread>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -9,8 +10,21 @@ class MainWindow;
 }
 QT_END_NAMESPACE
 
+class Renderer : public QObject {
+  Q_OBJECT
+  QThread renderThread;
+
+public slots:
+  void render();
+
+signals:
+  void resultReady();
+  void sendProgress(int);
+};
+
 class MainWindow : public QMainWindow {
   Q_OBJECT
+  QThread renderThread;
 
 public:
   MainWindow(QWidget *parent = nullptr);
@@ -42,6 +56,12 @@ private slots:
   void on_paddingValue_valueChanged(int arg1);
 
   void on_shading_stateChanged(int);
+
+  void updateProgress(int);
+  void handleResults() { printf("Okay\n"); };
+
+signals:
+  void render();
 
 private:
   Ui::MainWindow *ui;

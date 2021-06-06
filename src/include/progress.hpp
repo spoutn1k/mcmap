@@ -4,11 +4,11 @@
 #include <stdio.h>
 #include <vector>
 
-typedef void (*progressCallback)(int, int);
+typedef std::function<void(int, int)> progressCallback;
 
 struct Status {
-  static constexpr progressCallback quiet = [](int, int) {};
-  static constexpr progressCallback ascii = [](int d, int t) {
+  static void quiet(int, int){};
+  static void ascii(int d, int t) {
     fmt::print(stderr, "\rRendering [{:.{}f}%]", float(d) / float(t) * 100.0f,
                2);
     fflush(stderr);
@@ -23,11 +23,11 @@ struct Status {
   Status(size_t total, progressCallback cb = quiet) : done(0), total(total) {
     notify = cb;
 
-    (*notify)(0, total);
+    notify(0, total);
   }
 
   void increment() {
     done++;
-    (*notify)(done, total);
+    notify(done, total);
   }
 };

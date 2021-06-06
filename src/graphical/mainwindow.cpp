@@ -13,9 +13,23 @@ Colors::Palette custom_palette;
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
   ui->setupUi(this);
+
+  Renderer *renderer = new Renderer;
+  renderer->moveToThread(&renderThread);
+
+  connect(&renderThread, SIGNAL(finished()), renderer, SLOT(deleteLater()));
+  connect(this, SIGNAL(render()), renderer, SLOT(render()));
+  connect(renderer, SIGNAL(resultReady()), this, SLOT(handleResults()));
+  connect(renderer, SIGNAL(sendProgress(int)), this, SLOT(updateProgress(int)));
+
+  renderThread.start();
 }
 
-MainWindow::~MainWindow() { delete ui; }
+MainWindow::~MainWindow() {
+  delete ui;
+  renderThread.quit();
+  renderThread.wait();
+}
 
 bool convert(int &dest, const QString &arg, MainWindow *parent) {
   try {
@@ -272,12 +286,6 @@ void MainWindow::on_renderButton_clicked() {
   std::string water_id = "minecraft:water";
   std::string beam_id = "mcmap:beacon_beam";
 
-  /*
-    QMessageBox message;
-    message.setText(QString(json(options).dump().c_str()));
-    message.exec();
-  */
-
   Colors::Palette instance_palette = custom_palette;
   instance_palette.merge(Colors::Palette(default_palette));
 
@@ -287,7 +295,7 @@ void MainWindow::on_renderButton_clicked() {
   if (ui->hideBeacons->isChecked())
     instance_palette.insert_or_assign(beam_id, Colors::Block());
 
-  mcmap::render(options, instance_palette);
+  emit render();
 }
 
 void MainWindow::on_orientationNW_toggled(bool checked) {
@@ -308,4 +316,13 @@ void MainWindow::on_orientationSE_toggled(bool checked) {
 void MainWindow::on_orientationNE_toggled(bool checked) {
   if (checked)
     options.boundaries.orientation = Map::NE;
+}
+
+void MainWindow::updateProgress(int prog) { printf("Progress: %d\n", prog); }
+
+void Renderer::render() {
+  auto update = [this](int d, int) { emit sendProgress(d); };
+
+  mcmap::render(options, default_palette, update);
+  emit resultReady();
 }
