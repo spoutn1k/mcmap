@@ -14,6 +14,14 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
   ui->setupUi(this);
 
+  for (auto element : QVector<QWidget *>(
+           {ui->saveSelectButton, ui->hideBeacons, ui->hideWater, ui->maxX,
+            ui->maxY, ui->maxZ, ui->minX, ui->minY, ui->minZ, ui->shading,
+            ui->paddingValue, ui->outputSelectButton, ui->colorSelectButton,
+            ui->orientationNE, ui->orientationNW, ui->orientationSE,
+            ui->orientationSW, ui->renderButton, ui->dimensionSelectDropDown}))
+    params.append(element);
+
   Renderer *renderer = new Renderer;
   renderer->moveToThread(&renderThread);
 
@@ -332,15 +340,17 @@ void MainWindow::startRender() {
   ui->progressBar->setEnabled(true);
   ui->progressBar->setTextVisible(true);
 
-  ui->renderButton->setEnabled(false);
+  for (const auto &element : params)
+    element->setEnabled(false);
 };
 
 void MainWindow::stopRender() {
-  ui->progressBar->setEnabled(false);
   ui->progressBar->setValue(0);
+  ui->progressBar->setEnabled(false);
   ui->progressBar->setTextVisible(false);
 
-  ui->renderButton->setEnabled(true);
+  for (const auto &element : params)
+    element->setEnabled(true);
 };
 
 void Renderer::render() {

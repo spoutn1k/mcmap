@@ -26,6 +26,7 @@ signals:
 class MainWindow : public QMainWindow {
   Q_OBJECT
   QThread renderThread;
+  QVector<QWidget *> params;
 
 public:
   MainWindow(QWidget *parent = nullptr);
