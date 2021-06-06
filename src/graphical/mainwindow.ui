@@ -142,7 +142,7 @@
        <item>
         <widget class="QLabel" name="dimensionLabel">
          <property name="enabled">
-          <bool>false</bool>
+          <bool>true</bool>
          </property>
          <property name="text">
           <string>Dimension</string>
@@ -163,7 +163,7 @@
        <item>
         <widget class="QLabel" name="minXLabel">
          <property name="enabled">
-          <bool>false</bool>
+          <bool>true</bool>
          </property>
          <property name="text">
           <string>From X</string>
@@ -180,7 +180,7 @@
        <item>
         <widget class="QLabel" name="maxXLabel">
          <property name="enabled">
-          <bool>false</bool>
+          <bool>true</bool>
          </property>
          <property name="text">
           <string>To X</string>
@@ -201,7 +201,7 @@
        <item>
         <widget class="QLabel" name="minZLabel">
          <property name="enabled">
-          <bool>false</bool>
+          <bool>true</bool>
          </property>
          <property name="text">
           <string>From Z</string>
@@ -218,7 +218,7 @@
        <item>
         <widget class="QLabel" name="maxZLabel">
          <property name="enabled">
-          <bool>false</bool>
+          <bool>true</bool>
          </property>
          <property name="text">
           <string>To Z</string>
@@ -239,7 +239,7 @@
        <item>
         <widget class="QLabel" name="minYLabel">
          <property name="enabled">
-          <bool>false</bool>
+          <bool>true</bool>
          </property>
          <property name="text">
           <string>From Y</string>
@@ -256,7 +256,7 @@
        <item>
         <widget class="QLabel" name="maxYLabel">
          <property name="enabled">
-          <bool>false</bool>
+          <bool>true</bool>
          </property>
          <property name="text">
           <string>To Y</string>

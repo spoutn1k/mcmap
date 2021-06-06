@@ -20,7 +20,11 @@ MainWindow::MainWindow(QWidget *parent)
             ui->paddingValue, ui->outputSelectButton, ui->colorSelectButton,
             ui->orientationNE, ui->orientationNW, ui->orientationSE,
             ui->orientationSW, ui->renderButton, ui->dimensionSelectDropDown}))
-    params.append(element);
+    parameters.append(element);
+
+  for (auto element : QVector<QLineEdit *>(
+           {ui->maxX, ui->minX, ui->maxY, ui->minY, ui->maxZ, ui->minZ}))
+    boundaries.append(element);
 
   Renderer *renderer = new Renderer;
   renderer->moveToThread(&renderThread);
@@ -73,31 +77,11 @@ void MainWindow::reset_selection() {
   ui->dimensionSelectDropDown->setEnabled(false);
   ui->dimensionSelectDropDown->clear();
 
-  ok(ui->minX);
-  ok(ui->maxX);
-  ok(ui->minZ);
-  ok(ui->maxZ);
-  ok(ui->minY);
-  ok(ui->maxY);
-
-  ui->minX->setText("");
-  ui->minX->setEnabled(false);
-  ui->minXLabel->setEnabled(false);
-  ui->maxX->setText("");
-  ui->maxX->setEnabled(false);
-  ui->maxXLabel->setEnabled(false);
-  ui->minZ->setText("");
-  ui->minZ->setEnabled(false);
-  ui->minZLabel->setEnabled(false);
-  ui->maxZ->setText("");
-  ui->maxZ->setEnabled(false);
-  ui->maxZLabel->setEnabled(false);
-  ui->minY->setText("");
-  ui->minY->setEnabled(false);
-  ui->minYLabel->setEnabled(false);
-  ui->maxY->setText("");
-  ui->maxY->setEnabled(false);
-  ui->maxYLabel->setEnabled(false);
+  for (auto element : boundaries) {
+    ok(element);
+    element->setText("");
+    element->setEnabled(false);
+  }
 
   ui->renderButton->setEnabled(false);
 }
@@ -189,22 +173,13 @@ void MainWindow::on_dimensionSelectDropDown_currentIndexChanged(int index) {
 
   options.boundaries = options.save.getWorld(options.dim);
 
-  ui->minX->setEnabled(true);
-  ui->minXLabel->setEnabled(true);
-  ui->maxX->setEnabled(true);
-  ui->maxXLabel->setEnabled(true);
-  ui->minZ->setEnabled(true);
-  ui->minZLabel->setEnabled(true);
-  ui->maxZ->setEnabled(true);
-  ui->maxZLabel->setEnabled(true);
-  ui->minY->setEnabled(true);
-  ui->minYLabel->setEnabled(true);
-  ui->maxY->setEnabled(true);
-  ui->maxYLabel->setEnabled(true);
+  for (auto e : boundaries)
+    e->setEnabled(true);
 
   QValidator *horizontal = new QIntValidator(
       std::numeric_limits<int>::min(), std::numeric_limits<int>::max(), this);
-  QValidator *vertical = new QIntValidator(0, 255, this);
+  QValidator *vertical =
+      new QIntValidator(mcmap::constants::min_y, mcmap::constants::max_y, this);
 
   ui->minX->setValidator(horizontal);
   ui->maxX->setValidator(horizontal);
@@ -296,14 +271,13 @@ void MainWindow::on_renderButton_clicked() {
   std::string water_id = "minecraft:water";
   std::string beam_id = "mcmap:beacon_beam";
 
-  Colors::Palette instance_palette = custom_palette;
-  instance_palette.merge(Colors::Palette(default_palette));
+  custom_palette = default_palette;
 
   if (ui->hideWater->isChecked())
-    instance_palette.insert_or_assign(water_id, Colors::Block());
+    custom_palette.insert_or_assign(water_id, Colors::Block());
 
   if (ui->hideBeacons->isChecked())
-    instance_palette.insert_or_assign(beam_id, Colors::Block());
+    custom_palette.insert_or_assign(beam_id, Colors::Block());
 
   emit render();
 }
@@ -340,7 +314,7 @@ void MainWindow::startRender() {
   ui->progressBar->setEnabled(true);
   ui->progressBar->setTextVisible(true);
 
-  for (const auto &element : params)
+  for (const auto &element : parameters)
     element->setEnabled(false);
 };
 
@@ -349,7 +323,7 @@ void MainWindow::stopRender() {
   ui->progressBar->setEnabled(false);
   ui->progressBar->setTextVisible(false);
 
-  for (const auto &element : params)
+  for (const auto &element : parameters)
     element->setEnabled(true);
 };
 
@@ -357,6 +331,6 @@ void Renderer::render() {
   auto update = [this](int d, int t) { emit sendProgress(d, t); };
 
   emit startRender();
-  mcmap::render(options, default_palette, update);
+  mcmap::render(options, custom_palette, update);
   emit resultReady();
 }

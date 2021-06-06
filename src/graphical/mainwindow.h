@@ -1,6 +1,7 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include <QLineEdit>
 #include <QMainWindow>
 #include <QThread>
 
@@ -26,7 +27,8 @@ signals:
 class MainWindow : public QMainWindow {
   Q_OBJECT
   QThread renderThread;
-  QVector<QWidget *> params;
+  QVector<QWidget *> parameters;
+  QVector<QLineEdit *> boundaries;
 
 public:
   MainWindow(QWidget *parent = nullptr);
