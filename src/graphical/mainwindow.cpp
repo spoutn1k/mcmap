@@ -8,18 +8,33 @@
 
 Settings::WorldOptions options;
 extern Colors::Palette default_palette;
-Colors::Palette custom_palette;
+Colors::Palette custom_palette, file_colors;
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
   ui->setupUi(this);
 
-  for (auto element : QVector<QWidget *>(
-           {ui->saveSelectButton, ui->hideBeacons, ui->hideWater, ui->maxX,
-            ui->maxY, ui->maxZ, ui->minX, ui->minY, ui->minZ, ui->shading,
-            ui->paddingValue, ui->outputSelectButton, ui->colorSelectButton,
-            ui->orientationNE, ui->orientationNW, ui->orientationSE,
-            ui->orientationSW, ui->renderButton, ui->dimensionSelectDropDown}))
+  for (auto element : QVector<QWidget *>({ui->saveSelectButton,
+                                          ui->maxX,
+                                          ui->maxY,
+                                          ui->maxZ,
+                                          ui->minX,
+                                          ui->minY,
+                                          ui->minZ,
+                                          ui->shading,
+                                          ui->lighting,
+                                          ui->hideBeacons,
+                                          ui->hideWater,
+                                          ui->paddingValue,
+                                          ui->outputSelectButton,
+                                          ui->colorSelectButton,
+                                          ui->colorResetButton,
+                                          ui->orientationNE,
+                                          ui->orientationNW,
+                                          ui->orientationSE,
+                                          ui->orientationSW,
+                                          ui->renderButton,
+                                          ui->dimensionSelectDropDown}))
     parameters.append(element);
 
   for (auto element : QVector<QLineEdit *>(
@@ -139,17 +154,15 @@ void MainWindow::on_colorSelectButton_clicked() {
   QString filename = QFileDialog::getOpenFileName(this, tr("Open color file"),
                                                   getHome().c_str(),
                                                   tr("JSON files (*.json)"));
-
   if (filename.isEmpty()) {
     statusBar()->showMessage(tr("No file selected"), 2000);
     return;
   }
 
   FILE *f = fopen(filename.toStdString().c_str(), "r");
-  Colors::Palette colors_j;
 
   try {
-    colors_j = json::parse(f).get<Colors::Palette>();
+    file_colors = json::parse(f).get<Colors::Palette>();
   } catch (const std::exception &err) {
     statusBar()->showMessage(
         fmt::format("Parsing file failed: {}\n", err.what()).c_str(), 2000);
@@ -160,7 +173,13 @@ void MainWindow::on_colorSelectButton_clicked() {
 
   fclose(f);
 
-  ui->colorFileLabel->setText(filename);
+  ui->colorFileLabel->setText(QString::fromStdString(
+      fs::path(filename.toStdString()).filename().string()));
+}
+
+void MainWindow::on_colorResetButton_clicked() {
+  file_colors = Colors::Palette();
+  ui->colorFileLabel->setText("Not selected.");
 }
 
 void MainWindow::on_dimensionSelectDropDown_currentIndexChanged(int index) {
@@ -267,11 +286,17 @@ void MainWindow::on_shading_stateChanged(int checked) {
   options.shading = checked;
 }
 
+void MainWindow::on_lighting_stateChanged(int checked) {
+  options.lighting = checked;
+}
+
 void MainWindow::on_renderButton_clicked() {
   std::string water_id = "minecraft:water";
   std::string beam_id = "mcmap:beacon_beam";
 
-  custom_palette = default_palette;
+  custom_palette.clear();
+  custom_palette.merge(Colors::Palette(file_colors));
+  custom_palette.merge(Colors::Palette(default_palette));
 
   if (ui->hideWater->isChecked())
     custom_palette.insert_or_assign(water_id, Colors::Block());

@@ -42,6 +42,7 @@ private slots:
   void on_saveSelectButton_clicked();
   void on_outputSelectButton_clicked();
   void on_colorSelectButton_clicked();
+  void on_colorResetButton_clicked();
 
   void on_orientationNW_toggled(bool);
   void on_orientationSW_toggled(bool);
@@ -60,6 +61,7 @@ private slots:
   void on_paddingValue_valueChanged(int arg1);
 
   void on_shading_stateChanged(int);
+  void on_lighting_stateChanged(int);
 
   void startRender();
   void stopRender();

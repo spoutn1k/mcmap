@@ -40,7 +40,7 @@
     </property>
     <layout class="QVBoxLayout" name="verticalLayout">
      <item>
-      <layout class="QHBoxLayout" name="saveSelect">
+      <layout class="QHBoxLayout" name="saveSelect" stretch="0,1,0">
        <item>
         <widget class="QLabel" name="saveFieldLabel">
          <property name="text">
@@ -57,7 +57,7 @@
           <enum>Qt::PlainText</enum>
          </property>
          <property name="alignment">
-          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+          <set>Qt::AlignCenter</set>
          </property>
         </widget>
        </item>
@@ -71,7 +71,7 @@
       </layout>
      </item>
      <item>
-      <layout class="QHBoxLayout" name="outputSelect">
+      <layout class="QHBoxLayout" name="outputSelect" stretch="0,1,0">
        <item>
         <widget class="QLabel" name="outputFieldLabel">
          <property name="text">
@@ -83,6 +83,9 @@
         <widget class="QLabel" name="outputLabel">
          <property name="text">
           <string>output.png</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
          </property>
         </widget>
        </item>
@@ -300,6 +303,13 @@
         </widget>
        </item>
        <item>
+        <widget class="QCheckBox" name="lighting">
+         <property name="text">
+          <string>Lighting</string>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QCheckBox" name="hideBeacons">
          <property name="text">
           <string>Hide Beacons</string>
@@ -316,7 +326,7 @@
       </layout>
      </item>
      <item>
-      <layout class="QHBoxLayout" name="colorSelect">
+      <layout class="QHBoxLayout" name="colorSelect" stretch="0,1,0,0">
        <item>
         <widget class="QLabel" name="colorFieldLabel">
          <property name="text">
@@ -329,12 +339,22 @@
          <property name="text">
           <string>Not selected.</string>
          </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
         </widget>
        </item>
        <item>
         <widget class="QPushButton" name="colorSelectButton">
          <property name="text">
           <string>Select</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="colorResetButton">
+         <property name="text">
+          <string>Clear</string>
          </property>
         </widget>
        </item>
