@@ -9,8 +9,8 @@
 
 namespace mcmap {
 
-int render(const Settings::WorldOptions &options,
-           const Colors::Palette &colors) {
+int render(const Settings::WorldOptions &options, const Colors::Palette &colors,
+           progressCallback cb) {
   logger::debug("Rendering {} with {}\n", options.save.name,
                 options.boundaries.to_string());
 
@@ -19,6 +19,8 @@ int render(const Settings::WorldOptions &options,
   options.boundaries.tile(tiles, options.tile_size);
 
   std::vector<Canvas> fragments(tiles.size());
+
+  Status s = Status(tiles.size(), cb);
 
   // This value represents the amount of canvasses that can fit in memory at
   // once to avoid going over the limit of RAM
@@ -74,6 +76,11 @@ int render(const Settings::WorldOptions &options,
         if (i < capacity)
           ++capacity;
       }
+
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+      { s.increment(); }
     }
   }
 

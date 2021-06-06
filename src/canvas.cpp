@@ -251,13 +251,9 @@ void IsometricCanvas::renderTerrain(Terrain::Data &world) {
     std::swap(nXChunks, nZChunks);
 
   // world is supposed to have the SAME set of coordinates as the canvas
-  for (chunkX = 0; chunkX < nXChunks; chunkX++) {
-    for (chunkZ = 0; chunkZ < nZChunks; chunkZ++) {
+  for (chunkX = 0; chunkX < nXChunks; chunkX++)
+    for (chunkZ = 0; chunkZ < nZChunks; chunkZ++)
       renderChunk(world);
-      logger::printProgress("Rendering chunks", chunkX * nZChunks + chunkZ,
-                            nZChunks * nXChunks);
-    }
-  }
 
   return;
 }
