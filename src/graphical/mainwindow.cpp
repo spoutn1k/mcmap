@@ -19,8 +19,10 @@ MainWindow::MainWindow(QWidget *parent)
 
   connect(&renderThread, SIGNAL(finished()), renderer, SLOT(deleteLater()));
   connect(this, SIGNAL(render()), renderer, SLOT(render()));
-  connect(renderer, SIGNAL(resultReady()), this, SLOT(handleResults()));
-  connect(renderer, SIGNAL(sendProgress(int)), this, SLOT(updateProgress(int)));
+  connect(renderer, SIGNAL(startRender()), this, SLOT(startRender()));
+  connect(renderer, SIGNAL(resultReady()), this, SLOT(stopRender()));
+  connect(renderer, SIGNAL(sendProgress(int, int)), this,
+          SLOT(updateProgress(int, int)));
 
   renderThread.start();
 }
@@ -318,11 +320,33 @@ void MainWindow::on_orientationNE_toggled(bool checked) {
     options.boundaries.orientation = Map::NE;
 }
 
-void MainWindow::updateProgress(int prog) { printf("Progress: %d\n", prog); }
+void MainWindow::updateProgress(int prog, int total) {
+  if (!prog) {
+    ui->progressBar->setMaximum(total);
+  }
+
+  ui->progressBar->setValue(prog);
+}
+
+void MainWindow::startRender() {
+  ui->progressBar->setEnabled(true);
+  ui->progressBar->setTextVisible(true);
+
+  ui->renderButton->setEnabled(false);
+};
+
+void MainWindow::stopRender() {
+  ui->progressBar->setEnabled(false);
+  ui->progressBar->setValue(0);
+  ui->progressBar->setTextVisible(false);
+
+  ui->renderButton->setEnabled(true);
+};
 
 void Renderer::render() {
-  auto update = [this](int d, int) { emit sendProgress(d); };
+  auto update = [this](int d, int t) { emit sendProgress(d, t); };
 
+  emit startRender();
   mcmap::render(options, default_palette, update);
   emit resultReady();
 }

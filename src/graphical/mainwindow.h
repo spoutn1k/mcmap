@@ -18,8 +18,9 @@ public slots:
   void render();
 
 signals:
+  void startRender();
   void resultReady();
-  void sendProgress(int);
+  void sendProgress(int, int);
 };
 
 class MainWindow : public QMainWindow {
@@ -57,8 +58,9 @@ private slots:
 
   void on_shading_stateChanged(int);
 
-  void updateProgress(int);
-  void handleResults() { printf("Okay\n"); };
+  void startRender();
+  void stopRender();
+  void updateProgress(int, int);
 
 signals:
   void render();
