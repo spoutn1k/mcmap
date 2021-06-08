@@ -57,5 +57,6 @@ size_t memory_capacity(size_t, size_t, size_t, size_t);
 bool prepare_cache(const fs::path &);
 
 fs::path getHome();
+fs::path getSaveDir();
 
 #endif // HELPER_H_
