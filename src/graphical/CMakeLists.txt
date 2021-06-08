@@ -10,16 +10,16 @@ SET(PROJECT_SOURCES
     mainwindow.h
     mainwindow.ui)
 
-IF(QT_FOUND)
-    IF(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
-        QT_ADD_EXECUTABLE(mcmap-gui ${PROJECT_SOURCES})
-    ELSE()
+IF(Qt5_FOUND)
+    IF(NOT WIN32)
         ADD_EXECUTABLE(mcmap-gui ${PROJECT_SOURCES})
+    ELSE()
+        ADD_EXECUTABLE(mcmap-gui WIN32 ${PROJECT_SOURCES})
     ENDIF()
 
     TARGET_LINK_LIBRARIES(mcmap-gui
         PRIVATE
-        Qt${QT_VERSION_MAJOR}::Widgets
+        Qt5::Widgets
         format
         mcmap_core
         ZLIB::ZLIB
