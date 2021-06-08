@@ -104,7 +104,7 @@ void MainWindow::reset_selection() {
 void MainWindow::on_saveSelectButton_clicked() {
   QString filename = QFileDialog::getExistingDirectory(
       this, tr("Open Save Folder"),
-      fmt::format("{}/.minecraft/saves", getHome().string()).c_str());
+      QString::fromStdString(getSaveDir().string()));
 
   if (filename.isEmpty()) {
     statusBar()->showMessage(tr("No directory selected"), 2000);
@@ -124,7 +124,8 @@ void MainWindow::on_saveSelectButton_clicked() {
   }
 
   ui->saveNameLabel->setText(options.save.name.c_str());
-  statusBar()->showMessage(tr("Selected ") + options.save.name.c_str(), 2000);
+  statusBar()->showMessage(
+      tr("Selected ") + QString::fromStdString(options.save.name), 2000);
 
   reset_selection();
 
@@ -137,9 +138,9 @@ void MainWindow::on_saveSelectButton_clicked() {
 }
 
 void MainWindow::on_outputSelectButton_clicked() {
-  QString filename =
-      QFileDialog::getSaveFileName(this, tr("Choose destination"),
-                                   getHome().c_str(), tr("PNG file (*.png)"));
+  QString filename = QFileDialog::getSaveFileName(
+      this, tr("Choose destination"),
+      QString::fromStdString(getHome().string()), tr("PNG file (*.png)"));
 
   if (filename.isEmpty()) {
     statusBar()->showMessage(tr("No file selected"), 2000);
@@ -151,9 +152,9 @@ void MainWindow::on_outputSelectButton_clicked() {
 }
 
 void MainWindow::on_colorSelectButton_clicked() {
-  QString filename = QFileDialog::getOpenFileName(this, tr("Open color file"),
-                                                  getHome().c_str(),
-                                                  tr("JSON files (*.json)"));
+  QString filename = QFileDialog::getOpenFileName(
+      this, tr("Open color file"), QString::fromStdString(getHome().string()),
+      tr("JSON files (*.json)"));
   if (filename.isEmpty()) {
     statusBar()->showMessage(tr("No file selected"), 2000);
     return;
@@ -188,7 +189,9 @@ void MainWindow::on_dimensionSelectDropDown_currentIndexChanged(int index) {
     return;
 
   options.dim = options.save.dimensions[index];
-  statusBar()->showMessage(tr("Scanning ") + options.regionDir().c_str(), 2000);
+  statusBar()->showMessage(
+      tr("Scanning ") + QString::fromStdString(options.regionDir().string()),
+      2000);
 
   options.boundaries = options.save.getWorld(options.dim);
 
