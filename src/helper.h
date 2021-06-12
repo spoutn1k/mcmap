@@ -39,6 +39,10 @@ const int8_t lighting_dark = -75;
 const int8_t lighting_bright = 100;
 const int8_t lighting_delta = (lighting_bright - lighting_dark) >> 4;
 } // namespace constants
+
+namespace config {
+const std::string cache_name = "mcmap_cache";
+}
 } // namespace mcmap
 
 #define REGION_HEADER_SIZE REGIONSIZE *REGIONSIZE * 4
@@ -58,5 +62,6 @@ bool prepare_cache(const fs::path &);
 
 fs::path getHome();
 fs::path getSaveDir();
+fs::path getTempDir();
 
 #endif // HELPER_H_

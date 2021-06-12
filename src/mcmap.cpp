@@ -35,7 +35,7 @@ int render(const Settings::WorldOptions &options, const Colors::Palette &colors,
 
   // If caching is needed, ensure the cache directory is available
   if (capacity < tiles.size())
-    if (!prepare_cache(CACHE))
+    if (!prepare_cache(getTempDir()))
       return false;
 
   auto begin = std::chrono::high_resolution_clock::now();
@@ -63,8 +63,7 @@ int render(const Settings::WorldOptions &options, const Colors::Palette &colors,
 
       if (!canvas.empty()) {
         if (i >= capacity) {
-          std::filesystem::path temporary =
-              fmt::format("{}/{}.png", CACHE, canvas.map.to_string());
+          fs::path temporary = getTempDir() / canvas.map.to_string();
           canvas.save(temporary);
 
           fragments[i] = std::move(ImageCanvas(canvas.map, temporary));

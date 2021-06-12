@@ -92,14 +92,10 @@ fs::path getHome() {
 }
 
 fs::path getSaveDir() {
-  fs::path stub = ".minecraft/saves";
+  fs::path prefix, suffix = ".minecraft/saves";
+
 #ifndef _WINDOWS
-  fs::path home = getHome();
-
-  if (!fs::exists(home))
-    return "";
-
-  return home / stub;
+  prefix = getHome();
 #else
   char target[] = "APPDATA";
 
@@ -108,6 +104,22 @@ fs::path getSaveDir() {
   if (!query)
     return "";
 
-  return fs::path(std::string(query)) / stub;
+  prefix = std::string(query);
 #endif
+
+  if (!fs::exists(prefix))
+    return "";
+
+  return prefix / suffix;
+}
+
+fs::path getTempDir() {
+  std::error_code error;
+
+  fs::path destination = fs::temp_directory_path(error);
+
+  if (destination.empty() || error)
+    destination = fs::current_path();
+
+  return destination / mcmap::config::cache_name;
 }
