@@ -48,8 +48,8 @@ MainWindow::MainWindow(QWidget *parent)
   connect(this, SIGNAL(render()), renderer, SLOT(render()));
   connect(renderer, SIGNAL(startRender()), this, SLOT(startRender()));
   connect(renderer, SIGNAL(resultReady()), this, SLOT(stopRender()));
-  connect(renderer, SIGNAL(sendProgress(int, int)), this,
-          SLOT(updateProgress(int, int)));
+  connect(renderer, SIGNAL(sendProgress(int, int, int)), this,
+          SLOT(updateProgress(int, int, int)));
 
   renderThread.start();
 }
@@ -330,9 +330,15 @@ void MainWindow::on_orientationNE_toggled(bool checked) {
     options.boundaries.orientation = Map::NE;
 }
 
-void MainWindow::updateProgress(int prog, int total) {
+void MainWindow::updateProgress(int prog, int total, int action) {
   if (!prog) {
     ui->progressBar->setMaximum(total);
+
+    ui->progressBar->setTextVisible(true);
+    ui->progressBar->setFormat(
+        QString::fromStdString(
+            Progress::action_strings.at(Progress::Action(action))) +
+        " [%p%]");
   }
 
   ui->progressBar->setValue(prog);
@@ -356,7 +362,9 @@ void MainWindow::stopRender() {
 };
 
 void Renderer::render() {
-  auto update = [this](int d, int t) { emit sendProgress(d, t); };
+  auto update = [this](int d, int t, Progress::Action a) {
+    emit sendProgress(d, t, a);
+  };
 
   emit startRender();
   mcmap::render(options, custom_palette, update);

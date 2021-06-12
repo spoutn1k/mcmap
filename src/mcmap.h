@@ -9,7 +9,7 @@
 namespace mcmap {
 
 int render(const Settings::WorldOptions &, const Colors::Palette &,
-           progressCallback = Status::quiet);
+           Progress::Callback = Progress::Status::quiet);
 
 }
 

@@ -79,8 +79,10 @@ size_t Canvas::_get_line(const std::vector<Canvas> &fragments, uint8_t *buffer,
   return written;
 }
 
-bool Canvas::save(const std::filesystem::path file,
-                  const uint8_t padding) const {
+bool Canvas::save(const std::filesystem::path file, const uint8_t padding,
+                  Progress::Callback notify) const {
+  Progress::Status progress(height(), notify, Progress::COMPOSING);
+
   // Write the buffer to file
   PNG::PNGWriter output(file);
 
@@ -102,7 +104,12 @@ bool Canvas::save(const std::filesystem::path file,
     memset(buffer, 0, size);
     getLine(buffer, size, y);
     output.writeLine();
+
+    if (y && !(y % 100))
+      progress.increment(100);
   }
+
+  progress.increment(100);
 
   return true;
 }

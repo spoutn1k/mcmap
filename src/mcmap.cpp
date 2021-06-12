@@ -10,7 +10,7 @@
 namespace mcmap {
 
 int render(const Settings::WorldOptions &options, const Colors::Palette &colors,
-           progressCallback cb) {
+           Progress::Callback cb) {
   logger::debug("Rendering {} with {}\n", options.save.name,
                 options.boundaries.to_string());
 
@@ -20,7 +20,7 @@ int render(const Settings::WorldOptions &options, const Colors::Palette &colors,
 
   std::vector<Canvas> fragments(tiles.size());
 
-  Status s = Status(tiles.size(), cb);
+  Progress::Status s = Progress::Status(tiles.size(), cb, Progress::RENDERING);
 
   // This value represents the amount of canvasses that can fit in memory at
   // once to avoid going over the limit of RAM
@@ -99,7 +99,7 @@ int render(const Settings::WorldOptions &options, const Colors::Palette &colors,
   }
 
   begin = std::chrono::high_resolution_clock::now();
-  if (!merged.save(options.outFile, options.padding))
+  if (!merged.save(options.outFile, options.padding, cb))
     return false;
   end = std::chrono::high_resolution_clock::now();
 

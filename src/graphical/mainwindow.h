@@ -21,7 +21,7 @@ public slots:
 signals:
   void startRender();
   void resultReady();
-  void sendProgress(int, int);
+  void sendProgress(int, int, int);
 };
 
 class MainWindow : public QMainWindow {
@@ -65,7 +65,7 @@ private slots:
 
   void startRender();
   void stopRender();
-  void updateProgress(int, int);
+  void updateProgress(int, int, int);
 
 signals:
   void render();
