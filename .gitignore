@@ -5,6 +5,11 @@
 src/colors.bson
 src/graphical/ui_mainwindow.h
 src/include/json.hpp
+src/include/fmt/core.h
+src/include/fmt/format.h
+src/include/fmt/format-inl.h
+src/include/fmt/color.h
+src/include/fmt/format.cc
 
 # Tools byproducts
 .gdb_history

@@ -47,7 +47,27 @@ IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   ENDIF()
 ENDIF()
 
-ADD_SUBDIRECTORY(src/include)
+# Get file URL DEST MD5
+FUNCTION(GET_FILE)
+    FILE(
+        DOWNLOAD
+        ${ARGV0}
+        ${ARGV1}
+        EXPECTED_HASH ${ARGV2}
+        STATUS DL_STATUS
+    )
+
+    LIST(GET DL_STATUS 0 _STATUS)
+
+    IF(_STATUS)
+        LIST(GET DL_STATUS 1 _ERROR)
+        MESSAGE("Error downloading ${ARGV0}: ${_ERROR}")
+    ELSE()
+        MESSAGE("-- Successfully downloaded ${ARGV0}")
+    ENDIF()
+ENDFUNCTION()
+
+
 ADD_SUBDIRECTORY(src)
 ADD_SUBDIRECTORY(scripts)
 ADD_SUBDIRECTORY(tests)

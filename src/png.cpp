@@ -3,6 +3,7 @@
  */
 
 #include "png.h"
+#include <vector>
 
 #ifndef Z_BEST_SPEED
 #define Z_BEST_SPEED 6
