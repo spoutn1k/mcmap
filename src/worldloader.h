@@ -14,10 +14,6 @@ struct Data {
   using ChunkCoordinates = mcmap::Chunk::coordinates;
   using ChunkStore = std::map<ChunkCoordinates, Chunk>;
 
-  // The coordinates of the loaded chunks. This coordinates maps
-  // the CHUNKS loaded, not the blocks
-  World::Coordinates map;
-
   // The loaded chunks, organized as a map of coordinatesxchunk
   ChunkStore chunks;
 
@@ -28,15 +24,9 @@ struct Data {
   Diagnostics::Report *report;
 
   // Default constructor
-  explicit Data(const World::Coordinates &coords,
-                const std::filesystem::path &dir, const Colors::Palette &p,
+  explicit Data(const std::filesystem::path &dir, const Colors::Palette &p,
                 Diagnostics::Report *r = nullptr)
-      : regionDir(dir), palette(p), report(r) {
-    map.minX = CHUNK(coords.minX);
-    map.minZ = CHUNK(coords.minZ);
-    map.maxX = CHUNK(coords.maxX);
-    map.maxZ = CHUNK(coords.maxZ);
-  }
+      : regionDir(dir), palette(p), report(r) {}
 
   // Chunk pre-processing methods
   void stripChunk(std::vector<nbt::NBT> *);
