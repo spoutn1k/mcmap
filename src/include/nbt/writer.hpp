@@ -13,7 +13,7 @@ namespace nbt {
 
 bool put(io::ByteStreamWriter &output, const NBT &data) {
   bool error = false;
-  uint8_t buffer[65025];
+  uint8_t buffer[65025]; // max size of an element
 
   std::stack<std::pair<const NBT &, NBT::const_iterator>> parsing;
 
@@ -36,7 +36,10 @@ bool put(io::ByteStreamWriter &output, const NBT &data) {
       translate(buffer, name_size);
       output.write(2, buffer, &error);
 
-      output.write(name_size, (uint8_t *)current.get_name().c_str(), &error);
+      output.write(
+          name_size,
+          reinterpret_cast<const uint8_t *>(current.get_name().c_str()),
+          &error);
     }
 
     switch (current.get_type()) {
@@ -133,9 +136,10 @@ bool put(io::ByteStreamWriter &output, const NBT &data) {
       translate(buffer, size);
       output.write(4, buffer, &error);
 
-      for (int32_t value : *values)
+      for (int32_t value : *values) {
         translate(buffer, value);
-      output.write(4, buffer, &error);
+        output.write(4, buffer, &error);
+      }
 
       break;
     }
@@ -150,6 +154,7 @@ bool put(io::ByteStreamWriter &output, const NBT &data) {
         translate(buffer, value);
         output.write(8, buffer, &error);
       }
+
       break;
     }
 
