@@ -1,4 +1,5 @@
 #include "colors.h"
+#include <fmt/color.hpp>
 
 std::map<string, int> erroneous;
 
