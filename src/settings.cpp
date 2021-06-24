@@ -24,6 +24,20 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
       }
       opts->boundaries.maxX = atoi(NEXTARG);
       opts->boundaries.maxZ = atoi(NEXTARG);
+    } else if (strcmp(option, "-centre") == 0 ||
+               strcmp(option, "-center") == 0) {
+      if (!MOREARGS(2) || !isNumeric(POLLARG(1)) || !isNumeric(POLLARG(2))) {
+        logger::error("{} needs two integer arguments\n", option);
+        return false;
+      }
+      opts->boundaries.cenX = atoi(NEXTARG);
+      opts->boundaries.cenZ = atoi(NEXTARG);
+    } else if (strcmp(option, "-radius") == 0) {
+      if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
+        logger::error("{} needs an integer argument\n", option);
+        return false;
+      }
+      opts->boundaries.radius = atoi(NEXTARG);
     } else if (strcmp(option, "-max") == 0) {
       if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
         logger::error("{} needs an integer argument\n", option);
@@ -121,6 +135,20 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
     } else {
       opts->save = SaveFile(option);
     }
+  }
+
+  if (opts->boundaries.circleDefined()) {
+    // Generate the min/max coordinates based on our centre and the radius.
+    // Add a little padding for good luck.
+    int paddedRadius = 1.2 * opts->boundaries.radius;
+
+    opts->boundaries.minX = opts->boundaries.cenX - paddedRadius;
+    opts->boundaries.maxX = opts->boundaries.cenX + paddedRadius;
+    opts->boundaries.minZ = opts->boundaries.cenZ - paddedRadius;
+    opts->boundaries.maxZ = opts->boundaries.cenZ + paddedRadius;
+
+    // We use the squared radius many times later; calculate it once here.
+    opts->boundaries.rsqrd = opts->boundaries.radius * opts->boundaries.radius;
   }
 
   if (opts->mode == RENDER) {

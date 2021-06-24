@@ -1,2 +1,2 @@
-#define VERSION "mcmap 3.0.0"
+#define VERSION "mcmap 3.0.1"
 #define COMMENT "compatible with Minecraft v1.13+"

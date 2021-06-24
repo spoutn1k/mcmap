@@ -8,14 +8,57 @@
 
 Settings::WorldOptions options;
 extern Colors::Palette default_palette;
-Colors::Palette custom_palette;
+Colors::Palette custom_palette, file_colors;
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
   ui->setupUi(this);
+
+  for (auto element : QVector<QWidget *>({ui->saveSelectButton,
+                                          ui->maxX,
+                                          ui->maxY,
+                                          ui->maxZ,
+                                          ui->minX,
+                                          ui->minY,
+                                          ui->minZ,
+                                          ui->shading,
+                                          ui->lighting,
+                                          ui->hideBeacons,
+                                          ui->hideWater,
+                                          ui->paddingValue,
+                                          ui->outputSelectButton,
+                                          ui->colorSelectButton,
+                                          ui->colorResetButton,
+                                          ui->orientationNE,
+                                          ui->orientationNW,
+                                          ui->orientationSE,
+                                          ui->orientationSW,
+                                          ui->renderButton,
+                                          ui->dimensionSelectDropDown}))
+    parameters.append(element);
+
+  for (auto element : QVector<QLineEdit *>(
+           {ui->maxX, ui->minX, ui->maxY, ui->minY, ui->maxZ, ui->minZ}))
+    boundaries.append(element);
+
+  Renderer *renderer = new Renderer;
+  renderer->moveToThread(&renderThread);
+
+  connect(&renderThread, SIGNAL(finished()), renderer, SLOT(deleteLater()));
+  connect(this, SIGNAL(render()), renderer, SLOT(render()));
+  connect(renderer, SIGNAL(startRender()), this, SLOT(startRender()));
+  connect(renderer, SIGNAL(resultReady()), this, SLOT(stopRender()));
+  connect(renderer, SIGNAL(sendProgress(int, int, int)), this,
+          SLOT(updateProgress(int, int, int)));
+
+  renderThread.start();
 }
 
-MainWindow::~MainWindow() { delete ui; }
+MainWindow::~MainWindow() {
+  delete ui;
+  renderThread.quit();
+  renderThread.wait();
+}
 
 bool convert(int &dest, const QString &arg, MainWindow *parent) {
   try {
@@ -49,31 +92,11 @@ void MainWindow::reset_selection() {
   ui->dimensionSelectDropDown->setEnabled(false);
   ui->dimensionSelectDropDown->clear();
 
-  ok(ui->minX);
-  ok(ui->maxX);
-  ok(ui->minZ);
-  ok(ui->maxZ);
-  ok(ui->minY);
-  ok(ui->maxY);
-
-  ui->minX->setText("");
-  ui->minX->setEnabled(false);
-  ui->minXLabel->setEnabled(false);
-  ui->maxX->setText("");
-  ui->maxX->setEnabled(false);
-  ui->maxXLabel->setEnabled(false);
-  ui->minZ->setText("");
-  ui->minZ->setEnabled(false);
-  ui->minZLabel->setEnabled(false);
-  ui->maxZ->setText("");
-  ui->maxZ->setEnabled(false);
-  ui->maxZLabel->setEnabled(false);
-  ui->minY->setText("");
-  ui->minY->setEnabled(false);
-  ui->minYLabel->setEnabled(false);
-  ui->maxY->setText("");
-  ui->maxY->setEnabled(false);
-  ui->maxYLabel->setEnabled(false);
+  for (auto element : boundaries) {
+    ok(element);
+    element->setText("");
+    element->setEnabled(false);
+  }
 
   ui->renderButton->setEnabled(false);
 }
@@ -81,7 +104,7 @@ void MainWindow::reset_selection() {
 void MainWindow::on_saveSelectButton_clicked() {
   QString filename = QFileDialog::getExistingDirectory(
       this, tr("Open Save Folder"),
-      fmt::format("{}/.minecraft/saves", getHome().string()).c_str());
+      QString::fromStdString(getSaveDir().string()));
 
   if (filename.isEmpty()) {
     statusBar()->showMessage(tr("No directory selected"), 2000);
@@ -101,7 +124,8 @@ void MainWindow::on_saveSelectButton_clicked() {
   }
 
   ui->saveNameLabel->setText(options.save.name.c_str());
-  statusBar()->showMessage(tr("Selected ") + options.save.name.c_str(), 2000);
+  statusBar()->showMessage(
+      tr("Selected ") + QString::fromStdString(options.save.name), 2000);
 
   reset_selection();
 
@@ -114,9 +138,9 @@ void MainWindow::on_saveSelectButton_clicked() {
 }
 
 void MainWindow::on_outputSelectButton_clicked() {
-  QString filename =
-      QFileDialog::getSaveFileName(this, tr("Choose destination"),
-                                   getHome().c_str(), tr("PNG file (*.png)"));
+  QString filename = QFileDialog::getSaveFileName(
+      this, tr("Choose destination"),
+      QString::fromStdString(getHome().string()), tr("PNG file (*.png)"));
 
   if (filename.isEmpty()) {
     statusBar()->showMessage(tr("No file selected"), 2000);
@@ -128,20 +152,18 @@ void MainWindow::on_outputSelectButton_clicked() {
 }
 
 void MainWindow::on_colorSelectButton_clicked() {
-  QString filename = QFileDialog::getOpenFileName(this, tr("Open color file"),
-                                                  getHome().c_str(),
-                                                  tr("JSON files (*.json)"));
-
+  QString filename = QFileDialog::getOpenFileName(
+      this, tr("Open color file"), QString::fromStdString(getHome().string()),
+      tr("JSON files (*.json)"));
   if (filename.isEmpty()) {
     statusBar()->showMessage(tr("No file selected"), 2000);
     return;
   }
 
   FILE *f = fopen(filename.toStdString().c_str(), "r");
-  Colors::Palette colors_j;
 
   try {
-    colors_j = json::parse(f).get<Colors::Palette>();
+    file_colors = json::parse(f).get<Colors::Palette>();
   } catch (const std::exception &err) {
     statusBar()->showMessage(
         fmt::format("Parsing file failed: {}\n", err.what()).c_str(), 2000);
@@ -152,7 +174,13 @@ void MainWindow::on_colorSelectButton_clicked() {
 
   fclose(f);
 
-  ui->colorFileLabel->setText(filename);
+  ui->colorFileLabel->setText(QString::fromStdString(
+      fs::path(filename.toStdString()).filename().string()));
+}
+
+void MainWindow::on_colorResetButton_clicked() {
+  file_colors = Colors::Palette();
+  ui->colorFileLabel->setText("Not selected.");
 }
 
 void MainWindow::on_dimensionSelectDropDown_currentIndexChanged(int index) {
@@ -161,26 +189,19 @@ void MainWindow::on_dimensionSelectDropDown_currentIndexChanged(int index) {
     return;
 
   options.dim = options.save.dimensions[index];
-  statusBar()->showMessage(tr("Scanning ") + options.regionDir().c_str(), 2000);
+  statusBar()->showMessage(
+      tr("Scanning ") + QString::fromStdString(options.regionDir().string()),
+      2000);
 
   options.boundaries = options.save.getWorld(options.dim);
 
-  ui->minX->setEnabled(true);
-  ui->minXLabel->setEnabled(true);
-  ui->maxX->setEnabled(true);
-  ui->maxXLabel->setEnabled(true);
-  ui->minZ->setEnabled(true);
-  ui->minZLabel->setEnabled(true);
-  ui->maxZ->setEnabled(true);
-  ui->maxZLabel->setEnabled(true);
-  ui->minY->setEnabled(true);
-  ui->minYLabel->setEnabled(true);
-  ui->maxY->setEnabled(true);
-  ui->maxYLabel->setEnabled(true);
+  for (auto e : boundaries)
+    e->setEnabled(true);
 
   QValidator *horizontal = new QIntValidator(
       std::numeric_limits<int>::min(), std::numeric_limits<int>::max(), this);
-  QValidator *vertical = new QIntValidator(0, 255, this);
+  QValidator *vertical =
+      new QIntValidator(mcmap::constants::min_y, mcmap::constants::max_y, this);
 
   ui->minX->setValidator(horizontal);
   ui->maxX->setValidator(horizontal);
@@ -268,26 +289,25 @@ void MainWindow::on_shading_stateChanged(int checked) {
   options.shading = checked;
 }
 
+void MainWindow::on_lighting_stateChanged(int checked) {
+  options.lighting = checked;
+}
+
 void MainWindow::on_renderButton_clicked() {
   std::string water_id = "minecraft:water";
   std::string beam_id = "mcmap:beacon_beam";
 
-  /*
-    QMessageBox message;
-    message.setText(QString(json(options).dump().c_str()));
-    message.exec();
-  */
-
-  Colors::Palette instance_palette = custom_palette;
-  instance_palette.merge(Colors::Palette(default_palette));
+  custom_palette.clear();
+  custom_palette.merge(Colors::Palette(file_colors));
+  custom_palette.merge(Colors::Palette(default_palette));
 
   if (ui->hideWater->isChecked())
-    instance_palette.insert_or_assign(water_id, Colors::Block());
+    custom_palette.insert_or_assign(water_id, Colors::Block());
 
   if (ui->hideBeacons->isChecked())
-    instance_palette.insert_or_assign(beam_id, Colors::Block());
+    custom_palette.insert_or_assign(beam_id, Colors::Block());
 
-  mcmap::render(options, instance_palette);
+  emit render();
 }
 
 void MainWindow::on_orientationNW_toggled(bool checked) {
@@ -308,4 +328,45 @@ void MainWindow::on_orientationSE_toggled(bool checked) {
 void MainWindow::on_orientationNE_toggled(bool checked) {
   if (checked)
     options.boundaries.orientation = Map::NE;
+}
+
+void MainWindow::updateProgress(int prog, int total, int action) {
+  if (!prog) {
+    ui->progressBar->setMaximum(total);
+
+    ui->progressBar->setTextVisible(true);
+    ui->progressBar->setFormat(
+        QString::fromStdString(
+            Progress::action_strings.at(Progress::Action(action))) +
+        " [%p%]");
+  }
+
+  ui->progressBar->setValue(prog);
+}
+
+void MainWindow::startRender() {
+  ui->progressBar->setEnabled(true);
+  ui->progressBar->setTextVisible(true);
+
+  for (const auto &element : parameters)
+    element->setEnabled(false);
+};
+
+void MainWindow::stopRender() {
+  ui->progressBar->setValue(0);
+  ui->progressBar->setEnabled(false);
+  ui->progressBar->setTextVisible(false);
+
+  for (const auto &element : parameters)
+    element->setEnabled(true);
+};
+
+void Renderer::render() {
+  auto update = [this](int d, int t, Progress::Action a) {
+    emit sendProgress(d, t, a);
+  };
+
+  emit startRender();
+  mcmap::render(options, custom_palette, update);
+  emit resultReady();
 }

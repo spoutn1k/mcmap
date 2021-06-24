@@ -9,8 +9,8 @@
 
 namespace mcmap {
 
-int render(const Settings::WorldOptions &options,
-           const Colors::Palette &colors) {
+int render(const Settings::WorldOptions &options, const Colors::Palette &colors,
+           Progress::Callback cb) {
   logger::debug("Rendering {} with {}\n", options.save.name,
                 options.boundaries.to_string());
 
@@ -19,6 +19,8 @@ int render(const Settings::WorldOptions &options,
   options.boundaries.tile(tiles, options.tile_size);
 
   std::vector<Canvas> fragments(tiles.size());
+
+  Progress::Status s = Progress::Status(tiles.size(), cb, Progress::RENDERING);
 
   // This value represents the amount of canvasses that can fit in memory at
   // once to avoid going over the limit of RAM
@@ -33,7 +35,7 @@ int render(const Settings::WorldOptions &options,
 
   // If caching is needed, ensure the cache directory is available
   if (capacity < tiles.size())
-    if (!prepare_cache(CACHE))
+    if (!prepare_cache(getTempDir()))
       return false;
 
   auto begin = std::chrono::high_resolution_clock::now();
@@ -61,8 +63,7 @@ int render(const Settings::WorldOptions &options,
 
       if (!canvas.empty()) {
         if (i >= capacity) {
-          std::filesystem::path temporary =
-              fmt::format("{}/{}.png", CACHE, canvas.map.to_string());
+          fs::path temporary = getTempDir() / canvas.map.to_string();
           canvas.save(temporary);
 
           fragments[i] = std::move(ImageCanvas(canvas.map, temporary));
@@ -74,6 +75,11 @@ int render(const Settings::WorldOptions &options,
         if (i < capacity)
           ++capacity;
       }
+
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+      { s.increment(); }
     }
   }
 
@@ -93,7 +99,7 @@ int render(const Settings::WorldOptions &options,
   }
 
   begin = std::chrono::high_resolution_clock::now();
-  if (!merged.save(options.outFile, options.padding))
+  if (!merged.save(options.outFile, options.padding, cb))
     return false;
   end = std::chrono::high_resolution_clock::now();
 

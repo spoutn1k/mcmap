@@ -7,6 +7,7 @@
 #include "./worldloader.h"
 #include <filesystem>
 #include <map.hpp>
+#include <progress.hpp>
 
 #define CHANSPERPIXEL 4
 #define BYTESPERCHAN 1
@@ -78,7 +79,8 @@ struct Canvas {
   size_t _get_line(const std::vector<Canvas> &, uint8_t *, size_t,
                    uint64_t) const;
 
-  bool save(const std::filesystem::path, uint8_t = 0) const;
+  bool save(const std::filesystem::path, uint8_t = 0,
+            Progress::Callback = Progress::Status::quiet) const;
 
   virtual std::string to_string() const;
 

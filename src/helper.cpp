@@ -49,8 +49,6 @@ size_t memory_capacity(size_t limit, size_t element_size, size_t elements,
   return (limit - overhead - rendering) / element_size;
 }
 
-namespace fs = std::filesystem;
-
 bool prepare_cache(const std::filesystem::path &cache) {
   // If we can create the directory, no more checks
   if (create_directory(cache))
@@ -73,4 +71,55 @@ bool prepare_cache(const std::filesystem::path &cache) {
   return true;
 }
 
-fs::path getHome() { return std::string(getenv("HOME")); }
+fs::path getHome() {
+#ifndef _WINDOWS
+  char target[] = "HOME";
+  char *query = getenv(target);
+
+  if (!query)
+    return "";
+
+  return std::string(query);
+#else
+  char drive[] = "HOMEDRIVE", dir[] = "HOMEPATH";
+  char *query_drive = getenv(drive), *query_path = getenv(dir);
+
+  if (!query_drive || !query_path)
+    return "";
+
+  return fs::path(std::string(query_drive)) / fs::path(std::string(query_path));
+#endif
+}
+
+fs::path getSaveDir() {
+  fs::path prefix, suffix = ".minecraft/saves";
+
+#ifndef _WINDOWS
+  prefix = getHome();
+#else
+  char target[] = "APPDATA";
+
+  char *query = getenv(target);
+
+  if (!query)
+    return "";
+
+  prefix = std::string(query);
+#endif
+
+  if (!fs::exists(prefix))
+    return "";
+
+  return prefix / suffix;
+}
+
+fs::path getTempDir() {
+  std::error_code error;
+
+  fs::path destination = fs::temp_directory_path(error);
+
+  if (destination.empty() || error)
+    destination = fs::current_path();
+
+  return destination / mcmap::config::cache_name;
+}

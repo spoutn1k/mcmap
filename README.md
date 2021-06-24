@@ -1,6 +1,6 @@
 # `mcmap` - Isometric map visualizer
 
-![](https://img.shields.io/badge/version-1.16.5-success)
+![](https://img.shields.io/badge/version-1.16.5-success) ![](https://img.shields.io/badge/version-1.17-success)
 
 *Original project by Simon Rettberg. All the credit goes to him for the idea and vision.*
 
@@ -26,34 +26,37 @@ The standard save path is different between OSes:
 Native Windows is now supported.
 Pre-compiled binaries can be downloaded from the [releases page](https://github.com/spoutn1k/mcmap/releases).
 For now, the program can only be used via `terminal`/`powershell` on Linux/Macos or Windows respectively.
-A GUI is in the works, but needs to be compiled from sources.
+
+An experimental GUI is available for Windows and can be downloaded [here](https://github.com/spoutn1k/mcmap/discussions/63).
 
 ### Options
 
-| Name         | Description                              |
-|--------------|------------------------------------------|
-|`-from X Z`     |sets the coordinates of the block to start rendering at|
-|`-to X Z`       |sets the coordinates of the block to end rendering at|
-|`-min/max VAL`  |minimum/maximum Y index (height) of blocks to render|
-|`-file NAME`    |sets the output filename to 'NAME'; default is `./output.png`|
-|`-colors NAME`    |sets the custom color file to 'NAME'|
-|`-nw` `-ne` `-se` `-sw` |controls which direction will point to the top corner; North-West is default|
-|`-marker x z color`      |draw a marker at `x` `z` of color `color` in `red`,`green`,`blue` or `white`; can be used up to 256 times |
-|`-nowater`      |do not render water|
-|`-nobeacons`      |do not render beacon beams|
-|`-shading`      |toggle shading (brightens blocks depending on height)|
-|`-lighting`      |toggle lighting (brightens blocks depending on light)|
-|`-nether`      |render the nether|
-|`-end`          |render the end|
-|`-dim[ension] [namespace:]id` |render a dimension by namespaced ID|
-|`-mb VAL`       |maximum memory to use at once (default 3.5G, increase for large maps if you have the ram)|
-|`-tile VAL`       |render terrain in tiles of the specified size (default 1024)|
-|`-padding`      |padding around the final image, in pixels (default: 5)|
-|`-h[elp]`      |display an option summary|
-|`-v[erbose]`   |toggle debug mode|
-|`-dumpcolors`  |dump a json with all defined colors|
+| Name                         | Description                                                                                              |
+|------------------------------|----------------------------------------------------------------------------------------------------------|
+|`-from X Z`                   |sets the coordinates of the block to start rendering at                                                   |
+|`-to X Z`                     |sets the coordinates of the block to end rendering at                                                     |
+|`-center X Z`                 |sets the center of a circular render                                                                      |
+|`-radius VAL`                 |sets the radius of a circular render                                                                      |
+|`-min/max VAL`                |minimum/maximum Y index (height) of blocks to render                                                      |
+|`-file NAME`                  |sets the output filename to 'NAME'; default is `./output.png`                                             |
+|`-colors NAME`                |sets the custom color file to 'NAME'                                                                      |
+|`-nw` `-ne` `-se` `-sw`       |controls which direction will point to the top corner; North-West is default                              |
+|`-marker x z color`           |draw a marker at `x` `z` of color `color` in `red`,`green`,`blue` or `white`; can be used up to 256 times |
+|`-nowater`                    |do not render water                                                                                       |
+|`-nobeacons`                  |do not render beacon beams                                                                                |
+|`-shading`                    |toggle shading (brightens blocks depending on height)                                                     |
+|`-lighting`                   |toggle lighting (brightens blocks depending on light)                                                     |
+|`-nether`                     |render the nether                                                                                         |
+|`-end`                        |render the end                                                                                            |
+|`-dim[ension] [namespace:]id` |render a dimension by namespaced ID                                                                       |
+|`-mb VAL`                     |maximum memory to use at once (default 3.5G, increase for large maps if you have the ram)                 |
+|`-tile VAL`                   |render terrain in tiles of the specified size (default 1024)                                              |
+|`-padding`                    |padding around the final image, in pixels (default: 5)                                                    |
+|`-h[elp]`                     |display an option summary                                                                                 |
+|`-v[erbose]`                  |toggle debug mode                                                                                         |
+|`-dumpcolors`                 |dump a json with all defined colors                                                                       |
 
-*Note: Currently you need both -from and -to to define bounds.*
+*Note: Currently you need both `-from` and `-to` OR `-center` and `-radius` to define bounds.*
 
 #### Tips
 
@@ -162,8 +165,8 @@ Getting the libraries depends on your distribution:
 Then get the code and compile:
 ```
 git clone http://github.com/spoutn1k/mcmap
-cd mcmap
-cmake .
+mkdir -p mcmap/build && cd mcmap/build
+cmake ..
 make -j
 ```
 
@@ -175,8 +178,8 @@ Using [`brew`](https://brew.sh/):
 ```
 brew install libpng libomp
 git clone http://github.com/spoutn1k/mcmap
-cd mcmap
-cmake .
+mkdir -p mcmap/build && cd mcmap/build
+cmake ..
 make -j
 ```
 

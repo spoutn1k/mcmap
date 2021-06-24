@@ -1,4 +1,4 @@
-#include "../settings.h"
+#include "../colors.h"
 #include "mainwindow.h"
 #include <QApplication>
 #include <logger.hpp>

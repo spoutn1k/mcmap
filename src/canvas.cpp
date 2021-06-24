@@ -79,8 +79,10 @@ size_t Canvas::_get_line(const std::vector<Canvas> &fragments, uint8_t *buffer,
   return written;
 }
 
-bool Canvas::save(const std::filesystem::path file,
-                  const uint8_t padding) const {
+bool Canvas::save(const std::filesystem::path file, const uint8_t padding,
+                  Progress::Callback notify) const {
+  Progress::Status progress(height(), notify, Progress::COMPOSING);
+
   // Write the buffer to file
   PNG::PNGWriter output(file);
 
@@ -102,7 +104,12 @@ bool Canvas::save(const std::filesystem::path file,
     memset(buffer, 0, size);
     getLine(buffer, size, y);
     output.writeLine();
+
+    if (y && !(y % 100))
+      progress.increment(100);
   }
+
+  progress.increment(100);
 
   return true;
 }
@@ -251,13 +258,9 @@ void IsometricCanvas::renderTerrain(Terrain::Data &world) {
     std::swap(nXChunks, nZChunks);
 
   // world is supposed to have the SAME set of coordinates as the canvas
-  for (chunkX = 0; chunkX < nXChunks; chunkX++) {
-    for (chunkZ = 0; chunkZ < nZChunks; chunkZ++) {
+  for (chunkX = 0; chunkX < nXChunks; chunkX++)
+    for (chunkZ = 0; chunkZ < nZChunks; chunkZ++)
       renderChunk(world);
-      logger::printProgress("Rendering chunks", chunkX * nZChunks + chunkZ,
-                            nZChunks * nXChunks);
-    }
-  }
 
   return;
 }
@@ -352,11 +355,21 @@ void IsometricCanvas::renderSection(const Section &section) {
       orientedX = x, orientedZ = z;
       orientSection(orientedX, orientedZ);
 
+      // These get used a few times; calculate them once.
+      int px = (worldX << 4) + orientedX;
+      int pz = (worldZ << 4) + orientedZ;
+
+      // If we want a circular render, ignore everything outside the radius.
+      if (map.circleDefined()) {
+        int dist = (px - map.cenX) * (px - map.cenX) +
+                   (pz - map.cenZ) * (pz - map.cenZ);
+        if (dist > map.rsqrd) {
+          continue;
+        }
+      }
+
       // If we are oob, skip the line
-      if ((worldX << 4) + orientedX > map.maxX ||
-          (worldX << 4) + orientedX < map.minX ||
-          (worldZ << 4) + orientedZ > map.maxZ ||
-          (worldZ << 4) + orientedZ < map.minZ)
+      if (px > map.maxX || px < map.minX || pz > map.maxZ || pz < map.minZ)
         continue;
 
       for (uint8_t index = 0; index < beamNo; index++) {
@@ -535,8 +548,8 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
     localColor = *colorPtr;
     colorPtr = &localColor;
 
-    uint8_t self_light =
-        current_section->light_at(orientedX, y % 16, orientedZ);
+    uint8_t self_light = current_section->light_at(
+        orientedX, (y + mcmap::constants::terrain_height) % 16, orientedZ);
 
     if (beamColumn) {
       // Ignore the rest as a beam, as it most likely is rendered without a
@@ -562,7 +575,9 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
 
       // Get pointers to the correct sections if the adjacent block is in a
       // different one
-      auto top = (y % 16 == 15 ? section_up() : current_section);
+      auto top =
+          ((y + mcmap::constants::terrain_height) % 16 == 15 ? section_up()
+                                                             : current_section);
 
       auto left = current_section;
       if (current + left_in(map.orientation) != left_coords)
@@ -573,12 +588,15 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
         right = right_section;
 
       // Grab the lights from the iterators above
-      const uint8_t top_light =
-          top->light_at(orientedX, (y + 1) % 16, orientedZ);
-      const uint8_t left_light =
-          left->light_at(left_coords.x, y % 16, left_coords.z);
-      const uint8_t right_light =
-          right->light_at(right_coords.x, y % 16, right_coords.z);
+      const uint8_t top_light = top->light_at(
+          orientedX, (y + mcmap::constants::terrain_height + 1) % 16,
+          orientedZ);
+      const uint8_t left_light = left->light_at(
+          left_coords.x, (y + mcmap::constants::terrain_height) % 16,
+          left_coords.z);
+      const uint8_t right_light = right->light_at(
+          right_coords.x, (y + mcmap::constants::terrain_height) % 16,
+          right_coords.z);
 
       // Modify the block accordingdly
       localColor.dark.modColor((mcmap::constants::lighting_dark +
@@ -620,10 +638,11 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
 const Colors::Block *IsometricCanvas::nextBlock() {
   Chunk::section_array_t::const_iterator lookup = current_section;
 
-  if (y % 16 == 15)
+  if ((y + mcmap::constants::terrain_height) % 16 == 15)
     lookup = section_up();
 
-  return lookup->color_at(orientedX, (y + 1) % 16, orientedZ);
+  return lookup->color_at(
+      orientedX, (y + mcmap::constants::terrain_height + 1) % 16, orientedZ);
 }
 
 IsometricCanvas::Chunk::section_array_t::const_iterator
