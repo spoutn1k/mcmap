@@ -9,6 +9,8 @@ namespace nbt {
 
 namespace io {
 struct ByteStream {
+  using size_type = size_t;
+
   // Adapter for the matryoshkas to work with both files and memory buffers
   enum BufferType { MEMORY, GZFILE };
 
@@ -63,17 +65,25 @@ struct ByteStreamReader : ByteStream {
 };
 
 struct ByteStreamWriter : ByteStream {
-  ByteStreamWriter(gzFile f) : ByteStream(f) {};
+  ByteStreamWriter(gzFile f) : ByteStream(f), total_written(0) {};
   ByteStreamWriter(uint8_t *address, size_t size)
-      : ByteStream(address, size) {};
+      : ByteStream(address, size), total_written(0) {};
 
-  void write(size_t num, const uint8_t *buffer, bool *error) {
+  size_type total_written;
+
+  size_type write(size_t num, const uint8_t *buffer, bool *error) {
+    size_type written;
+
     switch (type) {
     case GZFILE: {
-      if (size_t(gzwrite(source.file, buffer, num)) < num) {
+      written = gzwrite(source.file, buffer, num);
+
+      if (written < num) {
         logger::error("Write error: not enough bytes written");
         *error = true;
       }
+
+      total_written += written;
 
       break;
     }
@@ -84,13 +94,20 @@ struct ByteStreamWriter : ByteStream {
         *error = true;
       }
 
-      memcpy(source.array.first, buffer, num);
-      source.array.first += num;
-      source.array.second -= num;
+      // Write as much as physically possible
+      written = std::min(source.array.second, num);
+
+      memcpy(source.array.first, buffer, written);
+      source.array.first += written;
+      source.array.second -= written;
+
+      total_written += written;
 
       break;
     }
     }
+
+    return written;
   }
 };
 
