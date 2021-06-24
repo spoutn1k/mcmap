@@ -1,4 +1,5 @@
-#include "colors.h"
+#include "./colors.h"
+#include "./color_format.h"
 
 std::map<string, int> erroneous;
 
