@@ -36,6 +36,7 @@ struct Region {
 
   void write_header();
 
+  void get_chunk(const mcmap::Chunk::coordinates &, nbt::NBT &);
   void add_chunk(const mcmap::Chunk::coordinates &, const nbt::NBT &);
 
 private:
