@@ -1,4 +1,5 @@
 #include "./region.h"
+#include <nbt/parser.hpp>
 #include <nbt/stream.hpp>
 #include <nbt/writer.hpp>
 
@@ -28,6 +29,9 @@ std::pair<int32_t, int32_t> Region::coordinates(const fs::path &_file) {
 Region::Region(const fs::path &_file) : file(_file) {
   locations.fill(Location());
 
+  if (!fs::exists(file))
+    return;
+
   std::ifstream regionData(file, std::ifstream::binary);
 
   for (uint16_t chunk = 0; chunk < REGIONSIZE * REGIONSIZE; chunk++) {
@@ -46,8 +50,17 @@ Region::Region(const fs::path &_file) : file(_file) {
 }
 
 void Region::write_header() {
+  // Create file if empty
+  if (!fs::exists(file))
+    std::ofstream(file.string()).close();
+
   std::fstream out(file.c_str(),
                    std::ios::in | std::ios::out | std::ios::binary);
+
+  if (!out) {
+    logger::error("Opening header for writing failed\n");
+    return;
+  }
 
   out.seekp(0, std::ios::beg);
 
@@ -100,6 +113,61 @@ size_t Region::get_offset(uint8_t max_size) {
   return block;
 }
 
+bool decompressChunk(const uint32_t offset, std::ifstream &region,
+                     uint8_t *chunkBuffer, uint64_t *length) {
+  uint8_t zData[COMPRESSED_BUFFER];
+
+  region.seekg(offset, std::ios::beg);
+
+  // Read the 5 bytes that give the size and type of data
+  region.read(reinterpret_cast<char *>(zData), 5);
+
+  // Read the size on the first 4 bytes, discard the type
+  *length = translate<uint32_t>(zData);
+  (*length)--; // Sometimes the data is 1 byte smaller
+
+  region.read(reinterpret_cast<char *>(zData), *length);
+
+  z_stream zlibStream;
+  memset(&zlibStream, 0, sizeof(z_stream));
+  zlibStream.next_in = (Bytef *)zData;
+  zlibStream.next_out = (Bytef *)chunkBuffer;
+  zlibStream.avail_in = *length;
+  zlibStream.avail_out = DECOMPRESSED_BUFFER;
+  inflateInit2(&zlibStream, 32 + MAX_WBITS);
+
+  int status = inflate(&zlibStream, Z_FINISH); // decompress in one step
+  inflateEnd(&zlibStream);
+
+  if (status != Z_STREAM_END) {
+    logger::debug("Decompressing chunk data failed: {}\n", zError(status));
+    return false;
+  }
+
+  *length = zlibStream.total_out;
+  return true;
+}
+
+void Region::get_chunk(const mcmap::Chunk::coordinates &coords,
+                       nbt::NBT &data) {
+  uint8_t chunkBuffer[DECOMPRESSED_BUFFER];
+  size_t length;
+  Location l = locations[coords.x * REGIONSIZE + coords.z];
+
+  if (!l.raw_data) {
+    logger::error("Chunk {} {} does not exist in region\n", coords.x, coords.z);
+    return;
+  }
+
+  std::ifstream region(file);
+
+  decompressChunk(l.offset() * 4096, region, chunkBuffer, &length);
+
+  region.close();
+
+  nbt::parse(chunkBuffer, length, data);
+}
+
 void Region::add_chunk(const mcmap::Chunk::coordinates &coords,
                        const nbt::NBT &data) {
   uint8_t chunk[1024 * 1024];
@@ -120,7 +188,7 @@ void Region::add_chunk(const mcmap::Chunk::coordinates &coords,
   zlibStream.avail_in = memory.total_written;
   zlibStream.avail_out = 65025;
 
-  deflateInit(&zlibStream, Z_DEFAULT_COMPRESSION);
+  deflateInit(&zlibStream, Z_BEST_COMPRESSION);
   zStatus = deflate(&zlibStream, Z_FINISH); // compress in one step
   deflateEnd(&zlibStream);
 

@@ -19,6 +19,7 @@ SET(SOURCES ${SOURCES}
     helper.cpp
     mcmap.cpp
     png.cpp
+    region.cpp
     savefile.cpp
     section.cpp
     settings.cpp
