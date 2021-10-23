@@ -29,6 +29,11 @@ std::pair<int32_t, int32_t> Region::coordinates(const fs::path &_file) {
 Region::Region(const fs::path &_file) : file(_file) {
   locations.fill(Location());
 
+  // An empty file holds no chunks, which is a valid region
+  std::error_code error;
+  if (!fs::exists(file) || fs::file_size(file, error) == 0)
+    return;
+
   std::ifstream regionData(file, std::ifstream::binary);
 
   for (uint16_t chunk = 0; chunk < REGIONSIZE * REGIONSIZE; chunk++) {
