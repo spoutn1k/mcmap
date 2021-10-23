@@ -1,5 +1,5 @@
 #include "../colors.h"
-#include <fmt/format.h>
+#include <fmt/core.h>
 
 template <> struct fmt::formatter<Colors::Color> : formatter<string_view> {
   char presentation = 'c';
