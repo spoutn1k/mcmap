@@ -176,3 +176,37 @@ void sectionAtPre116(const uint8_t index_length,
     buffer[index] = lower_data;
   }
 }
+
+void Section::to_nbt(nbt::NBT &section) {
+  std::vector<uint64_t> blockstates;
+
+  if (!palette.size())
+    return;
+
+  section["Palette"] = nbt::NBT(this->palette, "Palette");
+
+  const uint8_t blockBitLength =
+      std::max(uint8_t(ceil(log2(this->palette.size()))), uint8_t(4));
+
+  const std::vector<uint64_t>::size_type blocksPerLong =
+      sizeof(uint64_t) * 8 / blockBitLength;
+
+  const std::vector<uint64_t>::size_type states =
+      ceil(float(this->blocks.size()) / blocksPerLong);
+
+  blockstates.resize(states);
+
+  auto block_i = this->blocks.begin();
+
+  for (std::vector<uint64_t>::size_type index = 0; index < states; index++) {
+    uint64_t blockstate = 0;
+
+    for (std::vector<uint64_t>::size_type b = 0; b < blocksPerLong; b++) {
+      blockstate = blockstate | (uint64_t(*block_i++) << (blockBitLength * b));
+    }
+
+    blockstates[index] = blockstate;
+  }
+
+  section["BlockStates"] = nbt::NBT(blockstates, "BlockStates");
+}

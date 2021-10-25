@@ -67,6 +67,8 @@ struct Section {
   inline const nbt::NBT &state_at(uint8_t x, uint8_t y, uint8_t z) const {
     return palette[blocks[x + 16 * z + 16 * 16 * y]];
   }
+
+  void to_nbt(nbt::NBT &);
 };
 
 void sectionAtPre116(const uint8_t, const std::vector<int64_t> *,
