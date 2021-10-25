@@ -31,7 +31,8 @@ TEST_F(TestSection, TestCreateEmpty) {
 }
 
 TEST_F(TestSection, TestCreateFromEmpty) {
-  Section s(sections[0], dataVersion, colors);
+  Section s(sections[0], dataVersion);
+  s.loadPalette(colors);
 
   for (uint8_t x = 0; x < 16; x++)
     for (uint8_t y = 0; y < 16; y++)
@@ -44,7 +45,8 @@ TEST_F(TestSection, TestColorPresence) {
   bool presence = false;
 
   Colors::Block bedrock = query->second;
-  Section s(sections[1], dataVersion, colors);
+  Section s(sections[1], dataVersion);
+  s.loadPalette(colors);
 
   ASSERT_NE(s.colors.size(), 0);
 
@@ -58,7 +60,8 @@ TEST_F(TestSection, TestColor) {
   auto query = colors.find("minecraft:bedrock");
 
   Colors::Block bedrock = query->second;
-  Section s(sections[1], dataVersion, colors);
+  Section s(sections[1], dataVersion);
+  s.loadPalette(colors);
 
   for (uint8_t x = 0; x < 16; x++)
     for (uint8_t z = 0; z < 16; z++)
@@ -66,7 +69,8 @@ TEST_F(TestSection, TestColor) {
 }
 
 TEST_F(TestSection, TestMetadata) {
-  Section s(sections[1], dataVersion, colors);
+  Section s(sections[1], dataVersion);
+  s.loadPalette(colors);
 
   const nbt::NBT &state = s.state_at(0, 0, 0);
 

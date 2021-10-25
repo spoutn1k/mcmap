@@ -14,8 +14,11 @@ Chunk::Chunk(const nbt::NBT &data, const Colors::Palette &palette) : Chunk() {
   // in the sections
   data_version = data["DataVersion"].get<int>();
 
-  for (const auto &section : data["Level"]["Sections"])
-    sections.push_back(Section(section, data_version, palette));
+  for (const auto &raw_section : data["Level"]["Sections"]) {
+    Section section(raw_section, data_version);
+    section.loadPalette(palette);
+    sections.push_back(std::move(section));
+  }
 }
 
 Chunk::Chunk(Chunk &&other) { *this = std::move(other); }
@@ -32,11 +35,17 @@ bool Chunk::assert_chunk(const nbt::NBT &chunk) {
       || !chunk.contains("DataVersion")       // Dataversion is required
       || !chunk.contains("Level")             // Level data is required
       || !chunk["Level"].contains("Sections") // No sections mean no blocks
-      || !chunk["Level"].contains("Status")   // Ensure the status is `full`
-      || chunk["Level"]["Status"].get<nbt::NBT::tag_string_t>() != "full")
+      || !chunk["Level"].contains("Status"))  // Ensure the status is `full`
     return false;
 
-  return true;
+  long version = chunk["DataVersion"].get<long>();
+
+  if (version > 1628) {
+    return chunk["Level"]["Status"].get<nbt::NBT::tag_string_t>() == "full";
+  }
+
+  return chunk["Level"]["Status"].get<nbt::NBT::tag_string_t>() ==
+         "postprocessed";
 }
 
 } // namespace mcmap
