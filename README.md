@@ -164,7 +164,7 @@ Getting the libraries depends on your distribution:
 
 Then get the code and compile:
 ```
-git clone http://github.com/spoutn1k/mcmap
+git clone https://github.com/spoutn1k/mcmap
 mkdir -p mcmap/build && cd mcmap/build
 cmake ..
 make -j
@@ -177,7 +177,7 @@ In an Apple environment, you need a developer toolkit recent enough, with the ve
 Using [`brew`](https://brew.sh/):
 ```
 brew install libpng libomp
-git clone http://github.com/spoutn1k/mcmap
+git clone https://github.com/spoutn1k/mcmap
 mkdir -p mcmap/build && cd mcmap/build
 cmake ..
 make -j
