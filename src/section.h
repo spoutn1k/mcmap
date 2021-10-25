@@ -24,7 +24,7 @@ struct Section {
   block_array::value_type beaconIndex;
 
   Section();
-  Section(const nbt::NBT &, const int, const Colors::Palette &);
+  Section(const nbt::NBT &, const int);
   Section(Section &&other) { *this = std::move(other); }
 
   Section &operator=(Section &&other) {
@@ -67,10 +67,6 @@ struct Section {
   inline const nbt::NBT &state_at(uint8_t x, uint8_t y, uint8_t z) const {
     return palette[blocks[x + 16 * z + 16 * 16 * y]];
   }
+
+  void loadPalette(const Colors::Palette &);
 };
-
-void sectionAtPre116(const uint8_t, const std::vector<int64_t> *,
-                     Section::block_array &);
-
-void sectionAtPost116(const uint8_t, const std::vector<int64_t> *,
-                      Section::block_array &);

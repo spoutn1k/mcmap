@@ -1,92 +1,10 @@
 #include "./section.h"
 
-const Colors::Block _void;
-
-Section::Section() : colors{&_void} {
-  // The `colors` array needs to contain at least a color to have a defined
-  // behavious when uninitialized. `color_at` is called 4096x per section, it is
-  // critical for it to avoid if-elses.
-
-  // This is set to the maximum index available as not to trigger a beacon
-  // detection by error
-  beaconIndex = std::numeric_limits<block_array::value_type>::max();
-
-  // Make sure all the blocks are air - thanks to the default value in `colors`
-  blocks.fill(std::numeric_limits<block_array::value_type>::min());
-  lights.fill(std::numeric_limits<light_array::value_type>::min());
-}
-
-Section::Section(const nbt::NBT &raw_section, const int dataVersion,
-                 const Colors::Palette &defined)
-    : Section() {
-  // Get data from the NBT
-  Y = raw_section["Y"].get<int8_t>();
-
-  // Import block data if present
-  if (raw_section.contains("Palette") && raw_section.contains("BlockStates")) {
-    palette = *raw_section["Palette"].get<const std::vector<nbt::NBT> *>();
-    const nbt::NBT::tag_long_array_t *blockStates =
-        raw_section["BlockStates"].get<const nbt::NBT::tag_long_array_t *>();
-
-    // Remove the air that is default-constructed
-    colors.clear();
-    // Anticipate the color input from the palette's size
-    colors.reserve(palette.size());
-
-    // The length in bits of a block is the log2 of the palette's size or 4,
-    // whichever is greatest. Ranges from 4 to 12.
-    const uint8_t blockBitLength =
-        std::max(uint8_t(ceil(log2(palette.size()))), uint8_t(4));
-
-    // Parse the blockstates for block info
-    // TODO make a more reliable dataversion to algorithm detection
-    if (dataVersion < 2534)
-      sectionAtPre116(blockBitLength, blockStates, blocks);
-    else
-      sectionAtPost116(blockBitLength, blockStates, blocks);
-
-    // Pick the colors from the Palette
-    for (const auto &color : palette) {
-      const string namespacedId = color["Name"].get<string>();
-      auto query = defined.find(namespacedId);
-
-      if (query == defined.end()) {
-        logger::error("Color of block {} not found\n", namespacedId);
-        colors.push_back(&_void);
-      } else {
-        colors.push_back(&query->second);
-        if (namespacedId == "minecraft:beacon")
-          beaconIndex = colors.size() - 1;
-      }
-    }
-
-    // Iron out potential corruption errors
-    for (block_array::reference index : blocks) {
-      if (index > colors.size() - 1) {
-        logger::deep_debug(
-            "Malformed section: block is undefined in palette\n");
-        index = 0;
-      }
-    }
-  }
-
-  // Import lighting data if present
-  if (raw_section.contains("BlockLight")) {
-    const nbt::NBT::tag_byte_array_t *blockLights =
-        raw_section["BlockLight"].get<const nbt::NBT::tag_byte_array_t *>();
-
-    if (blockLights->size() == 2048) {
-      for (nbt::NBT::tag_byte_array_t::size_type i = 0; i < blockLights->size();
-           i++) {
-        lights[i] = blockLights->at(i);
-      }
-    }
-  }
-}
-
-void sectionAtPost116(const uint8_t index_length,
-                      const std::vector<int64_t> *blockStates,
-                      Section::block_array &buffer) {
+namespace versions {
+namespace block_states {
+void post116(const uint8_t index_length,
+             const std::vector<int64_t> *blockStates,
+             Section::block_array &buffer) {
   // NEW in 1.16, longs are padded by 0s when a block cannot fit, so no more
   // overflow to deal with !
 
@@ -110,9 +28,8 @@ void sectionAtPost116(const uint8_t index_length,
   }
 }
 
-void sectionAtPre116(const uint8_t index_length,
-                     const std::vector<int64_t> *blockStates,
-                     Section::block_array &buffer) {
+void pre116(const uint8_t index_length, const std::vector<int64_t> *blockStates,
+            Section::block_array &buffer) {
   // The `BlockStates` array contains data on the section's blocks. You have to
   // extract it by understanfing its structure.
   //
@@ -174,5 +91,145 @@ void sectionAtPre116(const uint8_t index_length,
 
     // lower_data now contains the index in the palette
     buffer[index] = lower_data;
+  }
+}
+} // namespace block_states
+
+void v1628(Section *target, const nbt::NBT raw_section) {
+  if (raw_section.contains("BlockStates") && raw_section.contains("Palette")) {
+    target->palette =
+        *raw_section["Palette"].get<const std::vector<nbt::NBT> *>();
+    const nbt::NBT::tag_long_array_t *blockStates =
+        raw_section["BlockStates"].get<const nbt::NBT::tag_long_array_t *>();
+
+    // Remove the air that is default-constructed
+    target->colors.clear();
+    // Anticipate the color input from the palette's size
+    target->colors.reserve(target->palette.size());
+
+    // The length in bits of a block is the log2 of the palette's size or 4,
+    // whichever is greatest. Ranges from 4 to 12.
+    const uint8_t blockBitLength =
+        std::max(uint8_t(ceil(log2(target->palette.size()))), uint8_t(4));
+
+    // Parse the blockstates for block info
+    block_states::pre116(blockBitLength, blockStates, target->blocks);
+  }
+}
+
+void v2534(Section *target, const nbt::NBT raw_section) {
+  if (raw_section.contains("BlockStates") && raw_section.contains("Palette")) {
+    target->palette =
+        *raw_section["Palette"].get<const std::vector<nbt::NBT> *>();
+    const nbt::NBT::tag_long_array_t *blockStates =
+        raw_section["BlockStates"].get<const nbt::NBT::tag_long_array_t *>();
+
+    // Remove the air that is default-constructed
+    target->colors.clear();
+    // Anticipate the color input from the palette's size
+    target->colors.reserve(target->palette.size());
+
+    // The length in bits of a block is the log2 of the palette's size or 4,
+    // whichever is greatest. Ranges from 4 to 12.
+    const uint8_t blockBitLength =
+        std::max(uint8_t(ceil(log2(target->palette.size()))), uint8_t(4));
+
+    // Parse the blockstates for block info
+    block_states::post116(blockBitLength, blockStates, target->blocks);
+  }
+}
+
+void v2840(Section *target, const nbt::NBT raw_section) {
+  if (raw_section.contains("block_states") &&
+      raw_section["block_states"].contains("data") &&
+      raw_section["block_states"].contains("palette")) {
+    target->palette = *raw_section["block_states"]["palette"]
+                           .get<const std::vector<nbt::NBT> *>();
+    const nbt::NBT::tag_long_array_t *blockStates =
+        raw_section["block_states"]["data"]
+            .get<const nbt::NBT::tag_long_array_t *>();
+
+    // Remove the air that is default-constructed
+    target->colors.clear();
+    // Anticipate the color input from the palette's size
+    target->colors.reserve(target->palette.size());
+
+    // The length in bits of a block is the log2 of the palette's size or 4,
+    // whichever is greatest. Ranges from 4 to 12.
+    const uint8_t blockBitLength =
+        std::max(uint8_t(ceil(log2(target->palette.size()))), uint8_t(4));
+
+    // Parse the blockstates for block info
+    block_states::post116(blockBitLength, blockStates, target->blocks);
+  }
+}
+
+} // namespace versions
+
+const Colors::Block _void;
+
+Section::Section() : colors{&_void} {
+  // The `colors` array needs to contain at least a color to have a defined
+  // behavious when uninitialized. `color_at` is called 4096x per section, it is
+  // critical for it to avoid if-elses.
+
+  // This is set to the maximum index available as not to trigger a beacon
+  // detection by error
+  beaconIndex = std::numeric_limits<block_array::value_type>::max();
+
+  // Make sure all the blocks are air - thanks to the default value in `colors`
+  blocks.fill(std::numeric_limits<block_array::value_type>::min());
+  lights.fill(std::numeric_limits<light_array::value_type>::min());
+}
+void Section::loadPalette(const Colors::Palette &defined) {
+  // Pick the colors from the Palette
+  for (const auto &color : palette) {
+    const string namespacedId = color["Name"].get<string>();
+    auto query = defined.find(namespacedId);
+
+    if (query == defined.end()) {
+      logger::error("Color of block {} not found\n", namespacedId);
+      colors.push_back(&_void);
+    } else {
+      colors.push_back(&query->second);
+      if (namespacedId == "minecraft:beacon")
+        beaconIndex = colors.size() - 1;
+    }
+  }
+}
+
+Section::Section(const nbt::NBT &raw_section, const int dataVersion)
+    : Section() {
+
+  // Get data from the NBT
+  Y = raw_section["Y"].get<int8_t>();
+
+  if (dataVersion >= 2840) {
+    versions::v2840(this, raw_section);
+  } else if (dataVersion >= 2534) {
+    versions::v2534(this, raw_section);
+  } else if (dataVersion >= 1628) {
+    versions::v1628(this, raw_section);
+  }
+
+  // Iron out potential corruption errors
+  for (block_array::reference index : blocks) {
+    if (index > palette.size() - 1) {
+      logger::deep_debug("Malformed section: block is undefined in palette\n");
+      index = 0;
+    }
+  }
+
+  // Import lighting data if present
+  if (raw_section.contains("BlockLight")) {
+    const nbt::NBT::tag_byte_array_t *blockLights =
+        raw_section["BlockLight"].get<const nbt::NBT::tag_byte_array_t *>();
+
+    if (blockLights->size() == 2048) {
+      for (nbt::NBT::tag_byte_array_t::size_type i = 0; i < blockLights->size();
+           i++) {
+        lights[i] = blockLights->at(i);
+      }
+    }
   }
 }
