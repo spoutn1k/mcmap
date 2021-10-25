@@ -82,5 +82,8 @@ struct Section {
     return palette[blocks[x + 16 * z + 16 * 16 * y]];
   }
 
+  void to_nbt(nbt::NBT &);
+
   void loadPalette(const Colors::Palette &, Diagnostics::Report * = nullptr);
+
 };
