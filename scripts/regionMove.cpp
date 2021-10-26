@@ -1,19 +1,43 @@
 #include "../src/region.h"
 #include <logger.hpp>
 #include <nbt/parser.hpp>
+#include <nbt/to_json.hpp>
 #include <translator.hpp>
 #include <unordered_set>
 #include <zlib.h>
 
 SETUP_LOGGER
 
-void strip_naturals(Section &s) {
-  std::unordered_set<nbt::NBT::tag_string_t> natural = {
+std::unordered_set<nbt::NBT::tag_string_t> natural = {
 #include "natural.list"
-  };
+};
 
-  if (!s.palette.size())
+std::unordered_set<nbt::NBT::tag_string_t> prismarine = {
+    "minecraft:dark_prismarine",        "minecraft:dark_prismarine_slab",
+    "minecraft:dark_prismarine_stairs", "minecraft:prismarine",
+    "minecraft:prismarine_brick_slab",  "minecraft:prismarine_brick_stairs",
+    "minecraft:prismarine_bricks",      "minecraft:prismarine_slab",
+    "minecraft:prismarine_stairs",      "minecraft:prismarine_wall",
+};
+
+std::unordered_set<nbt::NBT::tag_string_t> stone = {
+    "minecraft:smooth_stone",
+    "minecraft:smooth_stone_slab",
+    "minecraft:stone",
+    "minecraft:stone_brick_slab",
+    "minecraft:stone_brick_stairs",
+    "minecraft:stone_brick_wall",
+    "minecraft:stone_bricks",
+    "minecraft:chiseled_stone_bricks",
+    "minecraft:polished_andesite",
+    "minecraft:polished_andesite_stairs",
+    "minecraft:polished_andesite_slab",
+};
+
+void strip_naturals(Section &s) {
+  if (!s.palette.size()) {
     return;
+  }
 
   for (auto &block : s.blocks) {
     nbt::NBT::tag_string_t type =
@@ -21,6 +45,20 @@ void strip_naturals(Section &s) {
 
     if (natural.find(type) != natural.end()) {
       block = 0;
+    }
+  }
+}
+
+void dry(Section &s) {
+  if (!s.palette.size()) {
+    return;
+  }
+
+  for (auto &type : s.palette) {
+    if (type.contains("Properties") &&
+        type["Properties"].contains("waterlogged")) {
+
+      type["Properties"].erase("waterlogged");
     }
   }
 }
@@ -55,28 +93,6 @@ void bruise(Section &s) {
                     nbt::NBT(nbt::NBT::tag_compound_t(
                         {{"", nbt::NBT("minecraft:gravel", "Name")}})));
   std::vector<nbt::NBT>::size_type gravel = s.palette.size() - 1;
-
-  std::unordered_set<nbt::NBT::tag_string_t> prismarine = {
-      "minecraft:dark_prismarine",        "minecraft:dark_prismarine_slab",
-      "minecraft:dark_prismarine_stairs", "minecraft:prismarine",
-      "minecraft:prismarine_brick_slab",  "minecraft:prismarine_brick_stairs",
-      "minecraft:prismarine_bricks",      "minecraft:prismarine_slab",
-      "minecraft:prismarine_stairs",      "minecraft:prismarine_wall",
-  };
-
-  std::unordered_set<nbt::NBT::tag_string_t> stone = {
-      "minecraft:smooth_stone",
-      "minecraft:smooth_stone_slab",
-      "minecraft:stone",
-      "minecraft:stone_brick_slab",
-      "minecraft:stone_brick_stairs",
-      "minecraft:stone_brick_wall",
-      "minecraft:stone_bricks",
-      "minecraft:chiseled_stone_bricks",
-      "minecraft:polished_andesite",
-      "minecraft:polished_andesite_stairs",
-      "minecraft:polished_andesite_slab",
-  };
 
   for (auto &block : s.blocks) {
     nbt::NBT::tag_string_t type =
@@ -119,9 +135,10 @@ void process(nbt::NBT &chunk) {
   for (auto &section :
        *chunk["Level"]["Sections"].get<nbt::NBT::tag_list_t *>()) {
 
-    Section sec = Section(section, 3000, {});
+    Section sec = Section(section, 2534);
 
     strip_naturals(sec);
+    dry(sec);
     bruise(sec);
 
     sec.to_nbt(section);
