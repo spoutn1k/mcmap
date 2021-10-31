@@ -2,6 +2,7 @@
 #define HELPER_H_
 
 #include <filesystem>
+#include <map>
 
 namespace fs = std::filesystem;
 
@@ -63,5 +64,24 @@ bool prepare_cache(const fs::path &);
 fs::path getHome();
 fs::path getSaveDir();
 fs::path getTempDir();
+
+// TODO Finesse this atrocity out of existence
+template <typename F>
+typename std::map<int, F>::iterator compatible(std::map<int, F> hash,
+                                               int version) {
+  auto it = hash.rbegin();
+  int compatible = 0;
+
+  while (it != hash.rend()) {
+    if (it->first <= version) {
+      compatible = it->first;
+      break;
+    }
+
+    it++;
+  }
+
+  return hash.find(compatible);
+}
 
 #endif // HELPER_H_
