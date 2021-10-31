@@ -1,9 +1,10 @@
 #include "./chunk.h"
+#include <functional>
 
 namespace mcmap {
 
 namespace versions {
-namespace assert {
+namespace assert_versions {
 bool v2844(const nbt::NBT &chunk) {
   // Snapshot 21w43a
   return chunk.contains("sections")  // No sections mean no blocks
@@ -19,7 +20,8 @@ bool v2840(const nbt::NBT &chunk) {
          && chunk["Level"]["Status"].get<nbt::NBT::tag_string_t>() == "full";
 }
 
-bool vbetween(const nbt::NBT &chunk) {
+bool v1976(const nbt::NBT &chunk) {
+  // From 1.14 onwards
   return chunk.contains("Level")                // Level data is required
          && chunk["Level"].contains("Sections") // No sections mean no blocks
          && chunk["Level"].contains("Status")   // Ensure the status is `full`
@@ -27,19 +29,43 @@ bool vbetween(const nbt::NBT &chunk) {
 }
 
 bool v1628(const nbt::NBT &chunk) {
-  // 1.13
+  // From 1.13 onwards
   return chunk.contains("Level")                // Level data is required
          && chunk["Level"].contains("Sections") // No sections mean no blocks
          && chunk["Level"].contains("Status")   // Ensure the status is `full`
          && chunk["Level"]["Status"].get<nbt::NBT::tag_string_t>() ==
                 "postprocessed";
 }
-} // namespace assert
 
-namespace sections {
+bool catchall(const nbt::NBT &chunk) {
+  logger::deep_debug("Unsupported DataVersion: {}\n",
+                     chunk["DataVersion"].get<int>());
+  return false;
+}
+} // namespace assert_versions
+
+namespace sections_versions {
 nbt::NBT v2844(const nbt::NBT &chunk) { return chunk["sections"]; }
 nbt::NBT v1628(const nbt::NBT &chunk) { return chunk["Level"]["Sections"]; }
-} // namespace sections
+nbt::NBT catchall(const nbt::NBT &chunk) {
+  logger::deep_debug("Unsupported DataVersion: {}\n",
+                     chunk["DataVersion"].get<int>());
+  return nbt::NBT(std::vector<nbt::NBT>());
+}
+} // namespace sections_versions
+
+std::map<int, std::function<bool(const nbt::NBT &)>> assert = {
+    {2844, assert_versions::v2844}, {2840, assert_versions::v2840},
+    {1976, assert_versions::v1976}, {1628, assert_versions::v1628},
+    {0, assert_versions::catchall},
+};
+
+std::map<int, std::function<nbt::NBT(const nbt::NBT &)>> sections = {
+    {2844, sections_versions::v2844},
+    {1628, sections_versions::v1628},
+    {0, sections_versions::catchall},
+};
+
 } // namespace versions
 
 Chunk::Chunk() : data_version(-1) {}
@@ -56,16 +82,16 @@ Chunk::Chunk(const nbt::NBT &data, const Colors::Palette &palette) : Chunk() {
 
   nbt::NBT sections_list;
 
-  if (data_version >= 2844) {
-    sections_list = versions::sections::v2844(data);
-  } else {
-    sections_list = versions::sections::v1628(data);
-  }
+  auto sections_it = compatible(versions::sections, data_version);
 
-  for (const auto &raw_section : sections_list) {
-    Section section(raw_section, data_version);
-    section.loadPalette(palette);
-    sections.push_back(std::move(section));
+  if (sections_it != versions::sections.end()) {
+    sections_list = sections_it->second(data);
+
+    for (const auto &raw_section : sections_list) {
+      Section section(raw_section, data_version);
+      section.loadPalette(palette);
+      sections.push_back(std::move(section));
+    }
   }
 }
 
@@ -85,15 +111,12 @@ bool Chunk::assert_chunk(const nbt::NBT &chunk) {
 
   const int version = chunk["DataVersion"].get<int>();
 
-  if (version >= 2844) {
-    return versions::assert::v2844(chunk);
-  } else if (version >= 2840) {
-    return versions::assert::v2840(chunk);
-  } else if (version > 1628) {
-    return versions::assert::vbetween(chunk);
-  } else {
-    return versions::assert::v1628(chunk);
-  }
+  auto assert_it = compatible(versions::assert, version);
+
+  if (assert_it == versions::assert.end())
+    return false;
+
+  return assert_it->second(chunk);
 }
 
 } // namespace mcmap
