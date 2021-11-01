@@ -141,6 +141,7 @@ void v2534(Section *target, const nbt::NBT &raw_section) {
   }
 }
 
+#ifdef SNAPSHOT_SUPPORT
 void v2840(Section *target, const nbt::NBT &raw_section) {
   if (raw_section.contains("block_states") &&
       raw_section["block_states"].contains("data") &&
@@ -165,6 +166,7 @@ void v2840(Section *target, const nbt::NBT &raw_section) {
     block_states_versions::post116(blockBitLength, blockStates, target->blocks);
   }
 }
+#endif
 
 void catchall(Section *, const nbt::NBT &) {
   logger::deep_debug("Unsupported DataVersion\n");
@@ -172,7 +174,9 @@ void catchall(Section *, const nbt::NBT &) {
 } // namespace init_versions
 
 std::map<int, std::function<void(Section *, const nbt::NBT &)>> init = {
+#ifdef SNAPSHOT_SUPPORT
     {2840, init_versions::v2840},
+#endif
     {2534, init_versions::v2534},
     {1628, init_versions::v1628},
     {0, init_versions::catchall},

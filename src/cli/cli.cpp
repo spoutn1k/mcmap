@@ -6,6 +6,12 @@ SETUP_LOGGER
 #define SUCCESS 0
 #define ERROR 1
 
+#ifdef SNAPSHOT_SUPPORT
+#define SNAPSHOT " Snapshots enabled "
+#else
+#define SNAPSHOT ""
+#endif
+
 void printHelp(char *binary) {
   logger::info(
       "Usage: {} <options> WORLDPATH\n\n"
@@ -54,7 +60,7 @@ int main(int argc, char **argv) {
     logger::info("{}", json(colors).dump());
     return 0;
   } else {
-    logger::info(VERSION " {}bit (" COMMENT ")\n",
+    logger::info(VERSION " {}bit (" COMMENT ")" SNAPSHOT "\n",
                  8 * static_cast<int>(sizeof(size_t)));
   }
 
