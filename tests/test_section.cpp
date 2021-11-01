@@ -1,6 +1,6 @@
 #include "../src/include/nbt/parser.hpp"
 #include "../src/section.h"
-#include "./sample_chunk.h"
+#include "./samples.h"
 #include <gtest/gtest.h>
 
 class TestSection : public ::testing::Test {
