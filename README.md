@@ -1,6 +1,6 @@
 # `mcmap` - Isometric map visualizer
 
-![](https://img.shields.io/badge/version-1.16.5-success) ![](https://img.shields.io/badge/version-1.17-success)
+![](https://img.shields.io/badge/version-1.16.5-success) ![](https://img.shields.io/badge/version-1.17-success) ![](https://img.shields.io/badge/snapshot-21w43-blueviolet)
 
 *Original project by Simon Rettberg. All the credit goes to him for the idea and vision.*
 
@@ -190,6 +190,18 @@ As there is no package manager on Windows, [`libpng`](http://www.libpng.org/pub/
 If compiling the GUI version, you will also need [`Qt`](https://www.qt.io/download).
 
 You can also download and set up [Ubuntu on windows](https://ubuntu.com/tutorials/tutorial-ubuntu-on-windows#1-overview) then the steps are the same as Linux/Ubuntu.
+
+### Snapshot support
+
+Snapshots are unsupported by default. One can enable support by using the `SNAPSHOT` `CMake` option. In linux/macOS:
+```
+git clone https://github.com/spoutn1k/mcmap
+mkdir -p mcmap/build && cd mcmap/build
+cmake .. -DSNAPSHOT=1
+make -j
+```
+
+On Windows, this will depend on the software you are using to compile `mcmap`.
 
 ## Troubleshooting
 
