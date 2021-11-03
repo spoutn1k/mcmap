@@ -285,7 +285,7 @@ public:
     }
   }
 
-  bool operator!=(const iter &other) const { return not operator==(other); }
+  bool operator!=(const iter &other) const { return !operator==(other); }
 
   bool operator<(const iter &other) const {
     if (content != other.content) {

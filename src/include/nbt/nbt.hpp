@@ -793,7 +793,7 @@ public:
 
   template <
       typename PointerType,
-      typename std::enable_if<std::is_pointer<PointerType>::value and
+      typename std::enable_if<std::is_pointer<PointerType>::value &&
                                   std::is_const<typename std::remove_pointer<
                                       PointerType>::type>::value,
                               int>::type = 0>

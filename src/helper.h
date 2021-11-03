@@ -72,8 +72,8 @@ fs::path getTempDir();
 
 // TODO Finesse this atrocity out of existence
 template <typename F>
-typename std::map<int, F>::iterator compatible(std::map<int, F> hash,
-                                               int version) {
+typename std::map<int, F>::const_iterator
+compatible(const std::map<int, F> &hash, int version) {
   auto it = hash.rbegin();
   int compatible = 0;
 
