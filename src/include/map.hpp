@@ -1,5 +1,6 @@
 #pragma once
 #include <fmt/core.h>
+#include <vector>
 
 namespace Map {
 
@@ -79,8 +80,14 @@ struct Coordinates {
       break;
     }
 
-    return fmt::format("{}.{}.{} ~> {}.{}.{} ({})", minX, minZ, minY, maxX,
-                       maxZ, maxY, str_orient);
+#ifndef _WINDOWS
+    const std::string format_str = "{}.{}.{} ~> {}.{}.{} ({})";
+#else
+    const std::string format_str = "{}.{}.{}.{}.{}.{}.{}";
+#endif
+
+    return fmt::format(format_str, minX, minZ, minY, maxX, maxZ, maxY,
+                       str_orient);
   }
 
   void rotate() {
