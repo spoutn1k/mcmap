@@ -1,4 +1,5 @@
 #pragma once
+#include <functional>
 #include <logger.hpp>
 #include <map>
 #include <stdint.h>

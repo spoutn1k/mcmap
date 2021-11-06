@@ -119,7 +119,7 @@ void PNGWriter::_open() {
                      get_width(), get_height(), 8 * _bytesPerPixel,
                      file.string());
 
-  if (!(super::imageHandle = fopen(file.c_str(), "wb"))) {
+  if (!(super::imageHandle = fopen(file.string().c_str(), "wb"))) {
     logger::error("[PNGWriter] Error opening '{}' for writing: {}\n",
                   file.string(), strerror(errno));
     return;

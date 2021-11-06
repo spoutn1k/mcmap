@@ -1,7 +1,9 @@
 #include "./section.h"
+#include <compat.hpp>
+#include <functional>
 
 namespace versions {
-namespace block_states {
+namespace block_states_versions {
 void post116(const uint8_t index_length,
              const std::vector<int64_t> *blockStates,
              Section::block_array &buffer) {
@@ -93,10 +95,10 @@ void pre116(const uint8_t index_length, const std::vector<int64_t> *blockStates,
     buffer[index] = lower_data;
   }
 }
+} // namespace block_states_versions
 
-} // namespace block_states
-
-void v1628(Section *target, const nbt::NBT raw_section) {
+namespace init_versions {
+void v1628(Section *target, const nbt::NBT &raw_section) {
   if (raw_section.contains("BlockStates") && raw_section.contains("Palette")) {
     target->palette =
         *raw_section["Palette"].get<const std::vector<nbt::NBT> *>();
@@ -114,11 +116,11 @@ void v1628(Section *target, const nbt::NBT raw_section) {
         std::max(uint8_t(ceil(log2(target->palette.size()))), uint8_t(4));
 
     // Parse the blockstates for block info
-    block_states::pre116(blockBitLength, blockStates, target->blocks);
+    block_states_versions::pre116(blockBitLength, blockStates, target->blocks);
   }
 }
 
-void v2534(Section *target, const nbt::NBT raw_section) {
+void v2534(Section *target, const nbt::NBT &raw_section) {
   if (raw_section.contains("BlockStates") && raw_section.contains("Palette")) {
     target->palette =
         *raw_section["Palette"].get<const std::vector<nbt::NBT> *>();
@@ -136,11 +138,12 @@ void v2534(Section *target, const nbt::NBT raw_section) {
         std::max(uint8_t(ceil(log2(target->palette.size()))), uint8_t(4));
 
     // Parse the blockstates for block info
-    block_states::post116(blockBitLength, blockStates, target->blocks);
+    block_states_versions::post116(blockBitLength, blockStates, target->blocks);
   }
 }
 
-void v2840(Section *target, const nbt::NBT raw_section) {
+#ifdef SNAPSHOT_SUPPORT
+void v2840(Section *target, const nbt::NBT &raw_section) {
   if (raw_section.contains("block_states") &&
       raw_section["block_states"].contains("data") &&
       raw_section["block_states"].contains("palette")) {
@@ -161,9 +164,24 @@ void v2840(Section *target, const nbt::NBT raw_section) {
         std::max(uint8_t(ceil(log2(target->palette.size()))), uint8_t(4));
 
     // Parse the blockstates for block info
-    block_states::post116(blockBitLength, blockStates, target->blocks);
+    block_states_versions::post116(blockBitLength, blockStates, target->blocks);
   }
 }
+#endif
+
+void catchall(Section *, const nbt::NBT &) {
+  logger::deep_debug("Unsupported DataVersion\n");
+}
+} // namespace init_versions
+
+std::map<int, std::function<void(Section *, const nbt::NBT &)>> init = {
+#ifdef SNAPSHOT_SUPPORT
+    {2840, init_versions::v2840},
+#endif
+    {2534, init_versions::v2534},
+    {1628, init_versions::v1628},
+    {0, init_versions::catchall},
+};
 
 } // namespace versions
 
@@ -206,12 +224,10 @@ Section::Section(const nbt::NBT &raw_section, const int dataVersion)
   // Get data from the NBT
   Y = raw_section["Y"].get<int8_t>();
 
-  if (dataVersion >= 2840) {
-    versions::v2840(this, raw_section);
-  } else if (dataVersion >= 2534) {
-    versions::v2534(this, raw_section);
-  } else if (dataVersion >= 1628) {
-    versions::v1628(this, raw_section);
+  auto init_it = compatible(versions::init, dataVersion);
+
+  if (init_it != versions::init.end()) {
+    init_it->second(this, raw_section);
   }
 
   // Iron out potential corruption errors

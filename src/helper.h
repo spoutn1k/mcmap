@@ -2,6 +2,7 @@
 #define HELPER_H_
 
 #include <filesystem>
+#include <map>
 
 namespace fs = std::filesystem;
 
@@ -28,8 +29,13 @@ namespace fs = std::filesystem;
 
 namespace mcmap {
 namespace constants {
-const int16_t min_y = -128;
-const int16_t max_y = 385;
+#ifdef SNAPSHOT_SUPPORT
+const int16_t min_y = -64;
+const int16_t max_y = 319;
+#else
+const int16_t min_y = 0;
+const int16_t max_y = 255;
+#endif
 const uint16_t terrain_height = max_y - min_y + 1;
 
 const int8_t color_offset_left = -27;
