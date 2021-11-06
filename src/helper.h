@@ -70,23 +70,4 @@ fs::path getHome();
 fs::path getSaveDir();
 fs::path getTempDir();
 
-// TODO Finesse this atrocity out of existence
-template <typename F>
-typename std::map<int, F>::const_iterator
-compatible(const std::map<int, F> &hash, int version) {
-  auto it = hash.rbegin();
-  int compatible = 0;
-
-  while (it != hash.rend()) {
-    if (it->first <= version) {
-      compatible = it->first;
-      break;
-    }
-
-    it++;
-  }
-
-  return hash.find(compatible);
-}
-
 #endif // HELPER_H_

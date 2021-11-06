@@ -1,4 +1,5 @@
 #include "./chunk.h"
+#include <compat.hpp>
 #include <functional>
 
 namespace mcmap {

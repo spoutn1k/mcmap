@@ -1,4 +1,5 @@
 #include "./section.h"
+#include <compat.hpp>
 #include <functional>
 
 namespace versions {
