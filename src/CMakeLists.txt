@@ -21,6 +21,9 @@ SET(SOURCES ${SOURCES}
     section.cpp
     settings.cpp
     worldloader.cpp
+    chunk_format_versions/assert.cpp
+    chunk_format_versions/get_section.cpp
+    chunk_format_versions/section_format.cpp
     VERSION)
 
 ADD_LIBRARY(mcmap_core STATIC ${SOURCES})
