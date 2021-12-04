@@ -163,10 +163,13 @@ void PNGWriter::_open() {
 }
 
 void PNGWriter::pad() {
-  getBuffer();
-  memset(buffer, 0, row_size());
+  auto blank = new uint8_t[row_size()];
+  memset(blank, 0, row_size());
+
   for (size_t k = 0; k < _padding; k++)
     png_write_row(pngPtr, (png_bytep)buffer);
+
+  delete[] blank;
 }
 
 uint8_t *PNGWriter::getBuffer() {
