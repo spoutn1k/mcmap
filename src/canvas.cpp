@@ -114,6 +114,58 @@ bool Canvas::save(const std::filesystem::path file, const uint8_t padding,
   return true;
 }
 
+bool Canvas::tile(const fs::path file, uint16_t tilesize,
+                  Progress::Callback notify) const {
+  Progress::Status progress(height(), notify, Progress::COMPOSING);
+
+  uint16_t tilesX = width() / tilesize + (width() % tilesize ? 1 : 0);
+  uint16_t tilesY = height() / tilesize + (height() % tilesize ? 1 : 0);
+
+  size_t size = tilesX * tilesize * BYTESPERPIXEL;
+  std::vector<uint8_t> buffer;
+  buffer.resize(size);
+
+  std::vector<PNG::PNGWriter> row;
+
+  for (uint16_t y = 0; y < tilesY; y++) {
+    // Initialize the PNG files to output to and put them in the row vector
+    for (uint16_t x = 0; x < tilesX; x++) {
+      fs::create_directories(fmt::format("{}/{}", file.string(), x));
+      auto tile =
+          PNG::PNGWriter(fmt::format("{}/{}/{}.png", file.string(), x, y));
+      tile.set_padding(0);
+      tile.set_width(tilesize);
+      tile.set_height(tilesize);
+      PNG::Comments comments = {
+          {"Software", VERSION},
+          {"Coordinates", map.to_string()},
+          {"Tile", fmt::format("{}.{}", x, y)},
+      };
+
+      tile.set_text(comments);
+      row.emplace_back(std::move(tile));
+    }
+
+    // For the next tilesize lines
+    for (uint16_t line = 0; line < tilesize; line++) {
+      memset(&buffer[0], 0, size);
+
+      getLine(&buffer[0], size, y * tilesize + line);
+
+      for (uint16_t x = 0; x < tilesX; x++) {
+        auto output_buffer = row[x].getBuffer();
+        memcpy(output_buffer, &buffer[x * tilesize * BYTESPERPIXEL],
+               tilesize * BYTESPERPIXEL);
+        row[x].writeLine();
+      }
+    }
+
+    row.clear();
+  }
+
+  return true;
+}
+
 std::string Canvas::to_string() const {
   std::map<Canvas::BufferType, std::string> names = {
       {Canvas::BufferType::BYTES, "Byte"},
@@ -564,9 +616,9 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
       // For the rest, we calculate the coordinates of the top, left and right
       // adjacent blocks, lookup their light and modify the color accordingly
 
-      // Calculate the coordinates of the blocks on top/left/right, depending on
-      // the orientation of the map. This says chunk coordinates but really is
-      // section coordinates, as it belongs in [|0, 15|]^2
+      // Calculate the coordinates of the blocks on top/left/right, depending
+      // on the orientation of the map. This says chunk coordinates but really
+      // is section coordinates, as it belongs in [|0, 15|]^2
       Chunk::coordinates offset = {16, 16}, current = {orientedX, orientedZ};
       Chunk::coordinates left_coords =
           (current + left_in(map.orientation) + offset) % 16;
