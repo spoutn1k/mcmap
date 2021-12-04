@@ -81,6 +81,8 @@ struct Canvas {
 
   bool save(const std::filesystem::path, uint8_t = 0,
             Progress::Callback = Progress::Status::quiet) const;
+  bool tile(const std::filesystem::path, uint16_t tilesize,
+            Progress::Callback = Progress::Status::quiet) const;
 
   virtual std::string to_string() const;
 
