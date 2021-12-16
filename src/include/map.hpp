@@ -121,7 +121,8 @@ struct Coordinates {
 #undef BYTESPERPIXEL
   }
 
-  void tile(std::vector<Coordinates<Integer>> &fragments, size_t size) const {
+  void fragment(std::vector<Coordinates<Integer>> &fragments,
+                size_t size) const {
     for (Integer x = minX; x <= maxX; x += size) {
       for (Integer z = minZ; z <= maxZ; z += size) {
         Coordinates<Integer> fragment = *this;

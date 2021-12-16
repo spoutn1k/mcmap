@@ -125,6 +125,12 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
         return false;
       }
       opts->tile_size = atoi(NEXTARG);
+    } else if (strcmp(option, "-fragment") == 0) {
+      if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
+        logger::error("{} needs an integer\n", option);
+        return false;
+      }
+      opts->fragment_size = atoi(NEXTARG);
     } else if (strcmp(option, "-help") == 0 || strcmp(option, "-h") == 0) {
       opts->mode = Settings::HELP;
       return false;
@@ -188,9 +194,22 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
       return false;
     }
 
-    if (opts->tile_size < 16) {
-      logger::error("Cannot render tiles this small\n");
+    if (opts->fragment_size < 16) {
+      logger::error("Cannot render map fragments this small\n");
       return false;
+    }
+
+    if (opts->tile_size) {
+      if (opts->padding != PADDING_DEFAULT && opts->padding) {
+        logger::error("Cannot pad tiled output !\n");
+        return false;
+      }
+
+      if (opts->outFile == OUTPUT_DEFAULT) {
+        opts->outFile = OUTPUT_TILED_DEFAULT;
+
+        fs::create_directory(opts->outFile);
+      }
     }
   }
 

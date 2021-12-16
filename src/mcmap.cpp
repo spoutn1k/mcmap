@@ -14,27 +14,29 @@ int render(const Settings::WorldOptions &options, const Colors::Palette &colors,
   logger::debug("Rendering {} with {}\n", options.save.name,
                 options.boundaries.to_string());
 
-  // Split terrain according to tile size
-  std::vector<World::Coordinates> tiles;
-  options.boundaries.tile(tiles, options.tile_size);
+  // Divide terrain according to fragment size
+  std::vector<World::Coordinates> fragment_coordinates;
+  options.boundaries.fragment(fragment_coordinates, options.fragment_size);
 
-  std::vector<Canvas> fragments(tiles.size());
+  std::vector<Canvas> fragments(fragment_coordinates.size());
 
-  Progress::Status s = Progress::Status(tiles.size(), cb, Progress::RENDERING);
+  Progress::Status s =
+      Progress::Status(fragment_coordinates.size(), cb, Progress::RENDERING);
 
   // This value represents the amount of canvasses that can fit in memory at
   // once to avoid going over the limit of RAM
-  Counter<size_t> capacity = memory_capacity(
-      options.mem_limit, tiles[0].footprint(), tiles.size(), THREADS);
+  Counter<size_t> capacity =
+      memory_capacity(options.mem_limit, fragment_coordinates[0].footprint(),
+                      fragment_coordinates.size(), THREADS);
 
   if (!capacity)
     return false;
 
-  logger::debug("Memory capacity: {} tiles - {} tiles scheduled\n",
-                size_t(capacity), tiles.size());
+  logger::debug("Memory capacity: {} fragments - {} fragments scheduled\n",
+                size_t(capacity), fragment_coordinates.size());
 
   // If caching is needed, ensure the cache directory is available
-  if (capacity < tiles.size())
+  if (capacity < fragments.size())
     if (!prepare_cache(getTempDir()))
       return false;
 
@@ -46,14 +48,14 @@ int render(const Settings::WorldOptions &options, const Colors::Palette &colors,
 #ifdef _OPENMP
 #pragma omp for ordered schedule(dynamic)
 #endif
-    for (OMP_FOR_INDEX i = 0; i < tiles.size(); i++) {
-      logger::debug("Rendering {}\n", tiles[i].to_string());
+    for (OMP_FOR_INDEX i = 0; i < fragment_coordinates.size(); i++) {
+      logger::debug("Rendering {}\n", fragment_coordinates[i].to_string());
       IsometricCanvas canvas;
-      canvas.setMap(tiles[i]);
+      canvas.setMap(fragment_coordinates[i]);
       canvas.setColors(colors);
 
       // Load the minecraft terrain to render
-      Terrain::Data world(tiles[i], options.regionDir(), colors);
+      Terrain::Data world(fragment_coordinates[i], options.regionDir(), colors);
 
       // Draw the terrain fragment
       canvas.shading = options.shading;
@@ -99,9 +101,19 @@ int render(const Settings::WorldOptions &options, const Colors::Palette &colors,
   }
 
   begin = std::chrono::high_resolution_clock::now();
-  if (!merged.save(options.outFile, options.padding, cb))
-    return false;
+
+  bool save_status;
+
+  if (options.tile_size) {
+    save_status = merged.tile(options.outFile, options.tile_size, cb);
+  } else {
+    save_status = merged.save(options.outFile, options.padding, cb);
+  }
+
   end = std::chrono::high_resolution_clock::now();
+
+  if (!save_status)
+    return false;
 
   logger::debug(
       "Drawn PNG in {}ms\n",
