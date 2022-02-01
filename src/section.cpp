@@ -6,9 +6,7 @@
 namespace mcmap {
 namespace versions {
 std::map<int, std::function<void(Section *, const nbt::NBT &)>> init = {
-#ifdef SNAPSHOT_SUPPORT
     {2840, init_versions::v2840},
-#endif
     {2534, init_versions::v2534},
     {1628, init_versions::v1628},
     {0, init_versions::catchall},

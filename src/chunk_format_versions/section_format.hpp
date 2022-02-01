@@ -16,9 +16,7 @@ void v1628(Section *, const nbt::NBT &);
 
 void v2534(Section *, const nbt::NBT &);
 
-#ifdef SNAPSHOT_SUPPORT
 void v2840(Section *, const nbt::NBT &);
-#endif
 
 void catchall(Section *, const nbt::NBT &);
 } // namespace init_versions
