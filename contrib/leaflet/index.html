@@ -43,15 +43,19 @@
         }
 
         function viewMap(data) {
+            let [width, height] = data.imageDimensions;
+            data.mapDimensions = [-height, width];
+            data.mapCenter = [-height / 2, width / 2];
+
             const map = L.map('map', {
                 crs: L.CRS.Simple,
-                center: data.imageCenter,
+                center: data.mapCenter,
                 zoomControl: false,
                 scrollWheelZoom: false,
                 zoom: 0,
                 maxBounds: [
                     [0, 0],
-                    data.imageDimensions
+                    data.mapDimensions,
                 ],
             });
 
