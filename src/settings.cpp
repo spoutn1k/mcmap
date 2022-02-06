@@ -206,7 +206,7 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
       }
 
       if (opts->outFile == OUTPUT_DEFAULT) {
-        opts->outFile = OUTPUT_TILED_DEFAULT;
+        opts->outFile = fs::current_path() / OUTPUT_TILED_DEFAULT;
 
         fs::create_directory(opts->outFile);
       }
