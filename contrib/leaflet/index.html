@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A==" crossorigin="" />
+    <style>
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        #map {
+            height: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map"></div>
+    <input type="file" onchange="loadInfo()">
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js" integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA==" crossorigin=""></script>
+    <script type="text/javascript">
+        if (typeof window.FileReader !== 'function') {
+            alert("The file API isn't supported on this browser.");
+        }
+
+        function loadInfo() {
+            const input = document.querySelector('input[type=file]');
+            const [file] = input.files;
+            const reader = new FileReader();
+
+            reader.addEventListener("load", () => {
+                viewMap(JSON.parse(reader.result));
+            }, false);
+
+            if (file) {
+                reader.readAsText(file);
+            }
+
+            input.style.display = "none";
+        }
+
+        function viewMap(data) {
+            const map = L.map('map', {
+                crs: L.CRS.Simple,
+                center: data.imageCenter,
+                zoomControl: false,
+                scrollWheelZoom: false,
+                zoom: 0,
+                maxBounds: [
+                    [0, 0],
+                    data.imageDimensions
+                ],
+            });
+
+            L.tileLayer(data.layerLocation + '/{x}/{y}.png', {
+                tileSize: data.tileSize,
+                zoomOffset: -1,
+            }).addTo(map);
+        }
+    </script>
+</body>
