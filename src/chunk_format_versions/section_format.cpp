@@ -141,7 +141,6 @@ void v2534(Section *target, const nbt::NBT &raw_section) {
   }
 }
 
-#ifdef SNAPSHOT_SUPPORT
 void v2840(Section *target, const nbt::NBT &raw_section) {
   if (raw_section.contains("block_states") &&
       raw_section["block_states"].contains("data") &&
@@ -166,7 +165,6 @@ void v2840(Section *target, const nbt::NBT &raw_section) {
     block_states_versions::post116(blockBitLength, blockStates, target->blocks);
   }
 }
-#endif
 
 void catchall(Section *, const nbt::NBT &) {
   logger::deep_debug("Unsupported DataVersion\n");
