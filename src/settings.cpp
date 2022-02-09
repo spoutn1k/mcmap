@@ -200,15 +200,27 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
     }
 
     if (opts->tile_size) {
+      // In case tiling output has been queried
+      // Forbid padding
       if (opts->padding != PADDING_DEFAULT && opts->padding) {
         logger::error("Cannot pad tiled output !\n");
         return false;
       }
 
-      if (opts->outFile == OUTPUT_DEFAULT) {
-        opts->outFile = fs::current_path() / OUTPUT_TILED_DEFAULT;
+      // Change output.png to output by default
+      if (opts->outFile == OUTPUT_DEFAULT)
+        opts->outFile = OUTPUT_TILED_DEFAULT;
 
-        fs::create_directory(opts->outFile);
+      // Get absolute path towards file
+      if (opts->outFile.is_relative())
+        opts->outFile = fs::absolute(opts->outFile);
+
+      std::error_code dir_creation_error;
+      fs::create_directory(opts->outFile, dir_creation_error);
+      if (dir_creation_error) {
+        logger::error("Failed to create directory {}: {}\n",
+                      opts->outFile.string(), dir_creation_error.message());
+        return false;
       }
     }
   }
