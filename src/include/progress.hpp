@@ -11,6 +11,7 @@ namespace Progress {
 enum Action {
   RENDERING = 0,
   COMPOSING,
+  TILING,
 };
 
 typedef std::function<void(int, int, Progress::Action)> Callback;
@@ -18,6 +19,7 @@ typedef std::function<void(int, int, Progress::Action)> Callback;
 const std::map<Progress::Action, std::string> action_strings = {
     {Progress::RENDERING, "Rendering terrain"},
     {Progress::COMPOSING, "Composing final image"},
+    {Progress::TILING, "Splitting image in tiles"},
 };
 
 struct Status {

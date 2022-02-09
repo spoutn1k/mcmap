@@ -116,7 +116,7 @@ bool Canvas::save(const std::filesystem::path file, const uint8_t padding,
 
 bool Canvas::tile(const fs::path file, uint16_t tilesize,
                   Progress::Callback notify) const {
-  Progress::Status progress(height(), notify, Progress::COMPOSING);
+  Progress::Status progress(height(), notify, Progress::TILING);
 
   uint16_t tilesX = width() / tilesize + (width() % tilesize ? 1 : 0);
   uint16_t tilesY = height() / tilesize + (height() % tilesize ? 1 : 0);
@@ -129,6 +129,7 @@ bool Canvas::tile(const fs::path file, uint16_t tilesize,
 
   for (uint16_t y = 0; y < tilesY; y++) {
     // Initialize the PNG files to output to and put them in the row vector
+    progress.increment(tilesize);
     for (uint16_t x = 0; x < tilesX; x++) {
       fs::create_directories(fmt::format("{}/{}", file.string(), x));
       auto tile =
