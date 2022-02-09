@@ -219,7 +219,8 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
       fs::create_directory(opts->outFile, dir_creation_error);
       if (dir_creation_error) {
         logger::error("Failed to create directory {}: {}\n",
-                      opts->outFile.string(), dir_creation_error.message());
+                      opts->outFile.string().c_str(),
+                      dir_creation_error.message());
         return false;
       }
     }

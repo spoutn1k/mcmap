@@ -133,8 +133,8 @@ bool Canvas::tile(const fs::path file, uint16_t tilesize,
     fs::path row_dir = file / std::to_string(x);
     fs::create_directories(row_dir, dir_creation_error);
     if (dir_creation_error) {
-      logger::error("Failed to create directory {}: {}\n", row_dir,
-                    dir_creation_error.message());
+      logger::error("Failed to create directory {}: {}\n",
+                    row_dir.string().c_str(), dir_creation_error.message());
       return false;
     }
   }
