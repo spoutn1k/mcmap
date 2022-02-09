@@ -126,12 +126,24 @@ bool Canvas::tile(const fs::path file, uint16_t tilesize,
   buffer.resize(size);
 
   std::vector<PNG::PNGWriter> row;
+  std::error_code dir_creation_error;
+
+  for (uint16_t x = 0; x < tilesX; x++) {
+    // Create all the directories needed to output the tiles
+    fs::path row_dir = file / std::to_string(x);
+    fs::create_directories(row_dir, dir_creation_error);
+    if (dir_creation_error) {
+      logger::error("Failed to create directory {}: {}\n", row_dir,
+                    dir_creation_error.message());
+      return false;
+    }
+  }
 
   for (uint16_t y = 0; y < tilesY; y++) {
     // Initialize the PNG files to output to and put them in the row vector
     progress.increment(tilesize);
+
     for (uint16_t x = 0; x < tilesX; x++) {
-      fs::create_directories(fmt::format("{}/{}", file.string(), x));
       auto tile =
           PNG::PNGWriter(fmt::format("{}/{}/{}.png", file.string(), x, y));
       tile.set_padding(0);
@@ -161,6 +173,7 @@ bool Canvas::tile(const fs::path file, uint16_t tilesize,
       }
     }
 
+    // Delete all the PNG files, triggering close
     row.clear();
   }
 

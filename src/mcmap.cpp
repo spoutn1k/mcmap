@@ -15,10 +15,19 @@ bool writeMapInfo(fs::path outFile, const Canvas &finalImage,
              {"layerLocation", outFile.string()},
              {"tileSize", tileSize}});
 
-  std::ofstream mapInfo;
-  mapInfo.open(outFile / "mapinfo.json");
-  mapInfo << data.dump();
-  mapInfo.close();
+  fs::path infoFile = outFile / "mapinfo.json";
+  std::ofstream infoStream;
+
+  try {
+    infoStream.open(infoFile.string());
+  } catch (const std::exception &err) {
+    logger::error("Failed to open {} for writing: {}", infoFile.string(),
+                  err.what());
+    return false;
+  }
+
+  infoStream << data.dump();
+  infoStream.close();
 
   return true;
 }
@@ -118,9 +127,9 @@ int render(const Settings::WorldOptions &options, const Colors::Palette &colors,
 
   bool save_status;
 
-  if (options.tile_size) {
+  if (options.tile_size &&
+      writeMapInfo(options.outFile, merged, options.tile_size)) {
     save_status = merged.tile(options.outFile, options.tile_size, cb);
-    writeMapInfo(options.outFile, merged, options.tile_size);
   } else {
     save_status = merged.save(options.outFile, options.padding, cb);
   }
