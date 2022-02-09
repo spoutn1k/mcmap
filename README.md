@@ -50,7 +50,8 @@ An experimental GUI is available for Windows and can be downloaded [here](https:
 |`-end`                        |render the end                                                                                            |
 |`-dim[ension] [namespace:]id` |render a dimension by namespaced ID                                                                       |
 |`-mb VAL`                     |maximum memory to use at once (default 3.5G, increase for large maps if you have the ram)                 |
-|`-tile VAL`                   |render terrain in tiles of the specified size (default 1024)                                              |
+|`-fragment VAL`               |render terrain in regions of the specified size (default 1024x1024 blocks)                                |
+|`-tile VAL`                   |generate split output in square tiles of the specified size (in pixels) (default 0, disabled)             |
 |`-padding`                    |padding around the final image, in pixels (default: 5)                                                    |
 |`-h[elp]`                     |display an option summary                                                                                 |
 |`-v[erbose]`                  |toggle debug mode                                                                                         |
@@ -148,6 +149,22 @@ Examples:
     },
 }
 ```
+
+## Tiled output
+
+Using the `-tile` options with a non-zero value triggers the split output. A folder will be created with the following format:
+```
+$ ls output
+0    104  15  21  28  34  40  47  53  6   66  72  79  85  91  98
+1    105  16  22  29  35  41  48  54  60  67  73  8   86  92  99
+10   106  17  23  3   36  42  49  55  61  68  74  80  87  93  mapinfo.json
+100  11   18  24  30  37  43  5   56  62  69  75  81  88  94
+101  12   19  25  31  38  44  50  57  63  7   76  82  89  95
+102  13   2   26  32  39  45  51  58  64  70  77  83  9   96
+103  14   20  27  33  4   46  52  59  65  71  78  84  90  97
+```
+
+To view the generated map, open the HTML file in `contrib/leaflet/index.html`. A file dialog will be present; give it the above `mapinfo.json` to load the map.
 
 ## Compilation
 
