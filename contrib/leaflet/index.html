@@ -13,13 +13,14 @@
 
         #map {
             height: 100%;
+            display: none;
         }
     </style>
 </head>
 
 <body>
     <div id="map"></div>
-    <input type="file" onchange="loadInfo()">
+    <input type="file" accept=".json" onchange="loadInfo()">
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js" integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA==" crossorigin=""></script>
     <script type="text/javascript">
         if (typeof window.FileReader !== 'function') {
@@ -32,6 +33,8 @@
             const reader = new FileReader();
 
             reader.addEventListener("load", () => {
+                map = document.querySelector('#map');
+                map.style.display = "block";
                 viewMap(JSON.parse(reader.result));
             }, false);
 
