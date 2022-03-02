@@ -63,9 +63,9 @@ An experimental GUI is available for Windows and can be downloaded [here](https:
 
 `mcmap` will render the terrain in batches using all the threads of your computer. Unfortunately, when those batches merge, some artifacts are created: lines appear in oceans where the merge was operated.
 
-Use `-tile` with a bigger value to limit the amount of batches and thus of artifacts. This is limited by the available memory, as rendering a whole map iin one go may require 10+ gigabytes of ram.
+Use `-fragment` with a bigger value to limit the amount of batches and thus of artifacts. This is limited by the available memory, as rendering a whole map iin one go may require 10+ gigabytes of ram.
 
-Use `-tile` with a lower value to increase performance. 256 and 512 tiles are really efficient.
+Use `-fragment` with a lower value to increase performance. Fragments of 256x256 and 512x512 blocks are really efficient.
 
 ## Color file format
 
@@ -237,4 +237,4 @@ This disables the underlying threading code, so performance may drop.
 ### Output has lines in the ocean
 
 This is due to the merging algorithm.
-Try increasing the tile size with the `-tile` option, or change the color of the water block to use the `Full` block type to make it less noticeable.
+Try increasing the split size with the `-fragment` option, or change the color of the water block to use the `Full` block type to make it less noticeable.
