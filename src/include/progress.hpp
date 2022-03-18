@@ -26,6 +26,10 @@ struct Status {
 
   static void quiet(int, int, int){};
   static void ascii(int d, int t, Progress::Action status) {
+    // Only print progress bar if stderr is a tty
+    if (!logger::prettyErr)
+      return;
+
     fmt::print(stderr, "\r{} [{:.{}f}%]\r", action_strings.at(status),
                float(d) / float(t) * 100.0f, 2);
     fflush(stderr);
