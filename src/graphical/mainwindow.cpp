@@ -381,6 +381,8 @@ void Renderer::render() {
   emit resultReady();
 }
 
+void MainWindow::on_actionToggleLogs_triggered() { this->log_messages->show(); }
+
 void MainWindow::on_actionExit_triggered() {
   this->log_messages->close();
   this->close();

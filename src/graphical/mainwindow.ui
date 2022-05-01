@@ -411,6 +411,7 @@
     <property name="title">
      <string>File</string>
     </property>
+    <addaction name="actionToggleLogs"/>
     <addaction name="actionExit"/>
    </widget>
    <widget class="QMenu" name="menuAbout">
@@ -422,6 +423,11 @@
    <addaction name="menuFile"/>
    <addaction name="menuAbout"/>
   </widget>
+  <action name="actionToggleLogs">
+   <property name="text">
+    <string>Show logs</string>
+   </property>
+  </action>
   <action name="actionExit">
    <property name="text">
     <string>Exit</string>
