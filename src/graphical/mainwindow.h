@@ -5,6 +5,8 @@
 #include <QMainWindow>
 #include <QThread>
 
+#include "logwindow.h"
+
 QT_BEGIN_NAMESPACE
 namespace Ui {
 class MainWindow;
@@ -29,6 +31,7 @@ class MainWindow : public QMainWindow {
   QThread renderThread;
   QVector<QWidget *> parameters;
   QVector<QLineEdit *> boundaries;
+  LogWindow *log_messages;
 
 public:
   MainWindow(QWidget *parent = nullptr);
