@@ -4,6 +4,7 @@
 #include <QMessageBox>
 #include <QStatusBar>
 
+#include "../VERSION"
 #include "../mcmap.h"
 
 Settings::WorldOptions options;
@@ -13,6 +14,7 @@ Colors::Palette custom_palette, file_colors;
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
   ui->setupUi(this);
+  this->setWindowTitle(VERSION);
 
   for (auto element : QVector<QWidget *>({ui->saveSelectButton,
                                           ui->maxX,
@@ -369,4 +371,8 @@ void Renderer::render() {
   emit startRender();
   mcmap::render(options, custom_palette, update);
   emit resultReady();
+}
+
+void MainWindow::on_actionVersion_triggered() {
+  QMessageBox::about(this, VERSION, COMMENT);
 }
