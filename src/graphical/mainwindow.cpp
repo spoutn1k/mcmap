@@ -54,9 +54,17 @@ MainWindow::MainWindow(QWidget *parent)
           SLOT(updateProgress(int, int, int)));
 
   renderThread.start();
+
+  // Log window setup - might need to be moved to a cleaner spot
+  log_messages = new LogWindow();
+  log_messages->setReadOnly(true);
+  const QFont fixedFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+  log_messages->setFont(fixedFont);
 }
 
 MainWindow::~MainWindow() {
+  log_messages->close();
+  delete log_messages;
   delete ui;
   renderThread.quit();
   renderThread.wait();
