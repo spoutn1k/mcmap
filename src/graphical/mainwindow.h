@@ -67,6 +67,8 @@ private slots:
   void stopRender();
   void updateProgress(int, int, int);
 
+  void on_actionVersion_triggered();
+
 signals:
   void render();
 
