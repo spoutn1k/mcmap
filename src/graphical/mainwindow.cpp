@@ -381,6 +381,11 @@ void Renderer::render() {
   emit resultReady();
 }
 
+void MainWindow::on_actionExit_triggered() {
+  this->log_messages->close();
+  this->close();
+}
+
 void MainWindow::on_actionVersion_triggered() {
   QMessageBox::about(this, VERSION, COMMENT);
 }
