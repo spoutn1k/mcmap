@@ -5,7 +5,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: Execution
+    - name: Install fmt manually
+      run: git clone https://github.com/fmtlib/fmt
+        && cd fmt
+        && cmake . -DFMT_TEST=FALSE
+        && sudo make -j install
+    - name: Install spdlog manually
+      run: git clone https://github.com/gabime/spdlog
+        && cd spdlog
+        && cmake .
+        && sudo make -j install
+    - name: Compilation and execution
       uses: spoutn1k/mcmap-benchmark@cmake
     - name: Upload time data
       uses: actions/upload-artifact@v1
