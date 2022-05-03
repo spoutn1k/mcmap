@@ -46,8 +46,8 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  logger::info("{}\t{}\t{}\t{}\t{}\t{}\n", "X", "Z", "Offset", "Size",
-               "Compression", "Saved");
+  fmt::print("{}\t{}\t{}\t{}\t{}\t{}\n", "X", "Z", "Offset", "Size",
+             "Compression", "Saved");
 
   for (int it = 0; it < REGIONSIZE * REGIONSIZE; it++) {
     // Bound check
@@ -74,9 +74,9 @@ int main(int argc, char **argv) {
       strcpy(time, "No data");
     }
 
-    logger::info("{}\t{}\t{}\t{}\t{}\t{}\n", chunkX, chunkZ,
-                 (offset ? std::to_string(offset) : "Not found"), size, data[4],
-                 std::string(time));
+    fmt::print("{}\t{}\t{}\t{}\t{}\t{}\n", chunkX, chunkZ,
+               (offset ? std::to_string(offset) : "Not found"), size, data[4],
+               std::string(time));
   }
 
   fclose(f);

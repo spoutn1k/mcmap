@@ -45,10 +45,10 @@ int main(int argc, char **argv) {
 
   std::vector<uint8_t> bson_vector = json::to_bson(data);
 
-  logger::info("{{");
+  fmt::print("{{");
   for (auto byte : bson_vector)
-    logger::info("{:#x}, ", byte);
-  logger::info("}}\n");
+    fmt::print("{:#x}, ", byte);
+  fmt::print("}}\n");
 
   return 0;
 }
