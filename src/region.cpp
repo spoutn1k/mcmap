@@ -67,8 +67,8 @@ size_t Region::get_offset(uint8_t max_size) {
 
   while (it != sorted.end()) {
     if (it->offset() != block) {
-      logger::deep_debug("Empty region of size {} at offset {}",
-                         it->offset() - block, block);
+      logger::trace("Empty region of size {} at offset {}",
+                    it->offset() - block, block);
       if (it->offset() - block >= max_size)
         break;
     }

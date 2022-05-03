@@ -27,27 +27,27 @@ static bool format_check(io::ByteStreamReader &b) {
 
   b.read(1, buffer, &error);
   if (error || !buffer[0] || buffer[0] > 13) {
-    logger::deep_debug("NBT format check error: Invalid type read");
+    logger::trace("NBT format check error: Invalid type read");
     return false;
   }
 
   b.read(2, buffer, &error);
   if (error) {
-    logger::deep_debug("NBT format check error: Invalid name size read");
+    logger::trace("NBT format check error: Invalid name size read");
     return false;
   }
 
   name_length = translate<uint16_t>(buffer);
   b.read(name_length, buffer, &error);
   if (error) {
-    logger::deep_debug("NBT format check error: Invalid name read");
+    logger::trace("NBT format check error: Invalid name read");
     return false;
   }
 
   for (uint16_t i = 0; i < name_length; i++) {
     if (buffer[i] < 0x21 || buffer[i] > 0x7e) {
-      logger::deep_debug(
-          "NBT format check error: Invalid character read: {:02x}", buffer[i]);
+      logger::trace("NBT format check error: Invalid character read: {:02x}",
+                    buffer[i]);
       return false;
     }
   }

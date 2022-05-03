@@ -14,7 +14,6 @@ protected:
     nbt::parse(chunk_nbt, chunk_nbt_len, chunk);
 
     dataVersion = chunk["DataVersion"].get<int>();
-    // logger::level = logger::levels::DEEP_DEBUG;
     sections = chunk["Level"]["Sections"];
 
     Colors::load(&colors);

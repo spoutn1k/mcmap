@@ -115,9 +115,8 @@ void PNGWriter::_open() {
     return;
   }
 
-  logger::deep_debug("[PNGWriter] image {}x{}, {}bpp, writing to {}",
-                     get_width(), get_height(), 8 * _bytesPerPixel,
-                     file.string());
+  logger::trace("[PNGWriter] image {}x{}, {}bpp, writing to {}", get_width(),
+                get_height(), 8 * _bytesPerPixel, file.string());
 
   if (!(super::imageHandle = fopen(file.string().c_str(), "wb"))) {
     logger::error("[PNGWriter] Error opening '{}' for writing: {}",
@@ -212,7 +211,7 @@ void PNGReader::_close() {
 }
 
 void PNGReader::_open() {
-  logger::deep_debug("[PNGReader] Opening '{}'", file.string());
+  logger::trace("[PNGReader] Opening '{}'", file.string());
 
   if (!(super::imageHandle = fopen(file.string().c_str(), "rb"))) {
     logger::error("[PNGReader] Error opening '{}' for reading: {}",
@@ -261,9 +260,8 @@ void PNGReader::_open() {
 
   set_type(type);
 
-  logger::deep_debug("[PNGReader] '{}': PNG file of size {}x{}, {}bpp",
-                     file.string(), get_width(), get_height(),
-                     8 * _bytesPerPixel);
+  logger::trace("[PNGReader] '{}': PNG file of size {}x{}, {}bpp",
+                file.string(), get_width(), get_height(), 8 * _bytesPerPixel);
 }
 
 uint32_t PNGReader::getLine(uint8_t *buffer, size_t size) {
