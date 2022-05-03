@@ -42,7 +42,7 @@ int main(int argc, char **argv) {
     logger::error("Error parsing data !\n");
     return 1;
   } else
-    logger::info("{}", json(data).dump());
+    fmt::print("{}", json(data).dump());
 
   return 0;
 }

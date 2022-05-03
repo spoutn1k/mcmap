@@ -57,11 +57,11 @@ int main(int argc, char **argv) {
     Colors::load(&colors, options.colorFile);
 
   if (options.mode == Settings::DUMPCOLORS) {
-    logger::info("{}", json(colors).dump());
+    fmt::print("{}", json(colors).dump());
     return 0;
   } else {
-    logger::info(VERSION " {}bit (" COMMENT ")" SNAPSHOT,
-                 8 * static_cast<int>(sizeof(size_t)));
+    fmt::print(VERSION " {}bit (" COMMENT ")" SNAPSHOT "\n",
+               8 * static_cast<int>(sizeof(size_t)));
   }
 
   // Overwrite water if asked to
@@ -76,6 +76,6 @@ int main(int argc, char **argv) {
     return ERROR;
   }
 
-  logger::info("Job complete.");
+  fmt::print("Job complete.\n");
   return SUCCESS;
 }
