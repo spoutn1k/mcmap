@@ -22,8 +22,8 @@ IF(Qt5_FOUND)
     TARGET_LINK_LIBRARIES(mcmap-gui
         PRIVATE
         Qt5::Widgets
-        format
-        mcmap_core
         ZLIB::ZLIB
-        PNG::PNG)
+        PNG::PNG
+        fmt::fmt-header-only
+        mcmap_core)
 ENDIF()

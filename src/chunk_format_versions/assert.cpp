@@ -38,7 +38,7 @@ bool v1628(const nbt::NBT &chunk) {
 }
 
 bool catchall(const nbt::NBT &chunk) {
-  logger::deep_debug("Unsupported DataVersion: {}\n",
+  logger::deep_debug("Unsupported DataVersion: {}",
                      chunk["DataVersion"].get<int>());
   return false;
 }

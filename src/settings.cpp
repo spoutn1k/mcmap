@@ -12,14 +12,14 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
     const char *option = NEXTARG;
     if (strcmp(option, "-from") == 0) {
       if (!MOREARGS(2) || !isNumeric(POLLARG(1)) || !isNumeric(POLLARG(2))) {
-        logger::error("{} needs two integer arguments\n", option);
+        logger::error("{} needs two integer arguments", option);
         return false;
       }
       opts->boundaries.minX = atoi(NEXTARG);
       opts->boundaries.minZ = atoi(NEXTARG);
     } else if (strcmp(option, "-to") == 0) {
       if (!MOREARGS(2) || !isNumeric(POLLARG(1)) || !isNumeric(POLLARG(2))) {
-        logger::error("{} needs two integer arguments\n", option);
+        logger::error("{} needs two integer arguments", option);
         return false;
       }
       opts->boundaries.maxX = atoi(NEXTARG);
@@ -27,20 +27,20 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
     } else if (strcmp(option, "-centre") == 0 ||
                strcmp(option, "-center") == 0) {
       if (!MOREARGS(2) || !isNumeric(POLLARG(1)) || !isNumeric(POLLARG(2))) {
-        logger::error("{} needs two integer arguments\n", option);
+        logger::error("{} needs two integer arguments", option);
         return false;
       }
       opts->boundaries.cenX = atoi(NEXTARG);
       opts->boundaries.cenZ = atoi(NEXTARG);
     } else if (strcmp(option, "-radius") == 0) {
       if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
-        logger::error("{} needs an integer argument\n", option);
+        logger::error("{} needs an integer argument", option);
         return false;
       }
       opts->boundaries.radius = atoi(NEXTARG);
     } else if (strcmp(option, "-max") == 0) {
       if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
-        logger::error("{} needs an integer argument\n", option);
+        logger::error("{} needs an integer argument", option);
         return false;
       }
       const int height = atoi(NEXTARG);
@@ -48,7 +48,7 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
           std::min(height, static_cast<int>(mcmap::constants::max_y));
     } else if (strcmp(option, "-min") == 0) {
       if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
-        logger::error("{} needs an integer argument\n", option);
+        logger::error("{} needs an integer argument", option);
         return false;
       }
       const int height = atoi(NEXTARG);
@@ -56,7 +56,7 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
           std::max(height, static_cast<int>(mcmap::constants::min_y));
     } else if (strcmp(option, "-padding") == 0) {
       if (!MOREARGS(1) || !isNumeric(POLLARG(1)) || atoi(POLLARG(1)) < 0) {
-        logger::error("{} needs an positive integer argument\n", option);
+        logger::error("{} needs an positive integer argument", option);
         return false;
       }
       opts->padding = atoi(NEXTARG);
@@ -75,31 +75,31 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
     } else if (strcmp(option, "-dimension") == 0 ||
                strcmp(option, "-dim") == 0) {
       if (!MOREARGS(1)) {
-        logger::error("{} needs a dimension name or number\n", option);
+        logger::error("{} needs a dimension name or number", option);
         return false;
       }
       opts->dim = Dimension(NEXTARG);
     } else if (strcmp(option, "-file") == 0) {
       if (!MOREARGS(1)) {
-        logger::error("{} needs one argument\n", option);
+        logger::error("{} needs one argument", option);
         return false;
       }
       opts->outFile = NEXTARG;
     } else if (strcmp(option, "-colors") == 0) {
       if (!MOREARGS(1)) {
-        logger::error("{} needs one argument\n", option);
+        logger::error("{} needs one argument", option);
         return false;
       }
       opts->colorFile = NEXTARG;
       if (!ISPATH(opts->colorFile)) {
-        logger::error("File {} does not exist\n", opts->colorFile.string());
+        logger::error("File {} does not exist", opts->colorFile.string());
         return false;
       }
     } else if (strcmp(option, "-dumpcolors") == 0) {
       opts->mode = Settings::DUMPCOLORS;
     } else if (strcmp(option, "-marker") == 0) {
       if (!MOREARGS(3) || !(isNumeric(POLLARG(1)) && isNumeric(POLLARG(2)))) {
-        logger::error("{} needs three arguments: x z color\n", option);
+        logger::error("{} needs three arguments: x z color", option);
         return false;
       }
       int x = atoi(NEXTARG), z = atoi(NEXTARG);
@@ -115,19 +115,19 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
       opts->boundaries.orientation = Map::SE;
     } else if (strcmp(option, "-mb") == 0) {
       if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
-        logger::error("{} needs an integer\n", option);
+        logger::error("{} needs an integer", option);
         return false;
       }
       opts->mem_limit = atoi(NEXTARG) * size_t(1024 * 1024);
     } else if (strcmp(option, "-tile") == 0) {
       if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
-        logger::error("{} needs an integer\n", option);
+        logger::error("{} needs an integer", option);
         return false;
       }
       opts->tile_size = atoi(NEXTARG);
     } else if (strcmp(option, "-fragment") == 0) {
       if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
-        logger::error("{} needs an integer\n", option);
+        logger::error("{} needs an integer", option);
         return false;
       }
       opts->fragment_size = atoi(NEXTARG);
@@ -135,9 +135,9 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
       opts->mode = Settings::HELP;
       return false;
     } else if (strcmp(option, "-verbose") == 0 || strcmp(option, "-v") == 0) {
-      logger::level = logger::levels::DEBUG;
+      // logger::level = logger::levels::DEBUG;
     } else if (strcmp(option, "-vv") == 0) {
-      logger::level = logger::levels::DEEP_DEBUG;
+      // logger::level = logger::levels::DEEP_DEBUG;
     } else {
       opts->save = SaveFile(option);
     }
@@ -162,7 +162,7 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
     // as the world path can be given after the dimension name, which messes up
     // regionDir()
     if (!opts->save.valid()) {
-      logger::error("Given folder does not seem to be a save file\n");
+      logger::error("Given folder does not seem to be a save file");
       return false;
     }
 
@@ -184,18 +184,18 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
 
     if (opts->boundaries.maxX < opts->boundaries.minX ||
         opts->boundaries.maxZ < opts->boundaries.minZ) {
-      logger::debug("Processed boundaries: {}\n", opts->boundaries.to_string());
-      logger::error("Nothing to render: -from X Z has to be <= -to X Z\n");
+      logger::debug("Processed boundaries: {}", opts->boundaries.to_string());
+      logger::error("Nothing to render: -from X Z has to be <= -to X Z");
       return false;
     }
 
     if (opts->boundaries.maxX - opts->boundaries.minX < 0) {
-      logger::error("Nothing to render: -min Y has to be < -max Y\n");
+      logger::error("Nothing to render: -min Y has to be < -max Y");
       return false;
     }
 
     if (opts->fragment_size < 16) {
-      logger::error("Cannot render map fragments this small\n");
+      logger::error("Cannot render map fragments this small");
       return false;
     }
 
@@ -203,7 +203,7 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
       // In case tiling output has been queried
       // Forbid padding
       if (opts->padding != PADDING_DEFAULT && opts->padding) {
-        logger::error("Cannot pad tiled output !\n");
+        logger::error("Cannot pad tiled output !");
         return false;
       }
 
@@ -218,7 +218,7 @@ bool Settings::parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
       std::error_code dir_creation_error;
       fs::create_directory(opts->outFile, dir_creation_error);
       if (dir_creation_error) {
-        logger::error("Failed to create directory {}: {}\n",
+        logger::error("Failed to create directory {}: {}",
                       opts->outFile.string().c_str(),
                       dir_creation_error.message());
         return false;

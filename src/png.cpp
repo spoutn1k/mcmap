@@ -31,7 +31,7 @@ bool PNG::error_callback() {
   // libpng will issue a longjmp on error, so code flow will end up here if
   // something goes wrong in the code below
   if (setjmp(png_jmpbuf(pngPtr))) {
-    logger::error("[PNG] libpng encountered an error\n");
+    logger::error("[PNG] libpng encountered an error");
     return true;
   }
 
@@ -111,16 +111,16 @@ void write_text(png_structp pngPtr, png_infop pngInfoPtr,
 
 void PNGWriter::_open() {
   if (!(get_width() || get_height())) {
-    logger::warn("[PNGWriter] Nothing to output: canvas is empty !\n");
+    logger::warn("[PNGWriter] Nothing to output: canvas is empty !");
     return;
   }
 
-  logger::deep_debug("[PNGWriter] image {}x{}, {}bpp, writing to {}\n",
+  logger::deep_debug("[PNGWriter] image {}x{}, {}bpp, writing to {}",
                      get_width(), get_height(), 8 * _bytesPerPixel,
                      file.string());
 
   if (!(super::imageHandle = fopen(file.string().c_str(), "wb"))) {
-    logger::error("[PNGWriter] Error opening '{}' for writing: {}\n",
+    logger::error("[PNGWriter] Error opening '{}' for writing: {}",
                   file.string(), strerror(errno));
     return;
   }
@@ -212,10 +212,10 @@ void PNGReader::_close() {
 }
 
 void PNGReader::_open() {
-  logger::deep_debug("[PNGReader] Opening '{}'\n", file.string());
+  logger::deep_debug("[PNGReader] Opening '{}'", file.string());
 
   if (!(super::imageHandle = fopen(file.string().c_str(), "rb"))) {
-    logger::error("[PNGReader] Error opening '{}' for reading: {}\n",
+    logger::error("[PNGReader] Error opening '{}' for reading: {}",
                   file.string(), strerror(errno));
     return;
   }
@@ -223,7 +223,7 @@ void PNGReader::_open() {
   // Check the validity of the header
   png_byte header[8];
   if (fread(header, 1, 8, imageHandle) != 8 || !png_check_sig(header, 8)) {
-    logger::error("[PNGReader] File '{}' is not a PNG\n", file.string());
+    logger::error("[PNGReader] File '{}' is not a PNG", file.string());
     return;
   }
 
@@ -232,7 +232,7 @@ void PNGReader::_open() {
   png_set_sig_bytes(pngPtr, 8);
 
   if (pngPtr == NULL || error_callback()) {
-    logger::error("[PNGReader] Error reading '{}'\n", file.string());
+    logger::error("[PNGReader] Error reading '{}'", file.string());
     return;
   }
 
@@ -249,7 +249,7 @@ void PNGReader::_open() {
   png_uint_32 ret = png_get_IHDR(pngPtr, pngInfoPtr, &width, &height,
                                  &_bitDepth, &type, &interlace, &comp, &filter);
   if (ret == 0) {
-    logger::error("[PNGReader] Error getting IDHR block of '{}'\n",
+    logger::error("[PNGReader] Error getting IDHR block of '{}'",
                   file.string());
     png_destroy_read_struct(&pngPtr, &pngInfoPtr, NULL);
     return;
@@ -261,7 +261,7 @@ void PNGReader::_open() {
 
   set_type(type);
 
-  logger::deep_debug("[PNGReader] '{}': PNG file of size {}x{}, {}bpp\n",
+  logger::deep_debug("[PNGReader] '{}': PNG file of size {}x{}, {}bpp",
                      file.string(), get_width(), get_height(),
                      8 * _bytesPerPixel);
 }
@@ -272,8 +272,7 @@ uint32_t PNGReader::getLine(uint8_t *buffer, size_t size) {
     _open();
 
   if (size < get_width()) {
-    logger::error("[PNGReader] Buffer too small reading '{}' !\n",
-                  file.string());
+    logger::error("[PNGReader] Buffer too small reading '{}' !", file.string());
     return 0;
   }
 

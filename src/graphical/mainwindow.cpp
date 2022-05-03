@@ -177,7 +177,7 @@ void MainWindow::on_colorSelectButton_clicked() {
   } catch (const std::exception &err) {
     statusBar()->showMessage(
         fmt::format("Parsing file failed: {}\n", err.what()).c_str(), 2000);
-    logger::error("Parsing file failed: {}\n", err.what());
+    logger::error("Parsing file failed: {}", err.what());
     fclose(f);
     return;
   }

@@ -11,8 +11,6 @@ using nlohmann::json;
 using std::filesystem::exists;
 using std::filesystem::path;
 
-SETUP_LOGGER
-
 int main(int argc, char **argv) {
   if (argc > 2 || (argc == 2 && !exists(path(argv[1]))) ||
       (argc > 2 && !nbt::assert_NBT(argv[1]))) {

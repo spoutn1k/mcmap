@@ -11,8 +11,6 @@ using nlohmann::json;
 using std::filesystem::exists;
 using std::filesystem::path;
 
-SETUP_LOGGER
-
 int main(int argc, char **argv) {
   if (argc > 2) {
     logger::error("Usage: {} [json file]\n", argv[0]);
