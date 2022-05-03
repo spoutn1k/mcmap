@@ -65,8 +65,8 @@ void Data::loadChunk(const ChunkCoordinates coords) {
       fmt::format("r.{}.{}.mca", regionX, regionZ);
 
   if (!std::filesystem::exists(regionFile)) {
-    logger::deep_debug("Region file r.{}.{}.mca does not exist, skipping ..",
-                       regionX, regionZ);
+    logger::trace("Region file r.{}.{}.mca does not exist, skipping ..",
+                  regionX, regionZ);
     return;
   }
 

@@ -62,7 +62,7 @@ Section::Section(const nbt::NBT &raw_section, const int dataVersion)
   // Iron out potential corruption errors
   for (block_array::reference index : blocks) {
     if (index > palette.size() - 1) {
-      logger::deep_debug("Malformed section: block is undefined in palette");
+      logger::trace("Malformed section: block is undefined in palette");
       index = 0;
     }
   }
