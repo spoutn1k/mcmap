@@ -39,7 +39,7 @@ size_t memory_capacity(size_t limit, size_t element_size, size_t elements,
   // Check we have enought memory
   if (limit < overhead + rendering) {
     logger::error(
-        "At least {:.2f}MB are required to render with those parameters\n",
+        "At least {:.2f}MB are required to render with those parameters",
         float(overhead + rendering) / float(1024 * 1024));
     return 0;
   }
@@ -58,12 +58,12 @@ bool prepare_cache(const std::filesystem::path &cache) {
   fs::perms required = fs::perms::owner_all;
 
   if (cache_status.type() != fs::file_type::directory) {
-    logger::error("Cache directory `{}` is not a directory\n", cache.string());
+    logger::error("Cache directory `{}` is not a directory", cache.string());
     return false;
   }
 
   if ((cache_status.permissions() & required) != required) {
-    logger::error("Cache directory `{}` does not have the right permissions\n",
+    logger::error("Cache directory `{}` does not have the right permissions",
                   cache.string());
     return false;
   }

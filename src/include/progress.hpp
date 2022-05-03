@@ -1,9 +1,11 @@
 #pragma once
+#include <fmt/core.h>
 #include <functional>
 #include <logger.hpp>
 #include <map>
 #include <stdint.h>
 #include <stdio.h>
+#include <unistd.h>
 
 namespace Progress {
 
@@ -26,7 +28,7 @@ struct Status {
   static void quiet(int, int, int){};
   static void ascii(int d, int t, Progress::Action status) {
     // Only print progress bar if stderr is a tty
-    if (!logger::prettyErr)
+    if (!isatty(STDERR_FILENO))
       return;
 
     fmt::print(stderr, "\r{} [{:.{}f}%]\r", action_strings.at(status),

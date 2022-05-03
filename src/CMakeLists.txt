@@ -27,7 +27,7 @@ SET(SOURCES ${SOURCES}
     VERSION)
 
 ADD_LIBRARY(mcmap_core STATIC ${SOURCES})
-TARGET_LINK_LIBRARIES(mcmap_core format ZLIB::ZLIB PNG::PNG)
+TARGET_LINK_LIBRARIES(mcmap_core ZLIB::ZLIB PNG::PNG fmt::fmt-header-only)
 
 IF (OpenMP_FOUND)
     TARGET_LINK_LIBRARIES(mcmap_core OpenMP::OpenMP_CXX)

@@ -1,8 +1,6 @@
 #include "../VERSION"
 #include "../mcmap.h"
 
-SETUP_LOGGER
-
 #define SUCCESS 0
 #define ERROR 1
 
@@ -38,7 +36,7 @@ void printHelp(char *binary) {
       "  -v[erbose]            toggle debug mode (-vv for more)\n"
       "  -dumpcolors           dump a json with all defined colors\n"
       "  -radius VAL           radius of the circular render\n"
-      "  -centre|-center X Z   coordinates of the centre of circular render\n",
+      "  -centre|-center X Z   coordinates of the centre of circular render",
       binary);
 }
 
@@ -62,7 +60,7 @@ int main(int argc, char **argv) {
     logger::info("{}", json(colors).dump());
     return 0;
   } else {
-    logger::info(VERSION " {}bit (" COMMENT ")" SNAPSHOT "\n",
+    logger::info(VERSION " {}bit (" COMMENT ")" SNAPSHOT,
                  8 * static_cast<int>(sizeof(size_t)));
   }
 
@@ -74,10 +72,10 @@ int main(int argc, char **argv) {
     colors["mcmap:beacon_beam"] = Colors::Block();
 
   if (!mcmap::render(options, colors, Progress::Status::ascii)) {
-    logger::error("Error rendering terrain.\n");
+    logger::error("Error rendering terrain.");
     return ERROR;
   }
 
-  logger::info("Job complete.\n");
+  logger::info("Job complete.");
   return SUCCESS;
 }

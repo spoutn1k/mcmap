@@ -8,8 +8,6 @@
 using std::filesystem::exists;
 using std::filesystem::path;
 
-SETUP_LOGGER
-
 uint32_t _ntohi(uint8_t *val) {
   return (uint32_t(val[0]) << 24) + (uint32_t(val[1]) << 16) +
          (uint32_t(val[2]) << 8) + (uint32_t(val[3]));
