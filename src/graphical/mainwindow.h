@@ -3,9 +3,9 @@
 
 #include <QLineEdit>
 #include <QMainWindow>
+#include <QPlainTextEdit>
 #include <QThread>
-
-#include "logwindow.h"
+#include <spdlog/sinks/qt_sinks.h>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -28,14 +28,18 @@ signals:
 
 class MainWindow : public QMainWindow {
   Q_OBJECT
-  QThread renderThread;
-  QVector<QWidget *> parameters;
-  QVector<QLineEdit *> boundaries;
-  LogWindow *log_messages;
 
 public:
   MainWindow(QWidget *parent = nullptr);
   ~MainWindow();
+
+private:
+  QThread renderThread;
+  QVector<QWidget *> parameters;
+  QVector<QLineEdit *> boundaries;
+  QPlainTextEdit *log_messages;
+
+  std::shared_ptr<spdlog::logger> logger = nullptr;
 
 private slots:
   void reset_selection();

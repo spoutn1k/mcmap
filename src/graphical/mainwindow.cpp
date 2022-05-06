@@ -43,6 +43,16 @@ MainWindow::MainWindow(QWidget *parent)
            {ui->maxX, ui->minX, ui->maxY, ui->minY, ui->maxZ, ui->minZ}))
     boundaries.append(element);
 
+  // Log window setup - might need to be moved to a cleaner spot
+  log_messages = new QPlainTextEdit();
+  log_messages->setReadOnly(true);
+  const QFont fixedFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+  log_messages->setFont(fixedFont);
+
+  logger = spdlog::qt_logger_mt("gui_logger", log_messages);
+  logger->set_level(spdlog::level::debug);
+  spdlog::set_default_logger(logger);
+
   Renderer *renderer = new Renderer;
   renderer->moveToThread(&renderThread);
 
@@ -54,12 +64,6 @@ MainWindow::MainWindow(QWidget *parent)
           SLOT(updateProgress(int, int, int)));
 
   renderThread.start();
-
-  // Log window setup - might need to be moved to a cleaner spot
-  log_messages = new LogWindow();
-  log_messages->setReadOnly(true);
-  const QFont fixedFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
-  log_messages->setFont(fixedFont);
 }
 
 MainWindow::~MainWindow() {

@@ -8,8 +8,6 @@ SET(PROJECT_SOURCES
     main.cpp
     mainwindow.cpp
     mainwindow.h
-    logwindow.cpp
-    logwindow.h
     mainwindow.ui)
 
 IF(Qt5_FOUND)
