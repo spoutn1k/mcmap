@@ -425,7 +425,7 @@
   </widget>
   <action name="actionToggleLogs">
    <property name="text">
-    <string>Show logs</string>
+    <string>Toggle log window</string>
    </property>
   </action>
   <action name="actionExit">
