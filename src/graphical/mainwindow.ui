@@ -26,377 +26,445 @@
    </size>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QWidget" name="verticalLayoutWidget">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>20</y>
-      <width>521</width>
-      <height>461</height>
-     </rect>
-    </property>
-    <layout class="QVBoxLayout" name="verticalLayout">
-     <item>
-      <layout class="QHBoxLayout" name="saveSelect" stretch="0,1,0">
-       <item>
-        <widget class="QLabel" name="saveFieldLabel">
-         <property name="text">
-          <string>Savefile</string>
-         </property>
+   <layout class="QVBoxLayout" name="verticalLayout_3">
+    <item>
+     <layout class="QVBoxLayout" name="verticalLayout">
+      <property name="spacing">
+       <number>10</number>
+      </property>
+      <property name="leftMargin">
+       <number>9</number>
+      </property>
+      <property name="topMargin">
+       <number>9</number>
+      </property>
+      <property name="rightMargin">
+       <number>9</number>
+      </property>
+      <property name="bottomMargin">
+       <number>9</number>
+      </property>
+      <item>
+       <layout class="QHBoxLayout" name="saveSelect" stretch="0,1,0">
+        <item>
+         <widget class="QLabel" name="saveFieldLabel">
+          <property name="text">
+           <string>Savefile</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="saveNameLabel">
+          <property name="text">
+           <string>Not selected.</string>
+          </property>
+          <property name="textFormat">
+           <enum>Qt::PlainText</enum>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="saveSelectButton">
+          <property name="text">
+           <string>Select</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="outputSelect" stretch="0,1,0">
+        <item>
+         <widget class="QLabel" name="outputFieldLabel">
+          <property name="text">
+           <string>Output</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="outputLabel">
+          <property name="text">
+           <string>output.png</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="outputSelectButton">
+          <property name="text">
+           <string>Select</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="orientation">
+        <item>
+         <widget class="QLabel" name="orientationLabel">
+          <property name="text">
+           <string>Orientation</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="orientationNW">
+          <property name="text">
+           <string>North-West</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="orientationSW">
+          <property name="text">
+           <string>South-West</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="orientationSE">
+          <property name="text">
+           <string>South-East</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="orientationNE">
+          <property name="text">
+           <string>North-East</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="dimensionSelect">
+        <item>
+         <widget class="QLabel" name="dimensionLabel">
+          <property name="text">
+           <string>Dimension</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="dimensionSelectDropDown">
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QTabWidget" name="coordinatesSelect">
+        <property name="currentIndex">
+         <number>0</number>
+        </property>
+        <widget class="QWidget" name="boxCoordinates">
+         <attribute name="title">
+          <string>Box Coordinates</string>
+         </attribute>
+         <layout class="QGridLayout" name="gridLayout_2">
+          <property name="leftMargin">
+           <number>9</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>9</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <property name="horizontalSpacing">
+           <number>9</number>
+          </property>
+          <property name="verticalSpacing">
+           <number>3</number>
+          </property>
+          <item row="0" column="4">
+           <widget class="QLabel" name="boxMaxXLabel">
+            <property name="text">
+             <string>To X</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="4">
+           <widget class="QLabel" name="boxMaxYLabel">
+            <property name="text">
+             <string>To Y</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QLabel" name="boxMinYLabel">
+            <property name="text">
+             <string>From Y</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="5">
+           <widget class="QLineEdit" name="boxMaxX">
+           </widget>
+          </item>
+          <item row="3" column="2">
+           <widget class="QLineEdit" name="boxMinY">
+           </widget>
+          </item>
+          <item row="3" column="5">
+           <widget class="QLineEdit" name="boxMaxY">
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QLabel" name="boxMinXLabel">
+            <property name="text">
+             <string>From X</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QLineEdit" name="boxMinX">
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QLabel" name="boxMinZLabel">
+            <property name="text">
+             <string>From Z</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QLineEdit" name="boxMinZ">
+           </widget>
+          </item>
+          <item row="1" column="4">
+           <widget class="QLabel" name="boxMaxZLabel">
+            <property name="text">
+             <string>To Z</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="5">
+           <widget class="QLineEdit" name="boxMaxZ">
+           </widget>
+          </item>
+         </layout>
         </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="saveNameLabel">
-         <property name="text">
-          <string>Not selected.</string>
-         </property>
-         <property name="textFormat">
-          <enum>Qt::PlainText</enum>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
+        <widget class="QWidget" name="circularCoordinates">
+         <attribute name="title">
+          <string>Circular coordinates</string>
+         </attribute>
+         <layout class="QGridLayout" name="gridLayout">
+          <property name="leftMargin">
+           <number>9</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>9</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <property name="horizontalSpacing">
+           <number>9</number>
+          </property>
+          <property name="verticalSpacing">
+           <number>3</number>
+          </property>
+          <item row="1" column="2">
+           <widget class="QLabel" name="circularMaxYLabel">
+            <property name="text">
+             <string>To Y</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QLineEdit" name="circularMinY">
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="circularRadiusLabel">
+            <property name="text">
+             <string>Radius</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QLineEdit" name="circularCenterX">
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QLabel" name="circularCenterZLabel">
+            <property name="text">
+             <string>Center Z</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="3">
+           <widget class="QLineEdit" name="circularMaxY">
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="circularMinYLabel">
+            <property name="text">
+             <string>From Y</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QLabel" name="circularCenterXLabel">
+            <property name="text">
+             <string>Center X</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="3">
+           <widget class="QLineEdit" name="circularCenterZ">
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QLineEdit" name="circularRadius">
+           </widget>
+          </item>
+         </layout>
         </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="saveSelectButton">
-         <property name="text">
-          <string>Select</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item>
-      <layout class="QHBoxLayout" name="outputSelect" stretch="0,1,0">
-       <item>
-        <widget class="QLabel" name="outputFieldLabel">
-         <property name="text">
-          <string>Output</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="outputLabel">
-         <property name="text">
-          <string>output.png</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="outputSelectButton">
-         <property name="text">
-          <string>Select</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item>
-      <layout class="QHBoxLayout" name="orientation">
-       <item>
-        <widget class="QLabel" name="orientationLabel">
-         <property name="text">
-          <string>Orientation</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QRadioButton" name="orientationNW">
-         <property name="text">
-          <string>North-West</string>
-         </property>
-         <property name="checked">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QRadioButton" name="orientationSW">
-         <property name="text">
-          <string>South-West</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QRadioButton" name="orientationSE">
-         <property name="text">
-          <string>South-East</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QRadioButton" name="orientationNE">
-         <property name="text">
-          <string>North-East</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item>
-      <layout class="QHBoxLayout" name="dimensionSelect">
-       <item>
-        <widget class="QLabel" name="dimensionLabel">
-         <property name="enabled">
-          <bool>true</bool>
-         </property>
-         <property name="text">
-          <string>Dimension</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QComboBox" name="dimensionSelectDropDown">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item>
-      <layout class="QHBoxLayout" name="xBounds">
-       <item>
-        <widget class="QLabel" name="minXLabel">
-         <property name="enabled">
-          <bool>true</bool>
-         </property>
-         <property name="text">
-          <string>From X</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLineEdit" name="minX">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="maxXLabel">
-         <property name="enabled">
-          <bool>true</bool>
-         </property>
-         <property name="text">
-          <string>To X</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLineEdit" name="maxX">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item>
-      <layout class="QHBoxLayout" name="zBounds">
-       <item>
-        <widget class="QLabel" name="minZLabel">
-         <property name="enabled">
-          <bool>true</bool>
-         </property>
-         <property name="text">
-          <string>From Z</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLineEdit" name="minZ">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="maxZLabel">
-         <property name="enabled">
-          <bool>true</bool>
-         </property>
-         <property name="text">
-          <string>To Z</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLineEdit" name="maxZ">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item>
-      <layout class="QHBoxLayout" name="yBounds">
-       <item>
-        <widget class="QLabel" name="minYLabel">
-         <property name="enabled">
-          <bool>true</bool>
-         </property>
-         <property name="text">
-          <string>From Y</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLineEdit" name="minY">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="maxYLabel">
-         <property name="enabled">
-          <bool>true</bool>
-         </property>
-         <property name="text">
-          <string>To Y</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLineEdit" name="maxY">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item>
-      <layout class="QHBoxLayout" name="padding">
-       <item>
-        <widget class="QLabel" name="paddingFieldLabel">
-         <property name="text">
-          <string>Image Padding</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QSpinBox" name="paddingValue">
-         <property name="value">
-          <number>5</number>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item>
-      <layout class="QHBoxLayout" name="misc">
-       <item>
-        <widget class="QCheckBox" name="shading">
-         <property name="text">
-          <string>Shading</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QCheckBox" name="lighting">
-         <property name="text">
-          <string>Lighting</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QCheckBox" name="hideBeacons">
-         <property name="text">
-          <string>Hide Beacons</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QCheckBox" name="hideWater">
-         <property name="text">
-          <string>Hide Water</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item>
-      <layout class="QHBoxLayout" name="colorSelect" stretch="0,1,0,0">
-       <item>
-        <widget class="QLabel" name="colorFieldLabel">
-         <property name="text">
-          <string>Colorfile</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="colorFileLabel">
-         <property name="text">
-          <string>Not selected.</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="colorSelectButton">
-         <property name="text">
-          <string>Select</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="colorResetButton">
-         <property name="text">
-          <string>Clear</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-    </layout>
-   </widget>
-   <widget class="QWidget" name="horizontalLayoutWidget">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>500</y>
-      <width>521</width>
-      <height>41</height>
-     </rect>
-    </property>
-    <layout class="QHBoxLayout" name="horizontalLayout">
-     <item>
-      <widget class="QProgressBar" name="progressBar">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="maximum">
-        <number>100</number>
-       </property>
-       <property name="value">
-        <number>0</number>
-       </property>
-       <property name="textVisible">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="renderButton">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="text">
-        <string>Render</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </widget>
+       </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="padding">
+        <item>
+         <widget class="QLabel" name="paddingFieldLabel">
+          <property name="text">
+           <string>Image Padding</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QSpinBox" name="paddingValue">
+          <property name="value">
+           <number>5</number>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="misc">
+        <item>
+         <widget class="QCheckBox" name="shading">
+          <property name="text">
+           <string>Shading</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="lighting">
+          <property name="text">
+           <string>Lighting</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="hideBeacons">
+          <property name="text">
+           <string>Hide Beacons</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="hideWater">
+          <property name="text">
+           <string>Hide Water</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="colorSelect" stretch="0,1,0,0">
+        <item>
+         <widget class="QLabel" name="colorFieldLabel">
+          <property name="text">
+           <string>Colorfile</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="colorFileLabel">
+          <property name="text">
+           <string>Not selected.</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="colorSelectButton">
+          <property name="text">
+           <string>Select</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="colorResetButton">
+          <property name="text">
+           <string>Clear</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <property name="spacing">
+       <number>9</number>
+      </property>
+      <property name="leftMargin">
+       <number>9</number>
+      </property>
+      <property name="topMargin">
+       <number>9</number>
+      </property>
+      <property name="rightMargin">
+       <number>9</number>
+      </property>
+      <property name="bottomMargin">
+       <number>9</number>
+      </property>
+      <item>
+       <widget class="QProgressBar" name="progressBar">
+        <property name="maximum">
+         <number>100</number>
+        </property>
+        <property name="value">
+         <number>0</number>
+        </property>
+        <property name="textVisible">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="renderButton">
+        <property name="text">
+         <string>Render</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
@@ -404,7 +472,7 @@
      <x>0</x>
      <y>0</y>
      <width>554</width>
-     <height>21</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -439,4 +507,6 @@
    </property>
   </action>
  </widget>
+ <resources/>
+ <connections/>
 </ui>

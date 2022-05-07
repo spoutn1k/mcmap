@@ -16,12 +16,18 @@ MainWindow::MainWindow(QWidget *parent)
   this->setWindowTitle(mcmap::version().c_str());
 
   for (auto element : QVector<QWidget *>({ui->saveSelectButton,
-                                          ui->maxX,
-                                          ui->maxY,
-                                          ui->maxZ,
-                                          ui->minX,
-                                          ui->minY,
-                                          ui->minZ,
+                                          ui->boxMaxX,
+                                          ui->boxMaxY,
+                                          ui->boxMaxZ,
+                                          ui->boxMinX,
+                                          ui->boxMinY,
+                                          ui->boxMinZ,
+                                          ui->circularCenterX,
+                                          ui->circularCenterZ,
+                                          ui->circularMinY,
+                                          ui->circularMaxY,
+                                          ui->circularRadius,
+                                          ui->coordinatesSelect,
                                           ui->shading,
                                           ui->lighting,
                                           ui->hideBeacons,
@@ -38,9 +44,16 @@ MainWindow::MainWindow(QWidget *parent)
                                           ui->dimensionSelectDropDown}))
     parameters.append(element);
 
+  ui->dimensionSelectDropDown->setEnabled(false);
+  ui->progressBar->setEnabled(false);
+  ui->renderButton->setEnabled(false);
   for (auto element : QVector<QLineEdit *>(
-           {ui->maxX, ui->minX, ui->maxY, ui->minY, ui->maxZ, ui->minZ}))
+           {ui->boxMaxX, ui->boxMinX, ui->boxMaxY, ui->boxMinY, ui->boxMaxZ,
+            ui->boxMinZ, ui->circularCenterX, ui->circularCenterZ,
+            ui->circularMinY, ui->circularMaxY, ui->circularRadius})) {
+    element->setEnabled(false);
     boundaries.append(element);
+  }
 
   // Log window setup - might need to be moved to a cleaner spot
   log_messages = new QPlainTextEdit();
@@ -222,20 +235,33 @@ void MainWindow::on_dimensionSelectDropDown_currentIndexChanged(int index) {
   QValidator *vertical =
       new QIntValidator(mcmap::constants::min_y, mcmap::constants::max_y, this);
 
-  ui->minX->setValidator(horizontal);
-  ui->maxX->setValidator(horizontal);
-  ui->minZ->setValidator(horizontal);
-  ui->maxZ->setValidator(horizontal);
+  ui->boxMinX->setValidator(horizontal);
+  ui->boxMaxX->setValidator(horizontal);
+  ui->boxMinZ->setValidator(horizontal);
+  ui->boxMaxZ->setValidator(horizontal);
 
-  ui->minY->setValidator(vertical);
-  ui->maxY->setValidator(vertical);
+  ui->boxMinY->setValidator(vertical);
+  ui->boxMaxY->setValidator(vertical);
 
-  ui->minX->setText(std::to_string(options.boundaries.minX).c_str());
-  ui->maxX->setText(std::to_string(options.boundaries.maxX).c_str());
-  ui->minZ->setText(std::to_string(options.boundaries.minZ).c_str());
-  ui->maxZ->setText(std::to_string(options.boundaries.maxZ).c_str());
-  ui->minY->setText(std::to_string(options.boundaries.minY).c_str());
-  ui->maxY->setText(std::to_string(options.boundaries.maxY).c_str());
+  ui->circularCenterX->setValidator(horizontal);
+  ui->circularCenterZ->setValidator(horizontal);
+  ui->circularMinY->setValidator(vertical);
+  ui->circularMaxY->setValidator(vertical);
+  ui->circularRadius->setValidator(
+      new QIntValidator(0, std::numeric_limits<int>::max()));
+
+  ui->boxMinX->setText(std::to_string(options.boundaries.minX).c_str());
+  ui->boxMaxX->setText(std::to_string(options.boundaries.maxX).c_str());
+  ui->boxMinZ->setText(std::to_string(options.boundaries.minZ).c_str());
+  ui->boxMaxZ->setText(std::to_string(options.boundaries.maxZ).c_str());
+  ui->boxMinY->setText(std::to_string(options.boundaries.minY).c_str());
+  ui->boxMaxY->setText(std::to_string(options.boundaries.maxY).c_str());
+
+  ui->circularMinY->setText(std::to_string(options.boundaries.minY).c_str());
+  ui->circularMaxY->setText(std::to_string(options.boundaries.maxY).c_str());
+  ui->circularCenterX->setText(std::to_string(0).c_str());
+  ui->circularCenterZ->setText(std::to_string(0).c_str());
+  ui->circularRadius->setText(std::to_string(0).c_str());
 
   ui->renderButton->setEnabled(true);
 }
@@ -264,37 +290,37 @@ void check(QLineEdit *min, QLineEdit *max, int &min_dest, int &max_dest,
   }
 }
 
-void MainWindow::on_minX_textEdited(const QString &) {
-  check(ui->minX, ui->maxX, options.boundaries.minX, options.boundaries.maxX,
-        this);
+void MainWindow::on_boxMinX_textEdited(const QString &) {
+  check(ui->boxMinX, ui->boxMaxX, options.boundaries.minX,
+        options.boundaries.maxX, this);
 }
 
-void MainWindow::on_maxX_textEdited(const QString &) {
-  check(ui->minX, ui->maxX, options.boundaries.minX, options.boundaries.maxX,
-        this);
+void MainWindow::on_boxMaxX_textEdited(const QString &) {
+  check(ui->boxMinX, ui->boxMaxX, options.boundaries.minX,
+        options.boundaries.maxX, this);
 }
 
-void MainWindow::on_minZ_textEdited(const QString &) {
-  check(ui->minZ, ui->maxZ, options.boundaries.minZ, options.boundaries.maxZ,
-        this);
+void MainWindow::on_boxMinZ_textEdited(const QString &) {
+  check(ui->boxMinZ, ui->boxMaxZ, options.boundaries.minZ,
+        options.boundaries.maxZ, this);
 }
 
-void MainWindow::on_maxZ_textEdited(const QString &) {
-  check(ui->minZ, ui->maxZ, options.boundaries.minZ, options.boundaries.maxZ,
-        this);
+void MainWindow::on_boxMaxZ_textEdited(const QString &) {
+  check(ui->boxMinZ, ui->boxMaxZ, options.boundaries.minZ,
+        options.boundaries.maxZ, this);
 }
 
-void MainWindow::on_minY_textEdited(const QString &) {
+void MainWindow::on_boxMinY_textEdited(const QString &) {
   int min, max;
-  check(ui->minY, ui->maxY, min, max, this);
+  check(ui->boxMinY, ui->boxMaxY, min, max, this);
 
   options.boundaries.minY = min;
   options.boundaries.maxY = max;
 }
 
-void MainWindow::on_maxY_textEdited(const QString &) {
+void MainWindow::on_boxMaxY_textEdited(const QString &) {
   int min, max;
-  check(ui->minY, ui->maxY, min, max, this);
+  check(ui->boxMinY, ui->boxMaxY, min, max, this);
 
   options.boundaries.minY = min;
   options.boundaries.maxY = max;
