@@ -27,10 +27,23 @@ SET(SOURCES ${SOURCES}
     VERSION)
 
 ADD_LIBRARY(mcmap_core STATIC ${SOURCES})
-TARGET_LINK_LIBRARIES(mcmap_core ZLIB::ZLIB PNG::PNG fmt::fmt-header-only)
+TARGET_LINK_LIBRARIES(
+    mcmap_core
+    ZLIB::ZLIB
+    PNG::PNG
+    fmt::fmt-header-only)
+
+IF (Git_FOUND)
+    SET_SOURCE_FILES_PROPERTIES(
+        mcmap.cpp
+        PROPERTIES COMPILE_DEFINITIONS
+        SCM_COMMIT="${GIT_DESCRIBE}")
+ENDIF()
 
 IF (OpenMP_FOUND)
-    TARGET_LINK_LIBRARIES(mcmap_core OpenMP::OpenMP_CXX)
+    TARGET_LINK_LIBRARIES(
+        mcmap_core
+        OpenMP::OpenMP_CXX)
 ENDIF()
 
 ADD_SUBDIRECTORY(cli)
