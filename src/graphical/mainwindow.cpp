@@ -45,14 +45,20 @@ MainWindow::MainWindow(QWidget *parent)
 
   // Log window setup - might need to be moved to a cleaner spot
   log_messages = new QPlainTextEdit();
-  log_messages->setReadOnly(true);
   const QFont fixedFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
-  log_messages->setFont(fixedFont);
+  const QFontMetrics fm(fixedFont);
 
-  logger = spdlog::qt_logger_mt("gui_logger", log_messages);
+  log_messages->setReadOnly(true);
+  log_messages->setFont(fixedFont);
+  log_messages->resize(fm.averageCharWidth() * 80, fm.height() * 24);
+
+  // Logger setup
+  logger = spdlog::qt_logger_mt("gui", log_messages);
   logger->set_level(spdlog::level::debug);
   spdlog::set_default_logger(logger);
+  spdlog::set_pattern("[%l] %v");
 
+  // Create a thread to run mcmap_core in - and get updates
   Renderer *renderer = new Renderer;
   renderer->moveToThread(&renderThread);
 
@@ -385,11 +391,19 @@ void Renderer::render() {
   emit resultReady();
 }
 
-void MainWindow::on_actionToggleLogs_triggered() { this->log_messages->show(); }
+void MainWindow::on_actionToggleLogs_triggered() {
+  if (!this->log_messages->isVisible()) {
+    this->log_messages->show();
+  } else {
+    this->log_messages->close();
+  }
+}
 
-void MainWindow::on_actionExit_triggered() {
+void MainWindow::on_actionExit_triggered() { this->close(); }
+
+void MainWindow::closeEvent(QCloseEvent *event) {
   this->log_messages->close();
-  this->close();
+  event->accept();
 }
 
 void MainWindow::on_actionVersion_triggered() {

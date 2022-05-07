@@ -40,6 +40,7 @@ private:
   QPlainTextEdit *log_messages;
 
   std::shared_ptr<spdlog::logger> logger = nullptr;
+  void closeEvent(QCloseEvent *);
 
 private slots:
   void reset_selection();
