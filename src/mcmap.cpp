@@ -147,4 +147,57 @@ int render(const Settings::WorldOptions &options, const Colors::Palette &colors,
   return true;
 }
 
+std::string version() {
+  return fmt::format(VERSION " {}bit", 8 * static_cast<int>(sizeof(size_t)));
+}
+
+std::string compilation_options() {
+  std::map<std::string, std::string> enabled = {
+      {"Architecture",
+       fmt::format("{} bits", 8 * static_cast<int>(sizeof(size_t)))},
+#ifdef FMT_VERSION
+      {"fmt version",
+       fmt::format("{}.{}.{}", FMT_VERSION / 10000, (FMT_VERSION / 100) % 100,
+                   FMT_VERSION % 100)},
+#endif
+#ifdef SPDLOG_VERSION
+      {"spdlog version",
+       fmt::format("{}.{}.{}", SPDLOG_VERSION / 10000,
+                   (SPDLOG_VERSION / 100) % 100, SPDLOG_VERSION % 100)},
+#endif
+#ifdef PNG_LIBPNG_VER_STRING
+      {"libpng version", PNG_LIBPNG_VER_STRING},
+#endif
+#ifdef ZLIB_VERSION
+      {"zlib version", ZLIB_VERSION},
+#endif
+#ifdef SCM_COMMIT
+      {"Source version", SCM_COMMIT},
+#endif
+#ifdef _OPENMP
+      {"Threading", "OpenMP"},
+#endif
+#ifdef CXX_COMPILER_ID
+#ifdef CXX_COMPILER_VERSION
+      {"Compiler", fmt::format("{} {}", CXX_COMPILER_ID, CXX_COMPILER_VERSION)},
+#endif
+#endif
+#ifdef DEBUG_BUILD
+      {"Debug", "Enabled"},
+#endif
+#ifdef SNAPSHOT_SUPPORT
+      {"Snapshot compatibility", "Enabled"},
+#endif
+  };
+
+  auto pair = enabled.begin();
+  std::string out = fmt::format("{}: {}", pair->first, pair->second);
+
+  while (++pair != enabled.end()) {
+    out = fmt::format("{}, {}: {}", out, pair->first, pair->second);
+  }
+
+  return out;
+}
+
 } // namespace mcmap

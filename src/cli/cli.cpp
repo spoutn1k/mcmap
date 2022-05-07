@@ -1,4 +1,3 @@
-#include "../VERSION"
 #include "../mcmap.h"
 
 #define SUCCESS 0
@@ -11,7 +10,7 @@
 #endif
 
 void printHelp(char *binary) {
-  logger::info(
+  fmt::print(
       "Usage: {} <options> WORLDPATH\n\n"
       "  -from X Z             coordinates of the block to start rendering at\n"
       "  -to X Z               coordinates of the block to stop rendering at\n"
@@ -36,7 +35,7 @@ void printHelp(char *binary) {
       "  -v[erbose]            toggle debug mode (-vv for more)\n"
       "  -dumpcolors           dump a json with all defined colors\n"
       "  -radius VAL           radius of the circular render\n"
-      "  -centre|-center X Z   coordinates of the centre of circular render",
+      "  -centre|-center X Z   coordinates of the centre of circular render\n",
       binary);
 }
 
@@ -60,8 +59,7 @@ int main(int argc, char **argv) {
     fmt::print("{}", json(colors).dump());
     return 0;
   } else {
-    fmt::print(VERSION " {}bit (" COMMENT ")" SNAPSHOT "\n",
-               8 * static_cast<int>(sizeof(size_t)));
+    fmt::print("{}\n", mcmap::version());
   }
 
   // Overwrite water if asked to
