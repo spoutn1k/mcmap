@@ -7,6 +7,7 @@
 #include "../mcmap.h"
 
 Settings::WorldOptions options;
+Map::Orientation selected_orientation;
 extern Colors::Palette default_palette;
 Colors::Palette custom_palette, file_colors;
 
@@ -14,6 +15,7 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
   ui->setupUi(this);
   this->setWindowTitle(mcmap::version().c_str());
+  statusBar()->showMessage("", 1);
 
   for (auto element : QVector<QWidget *>({ui->saveSelectButton,
                                           ui->boxMaxX,
@@ -47,6 +49,8 @@ MainWindow::MainWindow(QWidget *parent)
   ui->dimensionSelectDropDown->setEnabled(false);
   ui->progressBar->setEnabled(false);
   ui->renderButton->setEnabled(false);
+  ui->paddingValue->setValue(Settings::PADDING_DEFAULT);
+
   for (auto element : QVector<QLineEdit *>(
            {ui->boxMaxX, ui->boxMinX, ui->boxMaxY, ui->boxMinY, ui->boxMaxZ,
             ui->boxMinZ, ui->circularCenterX, ui->circularCenterZ,
@@ -90,18 +94,6 @@ MainWindow::~MainWindow() {
   delete ui;
   renderThread.quit();
   renderThread.wait();
-}
-
-bool convert(int &dest, const QString &arg, MainWindow *parent) {
-  try {
-    dest = std::stol(arg.toStdString());
-  } catch (const std::exception &err) {
-    parent->statusBar()->showMessage("Could not convert value to integer",
-                                     2000);
-    return false;
-  }
-
-  return true;
 }
 
 void error(QWidget *widget) {
@@ -266,65 +258,17 @@ void MainWindow::on_dimensionSelectDropDown_currentIndexChanged(int index) {
   ui->renderButton->setEnabled(true);
 }
 
-void check(QLineEdit *min, QLineEdit *max, int &min_dest, int &max_dest,
-           MainWindow *parent) {
-  bool min_status = convert(min_dest, min->displayText(), parent);
-  bool max_status = convert(max_dest, max->displayText(), parent);
+void MainWindow::on_boxMinX_textEdited(const QString &) {}
 
-  ok(min);
-  ok(max);
+void MainWindow::on_boxMaxX_textEdited(const QString &) {}
 
-  if (min_status)
-    ok(min);
-  else
-    error(min);
+void MainWindow::on_boxMinZ_textEdited(const QString &) {}
 
-  if (max_status)
-    ok(max);
-  else
-    error(max);
+void MainWindow::on_boxMaxZ_textEdited(const QString &) {}
 
-  if (min_dest > max_dest) {
-    error(min);
-    error(max);
-  }
-}
+void MainWindow::on_boxMinY_textEdited(const QString &) {}
 
-void MainWindow::on_boxMinX_textEdited(const QString &) {
-  check(ui->boxMinX, ui->boxMaxX, options.boundaries.minX,
-        options.boundaries.maxX, this);
-}
-
-void MainWindow::on_boxMaxX_textEdited(const QString &) {
-  check(ui->boxMinX, ui->boxMaxX, options.boundaries.minX,
-        options.boundaries.maxX, this);
-}
-
-void MainWindow::on_boxMinZ_textEdited(const QString &) {
-  check(ui->boxMinZ, ui->boxMaxZ, options.boundaries.minZ,
-        options.boundaries.maxZ, this);
-}
-
-void MainWindow::on_boxMaxZ_textEdited(const QString &) {
-  check(ui->boxMinZ, ui->boxMaxZ, options.boundaries.minZ,
-        options.boundaries.maxZ, this);
-}
-
-void MainWindow::on_boxMinY_textEdited(const QString &) {
-  int min, max;
-  check(ui->boxMinY, ui->boxMaxY, min, max, this);
-
-  options.boundaries.minY = min;
-  options.boundaries.maxY = max;
-}
-
-void MainWindow::on_boxMaxY_textEdited(const QString &) {
-  int min, max;
-  check(ui->boxMinY, ui->boxMaxY, min, max, this);
-
-  options.boundaries.minY = min;
-  options.boundaries.maxY = max;
-}
+void MainWindow::on_boxMaxY_textEdited(const QString &) {}
 
 void MainWindow::on_paddingValue_valueChanged(int arg1) {
   options.padding = arg1;
@@ -352,27 +296,73 @@ void MainWindow::on_renderButton_clicked() {
   if (ui->hideBeacons->isChecked())
     custom_palette.insert_or_assign(beam_id, Colors::Block());
 
+  if (ui->coordinatesSelect->currentWidget() == ui->circularCoordinates) {
+    options.boundaries = World::Coordinates();
+
+    options.boundaries.cenX =
+        std::stol(ui->circularCenterX->displayText().toStdString());
+    options.boundaries.cenZ =
+        std::stol(ui->circularCenterZ->displayText().toStdString());
+
+    long radius = std::stol(ui->circularRadius->displayText().toStdString());
+
+    options.boundaries.radius = radius;
+
+    options.boundaries.minY =
+        std::stol(ui->circularMinY->displayText().toStdString());
+    options.boundaries.maxY =
+        std::stol(ui->circularMaxY->displayText().toStdString());
+
+    int paddedRadius = 1.2 * options.boundaries.radius;
+
+    options.boundaries.minX = options.boundaries.cenX - paddedRadius;
+    options.boundaries.maxX = options.boundaries.cenX + paddedRadius;
+    options.boundaries.minZ = options.boundaries.cenZ - paddedRadius;
+    options.boundaries.maxZ = options.boundaries.cenZ + paddedRadius;
+
+    // We use the squared radius many times later; calculate it once here.
+    options.boundaries.rsqrd =
+        options.boundaries.radius * options.boundaries.radius;
+  } else {
+    options.boundaries = World::Coordinates();
+
+    options.boundaries.minX =
+        std::stol(ui->boxMinX->displayText().toStdString());
+    options.boundaries.maxX =
+        std::stol(ui->boxMaxX->displayText().toStdString());
+    options.boundaries.minZ =
+        std::stol(ui->boxMinZ->displayText().toStdString());
+    options.boundaries.maxZ =
+        std::stol(ui->boxMaxZ->displayText().toStdString());
+    options.boundaries.minY =
+        std::stol(ui->boxMinY->displayText().toStdString());
+    options.boundaries.maxY =
+        std::stol(ui->boxMaxY->displayText().toStdString());
+  }
+
+  options.boundaries.orientation = selected_orientation;
+
   emit render();
 }
 
 void MainWindow::on_orientationNW_toggled(bool checked) {
   if (checked)
-    options.boundaries.orientation = Map::NW;
+    selected_orientation = Map::NW;
 }
 
 void MainWindow::on_orientationSW_toggled(bool checked) {
   if (checked)
-    options.boundaries.orientation = Map::SW;
+    selected_orientation = Map::SW;
 }
 
 void MainWindow::on_orientationSE_toggled(bool checked) {
   if (checked)
-    options.boundaries.orientation = Map::SE;
+    selected_orientation = Map::SE;
 }
 
 void MainWindow::on_orientationNE_toggled(bool checked) {
   if (checked)
-    options.boundaries.orientation = Map::NE;
+    selected_orientation = Map::NE;
 }
 
 void MainWindow::updateProgress(int prog, int total, int action) {
