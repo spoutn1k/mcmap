@@ -64,10 +64,8 @@ struct WorldOptions {
     fragment_size = 1024;
   }
 
-  fs::path regionDir() const;
+  fs::path regionDir() const { return save.region(dim); }
 };
-
-bool parseArgs(int argc, char **argv, Settings::WorldOptions *opts);
 
 void to_json(json &j, const WorldOptions &o);
 
