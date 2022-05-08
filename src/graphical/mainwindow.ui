@@ -349,9 +349,6 @@
         </item>
         <item>
          <widget class="QSpinBox" name="paddingValue">
-          <property name="value">
-           <number>5</number>
-          </property>
          </widget>
         </item>
        </layout>
