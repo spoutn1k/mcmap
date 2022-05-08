@@ -1,4 +1,5 @@
 #include "../mcmap.h"
+#include "./parse.h"
 
 #define SUCCESS 0
 #define ERROR 1
