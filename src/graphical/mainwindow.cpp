@@ -6,8 +6,9 @@
 
 #include "../mcmap.h"
 
-Settings::WorldOptions options;
-Map::Orientation selected_orientation;
+Settings::WorldOptions options = Settings::WorldOptions();
+World::Coordinates current_dim_bounds = World::Coordinates();
+Map::Orientation selected_orientation = Map::NW;
 extern Colors::Palette default_palette;
 Colors::Palette custom_palette, file_colors;
 
@@ -214,14 +215,12 @@ void MainWindow::on_dimensionSelectDropDown_currentIndexChanged(int index) {
 
   options.dim = options.save.dimensions[index];
   statusBar()->showMessage(
-      tr("Scanning ") + QString::fromStdString(options.regionDir().string()),
-      2000);
+      fmt::format("Scanning {}", options.regionDir().string()).c_str(), 2000);
 
-  options.boundaries = options.save.getWorld(options.dim);
+  current_dim_bounds = options.save.getWorld(options.dim);
 
   for (auto e : boundaries)
     e->setEnabled(true);
-
   QValidator *horizontal = new QIntValidator(
       std::numeric_limits<int>::min(), std::numeric_limits<int>::max(), this);
   QValidator *vertical =
@@ -239,18 +238,19 @@ void MainWindow::on_dimensionSelectDropDown_currentIndexChanged(int index) {
   ui->circularCenterZ->setValidator(horizontal);
   ui->circularMinY->setValidator(vertical);
   ui->circularMaxY->setValidator(vertical);
+
   ui->circularRadius->setValidator(
       new QIntValidator(0, std::numeric_limits<int>::max()));
 
-  ui->boxMinX->setText(std::to_string(options.boundaries.minX).c_str());
-  ui->boxMaxX->setText(std::to_string(options.boundaries.maxX).c_str());
-  ui->boxMinZ->setText(std::to_string(options.boundaries.minZ).c_str());
-  ui->boxMaxZ->setText(std::to_string(options.boundaries.maxZ).c_str());
-  ui->boxMinY->setText(std::to_string(options.boundaries.minY).c_str());
-  ui->boxMaxY->setText(std::to_string(options.boundaries.maxY).c_str());
+  ui->boxMinX->setText(std::to_string(current_dim_bounds.minX).c_str());
+  ui->boxMaxX->setText(std::to_string(current_dim_bounds.maxX).c_str());
+  ui->boxMinZ->setText(std::to_string(current_dim_bounds.minZ).c_str());
+  ui->boxMaxZ->setText(std::to_string(current_dim_bounds.maxZ).c_str());
+  ui->boxMinY->setText(std::to_string(current_dim_bounds.minY).c_str());
+  ui->boxMaxY->setText(std::to_string(current_dim_bounds.maxY).c_str());
 
-  ui->circularMinY->setText(std::to_string(options.boundaries.minY).c_str());
-  ui->circularMaxY->setText(std::to_string(options.boundaries.maxY).c_str());
+  ui->circularMinY->setText(std::to_string(current_dim_bounds.minY).c_str());
+  ui->circularMaxY->setText(std::to_string(current_dim_bounds.maxY).c_str());
   ui->circularCenterX->setText(std::to_string(0).c_str());
   ui->circularCenterZ->setText(std::to_string(0).c_str());
   ui->circularRadius->setText(std::to_string(0).c_str());
@@ -258,17 +258,95 @@ void MainWindow::on_dimensionSelectDropDown_currentIndexChanged(int index) {
   ui->renderButton->setEnabled(true);
 }
 
-void MainWindow::on_boxMinX_textEdited(const QString &) {}
+void check_value(MainWindow *w, QWidget *i, QString text,
+                 std::function<bool(int)> check, std::string message) {
+  int value = std::numeric_limits<int>::min();
 
-void MainWindow::on_boxMaxX_textEdited(const QString &) {}
+  try {
+    value = std::stol(text.toStdString());
+  } catch (const std::invalid_argument &err) {
+    error(i);
+  }
 
-void MainWindow::on_boxMinZ_textEdited(const QString &) {}
+  if (!text.length())
+    return;
 
-void MainWindow::on_boxMaxZ_textEdited(const QString &) {}
+  if (check(value)) {
+    error(i);
+    w->statusBar()->showMessage(message.c_str(), 2000);
+  } else {
+    ok(i);
+  }
+}
 
-void MainWindow::on_boxMinY_textEdited(const QString &) {}
+auto in_bounds_x = [](int i) {
+  return i < current_dim_bounds.minX || i > current_dim_bounds.maxX;
+};
 
-void MainWindow::on_boxMaxY_textEdited(const QString &) {}
+auto in_bounds_z = [](int i) {
+  return i < current_dim_bounds.minZ || i > current_dim_bounds.maxZ;
+};
+
+auto in_bounds_y = [](int i) {
+  return i < current_dim_bounds.minY || i > current_dim_bounds.maxY;
+};
+
+auto x_bounds_str = []() {
+  return fmt::format("Dimension spans from x: {} to x: {}",
+                     current_dim_bounds.minX, current_dim_bounds.maxX);
+};
+
+auto z_bounds_str = []() {
+  return fmt::format("Dimension spans from z: {} to z: {}",
+                     current_dim_bounds.minZ, current_dim_bounds.maxZ);
+};
+
+auto y_bounds_str = []() {
+  return fmt::format("Dimension spans from y: {} to y: {}",
+                     current_dim_bounds.minY, current_dim_bounds.maxY);
+};
+
+void MainWindow::on_boxMinX_textEdited(const QString &text) {
+  check_value(this, ui->boxMinX, text, in_bounds_x, x_bounds_str());
+}
+
+void MainWindow::on_boxMaxX_textEdited(const QString &text) {
+  check_value(this, ui->boxMaxX, text, in_bounds_x, x_bounds_str());
+}
+
+void MainWindow::on_boxMinZ_textEdited(const QString &text) {
+  check_value(this, ui->boxMinZ, text, in_bounds_z, z_bounds_str());
+}
+
+void MainWindow::on_boxMaxZ_textEdited(const QString &text) {
+  check_value(this, ui->boxMaxZ, text, in_bounds_z, z_bounds_str());
+}
+
+void MainWindow::on_boxMinY_textEdited(const QString &text) {
+  check_value(this, ui->boxMinY, text, in_bounds_y, y_bounds_str());
+}
+
+void MainWindow::on_boxMaxY_textEdited(const QString &text) {
+  check_value(this, ui->boxMaxY, text, in_bounds_y, y_bounds_str());
+}
+
+void MainWindow::on_circularCenterX_textEdited(const QString &text) {
+  check_value(this, ui->circularCenterX, text, in_bounds_x, x_bounds_str());
+}
+
+void MainWindow::on_circularCenterZ_textEdited(const QString &text) {
+  check_value(this, ui->circularCenterZ, text, in_bounds_z, z_bounds_str());
+}
+
+void MainWindow::on_circularMinY_textEdited(const QString &text) {
+  check_value(this, ui->circularMinY, text, in_bounds_y, y_bounds_str());
+}
+
+void MainWindow::on_circularMaxY_textEdited(const QString &text) {
+  check_value(this, ui->circularMaxY, text, in_bounds_y, y_bounds_str());
+}
+
+void MainWindow::on_circularRadius_textEdited(const QString &) {}
 
 void MainWindow::on_paddingValue_valueChanged(int arg1) {
   options.padding = arg1;
@@ -296,51 +374,73 @@ void MainWindow::on_renderButton_clicked() {
   if (ui->hideBeacons->isChecked())
     custom_palette.insert_or_assign(beam_id, Colors::Block());
 
-  if (ui->coordinatesSelect->currentWidget() == ui->circularCoordinates) {
-    options.boundaries = World::Coordinates();
+  options.boundaries = World::Coordinates();
 
-    options.boundaries.cenX =
-        std::stol(ui->circularCenterX->displayText().toStdString());
-    options.boundaries.cenZ =
-        std::stol(ui->circularCenterZ->displayText().toStdString());
+  try {
+    if (ui->coordinatesSelect->currentWidget() == ui->circularCoordinates) {
+      options.boundaries.cenX =
+          std::stol(ui->circularCenterX->displayText().toStdString());
+      options.boundaries.cenZ =
+          std::stol(ui->circularCenterZ->displayText().toStdString());
+      options.boundaries.radius =
+          std::stol(ui->circularRadius->displayText().toStdString());
+      options.boundaries.minY =
+          std::stol(ui->circularMinY->displayText().toStdString());
+      options.boundaries.maxY =
+          std::stol(ui->circularMaxY->displayText().toStdString());
 
-    long radius = std::stol(ui->circularRadius->displayText().toStdString());
+      int paddedRadius = 1.2 * options.boundaries.radius;
 
-    options.boundaries.radius = radius;
+      options.boundaries.minX = options.boundaries.cenX - paddedRadius;
+      options.boundaries.maxX = options.boundaries.cenX + paddedRadius;
+      options.boundaries.minZ = options.boundaries.cenZ - paddedRadius;
+      options.boundaries.maxZ = options.boundaries.cenZ + paddedRadius;
 
-    options.boundaries.minY =
-        std::stol(ui->circularMinY->displayText().toStdString());
-    options.boundaries.maxY =
-        std::stol(ui->circularMaxY->displayText().toStdString());
+      // We use the squared radius many times later; calculate it once here.
+      options.boundaries.rsqrd =
+          options.boundaries.radius * options.boundaries.radius;
+    } else {
+      options.boundaries.minX =
+          std::stol(ui->boxMinX->displayText().toStdString());
+      options.boundaries.maxX =
+          std::stol(ui->boxMaxX->displayText().toStdString());
+      options.boundaries.minZ =
+          std::stol(ui->boxMinZ->displayText().toStdString());
+      options.boundaries.maxZ =
+          std::stol(ui->boxMaxZ->displayText().toStdString());
+      options.boundaries.minY =
+          std::stol(ui->boxMinY->displayText().toStdString());
+      options.boundaries.maxY =
+          std::stol(ui->boxMaxY->displayText().toStdString());
+    }
+  } catch (const std::invalid_argument &err) {
+    QMessageBox::critical(
+        this, "Invalid coordinates",
+        "Failed to get coordinates data: check the given coordinates");
+    return;
+  }
 
-    int paddedRadius = 1.2 * options.boundaries.radius;
-
-    options.boundaries.minX = options.boundaries.cenX - paddedRadius;
-    options.boundaries.maxX = options.boundaries.cenX + paddedRadius;
-    options.boundaries.minZ = options.boundaries.cenZ - paddedRadius;
-    options.boundaries.maxZ = options.boundaries.cenZ + paddedRadius;
-
-    // We use the squared radius many times later; calculate it once here.
-    options.boundaries.rsqrd =
-        options.boundaries.radius * options.boundaries.radius;
-  } else {
-    options.boundaries = World::Coordinates();
-
-    options.boundaries.minX =
-        std::stol(ui->boxMinX->displayText().toStdString());
-    options.boundaries.maxX =
-        std::stol(ui->boxMaxX->displayText().toStdString());
-    options.boundaries.minZ =
-        std::stol(ui->boxMinZ->displayText().toStdString());
-    options.boundaries.maxZ =
-        std::stol(ui->boxMaxZ->displayText().toStdString());
-    options.boundaries.minY =
-        std::stol(ui->boxMinY->displayText().toStdString());
-    options.boundaries.maxY =
-        std::stol(ui->boxMaxY->displayText().toStdString());
+  if (!options.boundaries.intersects(current_dim_bounds)) {
+    QMessageBox::critical(
+        this, "Invalid area selection",
+        "The selected area does not overlap with available terrain");
+    return;
   }
 
   options.boundaries.orientation = selected_orientation;
+
+  auto cropped = options.boundaries;
+  cropped.crop(current_dim_bounds);
+
+  if (!(cropped == options.boundaries)) {
+    QMessageBox::warning(
+        this, "Automatic coordinates adjustment",
+        fmt::format("The coordinates were cropped to match the available "
+                    "terrain\nCropped coordinates: {}",
+                    cropped.to_string())
+            .c_str());
+    options.boundaries = cropped;
+  }
 
   emit render();
 }

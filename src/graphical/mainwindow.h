@@ -66,6 +66,12 @@ private slots:
   void on_boxMinY_textEdited(const QString &);
   void on_boxMaxY_textEdited(const QString &);
 
+  void on_circularCenterX_textEdited(const QString &);
+  void on_circularCenterZ_textEdited(const QString &);
+  void on_circularMinY_textEdited(const QString &);
+  void on_circularMaxY_textEdited(const QString &);
+  void on_circularRadius_textEdited(const QString &);
+
   void on_paddingValue_valueChanged(int arg1);
 
   void on_shading_stateChanged(int);
