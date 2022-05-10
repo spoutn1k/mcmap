@@ -477,6 +477,7 @@
      <string>File</string>
     </property>
     <addaction name="actionToggleLogs"/>
+    <addaction name="actionDumpColors"/>
     <addaction name="actionExit"/>
    </widget>
    <widget class="QMenu" name="menuAbout">
@@ -488,6 +489,11 @@
    <addaction name="menuFile"/>
    <addaction name="menuAbout"/>
   </widget>
+  <action name="actionDumpColors">
+   <property name="text">
+    <string>Write default colors to file</string>
+   </property>
+  </action>
   <action name="actionToggleLogs">
    <property name="text">
     <string>Toggle log window</string>

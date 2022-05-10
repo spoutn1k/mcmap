@@ -514,6 +514,21 @@ void MainWindow::on_actionToggleLogs_triggered() {
   }
 }
 
+void MainWindow::on_actionDumpColors_triggered() {
+  QString color_dest = QFileDialog::getSaveFileName(
+      this, "Color dump file", QDir::homePath(), tr("JSON files (*.json)"));
+
+  Colors::Palette colors;
+  // Load colors from the text segment
+  Colors::load(&colors);
+
+  std::ofstream color_handle(color_dest.toStdString());
+
+  std::string json_data = json(colors).dump(2, ' ');
+
+  color_handle.write(json_data.c_str(), json_data.length());
+}
+
 void MainWindow::on_actionExit_triggered() { this->close(); }
 
 void MainWindow::closeEvent(QCloseEvent *event) {

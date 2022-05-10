@@ -82,6 +82,7 @@ private slots:
   void updateProgress(int, int, int);
 
   void on_actionToggleLogs_triggered();
+  void on_actionDumpColors_triggered();
   void on_actionExit_triggered();
   void on_actionVersion_triggered();
 
