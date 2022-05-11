@@ -16,6 +16,8 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
   ui->setupUi(this);
   this->setWindowTitle(mcmap::version().c_str());
+  this->setWindowIcon(QIcon(":/icons/mcmap.png"));
+  ui->actionVersion->setIcon(QIcon(":/icons/mcmap.png"));
   statusBar()->showMessage("", 1);
 
   for (auto element : QVector<QWidget *>({ui->saveSelectButton,
