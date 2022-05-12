@@ -134,9 +134,9 @@ bool parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
       opts->mode = Settings::HELP;
       return false;
     } else if (strcmp(option, "-verbose") == 0 || strcmp(option, "-v") == 0) {
-      // logger::level = logger::levels::DEBUG;
+      logger::set_level(spdlog::level::debug);
     } else if (strcmp(option, "-vv") == 0) {
-      // logger::level = logger::levels::DEEP_DEBUG;
+      logger::set_level(spdlog::level::trace);
     } else {
       opts->save = SaveFile(option);
     }

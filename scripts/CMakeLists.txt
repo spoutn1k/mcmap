@@ -1,4 +1,7 @@
-LINK_LIBRARIES(ZLIB::ZLIB fmt::fmt-header-only)
+LINK_LIBRARIES(
+    ZLIB::ZLIB
+    fmt::fmt-header-only
+    spdlog::spdlog_header_only)
 
 ADD_EXECUTABLE(json2bson json2bson.cpp)
 
