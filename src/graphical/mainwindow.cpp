@@ -6,6 +6,21 @@
 
 #include "../mcmap.h"
 
+const std::string WATER_ID = "minecraft:water";
+const std::string BEAM_ID = "mcmap:beacon_beam";
+
+#define DEFAULT_DISABLED_OPTIONS                                               \
+  QVector<QWidget *>({ui->coordinatesSelect, ui->colorGroup,                   \
+                      ui->outputTypeSelect, ui->orientationGroup,              \
+                      ui->progressBar, ui->renderButton,                       \
+                      ui->dimensionSelectDropDown})
+
+#define PARAMETERS                                                             \
+  QVector<QWidget *>({ui->saveSelectButton, ui->coordinatesSelect,             \
+                      ui->outputTypeSelect, ui->colorGroup,                    \
+                      ui->orientationGroup, ui->renderButton,                  \
+                      ui->dimensionSelectDropDown, ui->worldGroup})
+
 Settings::WorldOptions options = Settings::WorldOptions();
 World::Coordinates current_dim_bounds = World::Coordinates();
 Map::Orientation selected_orientation = Map::NW;
@@ -15,52 +30,55 @@ Colors::Palette custom_palette, file_colors;
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
   ui->setupUi(this);
+
+  // Setup titles and icons
   this->setWindowTitle(mcmap::version().c_str());
-  this->setWindowIcon(QIcon(":/icons/mcmap.png"));
-  ui->actionVersion->setIcon(QIcon(":/icons/mcmap.png"));
+  this->setWindowIcon(QIcon(":/icons/grass_block.png"));
+  ui->actionVersion->setIcon(QIcon(":/icons/grass_block.png"));
+  ui->actionDumpColors->setIcon(QIcon(":/icons/lapis.png"));
+  ui->actionExit->setIcon(QIcon(":/icons/lava.png"));
+  ui->actionToggleLogs->setIcon(QIcon(":/icons/sprout.png"));
+
+  // Init status bar
   statusBar()->showMessage("", 1);
 
-  for (auto element : QVector<QWidget *>({ui->saveSelectButton,
-                                          ui->boxMaxX,
-                                          ui->boxMaxY,
-                                          ui->boxMaxZ,
-                                          ui->boxMinX,
-                                          ui->boxMinY,
-                                          ui->boxMinZ,
-                                          ui->circularCenterX,
-                                          ui->circularCenterZ,
-                                          ui->circularMinY,
-                                          ui->circularMaxY,
-                                          ui->circularRadius,
-                                          ui->coordinatesSelect,
-                                          ui->shading,
-                                          ui->lighting,
-                                          ui->hideBeacons,
-                                          ui->hideWater,
-                                          ui->paddingValue,
-                                          ui->outputSelectButton,
-                                          ui->colorSelectButton,
-                                          ui->colorResetButton,
-                                          ui->orientationNE,
-                                          ui->orientationNW,
-                                          ui->orientationSE,
-                                          ui->orientationSW,
-                                          ui->renderButton,
-                                          ui->dimensionSelectDropDown}))
-    parameters.append(element);
-
-  ui->dimensionSelectDropDown->setEnabled(false);
-  ui->progressBar->setEnabled(false);
-  ui->renderButton->setEnabled(false);
+  // Default values for special fields
   ui->paddingValue->setValue(Settings::PADDING_DEFAULT);
+  ui->singlePNGFileName->setText(
+      (fs::current_path() / std::string("output.png")).string().c_str());
+  ui->tiledOutputFileName->setText(
+      (fs::current_path() / std::string("output")).string().c_str());
 
-  for (auto element : QVector<QLineEdit *>(
-           {ui->boxMaxX, ui->boxMinX, ui->boxMaxY, ui->boxMinY, ui->boxMaxZ,
-            ui->boxMinZ, ui->circularCenterX, ui->circularCenterZ,
-            ui->circularMinY, ui->circularMaxY, ui->circularRadius})) {
+  for (auto element : DEFAULT_DISABLED_OPTIONS)
     element->setEnabled(false);
-    boundaries.append(element);
-  }
+
+  // Validators - allow only correct values
+  QValidator *horizontal = new QIntValidator(
+      std::numeric_limits<int>::min(), std::numeric_limits<int>::max(), this);
+  QValidator *vertical =
+      new QIntValidator(mcmap::constants::min_y, mcmap::constants::max_y, this);
+
+  ui->boxMinX->setValidator(horizontal);
+  ui->boxMaxX->setValidator(horizontal);
+  ui->boxMinZ->setValidator(horizontal);
+  ui->boxMaxZ->setValidator(horizontal);
+
+  ui->boxMinY->setValidator(vertical);
+  ui->boxMaxY->setValidator(vertical);
+
+  ui->circularCenterX->setValidator(horizontal);
+  ui->circularCenterZ->setValidator(horizontal);
+  ui->circularMinY->setValidator(vertical);
+  ui->circularMaxY->setValidator(vertical);
+
+  ui->circularRadius->setValidator(
+      new QIntValidator(0, std::numeric_limits<int>::max()));
+
+  connect(ui->tiledOutputSizeSlider, &QAbstractSlider::valueChanged, this,
+          [this](int val) {
+            this->ui->tiledOutputSizeValue->setText(
+                fmt::format("{}", val * 64).c_str());
+          });
 
   // Log window setup - might need to be moved to a cleaner spot
   log_messages = new QPlainTextEdit();
@@ -99,7 +117,7 @@ MainWindow::~MainWindow() {
   renderThread.wait();
 }
 
-void error(QWidget *widget) {
+inline void error(QWidget *widget) {
   QPalette pal = QPalette();
 
   pal.setColor(QPalette::Window, Qt::red);
@@ -107,25 +125,12 @@ void error(QWidget *widget) {
   widget->show();
 }
 
-void ok(QWidget *widget) {
+inline void ok(QWidget *widget) {
   QPalette pal = QPalette();
 
   pal.setColor(QPalette::Window, Qt::lightGray);
   widget->setPalette(pal);
   widget->show();
-}
-
-void MainWindow::reset_selection() {
-  ui->dimensionSelectDropDown->setEnabled(false);
-  ui->dimensionSelectDropDown->clear();
-
-  for (auto element : boundaries) {
-    ok(element);
-    element->setText("");
-    element->setEnabled(false);
-  }
-
-  ui->renderButton->setEnabled(false);
 }
 
 void MainWindow::on_saveSelectButton_clicked() {
@@ -140,6 +145,7 @@ void MainWindow::on_saveSelectButton_clicked() {
 
   if (!assert_save(filename.toStdString())) {
     statusBar()->showMessage(filename + tr(" is not a save folder"), 2000);
+    return;
   }
 
   options.save = SaveFile(filename.toStdString());
@@ -151,20 +157,17 @@ void MainWindow::on_saveSelectButton_clicked() {
   }
 
   ui->saveNameLabel->setText(options.save.name.c_str());
-  statusBar()->showMessage(
-      tr("Selected ") + QString::fromStdString(options.save.name), 2000);
 
-  reset_selection();
+  for (auto element : DEFAULT_DISABLED_OPTIONS)
+    element->setEnabled(true);
 
   for (auto &dim : options.save.dimensions)
     ui->dimensionSelectDropDown->addItem(dim.to_string().c_str());
-  ui->dimensionSelectDropDown->setCurrentIndex(-1);
 
-  ui->dimensionSelectDropDown->setEnabled(true);
-  ui->dimensionLabel->setEnabled(true);
+  // Implicit call to `on_dimensionSelectDropDown_currentIndexChanged(0)`
 }
 
-void MainWindow::on_outputSelectButton_clicked() {
+void MainWindow::on_singlePNGFileSelect_clicked() {
   QString filename = QFileDialog::getSaveFileName(
       this, tr("Choose destination"),
       QString::fromStdString(getHome().string()), tr("PNG file (*.png)"));
@@ -174,8 +177,22 @@ void MainWindow::on_outputSelectButton_clicked() {
     return;
   }
 
-  options.outFile = filename.toStdString();
-  ui->outputLabel->setText(filename);
+  ui->singlePNGFileName->setText(filename);
+}
+
+void MainWindow::on_tiledOutputFileSelect_clicked() {
+  QString filename = QFileDialog::getSaveFileName(
+      this, tr("Choose destination"),
+      fs::path(ui->tiledOutputFileName->text().toStdString())
+          .parent_path()
+          .c_str());
+
+  if (filename.isEmpty()) {
+    statusBar()->showMessage(tr("No directory selected"), 2000);
+    return;
+  }
+
+  ui->tiledOutputFileName->setText(filename);
 }
 
 void MainWindow::on_colorSelectButton_clicked() {
@@ -216,33 +233,9 @@ void MainWindow::on_dimensionSelectDropDown_currentIndexChanged(int index) {
     return;
 
   options.dim = options.save.dimensions[index];
-  statusBar()->showMessage(
-      fmt::format("Scanning {}", options.regionDir().string()).c_str(), 2000);
+  logger::info("Scanning {}", options.regionDir().string());
 
   current_dim_bounds = options.save.getWorld(options.dim);
-
-  for (auto e : boundaries)
-    e->setEnabled(true);
-  QValidator *horizontal = new QIntValidator(
-      std::numeric_limits<int>::min(), std::numeric_limits<int>::max(), this);
-  QValidator *vertical =
-      new QIntValidator(mcmap::constants::min_y, mcmap::constants::max_y, this);
-
-  ui->boxMinX->setValidator(horizontal);
-  ui->boxMaxX->setValidator(horizontal);
-  ui->boxMinZ->setValidator(horizontal);
-  ui->boxMaxZ->setValidator(horizontal);
-
-  ui->boxMinY->setValidator(vertical);
-  ui->boxMaxY->setValidator(vertical);
-
-  ui->circularCenterX->setValidator(horizontal);
-  ui->circularCenterZ->setValidator(horizontal);
-  ui->circularMinY->setValidator(vertical);
-  ui->circularMaxY->setValidator(vertical);
-
-  ui->circularRadius->setValidator(
-      new QIntValidator(0, std::numeric_limits<int>::max()));
 
   ui->boxMinX->setText(std::to_string(current_dim_bounds.minX).c_str());
   ui->boxMaxX->setText(std::to_string(current_dim_bounds.maxX).c_str());
@@ -256,8 +249,6 @@ void MainWindow::on_dimensionSelectDropDown_currentIndexChanged(int index) {
   ui->circularCenterX->setText(std::to_string(0).c_str());
   ui->circularCenterZ->setText(std::to_string(0).c_str());
   ui->circularRadius->setText(std::to_string(0).c_str());
-
-  ui->renderButton->setEnabled(true);
 }
 
 void check_value(MainWindow *w, QWidget *i, QString text,
@@ -363,18 +354,15 @@ void MainWindow::on_lighting_stateChanged(int checked) {
 }
 
 void MainWindow::on_renderButton_clicked() {
-  std::string water_id = "minecraft:water";
-  std::string beam_id = "mcmap:beacon_beam";
-
   custom_palette.clear();
   custom_palette.merge(Colors::Palette(file_colors));
   custom_palette.merge(Colors::Palette(default_palette));
 
   if (ui->hideWater->isChecked())
-    custom_palette.insert_or_assign(water_id, Colors::Block());
+    custom_palette.insert_or_assign(WATER_ID, Colors::Block());
 
   if (ui->hideBeacons->isChecked())
-    custom_palette.insert_or_assign(beam_id, Colors::Block());
+    custom_palette.insert_or_assign(BEAM_ID, Colors::Block());
 
   options.boundaries = World::Coordinates();
 
@@ -434,14 +422,27 @@ void MainWindow::on_renderButton_clicked() {
   auto cropped = options.boundaries;
   cropped.crop(current_dim_bounds);
 
-  if (!(cropped == options.boundaries)) {
-    QMessageBox::warning(
-        this, "Automatic coordinates adjustment",
-        fmt::format("The coordinates were cropped to match the available "
-                    "terrain\nCropped coordinates: {}",
-                    cropped.to_string())
-            .c_str());
-    options.boundaries = cropped;
+  if (ui->coordinatesSelect->currentWidget() == ui->boxCoordinates) {
+    if (!(cropped == options.boundaries)) {
+      QMessageBox::warning(
+          this, "Automatic coordinates adjustment",
+          fmt::format("The coordinates were cropped to match the available "
+                      "terrain\nCropped coordinates: {}",
+                      cropped.to_string())
+              .c_str());
+      options.boundaries = cropped;
+    }
+  }
+
+  if (ui->outputTypeSelect->currentWidget() == ui->singlePNG) {
+    options.tile_size = 0;
+    options.outFile = ui->singlePNGFileName->text().toStdString();
+    options.padding = std::stol(ui->paddingValue->text().toStdString());
+  } else {
+    options.padding = 0;
+    options.outFile = ui->tiledOutputFileName->text().toStdString();
+    options.tile_size =
+        std::stol(ui->tiledOutputSizeValue->text().toStdString());
   }
 
   emit render();
@@ -485,7 +486,7 @@ void MainWindow::startRender() {
   ui->progressBar->setEnabled(true);
   ui->progressBar->setTextVisible(true);
 
-  for (const auto &element : parameters)
+  for (const auto &element : PARAMETERS)
     element->setEnabled(false);
 };
 
@@ -494,7 +495,7 @@ void MainWindow::stopRender() {
   ui->progressBar->setEnabled(false);
   ui->progressBar->setTextVisible(false);
 
-  for (const auto &element : parameters)
+  for (const auto &element : PARAMETERS)
     element->setEnabled(true);
 };
 

@@ -9,423 +9,669 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>554</width>
-    <height>600</height>
+    <width>555</width>
+    <height>612</height>
    </rect>
   </property>
-  <property name="minimumSize">
-   <size>
-    <width>554</width>
-    <height>600</height>
-   </size>
-  </property>
-  <property name="maximumSize">
-   <size>
-    <width>554</width>
-    <height>600</height>
-   </size>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
   </property>
   <widget class="QWidget" name="centralwidget">
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
    <layout class="QVBoxLayout" name="verticalLayout_3">
+    <property name="spacing">
+     <number>9</number>
+    </property>
+    <property name="leftMargin">
+     <number>18</number>
+    </property>
+    <property name="topMargin">
+     <number>18</number>
+    </property>
+    <property name="rightMargin">
+     <number>18</number>
+    </property>
+    <property name="bottomMargin">
+     <number>18</number>
+    </property>
     <item>
-     <layout class="QVBoxLayout" name="verticalLayout">
-      <property name="spacing">
-       <number>10</number>
+     <widget class="QGroupBox" name="worldGroup">
+      <property name="title">
+       <string/>
       </property>
-      <property name="leftMargin">
-       <number>9</number>
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <property name="leftMargin">
+        <number>3</number>
+       </property>
+       <property name="topMargin">
+        <number>3</number>
+       </property>
+       <property name="rightMargin">
+        <number>3</number>
+       </property>
+       <property name="bottomMargin">
+        <number>3</number>
+       </property>
+       <item>
+        <layout class="QHBoxLayout" name="saveSelect" stretch="0,0,0">
+         <property name="leftMargin">
+          <number>3</number>
+         </property>
+         <property name="topMargin">
+          <number>3</number>
+         </property>
+         <property name="rightMargin">
+          <number>3</number>
+         </property>
+         <property name="bottomMargin">
+          <number>3</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="saveFieldLabel">
+           <property name="text">
+            <string>Savefile</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="saveNameLabel">
+           <property name="text">
+            <string>Not selected.</string>
+           </property>
+           <property name="textFormat">
+            <enum>Qt::PlainText</enum>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="saveSelectButton">
+           <property name="text">
+            <string>Select</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="dimensionSelect">
+         <property name="leftMargin">
+          <number>3</number>
+         </property>
+         <property name="topMargin">
+          <number>3</number>
+         </property>
+         <property name="rightMargin">
+          <number>3</number>
+         </property>
+         <property name="bottomMargin">
+          <number>3</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="dimensionLabel">
+           <property name="text">
+            <string>Dimension</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="dimensionSelectDropDown"/>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QTabWidget" name="coordinatesSelect">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
       </property>
-      <property name="topMargin">
-       <number>9</number>
+      <property name="currentIndex">
+       <number>0</number>
       </property>
-      <property name="rightMargin">
-       <number>9</number>
-      </property>
-      <property name="bottomMargin">
-       <number>9</number>
-      </property>
-      <item>
-       <layout class="QHBoxLayout" name="saveSelect" stretch="0,1,0">
-        <item>
-         <widget class="QLabel" name="saveFieldLabel">
-          <property name="text">
-           <string>Savefile</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="saveNameLabel">
-          <property name="text">
-           <string>Not selected.</string>
-          </property>
-          <property name="textFormat">
-           <enum>Qt::PlainText</enum>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="saveSelectButton">
-          <property name="text">
-           <string>Select</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="outputSelect" stretch="0,1,0">
-        <item>
-         <widget class="QLabel" name="outputFieldLabel">
-          <property name="text">
-           <string>Output</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="outputLabel">
-          <property name="text">
-           <string>output.png</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="outputSelectButton">
-          <property name="text">
-           <string>Select</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="orientation">
-        <item>
-         <widget class="QLabel" name="orientationLabel">
-          <property name="text">
-           <string>Orientation</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QRadioButton" name="orientationNW">
-          <property name="text">
-           <string>North-West</string>
-          </property>
-          <property name="checked">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QRadioButton" name="orientationSW">
-          <property name="text">
-           <string>South-West</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QRadioButton" name="orientationSE">
-          <property name="text">
-           <string>South-East</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QRadioButton" name="orientationNE">
-          <property name="text">
-           <string>North-East</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="dimensionSelect">
-        <item>
-         <widget class="QLabel" name="dimensionLabel">
-          <property name="text">
-           <string>Dimension</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QComboBox" name="dimensionSelectDropDown"/>
-        </item>
-       </layout>
-      </item>
-      <item>
-       <widget class="QTabWidget" name="coordinatesSelect">
-        <property name="currentIndex">
-         <number>0</number>
+      <widget class="QWidget" name="boxCoordinates">
+       <attribute name="title">
+        <string>Box Coordinates</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout_2">
+        <property name="leftMargin">
+         <number>3</number>
         </property>
-        <widget class="QWidget" name="boxCoordinates">
-         <attribute name="title">
-          <string>Box Coordinates</string>
-         </attribute>
-         <layout class="QGridLayout" name="gridLayout_2">
-          <property name="leftMargin">
-           <number>9</number>
+        <property name="topMargin">
+         <number>3</number>
+        </property>
+        <property name="rightMargin">
+         <number>3</number>
+        </property>
+        <property name="bottomMargin">
+         <number>3</number>
+        </property>
+        <property name="spacing">
+         <number>6</number>
+        </property>
+        <item row="1" column="5">
+         <widget class="QLineEdit" name="boxMaxZ"/>
+        </item>
+        <item row="3" column="4">
+         <widget class="QLabel" name="boxMaxYLabel">
+          <property name="text">
+           <string>To Y</string>
           </property>
-          <property name="topMargin">
-           <number>0</number>
+         </widget>
+        </item>
+        <item row="1" column="2">
+         <widget class="QLineEdit" name="boxMinZ"/>
+        </item>
+        <item row="3" column="2">
+         <widget class="QLineEdit" name="boxMinY"/>
+        </item>
+        <item row="1" column="4">
+         <widget class="QLabel" name="boxMaxZLabel">
+          <property name="text">
+           <string>To Z</string>
           </property>
-          <property name="rightMargin">
-           <number>9</number>
+         </widget>
+        </item>
+        <item row="0" column="5">
+         <widget class="QLineEdit" name="boxMaxX"/>
+        </item>
+        <item row="0" column="2">
+         <widget class="QLineEdit" name="boxMinX"/>
+        </item>
+        <item row="1" column="1">
+         <widget class="QLabel" name="boxMinZLabel">
+          <property name="text">
+           <string>From Z</string>
           </property>
-          <property name="bottomMargin">
-           <number>0</number>
+         </widget>
+        </item>
+        <item row="0" column="4">
+         <widget class="QLabel" name="boxMaxXLabel">
+          <property name="text">
+           <string>To X</string>
           </property>
-          <property name="horizontalSpacing">
-           <number>9</number>
+         </widget>
+        </item>
+        <item row="3" column="1">
+         <widget class="QLabel" name="boxMinYLabel">
+          <property name="text">
+           <string>From Y</string>
           </property>
-          <property name="verticalSpacing">
-           <number>3</number>
+         </widget>
+        </item>
+        <item row="3" column="5">
+         <widget class="QLineEdit" name="boxMaxY"/>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLabel" name="boxMinXLabel">
+          <property name="text">
+           <string>From X</string>
           </property>
-          <item row="0" column="4">
-           <widget class="QLabel" name="boxMaxXLabel">
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="circularCoordinates">
+       <attribute name="title">
+        <string>Circular coordinates</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout">
+        <property name="leftMargin">
+         <number>3</number>
+        </property>
+        <property name="topMargin">
+         <number>3</number>
+        </property>
+        <property name="rightMargin">
+         <number>3</number>
+        </property>
+        <property name="bottomMargin">
+         <number>3</number>
+        </property>
+        <property name="spacing">
+         <number>6</number>
+        </property>
+        <item row="1" column="2">
+         <widget class="QLabel" name="circularMaxYLabel">
+          <property name="text">
+           <string>To Y</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QLineEdit" name="circularMinY"/>
+        </item>
+        <item row="3" column="0">
+         <widget class="QLabel" name="circularRadiusLabel">
+          <property name="text">
+           <string>Radius</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLineEdit" name="circularCenterX"/>
+        </item>
+        <item row="0" column="2">
+         <widget class="QLabel" name="circularCenterZLabel">
+          <property name="text">
+           <string>Center Z</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="3">
+         <widget class="QLineEdit" name="circularMaxY"/>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="circularMinYLabel">
+          <property name="text">
+           <string>From Y</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QLabel" name="circularCenterXLabel">
+          <property name="text">
+           <string>Center X</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="3">
+         <widget class="QLineEdit" name="circularCenterZ"/>
+        </item>
+        <item row="3" column="1">
+         <widget class="QLineEdit" name="circularRadius"/>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="orientationGroup">
+      <layout class="QHBoxLayout" name="orientation">
+       <property name="leftMargin">
+        <number>3</number>
+       </property>
+       <property name="topMargin">
+        <number>3</number>
+       </property>
+       <property name="rightMargin">
+        <number>3</number>
+       </property>
+       <property name="bottomMargin">
+        <number>3</number>
+       </property>
+       <item>
+        <widget class="QLabel" name="orientationLabel">
+         <property name="text">
+          <string>Orientation</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="orientationNW">
+         <property name="text">
+          <string>North-West</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="orientationSW">
+         <property name="text">
+          <string>South-West</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="orientationSE">
+         <property name="text">
+          <string>South-East</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="orientationNE">
+         <property name="text">
+          <string>North-East</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="colorGroup">
+      <property name="title">
+       <string/>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <property name="spacing">
+        <number>9</number>
+       </property>
+       <property name="leftMargin">
+        <number>3</number>
+       </property>
+       <property name="topMargin">
+        <number>3</number>
+       </property>
+       <property name="rightMargin">
+        <number>3</number>
+       </property>
+       <property name="bottomMargin">
+        <number>3</number>
+       </property>
+       <item>
+        <layout class="QHBoxLayout" name="colorSelect" stretch="0,1,0,0">
+         <item>
+          <widget class="QLabel" name="colorFieldLabel">
+           <property name="text">
+            <string>Colorfile</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="colorFileLabel">
+           <property name="text">
+            <string>Not selected.</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="colorSelectButton">
+           <property name="text">
+            <string>Select</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="colorResetButton">
+           <property name="text">
+            <string>Clear</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="misc">
+         <item>
+          <widget class="QCheckBox" name="shading">
+           <property name="text">
+            <string>Shading</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="lighting">
+           <property name="text">
+            <string>Lighting</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="hideBeacons">
+           <property name="text">
+            <string>Hide Beacons</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="hideWater">
+           <property name="text">
+            <string>Hide Water</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QTabWidget" name="outputTypeSelect">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
+      <widget class="QWidget" name="singlePNG">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <attribute name="title">
+        <string>Single PNG output</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout_5">
+        <property name="spacing">
+         <number>6</number>
+        </property>
+        <property name="leftMargin">
+         <number>3</number>
+        </property>
+        <property name="topMargin">
+         <number>3</number>
+        </property>
+        <property name="rightMargin">
+         <number>3</number>
+        </property>
+        <property name="bottomMargin">
+         <number>3</number>
+        </property>
+        <item>
+         <layout class="QHBoxLayout" name="singlePNGFileOptions" stretch="0,1,0">
+          <item>
+           <widget class="QLabel" name="singlePNGFileLabel">
             <property name="text">
-             <string>To X</string>
+             <string>File</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="4">
-           <widget class="QLabel" name="boxMaxYLabel">
-            <property name="text">
-             <string>To Y</string>
+          <item>
+           <widget class="QLabel" name="singlePNGFileName">
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
             </property>
            </widget>
           </item>
-          <item row="3" column="1">
-           <widget class="QLabel" name="boxMinYLabel">
+          <item>
+           <widget class="QPushButton" name="singlePNGFileSelect">
             <property name="text">
-             <string>From Y</string>
+             <string>Select</string>
             </property>
            </widget>
-          </item>
-          <item row="0" column="5">
-           <widget class="QLineEdit" name="boxMaxX"/>
-          </item>
-          <item row="3" column="2">
-           <widget class="QLineEdit" name="boxMinY"/>
-          </item>
-          <item row="3" column="5">
-           <widget class="QLineEdit" name="boxMaxY"/>
-          </item>
-          <item row="0" column="1">
-           <widget class="QLabel" name="boxMinXLabel">
-            <property name="text">
-             <string>From X</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="2">
-           <widget class="QLineEdit" name="boxMinX"/>
-          </item>
-          <item row="1" column="1">
-           <widget class="QLabel" name="boxMinZLabel">
-            <property name="text">
-             <string>From Z</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="2">
-           <widget class="QLineEdit" name="boxMinZ"/>
-          </item>
-          <item row="1" column="4">
-           <widget class="QLabel" name="boxMaxZLabel">
-            <property name="text">
-             <string>To Z</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="5">
-           <widget class="QLineEdit" name="boxMaxZ"/>
           </item>
          </layout>
-        </widget>
-        <widget class="QWidget" name="circularCoordinates">
-         <attribute name="title">
-          <string>Circular coordinates</string>
-         </attribute>
-         <layout class="QGridLayout" name="gridLayout">
-          <property name="leftMargin">
-           <number>9</number>
-          </property>
-          <property name="topMargin">
-           <number>0</number>
-          </property>
-          <property name="rightMargin">
-           <number>9</number>
-          </property>
-          <property name="bottomMargin">
-           <number>0</number>
-          </property>
-          <property name="horizontalSpacing">
-           <number>9</number>
-          </property>
-          <property name="verticalSpacing">
-           <number>3</number>
-          </property>
-          <item row="1" column="2">
-           <widget class="QLabel" name="circularMaxYLabel">
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="padding">
+          <item>
+           <widget class="QLabel" name="paddingFieldLabel">
             <property name="text">
-             <string>To Y</string>
+             <string>Image Padding</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="1">
-           <widget class="QLineEdit" name="circularMinY"/>
-          </item>
-          <item row="3" column="0">
-           <widget class="QLabel" name="circularRadiusLabel">
-            <property name="text">
-             <string>Radius</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QLineEdit" name="circularCenterX"/>
-          </item>
-          <item row="0" column="2">
-           <widget class="QLabel" name="circularCenterZLabel">
-            <property name="text">
-             <string>Center Z</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="3">
-           <widget class="QLineEdit" name="circularMaxY"/>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="circularMinYLabel">
-            <property name="text">
-             <string>From Y</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0">
-           <widget class="QLabel" name="circularCenterXLabel">
-            <property name="text">
-             <string>Center X</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="3">
-           <widget class="QLineEdit" name="circularCenterZ"/>
-          </item>
-          <item row="3" column="1">
-           <widget class="QLineEdit" name="circularRadius"/>
+          <item>
+           <widget class="QSpinBox" name="paddingValue"/>
           </item>
          </layout>
-        </widget>
-       </widget>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="padding">
-        <item>
-         <widget class="QLabel" name="paddingFieldLabel">
-          <property name="text">
-           <string>Image Padding</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QSpinBox" name="paddingValue"/>
         </item>
        </layout>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="misc">
+      </widget>
+      <widget class="QWidget" name="tiledOutput">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <attribute name="title">
+        <string>Tiled map output</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout_4">
+        <property name="spacing">
+         <number>6</number>
+        </property>
+        <property name="leftMargin">
+         <number>3</number>
+        </property>
+        <property name="topMargin">
+         <number>3</number>
+        </property>
+        <property name="rightMargin">
+         <number>3</number>
+        </property>
+        <property name="bottomMargin">
+         <number>3</number>
+        </property>
         <item>
-         <widget class="QCheckBox" name="shading">
-          <property name="text">
-           <string>Shading</string>
-          </property>
-         </widget>
+         <layout class="QHBoxLayout" name="tiledOutputFileOptions" stretch="0,1,0">
+          <item>
+           <widget class="QLabel" name="tiledOutputFileLabel">
+            <property name="text">
+             <string>Directory</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="tiledOutputFileName">
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="tiledOutputFileSelect">
+            <property name="text">
+             <string>Select</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
         <item>
-         <widget class="QCheckBox" name="lighting">
-          <property name="text">
-           <string>Lighting</string>
+         <layout class="QHBoxLayout" name="tiledOutputSizeOptions">
+          <property name="spacing">
+           <number>15</number>
           </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QCheckBox" name="hideBeacons">
-          <property name="text">
-           <string>Hide Beacons</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QCheckBox" name="hideWater">
-          <property name="text">
-           <string>Hide Water</string>
-          </property>
-         </widget>
+          <item>
+           <widget class="QLabel" name="tiledOutputSizeLabel">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="text">
+             <string>Tile size</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSlider" name="tiledOutputSizeSlider">
+            <property name="layoutDirection">
+             <enum>Qt::LeftToRight</enum>
+            </property>
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>16</number>
+            </property>
+            <property name="singleStep">
+             <number>1</number>
+            </property>
+            <property name="pageStep">
+             <number>1</number>
+            </property>
+            <property name="value">
+             <number>1</number>
+            </property>
+            <property name="sliderPosition">
+             <number>1</number>
+            </property>
+            <property name="tracking">
+             <bool>true</bool>
+            </property>
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="invertedAppearance">
+             <bool>false</bool>
+            </property>
+            <property name="tickPosition">
+             <enum>QSlider::TicksBothSides</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="tiledOutputSizeValue">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="cursor">
+             <cursorShape>ForbiddenCursor</cursorShape>
+            </property>
+            <property name="focusPolicy">
+             <enum>Qt::NoFocus</enum>
+            </property>
+            <property name="text">
+             <string>64</string>
+            </property>
+            <property name="maxLength">
+             <number>10</number>
+            </property>
+            <property name="cursorPosition">
+             <number>0</number>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+            <property name="clearButtonEnabled">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
        </layout>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="colorSelect" stretch="0,1,0,0">
-        <item>
-         <widget class="QLabel" name="colorFieldLabel">
-          <property name="text">
-           <string>Colorfile</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="colorFileLabel">
-          <property name="text">
-           <string>Not selected.</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="colorSelectButton">
-          <property name="text">
-           <string>Select</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="colorResetButton">
-          <property name="text">
-           <string>Clear</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-     </layout>
+      </widget>
+     </widget>
     </item>
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout">
-      <property name="spacing">
-       <number>9</number>
-      </property>
-      <property name="leftMargin">
-       <number>9</number>
-      </property>
-      <property name="topMargin">
-       <number>9</number>
-      </property>
-      <property name="rightMargin">
-       <number>9</number>
-      </property>
-      <property name="bottomMargin">
-       <number>9</number>
-      </property>
       <item>
        <widget class="QProgressBar" name="progressBar">
         <property name="maximum">
@@ -455,7 +701,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>554</width>
+     <width>555</width>
      <height>26</height>
     </rect>
    </property>
@@ -499,13 +745,12 @@
  </widget>
  <tabstops>
   <tabstop>saveSelectButton</tabstop>
-  <tabstop>outputSelectButton</tabstop>
+  <tabstop>tiledOutputFileSelect</tabstop>
   <tabstop>orientationNW</tabstop>
   <tabstop>orientationSW</tabstop>
   <tabstop>orientationSE</tabstop>
   <tabstop>orientationNE</tabstop>
   <tabstop>dimensionSelectDropDown</tabstop>
-  <tabstop>coordinatesSelect</tabstop>
   <tabstop>boxMinX</tabstop>
   <tabstop>boxMaxX</tabstop>
   <tabstop>boxMinZ</tabstop>

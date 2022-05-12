@@ -35,20 +35,17 @@ public:
 
 private:
   QThread renderThread;
-  QVector<QWidget *> parameters;
-  QVector<QLineEdit *> boundaries;
   QPlainTextEdit *log_messages;
 
   std::shared_ptr<spdlog::logger> logger = nullptr;
   void closeEvent(QCloseEvent *);
 
 private slots:
-  void reset_selection();
-
   void on_renderButton_clicked();
 
   void on_saveSelectButton_clicked();
-  void on_outputSelectButton_clicked();
+  void on_singlePNGFileSelect_clicked();
+  void on_tiledOutputFileSelect_clicked();
   void on_colorSelectButton_clicked();
   void on_colorResetButton_clicked();
 
