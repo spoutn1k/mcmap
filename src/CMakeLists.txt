@@ -31,7 +31,8 @@ TARGET_LINK_LIBRARIES(
     mcmap_core
     ZLIB::ZLIB
     PNG::PNG
-    fmt::fmt-header-only)
+    fmt::fmt-header-only
+    spdlog::spdlog_header_only)
 
 IF (Git_FOUND)
     SET_SOURCE_FILES_PROPERTIES(
