@@ -5,7 +5,11 @@
 #include <map>
 #include <stdint.h>
 #include <stdio.h>
+
+#ifndef _WINDOWS
+// TTY support on linux
 #include <unistd.h>
+#endif
 
 namespace Progress {
 
@@ -27,9 +31,11 @@ struct Status {
 
   static void quiet(int, int, int){};
   static void ascii(int d, int t, Progress::Action status) {
+#ifndef _WINDOWS
     // Only print progress bar if stderr is a tty
     if (!isatty(STDERR_FILENO))
       return;
+#endif
 
     fmt::print(stderr, "\r{} [{:.{}f}%]\r", action_strings.at(status),
                float(d) / float(t) * 100.0f, 2);
