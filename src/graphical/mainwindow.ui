@@ -155,8 +155,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QComboBox" name="dimensionSelectDropDown">
-         </widget>
+         <widget class="QComboBox" name="dimensionSelectDropDown"/>
         </item>
        </layout>
       </item>
@@ -210,16 +209,13 @@
            </widget>
           </item>
           <item row="0" column="5">
-           <widget class="QLineEdit" name="boxMaxX">
-           </widget>
+           <widget class="QLineEdit" name="boxMaxX"/>
           </item>
           <item row="3" column="2">
-           <widget class="QLineEdit" name="boxMinY">
-           </widget>
+           <widget class="QLineEdit" name="boxMinY"/>
           </item>
           <item row="3" column="5">
-           <widget class="QLineEdit" name="boxMaxY">
-           </widget>
+           <widget class="QLineEdit" name="boxMaxY"/>
           </item>
           <item row="0" column="1">
            <widget class="QLabel" name="boxMinXLabel">
@@ -229,8 +225,7 @@
            </widget>
           </item>
           <item row="0" column="2">
-           <widget class="QLineEdit" name="boxMinX">
-           </widget>
+           <widget class="QLineEdit" name="boxMinX"/>
           </item>
           <item row="1" column="1">
            <widget class="QLabel" name="boxMinZLabel">
@@ -240,8 +235,7 @@
            </widget>
           </item>
           <item row="1" column="2">
-           <widget class="QLineEdit" name="boxMinZ">
-           </widget>
+           <widget class="QLineEdit" name="boxMinZ"/>
           </item>
           <item row="1" column="4">
            <widget class="QLabel" name="boxMaxZLabel">
@@ -251,8 +245,7 @@
            </widget>
           </item>
           <item row="1" column="5">
-           <widget class="QLineEdit" name="boxMaxZ">
-           </widget>
+           <widget class="QLineEdit" name="boxMaxZ"/>
           </item>
          </layout>
         </widget>
@@ -287,8 +280,7 @@
            </widget>
           </item>
           <item row="1" column="1">
-           <widget class="QLineEdit" name="circularMinY">
-           </widget>
+           <widget class="QLineEdit" name="circularMinY"/>
           </item>
           <item row="3" column="0">
            <widget class="QLabel" name="circularRadiusLabel">
@@ -298,8 +290,7 @@
            </widget>
           </item>
           <item row="0" column="1">
-           <widget class="QLineEdit" name="circularCenterX">
-           </widget>
+           <widget class="QLineEdit" name="circularCenterX"/>
           </item>
           <item row="0" column="2">
            <widget class="QLabel" name="circularCenterZLabel">
@@ -309,8 +300,7 @@
            </widget>
           </item>
           <item row="1" column="3">
-           <widget class="QLineEdit" name="circularMaxY">
-           </widget>
+           <widget class="QLineEdit" name="circularMaxY"/>
           </item>
           <item row="1" column="0">
            <widget class="QLabel" name="circularMinYLabel">
@@ -327,12 +317,10 @@
            </widget>
           </item>
           <item row="0" column="3">
-           <widget class="QLineEdit" name="circularCenterZ">
-           </widget>
+           <widget class="QLineEdit" name="circularCenterZ"/>
           </item>
           <item row="3" column="1">
-           <widget class="QLineEdit" name="circularRadius">
-           </widget>
+           <widget class="QLineEdit" name="circularRadius"/>
           </item>
          </layout>
         </widget>
@@ -348,8 +336,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QSpinBox" name="paddingValue">
-         </widget>
+         <widget class="QSpinBox" name="paddingValue"/>
         </item>
        </layout>
       </item>
@@ -510,6 +497,35 @@
    </property>
   </action>
  </widget>
+ <tabstops>
+  <tabstop>saveSelectButton</tabstop>
+  <tabstop>outputSelectButton</tabstop>
+  <tabstop>orientationNW</tabstop>
+  <tabstop>orientationSW</tabstop>
+  <tabstop>orientationSE</tabstop>
+  <tabstop>orientationNE</tabstop>
+  <tabstop>dimensionSelectDropDown</tabstop>
+  <tabstop>coordinatesSelect</tabstop>
+  <tabstop>boxMinX</tabstop>
+  <tabstop>boxMaxX</tabstop>
+  <tabstop>boxMinZ</tabstop>
+  <tabstop>boxMaxZ</tabstop>
+  <tabstop>boxMinY</tabstop>
+  <tabstop>boxMaxY</tabstop>
+  <tabstop>paddingValue</tabstop>
+  <tabstop>shading</tabstop>
+  <tabstop>lighting</tabstop>
+  <tabstop>hideBeacons</tabstop>
+  <tabstop>hideWater</tabstop>
+  <tabstop>colorSelectButton</tabstop>
+  <tabstop>renderButton</tabstop>
+  <tabstop>colorResetButton</tabstop>
+  <tabstop>circularCenterZ</tabstop>
+  <tabstop>circularRadius</tabstop>
+  <tabstop>circularCenterX</tabstop>
+  <tabstop>circularMinY</tabstop>
+  <tabstop>circularMaxY</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>
