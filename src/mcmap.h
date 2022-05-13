@@ -14,7 +14,7 @@ int render(const Settings::WorldOptions &, const Colors::Palette &,
 
 std::string version();
 
-std::string compilation_options();
+std::map<std::string, std::string> compilation_options();
 
 } // namespace mcmap
 

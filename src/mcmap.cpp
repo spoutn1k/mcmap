@@ -151,7 +151,7 @@ std::string version() {
   return fmt::format(VERSION " {}bit", 8 * static_cast<int>(sizeof(size_t)));
 }
 
-std::string compilation_options() {
+std::map<std::string, std::string> compilation_options() {
   std::map<std::string, std::string> enabled = {
       {"Architecture",
        fmt::format("{} bits", 8 * static_cast<int>(sizeof(size_t)))},
@@ -190,14 +190,7 @@ std::string compilation_options() {
 #endif
   };
 
-  auto pair = enabled.begin();
-  std::string out = fmt::format("{}: {}", pair->first, pair->second);
-
-  while (++pair != enabled.end()) {
-    out = fmt::format("{}, {}: {}", out, pair->first, pair->second);
-  }
-
-  return out;
+  return enabled;
 }
 
 } // namespace mcmap

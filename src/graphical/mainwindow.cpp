@@ -565,7 +565,14 @@ void MainWindow::closeEvent(QCloseEvent *event) {
 }
 
 void MainWindow::on_actionVersion_triggered() {
-  QMessageBox::about(
-      this, mcmap::version().c_str(),
-      fmt::format("{}, {}", mcmap::compilation_options(), COMMENT).c_str());
+  auto options = mcmap::compilation_options();
+  auto it = options.begin();
+  std::string out = fmt::format("{}: {}", it->first, it->second);
+
+  while (++it != options.end()) {
+    out = fmt::format("{}\n{}: {}", out, it->first, it->second);
+  }
+
+  QMessageBox::about(this, mcmap::version().c_str(),
+                     fmt::format("{}\n{}", out.c_str(), COMMENT).c_str());
 }
