@@ -493,6 +493,7 @@
   "minecraft:mangrove_door": "#70302e",
   "minecraft:mangrove_fence": { "color": "#763631", "type": "Rod" },
   "minecraft:mangrove_fence_gate": "#763631",
+  "minecraft:mangrove_leaves": { "color": "#8db127b4", "type": "Clear" },
   "minecraft:mangrove_log": { "accent": "#682f2a", "color": "#544329", "type": "Log" },
   "minecraft:mangrove_planks": "#763631",
   "minecraft:mangrove_pressure_plate": { "color": "#763631", "type": "Thin" },
