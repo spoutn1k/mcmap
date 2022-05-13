@@ -21,6 +21,12 @@ const std::string BEAM_ID = "mcmap:beacon_beam";
                       ui->orientationGroup, ui->renderButton,                  \
                       ui->dimensionSelectDropDown, ui->worldGroup})
 
+#define BOUNDARY_INPUTS                                                        \
+  QVector<QWidget *>({ui->boxMinX, ui->boxMaxX, ui->boxMinZ, ui->boxMaxZ,      \
+                      ui->boxMinY, ui->boxMaxY, ui->circularMinY,              \
+                      ui->circularMaxY, ui->circularCenterX,                   \
+                      ui->circularCenterZ, ui->circularRadius})
+
 Settings::WorldOptions options = Settings::WorldOptions();
 World::Coordinates current_dim_bounds = World::Coordinates();
 Map::Orientation selected_orientation = Map::NW;
@@ -161,6 +167,7 @@ void MainWindow::on_saveSelectButton_clicked() {
   for (auto element : DEFAULT_DISABLED_OPTIONS)
     element->setEnabled(true);
 
+  ui->dimensionSelectDropDown->clear();
   for (auto &dim : options.save.dimensions)
     ui->dimensionSelectDropDown->addItem(dim.to_string().c_str());
 
@@ -185,6 +192,7 @@ void MainWindow::on_tiledOutputFileSelect_clicked() {
       this, tr("Choose destination"),
       fs::path(ui->tiledOutputFileName->text().toStdString())
           .parent_path()
+          .string()
           .c_str());
 
   if (filename.isEmpty()) {
@@ -249,6 +257,9 @@ void MainWindow::on_dimensionSelectDropDown_currentIndexChanged(int index) {
   ui->circularCenterX->setText(std::to_string(0).c_str());
   ui->circularCenterZ->setText(std::to_string(0).c_str());
   ui->circularRadius->setText(std::to_string(0).c_str());
+
+  for (auto element : BOUNDARY_INPUTS)
+    ok(element);
 }
 
 void check_value(MainWindow *w, QWidget *i, QString text,
@@ -443,6 +454,20 @@ void MainWindow::on_renderButton_clicked() {
     options.outFile = ui->tiledOutputFileName->text().toStdString();
     options.tile_size =
         std::stol(ui->tiledOutputSizeValue->text().toStdString());
+
+    std::error_code dir_creation_error;
+    fs::create_directory(options.outFile, dir_creation_error);
+    if (dir_creation_error) {
+      QMessageBox::warning(this, "Directory creation error",
+                           fmt::format("Failed to create directory {}: {}",
+                                       options.outFile.string().c_str(),
+                                       dir_creation_error.message())
+                               .c_str());
+      logger::error("Failed to create directory {}: {}",
+                    options.outFile.string().c_str(),
+                    dir_creation_error.message());
+      return;
+    }
   }
 
   emit render();
