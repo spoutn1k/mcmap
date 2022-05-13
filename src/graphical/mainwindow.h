@@ -82,6 +82,8 @@ private slots:
   void on_actionDumpColors_triggered();
   void on_actionExit_triggered();
   void on_actionVersion_triggered();
+  void on_actionSetMemoryLimit_triggered();
+  void on_actionSetFragmentSize_triggered();
 
 signals:
   void render();
