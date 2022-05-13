@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
 #include <QFileDialog>
+#include <QInputDialog>
 #include <QMessageBox>
 #include <QStatusBar>
 
@@ -44,6 +45,8 @@ MainWindow::MainWindow(QWidget *parent)
   ui->actionDumpColors->setIcon(QIcon(":/icons/lapis.png"));
   ui->actionExit->setIcon(QIcon(":/icons/lava.png"));
   ui->actionToggleLogs->setIcon(QIcon(":/icons/sprout.png"));
+  ui->actionSetMemoryLimit->setIcon(QIcon(":/icons/deepslate_diamond.png"));
+  ui->actionSetFragmentSize->setIcon(QIcon(":/icons/deepslate_redstone.png"));
 
   // Init status bar
   statusBar()->showMessage("", 1);
@@ -575,4 +578,28 @@ void MainWindow::on_actionVersion_triggered() {
 
   QMessageBox::about(this, mcmap::version().c_str(),
                      fmt::format("{}\n{}", out.c_str(), COMMENT).c_str());
+}
+
+void MainWindow::on_actionSetMemoryLimit_triggered() {
+  bool ok;
+  size_t mem = QInputDialog::getInt(
+      this, "Set memory limit", "Maximum amount of memory to use (MB):",
+      options.mem_limit / (1024 * 1024), 1000, 32000, 100, &ok);
+
+  if (ok)
+    options.mem_limit = mem * 1024 * 1024;
+
+  logger::info("Memory to use: {} ({})", options.mem_limit, mem);
+}
+
+void MainWindow::on_actionSetFragmentSize_triggered() {
+  bool ok;
+  size_t size = QInputDialog::getInt(
+      this, "Set fragment size", "Size of subterrains to render per thread",
+      options.fragment_size, 128, 8192, 128, &ok);
+
+  if (ok)
+    options.fragment_size = size;
+
+  logger::info("Fragment size to use: {}", options.fragment_size);
 }
