@@ -37,7 +37,7 @@ void Section::loadPalette(const Colors::Palette &defined) {
     auto query = defined.find(namespacedId);
 
     if (query == defined.end()) {
-      logger::error("Color of block {} not found\n", namespacedId);
+      logger::error("Color of block {} not found", namespacedId);
       colors.push_back(&_void);
     } else {
       colors.push_back(&query->second);
@@ -62,7 +62,7 @@ Section::Section(const nbt::NBT &raw_section, const int dataVersion)
   // Iron out potential corruption errors
   for (block_array::reference index : blocks) {
     if (index > palette.size() - 1) {
-      logger::deep_debug("Malformed section: block is undefined in palette\n");
+      logger::trace("Malformed section: block is undefined in palette");
       index = 0;
     }
   }

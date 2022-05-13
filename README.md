@@ -168,7 +168,7 @@ To view the generated map, open the HTML file in `contrib/leaflet/index.html`. A
 
 ## Compilation
 
-`mcmap` depends on the `PNG` and `zlib` libraries.
+`mcmap` depends on the [`zlib`](https://zlib.net/), [`PNG`](http://www.libpng.org/pub/png/libpng.html), [`fmt`](https://fmt.dev/latest/index.html) and [`spdlog`](https://github.com/gabime/spdlog) libraries.
 Development was made using `gcc` version 10, and can be compiled with `gcc` 8 or later or `clang` 10 or later.
 Configuration is done using `CMake`.
 
@@ -176,8 +176,8 @@ Configuration is done using `CMake`.
 
 Getting the libraries depends on your distribution:
 
-- Ubuntu: `apt update && apt install git make g++ libpng-dev cmake`;
-- Archlinux: `pacman -S --needed git gcc make libpng cmake`.
+- Ubuntu: `apt update && apt install git make g++ libpng-dev cmake libspdlog-dev`;
+- Archlinux: `pacman -S --needed git gcc make cmake libpng spdlog fmt`.
 
 Then get the code and compile:
 ```
@@ -193,7 +193,7 @@ In an Apple environment, you need a developer toolkit recent enough, with the ve
 
 Using [`brew`](https://brew.sh/):
 ```
-brew install libpng libomp
+brew install libpng libomp <fmt/spdlog package names>
 git clone https://github.com/spoutn1k/mcmap
 mkdir -p mcmap/build && cd mcmap/build
 cmake ..
@@ -202,9 +202,19 @@ make -j
 
 #### Windows
 
-`mcmap` was successfully compiled for Windows using Visual Studio/Visual C++ and MinGW.
+`mcmap` was successfully compiled for Windows Visual C++ 19 and `nmake`.
 As there is no package manager on Windows, [`libpng`](http://www.libpng.org/pub/png/libpng.html) and [`zlib`](https://zlib.net/) need to be compiled/installed manually.
 If compiling the GUI version, you will also need [`Qt`](https://www.qt.io/download).
+
+Once those are installed, configure `mcmap` following this template:
+```
+cmake .. -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release -DSTATIC_BUILD=1^
+  -DQt5_DIR=<path to qt>\lib\cmake\Qt5^
+  -Dfmt_DIR=<path to fmt>\lib\cmake\fmt^
+  -Dspdlog_DIR=<path to spdlog>\lib\cmake\spdlog^
+  -DPNG_LIBRARY=<path to libpng>\lib\libpng16_static.lib^
+  -DZLIB_LIBRARY=<path to zlib>\lib\zlibstatic.lib
+```
 
 You can also download and set up [Ubuntu on windows](https://ubuntu.com/tutorials/tutorial-ubuntu-on-windows#1-overview) then the steps are the same as Linux/Ubuntu.
 

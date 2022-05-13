@@ -34,7 +34,7 @@ bool writeMapInfo(fs::path outFile, const Canvas &finalImage,
 
 int render(const Settings::WorldOptions &options, const Colors::Palette &colors,
            Progress::Callback cb) {
-  logger::debug("Rendering {} with {}\n", options.save.name,
+  logger::debug("Rendering {} with {}", options.save.name,
                 options.boundaries.to_string());
 
   // Divide terrain according to fragment size
@@ -55,7 +55,7 @@ int render(const Settings::WorldOptions &options, const Colors::Palette &colors,
   if (!capacity)
     return false;
 
-  logger::debug("Memory capacity: {} fragments - {} fragments scheduled\n",
+  logger::debug("Memory capacity: {} fragments - {} fragments scheduled",
                 size_t(capacity), fragment_coordinates.size());
 
   // If caching is needed, ensure the cache directory is available
@@ -72,7 +72,7 @@ int render(const Settings::WorldOptions &options, const Colors::Palette &colors,
 #pragma omp for ordered schedule(dynamic)
 #endif
     for (OMP_FOR_INDEX i = 0; i < fragment_coordinates.size(); i++) {
-      logger::debug("Rendering {}\n", fragment_coordinates[i].to_string());
+      logger::debug("Rendering {}", fragment_coordinates[i].to_string());
       IsometricCanvas canvas;
       canvas.setMap(fragment_coordinates[i]);
       canvas.setColors(colors);
@@ -111,15 +111,15 @@ int render(const Settings::WorldOptions &options, const Colors::Palette &colors,
   auto end = std::chrono::high_resolution_clock::now();
 
   logger::debug(
-      "Rendered in {}ms\n",
+      "Rendered in {}ms",
       std::chrono::duration_cast<std::chrono::milliseconds>(end - begin)
           .count());
 
   CompositeCanvas merged(std::move(fragments));
-  logger::debug("{}\n", merged.to_string());
+  logger::debug("{}", merged.to_string());
 
   if (merged.empty()) {
-    logger::error("Canvas is empty !\n");
+    logger::error("Canvas is empty !");
     return false;
   }
 
@@ -140,11 +140,57 @@ int render(const Settings::WorldOptions &options, const Colors::Palette &colors,
     return false;
 
   logger::debug(
-      "Drawn PNG in {}ms\n",
+      "Drawn PNG in {}ms",
       std::chrono::duration_cast<std::chrono::milliseconds>(end - begin)
           .count());
 
   return true;
+}
+
+std::string version() {
+  return fmt::format(VERSION " {}bit", 8 * static_cast<int>(sizeof(size_t)));
+}
+
+std::map<std::string, std::string> compilation_options() {
+  std::map<std::string, std::string> enabled = {
+      {"Architecture",
+       fmt::format("{} bits", 8 * static_cast<int>(sizeof(size_t)))},
+#ifdef FMT_VERSION
+      {"fmt version",
+       fmt::format("{}.{}.{}", FMT_VERSION / 10000, (FMT_VERSION / 100) % 100,
+                   FMT_VERSION % 100)},
+#endif
+#ifdef SPDLOG_VERSION
+      {"spdlog version",
+       fmt::format("{}.{}.{}", SPDLOG_VERSION / 10000,
+                   (SPDLOG_VERSION / 100) % 100, SPDLOG_VERSION % 100)},
+#endif
+#ifdef PNG_LIBPNG_VER_STRING
+      {"libpng version", PNG_LIBPNG_VER_STRING},
+#endif
+#ifdef ZLIB_VERSION
+      {"zlib version", ZLIB_VERSION},
+#endif
+#ifdef SCM_COMMIT
+      {"Source version", SCM_COMMIT},
+#endif
+#ifdef _OPENMP
+      {"Threading", "OpenMP"},
+#endif
+#ifdef CXX_COMPILER_ID
+#ifdef CXX_COMPILER_VERSION
+      {"Compiler", fmt::format("{} {}", CXX_COMPILER_ID, CXX_COMPILER_VERSION)},
+#endif
+#endif
+#ifdef DEBUG_BUILD
+      {"Debug", "Enabled"},
+#endif
+#ifdef SNAPSHOT_SUPPORT
+      {"Snapshot compatibility", "Enabled"},
+#endif
+  };
+
+  return enabled;
 }
 
 } // namespace mcmap

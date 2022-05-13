@@ -35,7 +35,7 @@ Region::Region(const fs::path &_file) : file(_file) {
     locations[chunk].raw_data = _ntohi((uint8_t *)buffer);
 
     if (!regionData) {
-      logger::error("Error reading `{}` header.\n", _file.string());
+      logger::error("Error reading `{}` header.", _file.string());
       break;
     }
   }
@@ -67,8 +67,8 @@ size_t Region::get_offset(uint8_t max_size) {
 
   while (it != sorted.end()) {
     if (it->offset() != block) {
-      logger::deep_debug("Empty region of size {} at offset {}\n",
-                         it->offset() - block, block);
+      logger::trace("Empty region of size {} at offset {}",
+                    it->offset() - block, block);
       if (it->offset() - block >= max_size)
         break;
     }

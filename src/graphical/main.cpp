@@ -3,8 +3,6 @@
 #include <QApplication>
 #include <logger.hpp>
 
-SETUP_LOGGER
-
 Colors::Palette default_palette;
 
 int main(int argc, char *argv[]) {

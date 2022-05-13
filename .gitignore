@@ -4,6 +4,7 @@
 !sample.png
 src/colors.bson
 src/graphical/ui_mainwindow.h
+src/graphical/icons.qrc
 src/include/json.hpp
 src/include/fmt/core.h
 src/include/fmt/format.h

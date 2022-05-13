@@ -8,8 +8,6 @@
 
 namespace fs = std::filesystem;
 
-SETUP_LOGGER
-
 int main(int argc, char **argv) {
   fs::path region_file;
 
@@ -20,5 +18,5 @@ int main(int argc, char **argv) {
 
   Region r(region_file);
 
-  logger::info("{:r}", r);
+  fmt::print("{:r}", r);
 }

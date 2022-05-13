@@ -196,7 +196,7 @@ struct Marker {
 
   Marker(int64_t x, int64_t z, string c) : x(x), z(z) {
     if (markerColors.find(c) == markerColors.end()) {
-      logger::error("Invalid marker color: {}\n", c);
+      logger::error("Invalid marker color: {}", c);
       c = "white";
     }
 

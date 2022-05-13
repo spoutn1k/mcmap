@@ -6,8 +6,7 @@ namespace sections_versions {
 nbt::NBT v2844(const nbt::NBT &chunk) { return chunk["sections"]; }
 nbt::NBT v1628(const nbt::NBT &chunk) { return chunk["Level"]["Sections"]; }
 nbt::NBT catchall(const nbt::NBT &chunk) {
-  logger::deep_debug("Unsupported DataVersion: {}\n",
-                     chunk["DataVersion"].get<int>());
+  logger::trace("Unsupported DataVersion: {}", chunk["DataVersion"].get<int>());
   return nbt::NBT(std::vector<nbt::NBT>());
 }
 } // namespace sections_versions

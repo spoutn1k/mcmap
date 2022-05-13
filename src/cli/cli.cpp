@@ -1,7 +1,5 @@
-#include "../VERSION"
 #include "../mcmap.h"
-
-SETUP_LOGGER
+#include "./parse.h"
 
 #define SUCCESS 0
 #define ERROR 1
@@ -13,7 +11,7 @@ SETUP_LOGGER
 #endif
 
 void printHelp(char *binary) {
-  logger::info(
+  fmt::print(
       "Usage: {} <options> WORLDPATH\n\n"
       "  -from X Z             coordinates of the block to start rendering at\n"
       "  -to X Z               coordinates of the block to stop rendering at\n"
@@ -59,11 +57,10 @@ int main(int argc, char **argv) {
     Colors::load(&colors, options.colorFile);
 
   if (options.mode == Settings::DUMPCOLORS) {
-    logger::info("{}", json(colors).dump());
+    fmt::print("{}", json(colors).dump());
     return 0;
   } else {
-    logger::info(VERSION " {}bit (" COMMENT ")" SNAPSHOT "\n",
-                 8 * static_cast<int>(sizeof(size_t)));
+    fmt::print("{}\n", mcmap::version());
   }
 
   // Overwrite water if asked to
@@ -74,10 +71,10 @@ int main(int argc, char **argv) {
     colors["mcmap:beacon_beam"] = Colors::Block();
 
   if (!mcmap::render(options, colors, Progress::Status::ascii)) {
-    logger::error("Error rendering terrain.\n");
+    logger::error("Error rendering terrain.");
     return ERROR;
   }
 
-  logger::info("Job complete.\n");
+  fmt::print("Job complete.\n");
   return SUCCESS;
 }

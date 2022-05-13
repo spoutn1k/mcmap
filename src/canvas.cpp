@@ -37,7 +37,7 @@ std::vector<uint8_t> read_bytes;
 size_t Canvas::_get_line(PNG::PNGReader *data, uint8_t *buffer, size_t bufSize,
                          uint64_t y) const {
   if (y > data->get_height()) {
-    logger::error("Invalid access to PNG image: line {}\n", y);
+    logger::error("Invalid access to PNG image: line {}", y);
     return 0;
   }
 
@@ -133,7 +133,7 @@ bool Canvas::tile(const fs::path file, uint16_t tilesize,
     fs::path row_dir = file / std::to_string(x);
     fs::create_directories(row_dir, dir_creation_error);
     if (dir_creation_error) {
-      logger::error("Failed to create directory {}: {}\n",
+      logger::error("Failed to create directory {}: {}",
                     row_dir.string().c_str(), dir_creation_error.message());
       return false;
     }

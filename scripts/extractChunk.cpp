@@ -7,8 +7,6 @@
 #define REGIONSIZE 32
 #define HEADER_SIZE REGIONSIZE *REGIONSIZE * 4
 
-SETUP_LOGGER
-
 using std::filesystem::exists;
 using std::filesystem::path;
 

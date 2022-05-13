@@ -115,7 +115,7 @@ struct Canvas {
       }
 
       case IMAGE:
-        logger::error("Default constructing image canvas not supported\n");
+        logger::error("Default constructing image canvas not supported");
         break;
 
       default: {

@@ -167,7 +167,7 @@ void v2840(Section *target, const nbt::NBT &raw_section) {
 }
 
 void catchall(Section *, const nbt::NBT &) {
-  logger::deep_debug("Unsupported DataVersion\n");
+  logger::trace("Unsupported DataVersion");
 }
 } // namespace init_versions
 } // namespace versions
