@@ -36,6 +36,17 @@ struct PNG {
   size_t _line;
 
   PNG(const std::filesystem::path &file);
+  PNG(PNG &&other) : file(other.file), imageHandle(nullptr) {
+    set_type(other._type);
+
+    _line = 0;
+    _height = other._height;
+    _width = other._width;
+    _padding = other._padding;
+
+    pngPtr = NULL;
+    pngInfoPtr = NULL;
+  }
   ~PNG() { _close(); }
 
   void _close();
@@ -59,6 +70,20 @@ struct PNGWriter : public PNG {
   Comments comments;
 
   PNGWriter(const std::filesystem::path &);
+  PNGWriter(PNGWriter &&other) : PNG(other.file) {
+    set_type(RGBA);
+
+    _line = other._line;
+    _height = other._height;
+    _width = other._width;
+    _padding = other._padding;
+
+    pngPtr = NULL;
+    pngInfoPtr = NULL;
+
+    buffer = nullptr;
+  };
+
   ~PNGWriter();
 
   void _open();

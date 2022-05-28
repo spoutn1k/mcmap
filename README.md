@@ -1,6 +1,6 @@
 # `mcmap` - Isometric map visualizer
 
-![](https://img.shields.io/badge/version-1.16.5-success) ![](https://img.shields.io/badge/version-1.17-success) ![](https://img.shields.io/badge/snapshot-21w43-blueviolet)
+![](https://img.shields.io/badge/version-1.16.5-success) ![](https://img.shields.io/badge/version-1.17-success) ![](https://img.shields.io/badge/version-1.18.1-success)
 
 *Original project by Simon Rettberg. All the credit goes to him for the idea and vision.*
 
@@ -50,7 +50,8 @@ An experimental GUI is available for Windows and can be downloaded [here](https:
 |`-end`                        |render the end                                                                                            |
 |`-dim[ension] [namespace:]id` |render a dimension by namespaced ID                                                                       |
 |`-mb VAL`                     |maximum memory to use at once (default 3.5G, increase for large maps if you have the ram)                 |
-|`-tile VAL`                   |render terrain in tiles of the specified size (default 1024)                                              |
+|`-fragment VAL`               |render terrain in regions of the specified size (default 1024x1024 blocks)                                |
+|`-tile VAL`                   |generate split output in square tiles of the specified size (in pixels) (default 0, disabled)             |
 |`-padding`                    |padding around the final image, in pixels (default: 5)                                                    |
 |`-h[elp]`                     |display an option summary                                                                                 |
 |`-v[erbose]`                  |toggle debug mode                                                                                         |
@@ -62,9 +63,9 @@ An experimental GUI is available for Windows and can be downloaded [here](https:
 
 `mcmap` will render the terrain in batches using all the threads of your computer. Unfortunately, when those batches merge, some artifacts are created: lines appear in oceans where the merge was operated.
 
-Use `-tile` with a bigger value to limit the amount of batches and thus of artifacts. This is limited by the available memory, as rendering a whole map iin one go may require 10+ gigabytes of ram.
+Use `-fragment` with a bigger value to limit the amount of batches and thus of artifacts. This is limited by the available memory, as rendering a whole map iin one go may require 10+ gigabytes of ram.
 
-Use `-tile` with a lower value to increase performance. 256 and 512 tiles are really efficient.
+Use `-fragment` with a lower value to increase performance. Fragments of 256x256 and 512x512 blocks are really efficient.
 
 ## Color file format
 
@@ -149,9 +150,25 @@ Examples:
 }
 ```
 
+## Tiled output
+
+Using the `-tile` options with a non-zero value triggers the split output. A folder will be created with the following format:
+```
+$ ls output
+0    104  15  21  28  34  40  47  53  6   66  72  79  85  91  98
+1    105  16  22  29  35  41  48  54  60  67  73  8   86  92  99
+10   106  17  23  3   36  42  49  55  61  68  74  80  87  93  mapinfo.json
+100  11   18  24  30  37  43  5   56  62  69  75  81  88  94
+101  12   19  25  31  38  44  50  57  63  7   76  82  89  95
+102  13   2   26  32  39  45  51  58  64  70  77  83  9   96
+103  14   20  27  33  4   46  52  59  65  71  78  84  90  97
+```
+
+To view the generated map, open the HTML file in `contrib/leaflet/index.html`. A file dialog will be present; give it the above `mapinfo.json` to load the map.
+
 ## Compilation
 
-`mcmap` depends on the `PNG` and `zlib` libraries.
+`mcmap` depends on the [`zlib`](https://zlib.net/), [`PNG`](http://www.libpng.org/pub/png/libpng.html), [`fmt`](https://fmt.dev/latest/index.html) and [`spdlog`](https://github.com/gabime/spdlog) libraries.
 Development was made using `gcc` version 10, and can be compiled with `gcc` 8 or later or `clang` 10 or later.
 Configuration is done using `CMake`.
 
@@ -159,8 +176,8 @@ Configuration is done using `CMake`.
 
 Getting the libraries depends on your distribution:
 
-- Ubuntu: `apt update && apt install git make g++ libpng-dev cmake`;
-- Archlinux: `pacman -S --needed git gcc make libpng cmake`.
+- Ubuntu: `apt update && apt install git make g++ libpng-dev cmake libspdlog-dev`;
+- Archlinux: `pacman -S --needed git gcc make cmake libpng spdlog fmt`.
 
 Then get the code and compile:
 ```
@@ -176,7 +193,7 @@ In an Apple environment, you need a developer toolkit recent enough, with the ve
 
 Using [`brew`](https://brew.sh/):
 ```
-brew install libpng libomp
+brew install libpng libomp <fmt/spdlog package names>
 git clone https://github.com/spoutn1k/mcmap
 mkdir -p mcmap/build && cd mcmap/build
 cmake ..
@@ -185,9 +202,19 @@ make -j
 
 #### Windows
 
-`mcmap` was successfully compiled for Windows using Visual Studio/Visual C++ and MinGW.
+`mcmap` was successfully compiled for Windows Visual C++ 19 and `nmake`.
 As there is no package manager on Windows, [`libpng`](http://www.libpng.org/pub/png/libpng.html) and [`zlib`](https://zlib.net/) need to be compiled/installed manually.
 If compiling the GUI version, you will also need [`Qt`](https://www.qt.io/download).
+
+Once those are installed, configure `mcmap` following this template:
+```
+cmake .. -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release -DSTATIC_BUILD=1^
+  -DQt5_DIR=<path to qt>\lib\cmake\Qt5^
+  -Dfmt_DIR=<path to fmt>\lib\cmake\fmt^
+  -Dspdlog_DIR=<path to spdlog>\lib\cmake\spdlog^
+  -DPNG_LIBRARY=<path to libpng>\lib\libpng16_static.lib^
+  -DZLIB_LIBRARY=<path to zlib>\lib\zlibstatic.lib
+```
 
 You can also download and set up [Ubuntu on windows](https://ubuntu.com/tutorials/tutorial-ubuntu-on-windows#1-overview) then the steps are the same as Linux/Ubuntu.
 
@@ -220,4 +247,4 @@ This disables the underlying threading code, so performance may drop.
 ### Output has lines in the ocean
 
 This is due to the merging algorithm.
-Try increasing the tile size with the `-tile` option, or change the color of the water block to use the `Full` block type to make it less noticeable.
+Try increasing the split size with the `-fragment` option, or change the color of the water block to use the `Full` block type to make it less noticeable.

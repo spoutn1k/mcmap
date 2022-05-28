@@ -3,7 +3,9 @@
 
 #include <QLineEdit>
 #include <QMainWindow>
+#include <QPlainTextEdit>
 #include <QThread>
+#include <spdlog/sinks/qt_sinks.h>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -26,21 +28,24 @@ signals:
 
 class MainWindow : public QMainWindow {
   Q_OBJECT
-  QThread renderThread;
-  QVector<QWidget *> parameters;
-  QVector<QLineEdit *> boundaries;
 
 public:
   MainWindow(QWidget *parent = nullptr);
   ~MainWindow();
 
-private slots:
-  void reset_selection();
+private:
+  QThread renderThread;
+  QPlainTextEdit *log_messages;
 
+  std::shared_ptr<spdlog::logger> logger = nullptr;
+  void closeEvent(QCloseEvent *);
+
+private slots:
   void on_renderButton_clicked();
 
   void on_saveSelectButton_clicked();
-  void on_outputSelectButton_clicked();
+  void on_singlePNGFileSelect_clicked();
+  void on_tiledOutputFileSelect_clicked();
   void on_colorSelectButton_clicked();
   void on_colorResetButton_clicked();
 
@@ -51,12 +56,18 @@ private slots:
 
   void on_dimensionSelectDropDown_currentIndexChanged(int index);
 
-  void on_minX_textEdited(const QString &);
-  void on_maxX_textEdited(const QString &);
-  void on_minZ_textEdited(const QString &);
-  void on_maxZ_textEdited(const QString &);
-  void on_minY_textEdited(const QString &);
-  void on_maxY_textEdited(const QString &);
+  void on_boxMinX_textEdited(const QString &);
+  void on_boxMaxX_textEdited(const QString &);
+  void on_boxMinZ_textEdited(const QString &);
+  void on_boxMaxZ_textEdited(const QString &);
+  void on_boxMinY_textEdited(const QString &);
+  void on_boxMaxY_textEdited(const QString &);
+
+  void on_circularCenterX_textEdited(const QString &);
+  void on_circularCenterZ_textEdited(const QString &);
+  void on_circularMinY_textEdited(const QString &);
+  void on_circularMaxY_textEdited(const QString &);
+  void on_circularRadius_textEdited(const QString &);
 
   void on_paddingValue_valueChanged(int arg1);
 
@@ -66,6 +77,13 @@ private slots:
   void startRender();
   void stopRender();
   void updateProgress(int, int, int);
+
+  void on_actionToggleLogs_triggered();
+  void on_actionDumpColors_triggered();
+  void on_actionExit_triggered();
+  void on_actionVersion_triggered();
+  void on_actionSetMemoryLimit_triggered();
+  void on_actionSetFragmentSize_triggered();
 
 signals:
   void render();

@@ -27,28 +27,27 @@ static bool format_check(io::ByteStreamReader &b) {
 
   b.read(1, buffer, &error);
   if (error || !buffer[0] || buffer[0] > 13) {
-    logger::deep_debug("NBT format check error: Invalid type read\n");
+    logger::trace("NBT format check error: Invalid type read");
     return false;
   }
 
   b.read(2, buffer, &error);
   if (error) {
-    logger::deep_debug("NBT format check error: Invalid name size read\n");
+    logger::trace("NBT format check error: Invalid name size read");
     return false;
   }
 
   name_length = translate<uint16_t>(buffer);
   b.read(name_length, buffer, &error);
   if (error) {
-    logger::deep_debug("NBT format check error: Invalid name read\n");
+    logger::trace("NBT format check error: Invalid name read");
     return false;
   }
 
   for (uint16_t i = 0; i < name_length; i++) {
     if (buffer[i] < 0x21 || buffer[i] > 0x7e) {
-      logger::deep_debug(
-          "NBT format check error: Invalid character read: {:02x}\n",
-          buffer[i]);
+      logger::trace("NBT format check error: Invalid character read: {:02x}",
+                    buffer[i]);
       return false;
     }
   }
@@ -294,7 +293,7 @@ static bool assert_NBT(const fs::path &file) {
 
     gzclose(f);
   } else {
-    logger::error("Error opening file '{}': {}\n", file.string(),
+    logger::error("Error opening file '{}': {}", file.string(),
                   strerror(errno));
   }
 
@@ -326,11 +325,11 @@ static bool parse(const fs::path &file, NBT &container) {
     io::ByteStreamReader gz(f);
     status = matryoshka(gz, container);
     if (!status)
-      logger::error("Error reading file {}\n", file.string());
+      logger::error("Error reading file {}", file.string());
 
     gzclose(f);
   } else {
-    logger::error("Error opening file '{}': {}\n", file.string(),
+    logger::error("Error opening file '{}': {}", file.string(),
                   strerror(errno));
   }
 
@@ -346,7 +345,7 @@ static bool parse(uint8_t *buffer, size_t size, NBT &container) {
   io::ByteStreamReader mem(buffer, size);
   status = matryoshka(mem, container);
   if (!status)
-    logger::error("Error reading NBT data\n");
+    logger::error("Error reading NBT data");
 
   return status;
 }

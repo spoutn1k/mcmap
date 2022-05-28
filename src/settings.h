@@ -12,6 +12,10 @@
 #define UNDEFINED 0x7FFFFFFF
 
 namespace Settings {
+const string OUTPUT_DEFAULT = "output.png";
+const string OUTPUT_TILED_DEFAULT = "output";
+const size_t PADDING_DEFAULT = 5;
+const size_t TILE_SIZE_DEFAULT = 0;
 
 enum Action { RENDER, DUMPCOLORS, HELP };
 
@@ -28,19 +32,20 @@ struct WorldOptions {
   World::Coordinates boundaries;
 
   // Image settings
-  uint16_t padding; // Should be enough
+  uint16_t padding;
   bool hideWater, hideBeacons, shading, lighting;
+  size_t tile_size; // 0 means no tiling
 
   // Marker storage
   uint8_t totalMarkers;
   std::array<Colors::Marker, 256> markers;
 
-  // Memory limits, legacy code for image splitting
+  // Memory limits
   size_t mem_limit;
-  size_t tile_size;
+  size_t fragment_size;
 
   WorldOptions()
-      : mode(RENDER), outFile("output.png"), colorFile(""), save(),
+      : mode(RENDER), outFile(OUTPUT_DEFAULT), colorFile(""), save(),
         dim("overworld") {
 
     boundaries.setUndefined();
@@ -48,18 +53,19 @@ struct WorldOptions {
     boundaries.maxY = mcmap::constants::max_y;
 
     hideWater = hideBeacons = shading = lighting = false;
-    padding = 5;
+    padding = PADDING_DEFAULT;
+    tile_size = TILE_SIZE_DEFAULT;
 
     totalMarkers = 0;
 
+    // Default 3.5G of memory maximum
     mem_limit = 3500 * uint64_t(1024 * 1024);
-    tile_size = 1024;
+    // Render whole regions at once
+    fragment_size = 1024;
   }
 
-  fs::path regionDir() const;
+  fs::path regionDir() const { return save.region(dim); }
 };
-
-bool parseArgs(int argc, char **argv, Settings::WorldOptions *opts);
 
 void to_json(json &j, const WorldOptions &o);
 

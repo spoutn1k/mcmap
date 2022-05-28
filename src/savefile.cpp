@@ -36,8 +36,7 @@ bool assert_save(const fs::path &root) {
 
   for (auto &r : requirements) {
     if (fs::status(r.first).type() != r.second) {
-      logger::debug("File '{}' is of an unexpected format ({}/{})\n",
-                    r.first.string(), fs::status(r.first).type(), r.second);
+      logger::debug("File '{}' is of an unexpected format", r.first.string());
       return false;
     }
   }
@@ -55,7 +54,7 @@ SaveFile::SaveFile(const fs::path &_folder) : folder(_folder) {
 
   fs::path datafile = _folder / "level.dat";
 
-  logger::debug("Parsing {}\n", datafile.string());
+  logger::debug("Parsing {}", datafile.string());
 
   if (!(nbt::assert_NBT(datafile) && nbt::parse(datafile, level_data))) {
     last_played = 0;
@@ -164,7 +163,7 @@ World::Coordinates SaveFile::getWorld(const Dimension &dim) {
   savedWorld.minY = mcmap::constants::min_y;
   savedWorld.maxY = mcmap::constants::max_y;
 
-  logger::debug("World spans from {}\n", savedWorld.to_string());
+  logger::debug("World spans from {}", savedWorld.to_string());
 
   return savedWorld;
 }

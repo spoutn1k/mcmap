@@ -7,7 +7,7 @@ IF(GTest_FOUND)
         PRIVATE
         GTest::gtest
         GTest::gtest_main
-        mcmap_core
-        format
-        ZLIB::ZLIB)
+        fmt::fmt-header-only
+        ZLIB::ZLIB
+        mcmap_core)
 ENDIF()

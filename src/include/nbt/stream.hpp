@@ -38,7 +38,7 @@ struct ByteStreamReader : ByteStream {
     switch (type) {
     case GZFILE: {
       if (size_t(gzread(source.file, buffer, num)) < num) {
-        logger::error("Unexpected EOF\n");
+        logger::error("Unexpected EOF");
         *error = true;
         memset(buffer, 0, num);
       }
@@ -48,7 +48,7 @@ struct ByteStreamReader : ByteStream {
 
     case MEMORY: {
       if (source.array.second < num) {
-        logger::error("Not enough data in memory buffer\n");
+        logger::error("Not enough data in memory buffer");
         *error = true;
         memset(buffer, 0, num);
       }
@@ -89,7 +89,7 @@ struct ByteStreamWriter : ByteStream {
 
     case MEMORY: {
       if (source.array.second < num) {
-        logger::error("Not enough space left in memory buffer\n");
+        logger::error("Not enough space left in memory buffer");
         *error = true;
       }
 

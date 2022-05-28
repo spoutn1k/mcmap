@@ -41,7 +41,7 @@ Region::Region(const fs::path &_file) : file(_file) {
     locations[chunk].raw_data = _ntohi((uint8_t *)buffer);
 
     if (!regionData) {
-      logger::error("Error reading `{}` header.\n", _file.string());
+      logger::error("Error reading `{}` header.", _file.string());
       break;
     }
   }
@@ -58,7 +58,7 @@ void Region::write_header() {
                    std::ios::in | std::ios::out | std::ios::binary);
 
   if (!out) {
-    logger::error("Opening header for writing failed\n");
+    logger::error("Opening header for writing failed");
     return;
   }
 
@@ -96,9 +96,8 @@ size_t Region::get_offset(uint8_t max_size) {
 
     // If the next offset is not the current block, we just found a pocket
     if (it->offset() != block) {
-      logger::deep_debug("Empty region of size {} at offset {}\n",
-                         it->offset() - block, block);
-
+      logger::trace("Empty region of size {} at offset {}",
+                    it->offset() - block, block);
       // Return if this pocket of blocks is big enough
       if (it->offset() - block >= max_size)
         break;
@@ -140,7 +139,7 @@ bool decompressChunk(const uint32_t offset, std::ifstream &region,
   inflateEnd(&zlibStream);
 
   if (status != Z_STREAM_END) {
-    logger::debug("Decompressing chunk data failed: {}\n", zError(status));
+    logger::debug("Decompressing chunk data failed: {}", zError(status));
     return false;
   }
 
@@ -155,7 +154,7 @@ void Region::get_chunk(const mcmap::Chunk::coordinates &coords,
   Location l = locations[coords.x * REGIONSIZE + coords.z];
 
   if (!l.raw_data) {
-    logger::error("Chunk {} {} does not exist in region\n", coords.x, coords.z);
+    logger::error("Chunk {} {} does not exist in region", coords.x, coords.z);
     return;
   }
 
@@ -193,12 +192,12 @@ void Region::add_chunk(const mcmap::Chunk::coordinates &coords,
   deflateEnd(&zlibStream);
 
   if (zStatus != Z_STREAM_END) {
-    logger::info("Compressing chunk data failed: {}\n", zError(zStatus));
+    logger::info("Compressing chunk data failed: {}", zError(zStatus));
     return;
   }
 
-  logger::deep_debug("Compressed chunk {} {}: compressed size {}\n", coords.x,
-                     coords.z, zlibStream.total_out);
+  logger::trace("Compressed chunk {} {}: compressed size {}", coords.x,
+                coords.z, zlibStream.total_out);
 
   // Add the compression type byte to the total size
   blob_size = zlibStream.total_out + 1;

@@ -13,14 +13,14 @@ bool decompressChunk(const uint32_t offset, FILE *regionHandle,
   uint8_t zData[COMPRESSED_BUFFER];
 
   if (0 != FSEEK(regionHandle, offset, SEEK_SET)) {
-    logger::debug("Accessing chunk data in file {} failed: {}\n",
+    logger::debug("Accessing chunk data in file {} failed: {}",
                   filename.string(), strerror(errno));
     return false;
   }
 
   // Read the 5 bytes that give the size and type of data
   if (5 != fread(zData, sizeof(uint8_t), 5, regionHandle)) {
-    logger::debug("Reading chunk size from region file {} failed: {}\n",
+    logger::debug("Reading chunk size from region file {} failed: {}",
                   filename.string(), strerror(errno));
     return false;
   }
@@ -30,7 +30,7 @@ bool decompressChunk(const uint32_t offset, FILE *regionHandle,
   (*length)--; // Sometimes the data is 1 byte smaller
 
   if (fread(zData, sizeof(uint8_t), *length, regionHandle) != *length) {
-    logger::debug("Not enough data for chunk: {}\n", strerror(errno));
+    logger::debug("Not enough data for chunk: {}", strerror(errno));
     return false;
   }
 
@@ -46,7 +46,7 @@ bool decompressChunk(const uint32_t offset, FILE *regionHandle,
   inflateEnd(&zlibStream);
 
   if (status != Z_STREAM_END) {
-    logger::debug("Decompressing chunk data failed: {}\n", zError(status));
+    logger::debug("Decompressing chunk data failed: {}", zError(status));
     return false;
   }
 
@@ -65,13 +65,13 @@ void Data::loadChunk(const ChunkCoordinates coords) {
       fmt::format("r.{}.{}.mca", regionX, regionZ);
 
   if (!std::filesystem::exists(regionFile)) {
-    logger::deep_debug("Region file r.{}.{}.mca does not exist, skipping ..\n",
-                       regionX, regionZ);
+    logger::trace("Region file r.{}.{}.mca does not exist, skipping ..",
+                  regionX, regionZ);
     return;
   }
 
   if (!(regionHandle = fopen(regionFile.string().c_str(), "rb"))) {
-    logger::error("Opening region file `{}` failed: {}\n", regionFile.string(),
+    logger::error("Opening region file `{}` failed: {}", regionFile.string(),
                   strerror(errno));
     return;
   }
@@ -79,7 +79,7 @@ void Data::loadChunk(const ChunkCoordinates coords) {
   // Then, we read the header (of size 4K) storing the chunks locations
   if (fread(regionHeader, sizeof(uint8_t), REGION_HEADER_SIZE, regionHandle) !=
       REGION_HEADER_SIZE) {
-    logger::error("Region header too short in `{}`\n", regionFile.string());
+    logger::error("Region header too short in `{}`", regionFile.string());
     fclose(regionHandle);
     return;
   }

@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <type_traits>
 
-enum DataType { SHORT, INT, LONG, FLOAT, DOUBLE };
+// enum DataType { SHORT, INT, LONG, FLOAT, DOUBLE };
 
 inline void swap16(const uint8_t *src, uint8_t *dest) {
   dest[0] = src[1];

@@ -18,10 +18,10 @@ bool Colors::load(Palette *colors, const json &data) {
   try {
     defined = data.get<Colors::Palette>();
   } catch (const nlohmann::detail::parse_error &err) {
-    logger::error("Parsing JSON data failed: {}\n", err.what());
+    logger::error("Parsing JSON data failed: {}", err.what());
     return false;
   } catch (const std::invalid_argument &err) {
-    logger::error("Parsing JSON data failed: {}\n", err.what());
+    logger::error("Parsing JSON data failed: {}", err.what());
     return false;
   }
 
@@ -36,7 +36,7 @@ bool Colors::load(Palette *colors, const fs::path &color_file) {
   json colors_j;
 
   if (color_file.empty() || !fs::exists(color_file)) {
-    logger::error("Could not open color file `{}`\n", color_file.string());
+    logger::error("Could not open color file `{}`", color_file.string());
     return false;
   }
 
@@ -45,7 +45,7 @@ bool Colors::load(Palette *colors, const fs::path &color_file) {
   try {
     colors_j = json::parse(f);
   } catch (const nlohmann::detail::parse_error &err) {
-    logger::error("Parsing color file `{}` failed: {}\n", color_file.string(),
+    logger::error("Parsing color file `{}` failed: {}", color_file.string(),
                   err.what());
     fclose(f);
     return false;
@@ -55,7 +55,7 @@ bool Colors::load(Palette *colors, const fs::path &color_file) {
   bool status = load(colors, colors_j);
 
   if (!status)
-    logger::error("From file `{}`\n", color_file.string());
+    logger::error("From file `{}`", color_file.string());
 
   return true;
 }
@@ -115,7 +115,7 @@ void Colors::from_json(const json &data, Block &b) {
   if (Colors::stringToType.find(stype) == stringToType.end()) {
     auto pair = erroneous.find(stype);
     if (pair == erroneous.end()) {
-      logger::warn("Block with type {} is either disabled or not implemented\n",
+      logger::warn("Block with type {} is either disabled or not implemented",
                    stype);
       erroneous.insert(std::pair<string, int>(stype, 1));
     } else

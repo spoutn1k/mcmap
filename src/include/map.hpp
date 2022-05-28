@@ -63,6 +63,17 @@ struct Coordinates {
     maxZ = std::min(maxZ, boundaries.maxZ);
   }
 
+  inline bool intersects(const Coordinates &other) {
+    return (((other.minX <= maxX && maxX <= other.maxX) ||
+             (other.minX <= minX && minX <= other.maxX)) &&
+            ((other.minZ <= maxZ && maxZ <= other.maxZ) ||
+             (other.minZ <= minZ && minZ <= other.maxZ))) ||
+           (((minX <= other.maxX && other.maxX <= maxX) ||
+             (minX <= other.minX && other.minX <= maxX)) &&
+            ((minZ <= other.maxZ && other.maxZ <= maxZ) ||
+             (minZ <= other.minZ && other.minZ <= maxZ)));
+  }
+
   std::string to_string() const {
     std::string str_orient = "ERROR";
     switch (orientation) {
@@ -121,7 +132,8 @@ struct Coordinates {
 #undef BYTESPERPIXEL
   }
 
-  void tile(std::vector<Coordinates<Integer>> &fragments, size_t size) const {
+  void fragment(std::vector<Coordinates<Integer>> &fragments,
+                size_t size) const {
     for (Integer x = minX; x <= maxX; x += size) {
       for (Integer z = minZ; z <= maxZ; z += size) {
         Coordinates<Integer> fragment = *this;
