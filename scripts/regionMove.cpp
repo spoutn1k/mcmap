@@ -6,8 +6,6 @@
 #include <unordered_set>
 #include <zlib.h>
 
-SETUP_LOGGER
-
 std::unordered_set<nbt::NBT::tag_string_t> natural = {
 #include "natural.list"
 };
@@ -146,14 +144,14 @@ void process(nbt::NBT &chunk) {
 }
 
 int main(int argc, char **argv) {
-  logger::level = logger::levels::DEEP_DEBUG;
+  logger::set_level(spdlog::level::debug);
   fs::path region_file, target = "r.0.0.mca";
 
   Region origin, destination("target");
   destination.file = target;
 
   if (argc < 2 || !fs::exists((region_file = fs::path(argv[1])))) {
-    logger::error("Usage: {} <Region file>\n", argv[0]);
+    logger::error("Usage: {} <Region file>", argv[0]);
     return 1;
   }
 
