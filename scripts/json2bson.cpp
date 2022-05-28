@@ -13,7 +13,7 @@ using std::filesystem::path;
 
 int main(int argc, char **argv) {
   if (argc > 2) {
-    logger::error("Usage: {} [json file]\n", argv[0]);
+    logger::error("Usage: {} [json file]", argv[0]);
 
     return 1;
   }
@@ -29,7 +29,7 @@ int main(int argc, char **argv) {
     f = fopen(argv[1], "r");
 
   if (!f) {
-    logger::error("{}: Error opening {}: {}\n", argv[0], argv[1],
+    logger::error("{}: Error opening {}: {}", argv[0], argv[1],
                   strerror(errno));
     return 1;
   }
@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
   try {
     data = json::parse(f);
   } catch (const json::parse_error &err) {
-    logger::error("{}: Error parsing {}: {}\n", argv[0], argv[1], err.what());
+    logger::error("{}: Error parsing {}: {}", argv[0], argv[1], err.what());
     fclose(f);
     return 1;
   }

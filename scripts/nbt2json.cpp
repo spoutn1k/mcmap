@@ -5,6 +5,11 @@
 #include <nbt/to_json.hpp>
 #include <zlib.h>
 
+std::string info =
+    "Convert a NBT file (compressed or not) into a JSON file. This operation "
+    "is destructive and cannot be reversed. Extremely useful to easily "
+    "diagnose errors due to format changes.";
+
 #define BUFFERSIZE 2000000
 
 using nlohmann::json;
@@ -14,7 +19,7 @@ using std::filesystem::path;
 int main(int argc, char **argv) {
   if (argc > 2 || (argc == 2 && !exists(path(argv[1]))) ||
       (argc > 2 && !nbt::assert_NBT(argv[1]))) {
-    logger::error("Usage: {} [NBT file]\n", argv[0]);
+    fmt::print(stderr, "Usage: {} [NBT file]\n{}\n", argv[0], info);
     return 1;
   }
 
