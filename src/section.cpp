@@ -6,9 +6,8 @@
 namespace mcmap {
 namespace versions {
 std::map<int, std::function<void(Section *, const nbt::NBT &)>> init = {
-    {2840, init_versions::v2840},
-    {2534, init_versions::v2534},
-    {1628, init_versions::v1628},
+    {3100, init_versions::v3100}, {2840, init_versions::v2840},
+    {2534, init_versions::v2534}, {1628, init_versions::v1628},
     {0, init_versions::catchall},
 };
 } // namespace versions

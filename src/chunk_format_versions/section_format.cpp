@@ -116,7 +116,9 @@ void v1628(Section *target, const nbt::NBT &raw_section) {
 
     // Parse the blockstates for block info
     block_states_versions::pre116(blockBitLength, blockStates, target->blocks);
-  }
+  } else
+    logger::trace("Section {} does not contain BlockStates or Palette !",
+                  target->Y);
 }
 
 void v2534(Section *target, const nbt::NBT &raw_section) {
@@ -138,7 +140,9 @@ void v2534(Section *target, const nbt::NBT &raw_section) {
 
     // Parse the blockstates for block info
     block_states_versions::post116(blockBitLength, blockStates, target->blocks);
-  }
+  } else
+    logger::trace("Section {} does not contain BlockStates or Palette !",
+                  target->Y);
 }
 
 void v2840(Section *target, const nbt::NBT &raw_section) {
@@ -163,7 +167,43 @@ void v2840(Section *target, const nbt::NBT &raw_section) {
 
     // Parse the blockstates for block info
     block_states_versions::post116(blockBitLength, blockStates, target->blocks);
-  }
+  } else
+    logger::trace("Section {} does not contain BlockStates or Palette !",
+                  target->Y);
+}
+
+void v3100(Section *target, const nbt::NBT &raw_section) {
+  // NEW in 1.19, some sections can omit the block_states array when only one
+  // block is present in the palette to signify that the whole section is
+  // filled with one block, so this checks for that special case
+
+  if (raw_section.contains("block_states") &&
+      raw_section["block_states"].contains("palette")) {
+    target->palette = *raw_section["block_states"]["palette"]
+                           .get<const std::vector<nbt::NBT> *>();
+    // Remove the air that is default-constructed
+    target->colors.clear();
+    // Anticipate the color input from the palette's size
+    target->colors.reserve(target->palette.size());
+
+    if (raw_section["block_states"].contains("data")) {
+      const nbt::NBT::tag_long_array_t *blockStates =
+          raw_section["block_states"]["data"]
+              .get<const nbt::NBT::tag_long_array_t *>();
+
+      // The length in bits of a block is the log2 of the palette's size or 4,
+      // whichever is greatest. Ranges from 4 to 12.
+      const uint8_t blockBitLength =
+          std::max(uint8_t(ceil(log2(target->palette.size()))), uint8_t(4));
+
+      // Parse the blockstates for block info
+      block_states_versions::post116(blockBitLength, blockStates,
+                                     target->blocks);
+    } else {
+      target->blocks.fill(0);
+    }
+  } else
+    logger::trace("Section {} does not contain a palette, aborting", target->Y);
 }
 
 void catchall(Section *, const nbt::NBT &) {
