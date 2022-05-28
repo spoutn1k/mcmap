@@ -40,8 +40,11 @@ struct Section {
   }
 
   inline bool empty() const {
+    // Check the state of the section by looking at its palette: a section with
+    // only air does not need to be rendered
     return palette.empty() ||
-           palette[0]["Name"].get<std::string>() == "minecraft:air";
+           (palette.size() == 1 &&
+            palette[0]["Name"].get<std::string>() == "minecraft:air");
   }
 
   inline block_array::value_type block_at(uint8_t x, uint8_t y,
