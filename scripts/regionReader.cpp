@@ -23,25 +23,25 @@ int main(int argc, char **argv) {
   struct tm saved;
 
   if (argc < 2 || !exists(path(argv[1]))) {
-    logger::error("Usage: {} <Region file>\n", argv[0]);
+    logger::error("Usage: {} <Region file>", argv[0]);
     return 1;
   }
 
   if (!(f = fopen(argv[1], "r"))) {
-    logger::error("Error opening file: {}\n", strerror(errno));
+    logger::error("Error opening file: {}", strerror(errno));
     return 1;
   }
 
   if ((length = fread(locations, sizeof(uint8_t), HEADER_SIZE, f)) !=
       HEADER_SIZE) {
-    logger::error("Error reading header, not enough bytes read.\n");
+    logger::error("Error reading header, not enough bytes read.");
     fclose(f);
     return 1;
   }
 
   if ((length = fread(timestamps, sizeof(uint8_t), HEADER_SIZE, f)) !=
       HEADER_SIZE) {
-    logger::error("Error reading header, not enough bytes read.\n");
+    logger::error("Error reading header, not enough bytes read.");
     fclose(f);
     return 1;
   }
@@ -64,7 +64,7 @@ int main(int argc, char **argv) {
       if ((read = fread(data, sizeof(uint8_t), 5, f)) == 5)
         size = _ntohi(data);
       else
-        logger::error("Not enough data read for chunk {} {}\n", chunkX, chunkZ);
+        logger::error("Not enough data read for chunk {} {}", chunkX, chunkZ);
 
       saved = *localtime(&timestamp);
       strftime(time, 80, "%c", &saved);

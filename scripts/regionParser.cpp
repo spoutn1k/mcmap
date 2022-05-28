@@ -12,7 +12,7 @@ int main(int argc, char **argv) {
   fs::path region_file;
 
   if (argc < 2 || !fs::exists((region_file = fs::path(argv[1])))) {
-    logger::error("Usage: {} <Region file>\n", argv[0]);
+    logger::error("Usage: {} <Region file>", argv[0]);
     return 1;
   }
 

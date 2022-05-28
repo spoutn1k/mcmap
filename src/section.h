@@ -40,11 +40,11 @@ struct Section {
   }
 
   inline bool empty() const {
-    // The palette's first block is always air, even if no air is present.
-    // Checking if it is empty is then as simple as checking if another block is
-    // defined.
-
-    return colors.size() < 2;
+    // Check the state of the section by looking at its palette: a section with
+    // only air does not need to be rendered
+    return palette.empty() ||
+           (palette.size() == 1 &&
+            palette[0]["Name"].get<std::string>() == "minecraft:air");
   }
 
   inline block_array::value_type block_at(uint8_t x, uint8_t y,
