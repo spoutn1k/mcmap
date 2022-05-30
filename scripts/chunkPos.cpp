@@ -1,6 +1,6 @@
 #include <logger.hpp>
 
-#define CHUNK(x) (((x) >> 4) & 0xf)
+#define CHUNK(x) (((x) >> 4) & 0x1f)
 #define REGION(x) ((x) >> 9)
 
 std::string info = "This program's purpose is to locate a chunk in the world. "
