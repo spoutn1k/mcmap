@@ -1,6 +1,7 @@
 #pragma once
 
 #include "./colors.h"
+#include <2DCoordinates.hpp>
 #include <nbt/nbt.hpp>
 
 struct Section {
@@ -15,6 +16,8 @@ struct Section {
 
   // The vertical index of the section
   int8_t Y;
+  // Coordinates of the parent chunk, used only for debug
+  Coordinates parent_chunk_coordinates;
 
   block_array blocks;
   color_array colors;
@@ -24,11 +27,12 @@ struct Section {
   block_array::value_type beaconIndex;
 
   Section();
-  Section(const nbt::NBT &, const int);
+  Section(const nbt::NBT &, const int, const Coordinates = {0, 0});
   Section(Section &&other) { *this = std::move(other); }
 
   Section &operator=(Section &&other) {
     Y = other.Y;
+    parent_chunk_coordinates = other.parent_chunk_coordinates;
 
     beaconIndex = other.beaconIndex;
 

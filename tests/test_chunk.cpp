@@ -61,7 +61,7 @@ protected:
     nbt::NBT data;
     nbt::parse(chunk_nbt, chunk_nbt_len, data);
 
-    chunk = mcmap::Chunk(data, colors);
+    chunk = mcmap::Chunk(data, colors, {0, 0});
   }
 };
 

@@ -46,11 +46,13 @@ void Section::loadPalette(const Colors::Palette &defined) {
   }
 }
 
-Section::Section(const nbt::NBT &raw_section, const int dataVersion)
+Section::Section(const nbt::NBT &raw_section, const int dataVersion,
+                 const Coordinates chunk)
     : Section() {
 
   // Get data from the NBT
   Y = raw_section["Y"].get<int8_t>();
+  this->parent_chunk_coordinates = chunk;
 
   auto init_it = compatible(mcmap::versions::init, dataVersion);
 

@@ -14,11 +14,12 @@ struct Chunk {
   using section_array_t = std::vector<section_t>;
   using coordinates = Coordinates;
 
+  coordinates position;
   version_t data_version;
   section_array_t sections;
 
   Chunk();
-  Chunk(const nbt_t &, const Colors::Palette &);
+  Chunk(const nbt_t &, const Colors::Palette &, const coordinates);
   Chunk(Chunk &&);
 
   Chunk &operator=(Chunk &&);

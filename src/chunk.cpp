@@ -26,7 +26,11 @@ std::map<int, std::function<nbt::NBT(const nbt::NBT &)>> sections = {
 
 Chunk::Chunk() : data_version(-1) {}
 
-Chunk::Chunk(const nbt::NBT &data, const Colors::Palette &palette) : Chunk() {
+Chunk::Chunk(const nbt::NBT &data, const Colors::Palette &palette,
+             const coordinates pos)
+    : Chunk() {
+  position = pos;
+
   // If there is nothing to render
   if (data.is_end() || !assert_chunk(data))
     return;
@@ -44,7 +48,7 @@ Chunk::Chunk(const nbt::NBT &data, const Colors::Palette &palette) : Chunk() {
     sections_list = sections_it->second(data);
 
     for (const auto &raw_section : sections_list) {
-      Section section(raw_section, data_version);
+      Section section(raw_section, data_version, this->position);
       section.loadPalette(palette);
       sections.push_back(std::move(section));
     }
@@ -54,6 +58,7 @@ Chunk::Chunk(const nbt::NBT &data, const Colors::Palette &palette) : Chunk() {
 Chunk::Chunk(Chunk &&other) { *this = std::move(other); }
 
 Chunk &Chunk::operator=(Chunk &&other) {
+  position = other.position;
   data_version = other.data_version;
   sections = std::move(other.sections);
 

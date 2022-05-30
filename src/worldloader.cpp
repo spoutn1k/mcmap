@@ -102,7 +102,7 @@ void Data::loadChunk(const ChunkCoordinates coords) {
 
   fclose(regionHandle);
 
-  chunks[coords] = Chunk(data, palette);
+  chunks[coords] = Chunk(data, palette, coords);
 }
 
 const Data::Chunk &Data::chunkAt(const ChunkCoordinates coords,
