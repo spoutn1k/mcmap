@@ -145,6 +145,48 @@ void v2534(Section *target, const nbt::NBT &raw_section) {
                   target->Y);
 }
 
+void v2567(Section *target, const nbt::NBT &raw_section) {
+  if (raw_section.contains("BlockStates") && raw_section.contains("Palette")) {
+    target->palette =
+        *raw_section["Palette"].get<const std::vector<nbt::NBT> *>();
+    const nbt::NBT::tag_long_array_t *blockStates =
+        raw_section["BlockStates"].get<const nbt::NBT::tag_long_array_t *>();
+
+    auto section_parsing = block_states_versions::post116;
+
+    // Remove the air that is default-constructed
+    target->colors.clear();
+    // Anticipate the color input from the palette's size
+    target->colors.reserve(target->palette.size());
+
+    // The length in bits of a block is the log2 of the palette's size or 4,
+    // whichever is greatest. Ranges from 4 to 12.
+    uint8_t blockBitLength =
+        std::max(uint8_t(ceil(log2(target->palette.size()))), uint8_t(4));
+
+    auto states_size = blockStates->size();
+    if (4096 * blockBitLength != 64 * states_size) {
+      auto inflation = 100 * 64 * states_size / (4096 * blockBitLength);
+      logger::trace("Section {} in {} {}: bbl {}, bs {}, {}%", target->Y,
+                    target->parent_chunk_coordinates.x,
+                    target->parent_chunk_coordinates.z, blockBitLength,
+                    states_size, inflation);
+
+      if (inflation > 120) {
+        blockBitLength += 1;
+        section_parsing = block_states_versions::pre116;
+        return;
+      }
+    }
+
+    // Parse the blockstates for block info
+    section_parsing(blockBitLength, blockStates, target->blocks);
+  } else
+    logger::trace("Section {} of DataVersion 2567 does not contain BlockStates "
+                  "or Palette !",
+                  target->Y);
+}
+
 void v2840(Section *target, const nbt::NBT &raw_section) {
   if (raw_section.contains("block_states") &&
       raw_section["block_states"].contains("data") &&
