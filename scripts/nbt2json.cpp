@@ -17,6 +17,9 @@ using std::filesystem::exists;
 using std::filesystem::path;
 
 int main(int argc, char **argv) {
+  auto logger = spdlog::stderr_color_mt("nbt2json");
+  spdlog::set_default_logger(logger);
+
   if (argc > 2 || (argc == 2 && !exists(path(argv[1]))) ||
       (argc > 2 && !nbt::assert_NBT(argv[1]))) {
     fmt::print(stderr, "Usage: {} [NBT file]\n{}\n", argv[0], info);

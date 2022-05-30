@@ -10,6 +10,9 @@ std::string info = "This program's purpose is to locate a chunk in the world. "
 
 int main(int argc, char **argv) {
 
+  auto logger = spdlog::stderr_color_mt("chunkPos");
+  spdlog::set_default_logger(logger);
+
   if (argc < 3) {
     fmt::print(stderr, "Usage: {} <X> <Z>\n{}\n", argv[0], info);
     return 1;

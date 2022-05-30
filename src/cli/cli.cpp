@@ -1,14 +1,10 @@
 #include "../mcmap.h"
 #include "./parse.h"
 
+#include <memory>
+
 #define SUCCESS 0
 #define ERROR 1
-
-#ifdef SNAPSHOT_SUPPORT
-#define SNAPSHOT " Snapshots enabled "
-#else
-#define SNAPSHOT ""
-#endif
 
 void printHelp(char *binary) {
   fmt::print(
@@ -44,6 +40,9 @@ int main(int argc, char **argv) {
   Settings::WorldOptions options;
   Colors::Palette colors;
 
+  auto logger = spdlog::stderr_color_mt("mcmap_cli");
+  spdlog::set_default_logger(logger);
+
   if (argc < 2 || !parseArgs(argc, argv, &options)) {
     printHelp(argv[0]);
     return ERROR;
@@ -58,7 +57,7 @@ int main(int argc, char **argv) {
 
   if (options.mode == Settings::DUMPCOLORS) {
     fmt::print("{}", json(colors).dump());
-    return 0;
+    return SUCCESS;
   } else {
     fmt::print("{}\n", mcmap::version());
   }

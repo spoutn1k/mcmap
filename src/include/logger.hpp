@@ -1,6 +1,6 @@
-#ifndef LOGGER_H_
-#define LOGGER_H_
+#pragma once
 
+#include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 
 namespace logger {
@@ -14,5 +14,3 @@ using spdlog::trace;
 using spdlog::warn;
 
 } // namespace logger
-
-#endif

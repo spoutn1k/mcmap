@@ -39,6 +39,9 @@ int main(int argc, char **argv) {
   size_t length;
   FILE *f;
 
+  auto logger = spdlog::stderr_color_mt("extractChunk");
+  spdlog::set_default_logger(logger);
+
   if (argc < 4 || !exists(path(argv[1])) || !isNumeric(argv[2]) ||
       !isNumeric(argv[3])) {
     fmt::print(stderr, "Usage: {} <Region file> <X> <Z>\n{}\n", argv[0], info);

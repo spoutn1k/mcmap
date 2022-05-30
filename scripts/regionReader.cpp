@@ -1,6 +1,9 @@
 #include <filesystem>
 #include <logger.hpp>
 
+std::string info = "This program will output all the information present in a "
+                   "region header from the file passed as an argument.";
+
 #define BUFFERSIZE 4096
 #define REGIONSIZE 32
 #define HEADER_SIZE REGIONSIZE *REGIONSIZE * 4
@@ -22,8 +25,11 @@ int main(int argc, char **argv) {
   FILE *f;
   struct tm saved;
 
+  auto logger = spdlog::stderr_color_mt("regionReader");
+  spdlog::set_default_logger(logger);
+
   if (argc < 2 || !exists(path(argv[1]))) {
-    logger::error("Usage: {} <Region file>", argv[0]);
+    fmt::print("Usage: {} <Region file>\n{}\n", argv[0], info);
     return 1;
   }
 
