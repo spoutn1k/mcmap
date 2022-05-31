@@ -16,7 +16,9 @@ void v1628(Section *, const nbt::NBT &);
 
 void v2534(Section *, const nbt::NBT &);
 
-void v2567(Section *, const nbt::NBT &);
+#ifdef MINEFLAYER
+void v2567_MINEFLAYER(Section *, const nbt::NBT &);
+#endif
 
 void v2840(Section *, const nbt::NBT &);
 

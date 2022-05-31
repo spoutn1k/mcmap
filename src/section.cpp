@@ -7,8 +7,11 @@ namespace mcmap {
 namespace versions {
 std::map<int, std::function<void(Section *, const nbt::NBT &)>> init = {
     {3100, init_versions::v3100}, {2840, init_versions::v2840},
-    {2567, init_versions::v2567}, {2534, init_versions::v2534},
-    {1628, init_versions::v1628}, {0, init_versions::catchall},
+#ifdef MINEFLAYER
+    {2568, init_versions::v2534}, {2567, init_versions::v2567},
+#endif
+    {2534, init_versions::v2534}, {1628, init_versions::v1628},
+    {0, init_versions::catchall},
 };
 } // namespace versions
 } // namespace mcmap
