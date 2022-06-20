@@ -1,11 +1,7 @@
-FROM ubuntu:latest
-
-# ubuntu prompts the user if tzdata is not set ahead of time
-ENV TZ=US/Eastern
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+FROM gcc:latest
 
 # dependencies
-RUN apt update && apt install make g++ libpng-dev cmake libspdlog-dev libfmt-dev qtbase5-dev qttools5-dev -y
+RUN apt update && apt install cmake libspdlog-dev libfmt-dev -y
 
 # create user
 ENV APPUSER=mcmap
@@ -17,7 +13,7 @@ RUN mkdir /output && chown $APPUSER:$APPUSER /output
 # build
 COPY . /$APPUSER
 RUN cmake -S /$APPUSER -B /$APPUSER/build
-RUN make -C /$APPUSER/build -j
+RUN make -C /$APPUSER/build mcmap
 RUN ln -s /$APPUSER/build/bin/* /bin/
 
 # create a mount point for the minecraft save
