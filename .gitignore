@@ -21,6 +21,11 @@ CMakeFiles/
 Makefile
 cmake_install.cmake
 build
+linux-build/out
+
+#IDE
+.idea/
+*.iml
 
 # Executables
 mcmap

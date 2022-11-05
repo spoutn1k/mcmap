@@ -1,0 +1,25 @@
+# nfpm example config file
+#
+# check https://nfpm.goreleaser.com/configuration for detailed usage
+#
+name: "mcmap"
+arch: "amd64"
+platform: "linux"
+version: "3.0.2"
+section: "default"
+priority: "extra"
+description: |
+  Mcmap is a tool allowing you to create isometric renders of your Minecraft save file.
+maintainer: "Andres Bott <contact@andresbott.com>"
+homepage: "https://github.com/spoutn1k/mcmap"
+license: " GPL-3.0 license"
+contents:
+- src: ./mcmap # this path is mounted into the container
+  dst: /usr/local/bin/mcmap
+overrides:
+  rpm:
+    scripts:
+      postinstall: /app/linux-build/postinstall.sh # this path is copied into the container at build time
+  deb:
+    scripts:
+      postinstall: /app/linux-build/postinstall.sh
