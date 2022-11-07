@@ -16,10 +16,13 @@ license: "GPL-3.0 license"
 contents:
 - src: ./mcmap # this path is mounted into the container
   dst: /usr/local/bin/mcmap
+- src: ./mcmap-gui
+  dst: /usr/local/bin/mcmap-gui
 overrides:
-  rpm:
-    scripts:
-      postinstall: /mcmap/linux-build/postinstall.sh # this path is copied into the container at build time
   deb:
+    depends:
+      - libpng16-16
+      - libgomp1
+      - qtbase5-dev
     scripts:
       postinstall: /mcmap/linux-build/postinstall.sh
