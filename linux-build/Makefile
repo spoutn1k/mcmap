@@ -10,18 +10,16 @@ build-builder: ## build the builder image that contains the source code
 
 build-linux: build-builder ## build for linux using docker
 	@mkdir -p out
-	@docker run -it -v ${PWD_DIR}/out:/out mcmap-builder:latest /bin/bash -c "cd /app && \
-		mkdir -p /app/build && cd /app/build && \
+	@docker run -it --rm -v ${PWD_DIR}/out:/out mcmap-builder:latest /bin/bash -c "mkdir -p /mcmap/build && \
+		cd /mcmap/build && \
 		cmake .. && \
-		make -j && \
-		chmod -R 777 /app/build/bin/* && \
-		cp -R /app/build/bin/* /out"
+		make -j mcmap mcmap-gui && \
+		cp /mcmap/build/bin/* /out"
 
 package-linux: build-linux ## package the just compiled binary
-	@docker run -it -v ${PWD_DIR}/out:/out mcmap-builder:latest /bin/bash -c "cd /out && \
-		pwd && ls -al && \
-		nfpm pkg -f /app/linux-build/nfpm.yaml -p deb"
+	@docker run -it --rm -v ${PWD_DIR}/out:/out mcmap-builder:latest /bin/bash -c "cd /out && \
+		nfpm pkg -f /mcmap/linux-build/nfpm.yaml -p deb"
 
 
 help: ## Show this help
-	@egrep '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST)  | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m·%-20s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST)  | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m·%-20s\033[0m %s\n", $$1, $$2}'
