@@ -21,7 +21,7 @@ CMakeFiles/
 Makefile
 cmake_install.cmake
 build
-linux-build/out
+package-debian/out
 
 #IDE
 .idea/
