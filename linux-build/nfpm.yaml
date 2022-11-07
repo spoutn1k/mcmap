@@ -1,7 +1,6 @@
-# nfpm example config file
-#
-# check https://nfpm.goreleaser.com/configuration for detailed usage
-#
+# mcmap packaging config
+# expects to be run from the `bin` directory
+
 name: "mcmap"
 arch: "amd64"
 platform: "linux"
@@ -16,13 +15,19 @@ license: "GPL-3.0 license"
 contents:
 - src: ./mcmap # this path is mounted into the container
   dst: /usr/local/bin/mcmap
+  file_info:
+    mode: 0755
+    owner: root
+    group: root
 - src: ./mcmap-gui
   dst: /usr/local/bin/mcmap-gui
+  file_info:
+    mode: 0755
+    owner: root
+    group: root
 overrides:
   deb:
     depends:
       - libpng16-16
       - libgomp1
       - qtbase5-dev
-    scripts:
-      postinstall: /mcmap/linux-build/postinstall.sh
