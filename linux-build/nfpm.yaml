@@ -12,14 +12,14 @@ description: |
   Mcmap is a tool allowing you to create isometric renders of your Minecraft save file.
 maintainer: "Andres Bott <contact@andresbott.com>"
 homepage: "https://github.com/spoutn1k/mcmap"
-license: " GPL-3.0 license"
+license: "GPL-3.0 license"
 contents:
 - src: ./mcmap # this path is mounted into the container
   dst: /usr/local/bin/mcmap
 overrides:
   rpm:
     scripts:
-      postinstall: /app/linux-build/postinstall.sh # this path is copied into the container at build time
+      postinstall: /mcmap/linux-build/postinstall.sh # this path is copied into the container at build time
   deb:
     scripts:
-      postinstall: /app/linux-build/postinstall.sh
+      postinstall: /mcmap/linux-build/postinstall.sh
