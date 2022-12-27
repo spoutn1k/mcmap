@@ -21,6 +21,7 @@ FIND_PACKAGE(OpenMP)
 FIND_PACKAGE(GTest)
 FIND_PACKAGE(Qt5 COMPONENTS Widgets LinguistTools)
 FIND_PACKAGE(Git)
+FIND_PACKAGE(nlohmann_json)
 
 IF (Git_FOUND)
     # Copy the git index to a random unused file to trigger a reconfigure

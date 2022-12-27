@@ -32,7 +32,8 @@ TARGET_LINK_LIBRARIES(
     ZLIB::ZLIB
     PNG::PNG
     fmt::fmt-header-only
-    spdlog::spdlog_header_only)
+    spdlog::spdlog_header_only
+    nlohmann_json::nlohmann_json)
 
 IF (Git_FOUND)
     SET_SOURCE_FILES_PROPERTIES(

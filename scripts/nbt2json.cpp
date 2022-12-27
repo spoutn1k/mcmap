@@ -1,5 +1,5 @@
 #include <filesystem>
-#include <json.hpp>
+#include <nlohmann/json.hpp>
 #include <logger.hpp>
 #include <nbt/parser.hpp>
 #include <nbt/to_json.hpp>

@@ -2,7 +2,7 @@
 #ifndef NBT_TO_JSON_HPP_
 #define NBT_TO_JSON_HPP_
 
-#include <json.hpp>
+#include <nlohmann/json.hpp>
 #include <nbt/nbt.hpp>
 
 using nlohmann::json;
