@@ -129,7 +129,8 @@ int render(const Settings::WorldOptions &options, const Colors::Palette &colors,
 
   if (options.tile_size &&
       writeMapInfo(options.outFile, merged, options.tile_size)) {
-    save_status = merged.tile(options.outFile, options.tile_size, cb);
+    save_status = merged.tile_scale(options.outFile, options.tile_size, 1, cb);
+    // save_status = merged.tile(options.outFile, options.tile_size, cb);
   } else {
     save_status = merged.save(options.outFile, options.padding, cb);
   }

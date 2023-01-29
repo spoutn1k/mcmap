@@ -114,6 +114,103 @@ bool Canvas::save(const std::filesystem::path file, const uint8_t padding,
   return true;
 }
 
+void scale_buffer(const std::vector<uint8_t> &buffer,
+                  std::vector<uint8_t> &output, uint8_t scale, uint16_t size) {
+  /// Perform 1D liner interpolation over a buffer, and add the results to the
+  /// output buffer.
+  ///
+  /// For a buffer [r1,g1,b1,a1, r2,g2,b2,a2, r3,g3,b3,a3, r4,g4,b4,a4] scale 2
+  /// would populate : [(r1+r2)/4, (g1+g2)/4, (b1+b2)/4, (a1+a2)/4, (r3+r4)/4,
+  /// (g3+g4)/4, (b3+b4)/4, (a3+a4)/4]
+  for (auto pixel = 0; pixel < size; pixel++) {
+    for (auto merged = 0; merged < scale; merged++) {
+      memcpy(&output[pixel * BYTESPERPIXEL],
+             &buffer[(pixel + merged) * BYTESPERPIXEL * scale], BYTESPERPIXEL);
+    }
+  }
+}
+
+bool Canvas::tile_scale(const fs::path file, uint16_t tilesize, uint8_t scale,
+                        Progress::Callback notify) const {
+  Progress::Status progress(height(), notify, Progress::TILING);
+
+  uint8_t zoom_level = 1;
+  uint16_t pixels_per_tile = tilesize * scale;
+  uint16_t tilesX =
+      width() / pixels_per_tile + (width() % pixels_per_tile ? 1 : 0);
+  uint16_t tilesY =
+      height() / pixels_per_tile + (height() % pixels_per_tile ? 1 : 0);
+
+  size_t full_buffer_size = tilesX * pixels_per_tile * BYTESPERPIXEL;
+  std::vector<uint8_t> full_buffer;
+  full_buffer.resize(full_buffer_size);
+
+  size_t scaled_buffer_size = tilesX * tilesize * BYTESPERPIXEL;
+  std::vector<uint8_t> scaled_buffer;
+  scaled_buffer.resize(scaled_buffer_size);
+
+  std::vector<PNG::PNGWriter> row;
+  std::error_code dir_creation_error;
+
+  auto zoom_dir = file / std::to_string(zoom_level);
+
+  for (uint16_t x = 0; x < tilesX; x++) {
+    // Create all the directories needed to output the tiles
+    fs::path row_dir = zoom_dir / std::to_string(x);
+    fs::create_directories(row_dir, dir_creation_error);
+    if (dir_creation_error) {
+      logger::error("Failed to create directory {}: {}",
+                    row_dir.string().c_str(), dir_creation_error.message());
+      return false;
+    }
+  }
+
+  for (uint16_t y = 0; y < tilesY; y++) {
+    progress.increment(tilesize);
+
+    // Initialize the PNG files to output to and put them in the row vector
+    for (uint16_t x = 0; x < tilesX; x++) {
+      auto tile =
+          PNG::PNGWriter(fmt::format("{}/{}/{}.png", zoom_dir.string(), x, y));
+      tile.set_padding(0);
+      tile.set_width(tilesize);
+      tile.set_height(tilesize);
+      PNG::Comments comments = {
+          {"Software", VERSION},
+          {"Coordinates", map.to_string()},
+          {"Tile", fmt::format("{}.{}", x, y)},
+      };
+
+      tile.set_text(comments);
+      row.emplace_back(std::move(tile));
+    }
+
+    // For the next tilesize lines
+    for (uint16_t line = 0; line < tilesize; line++) {
+      memset(&full_buffer[0], 0, full_buffer_size);
+      memset(&scaled_buffer[0], 0, scaled_buffer_size);
+
+      for (auto merged = 0; merged < scale; merged++) {
+        getLine(&full_buffer[0], full_buffer_size,
+                (y * tilesize + line) * scale + merged);
+        scale_buffer(full_buffer, scaled_buffer, scale, width() / scale);
+      }
+
+      for (uint16_t x = 0; x < tilesX; x++) {
+        auto output_buffer = row[x].getBuffer();
+        memcpy(output_buffer, &scaled_buffer[x * tilesize * BYTESPERPIXEL],
+               tilesize * BYTESPERPIXEL);
+        row[x].writeLine();
+      }
+    }
+
+    // Delete all the PNG files, triggering close
+    row.clear();
+  }
+
+  return true;
+}
+
 bool Canvas::tile(const fs::path file, uint16_t tilesize,
                   Progress::Callback notify) const {
   Progress::Status progress(height(), notify, Progress::TILING);
