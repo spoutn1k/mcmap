@@ -11,9 +11,10 @@ namespace mcmap {
 
 bool writeMapInfo(fs::path outFile, const Canvas &finalImage,
                   const uint32_t tileSize) {
-  json data({{"imageDimensions", {finalImage.width(), finalImage.height()}},
-             {"layerLocation", outFile.string()},
-             {"tileSize", tileSize}});
+  json data(
+      {{"imageDimensions", {finalImage.width() / 8, finalImage.height() / 8}},
+       {"layerLocation", outFile.string()},
+       {"tileSize", tileSize}});
 
   fs::path infoFile = outFile / "mapinfo.json";
   std::ofstream infoStream;
@@ -129,8 +130,7 @@ int render(const Settings::WorldOptions &options, const Colors::Palette &colors,
 
   if (options.tile_size &&
       writeMapInfo(options.outFile, merged, options.tile_size)) {
-    save_status = merged.tile_scale(options.outFile, options.tile_size, 1, cb);
-    // save_status = merged.tile(options.outFile, options.tile_size, cb);
+    save_status = merged.tile(options.outFile, options.tile_size, 3, cb);
   } else {
     save_status = merged.save(options.outFile, options.padding, cb);
   }

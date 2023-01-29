@@ -81,7 +81,7 @@ struct Canvas {
 
   bool save(const std::filesystem::path, uint8_t = 0,
             Progress::Callback = Progress::Status::quiet) const;
-  bool tile(const std::filesystem::path, uint16_t tilesize,
+  bool tile(const std::filesystem::path, uint16_t tilesize, uint8_t zoom_levels,
             Progress::Callback = Progress::Status::quiet) const;
   bool tile_scale(const std::filesystem::path, uint16_t tilesize, uint8_t scale,
                   Progress::Callback = Progress::Status::quiet) const;
