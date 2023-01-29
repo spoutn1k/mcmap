@@ -118,6 +118,7 @@ bool Canvas::tile(const fs::path file, uint16_t tilesize,
                   Progress::Callback notify) const {
   Progress::Status progress(height(), notify, Progress::TILING);
 
+  uint8_t zoom_level = 0;
   uint16_t tilesX = width() / tilesize + (width() % tilesize ? 1 : 0);
   uint16_t tilesY = height() / tilesize + (height() % tilesize ? 1 : 0);
 
@@ -128,9 +129,11 @@ bool Canvas::tile(const fs::path file, uint16_t tilesize,
   std::vector<PNG::PNGWriter> row;
   std::error_code dir_creation_error;
 
+  auto zoom_dir = file / std::to_string(zoom_level);
+
   for (uint16_t x = 0; x < tilesX; x++) {
     // Create all the directories needed to output the tiles
-    fs::path row_dir = file / std::to_string(x);
+    fs::path row_dir = zoom_dir / std::to_string(x);
     fs::create_directories(row_dir, dir_creation_error);
     if (dir_creation_error) {
       logger::error("Failed to create directory {}: {}",
@@ -145,7 +148,7 @@ bool Canvas::tile(const fs::path file, uint16_t tilesize,
 
     for (uint16_t x = 0; x < tilesX; x++) {
       auto tile =
-          PNG::PNGWriter(fmt::format("{}/{}/{}.png", file.string(), x, y));
+          PNG::PNGWriter(fmt::format("{}/{}/{}.png", zoom_dir.string(), x, y));
       tile.set_padding(0);
       tile.set_width(tilesize);
       tile.set_height(tilesize);

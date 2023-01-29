@@ -53,18 +53,19 @@
             const map = L.map('map', {
                 crs: L.CRS.Simple,
                 center: data.mapCenter,
-                zoomControl: false,
-                scrollWheelZoom: false,
                 zoom: 0,
+                zoomControl: true,
+                zoomSnap: .75,
+                scrollWheelZoom: false,
                 maxBounds: [
                     [0, 0],
                     data.mapDimensions,
                 ],
+                maxBoundsViscosity: 1,
             });
 
-            L.tileLayer(data.layerLocation + '/{x}/{y}.png', {
+            L.tileLayer(data.layerLocation + '/{z}/{x}/{y}.png', {
                 tileSize: data.tileSize,
-                zoomOffset: -1,
             }).addTo(map);
         }
     </script>
