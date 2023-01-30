@@ -54,9 +54,11 @@
                 crs: L.CRS.Simple,
                 center: data.mapCenter,
                 zoom: 0,
+                minZoom: 0,
+                maxZoom: data.zoomLevels,
                 zoomControl: true,
-                zoomSnap: .75,
-                scrollWheelZoom: false,
+                zoomSnap: .5,
+                scrollWheelZoom: true,
                 maxBounds: [
                     [0, 0],
                     data.mapDimensions,

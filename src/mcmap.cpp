@@ -10,11 +10,15 @@
 namespace mcmap {
 
 bool writeMapInfo(fs::path outFile, const Canvas &finalImage,
-                  const uint32_t tileSize) {
-  json data(
-      {{"imageDimensions", {finalImage.width() / 8, finalImage.height() / 8}},
-       {"layerLocation", outFile.string()},
-       {"tileSize", tileSize}});
+                  const uint32_t tileSize, const uint8_t zoom_levels) {
+  auto zoom_scale = pow(2, zoom_levels);
+  json data({
+      {"imageDimensions",
+       {finalImage.width() / zoom_scale, finalImage.height() / zoom_scale}},
+      {"layerLocation", outFile.string()},
+      {"tileSize", tileSize},
+      {"zoomLevels", zoom_levels},
+  });
 
   fs::path infoFile = outFile / "mapinfo.json";
   std::ofstream infoStream;
@@ -129,8 +133,10 @@ int render(const Settings::WorldOptions &options, const Colors::Palette &colors,
   bool save_status;
 
   if (options.tile_size &&
-      writeMapInfo(options.outFile, merged, options.tile_size)) {
-    save_status = merged.tile(options.outFile, options.tile_size, 3, cb);
+      writeMapInfo(options.outFile, merged, options.tile_size,
+                   options.zoom_levels)) {
+    save_status = merged.tile(options.outFile, options.tile_size,
+                              options.zoom_levels, cb);
   } else {
     save_status = merged.save(options.outFile, options.padding, cb);
   }

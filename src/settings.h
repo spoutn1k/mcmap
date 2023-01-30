@@ -16,6 +16,7 @@ const string OUTPUT_DEFAULT = "output.png";
 const string OUTPUT_TILED_DEFAULT = "output";
 const size_t PADDING_DEFAULT = 5;
 const size_t TILE_SIZE_DEFAULT = 0;
+const size_t ZOOM_LEVELS_DEFAULT = 3;
 
 enum Action { RENDER, DUMPCOLORS, HELP };
 
@@ -35,6 +36,7 @@ struct WorldOptions {
   uint16_t padding;
   bool hideWater, hideBeacons, shading, lighting;
   size_t tile_size; // 0 means no tiling
+  uint8_t zoom_levels;
 
   // Marker storage
   uint8_t totalMarkers;
@@ -55,6 +57,7 @@ struct WorldOptions {
     hideWater = hideBeacons = shading = lighting = false;
     padding = PADDING_DEFAULT;
     tile_size = TILE_SIZE_DEFAULT;
+    zoom_levels = ZOOM_LEVELS_DEFAULT;
 
     totalMarkers = 0;
 
