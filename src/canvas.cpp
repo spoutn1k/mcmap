@@ -118,10 +118,6 @@ void scale_buffer(const std::vector<uint8_t> &buffer,
                   std::vector<uint8_t> &output, uint8_t scale, uint16_t size) {
   /// Perform 1D liner interpolation over a buffer, and add the results to the
   /// output buffer.
-  ///
-  /// For a buffer [r1,g1,b1,a1, r2,g2,b2,a2, r3,g3,b3,a3, r4,g4,b4,a4] scale 2
-  /// would populate : [(r1+r2)/4, (g1+g2)/4, (b1+b2)/4, (a1+a2)/4, (r3+r4)/4,
-  /// (g3+g4)/4, (b3+b4)/4, (a3+a4)/4]
   for (auto pixel = 0; pixel < size; pixel++) {
     for (auto merged = 0; merged < scale; merged++) {
       memcpy(&output[pixel * BYTESPERPIXEL],
@@ -187,11 +183,8 @@ bool Canvas::tile_scale(const fs::path zoom_dir, uint16_t tilesize,
       memset(&full_buffer[0], 0, full_buffer_size);
       memset(&scaled_buffer[0], 0, scaled_buffer_size);
 
-      for (auto merged = 0; merged < scale; merged++) {
-        getLine(&full_buffer[0], full_buffer_size,
-                (y * tilesize + line) * scale + merged);
-        scale_buffer(full_buffer, scaled_buffer, scale, width() / scale);
-      }
+      getLine(&full_buffer[0], full_buffer_size, (y * tilesize + line) * scale);
+      scale_buffer(full_buffer, scaled_buffer, scale, width() / scale);
 
       for (uint16_t x = 0; x < tilesX; x++) {
         auto output_buffer = row[x].getBuffer();
