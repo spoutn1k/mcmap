@@ -1,5 +1,6 @@
 #include "./mcmap.h"
 #include <counter.hpp>
+#include <marker_png.h>
 
 #ifdef _OPENMP
 #define THREADS omp_get_max_threads()
@@ -11,6 +12,20 @@ namespace mcmap {
 
 bool writeMapInfo(fs::path outFile, const Canvas &finalImage,
                   const uint32_t tileSize, const uint8_t zoom_levels) {
+  fs::path markerFile = outFile / "marker.png";
+  std::ofstream markerStream;
+
+  try {
+    markerStream.open(markerFile.string());
+  } catch (const std::exception &err) {
+    logger::error("Failed to open {} for writing: {}", markerFile.string(),
+                  err.what());
+    return false;
+  }
+
+  markerStream.write((const char *)&map_marker_png[0], map_marker_png_len);
+  markerStream.close();
+
   auto zoom_scale = pow(2, zoom_levels);
   json data({
       {"imageDimensions",
@@ -18,6 +33,7 @@ bool writeMapInfo(fs::path outFile, const Canvas &finalImage,
       {"layerLocation", outFile.string()},
       {"tileSize", tileSize},
       {"zoomLevels", zoom_levels},
+      {"marker", markerFile.string()},
   });
 
   fs::path infoFile = outFile / "mapinfo.json";

@@ -66,9 +66,27 @@
                 maxBoundsViscosity: 1,
             });
 
+            const defaultIcon = L.icon({
+                iconUrl: data.marker,
+                iconSize: [15, 21],
+                iconAnchor: [8, 21],
+                popupAnchor: [0, -25],
+            });
+
             L.tileLayer(data.layerLocation + '/{z}/{x}/{y}.png', {
                 tileSize: data.tileSize,
             }).addTo(map);
+
+            var layerGroup = new L.LayerGroup().addTo(map);
+            var layerControl = L.control.layers({}, {
+                "Markers": layerGroup
+            }).addTo(map);
+
+            L.marker([-height / 2, width / 2], {
+                "icon": defaultIcon,
+                "title": "My first marker !",
+                "opacity": 1,
+            }).bindPopup("Sup bro").addTo(layerGroup);
         }
     </script>
 </body>
