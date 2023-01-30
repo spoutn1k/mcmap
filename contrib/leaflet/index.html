@@ -67,7 +67,7 @@
             });
 
             const defaultIcon = L.icon({
-                iconUrl: data.marker,
+                iconUrl: data.markerIcon,
                 iconSize: [15, 21],
                 iconAnchor: [8, 21],
                 popupAnchor: [0, -25],
@@ -82,11 +82,14 @@
                 "Markers": layerGroup
             }).addTo(map);
 
-            L.marker([-height / 2, width / 2], {
-                "icon": defaultIcon,
-                "title": "My first marker !",
-                "opacity": 1,
-            }).bindPopup("Sup bro").addTo(layerGroup);
+            data.markers.map(marker => {
+                let [width, height] = marker.coordinates;
+                L.marker([-height, width], {
+                    "icon": defaultIcon,
+                    "title": marker.title,
+                    "opacity": 1,
+                }).bindPopup(marker.title).addTo(layerGroup);
+            });
         }
     </script>
 </body>

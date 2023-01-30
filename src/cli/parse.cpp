@@ -97,13 +97,15 @@ bool parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
     } else if (strcmp(option, "-dumpcolors") == 0) {
       opts->mode = Settings::DUMPCOLORS;
     } else if (strcmp(option, "-marker") == 0) {
-      if (!MOREARGS(3) || !(isNumeric(POLLARG(1)) && isNumeric(POLLARG(2)))) {
-        logger::error("{} needs three arguments: x z color", option);
+      if (!MOREARGS(1)) {
+        logger::error("{} needs one argument", option);
         return false;
       }
-      int x = atoi(NEXTARG), z = atoi(NEXTARG);
-      opts->markers[opts->totalMarkers++] =
-          Colors::Marker(x, z, std::string(NEXTARG));
+      opts->markerFile = NEXTARG;
+      if (!ISPATH(opts->markerFile)) {
+        logger::error("File {} does not exist", opts->markerFile.string());
+        return false;
+      }
     } else if (strcmp(option, "-nw") == 0) {
       opts->boundaries.orientation = Map::NW;
     } else if (strcmp(option, "-sw") == 0) {

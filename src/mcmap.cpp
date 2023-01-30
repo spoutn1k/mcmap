@@ -11,7 +11,8 @@
 namespace mcmap {
 
 bool writeMapInfo(fs::path outFile, const Canvas &finalImage,
-                  const uint32_t tileSize, const uint8_t zoom_levels) {
+                  const uint32_t tileSize, const uint8_t zoom_levels,
+                  std::vector<Markers::Marker> &markers) {
   fs::path markerFile = outFile / "marker.png";
   std::ofstream markerStream;
 
@@ -27,13 +28,22 @@ bool writeMapInfo(fs::path outFile, const Canvas &finalImage,
   markerStream.close();
 
   auto zoom_scale = pow(2, zoom_levels);
+
+  for (auto &marker : markers) {
+    finalImage.block_pos(marker.x, marker.y, marker.z, marker.map_x,
+                         marker.map_y);
+    marker.map_x = marker.map_x / zoom_scale;
+    marker.map_y = marker.map_y / zoom_scale;
+  }
+
   json data({
       {"imageDimensions",
        {finalImage.width() / zoom_scale, finalImage.height() / zoom_scale}},
       {"layerLocation", outFile.string()},
       {"tileSize", tileSize},
       {"zoomLevels", zoom_levels},
-      {"marker", markerFile.string()},
+      {"markerIcon", markerFile.string()},
+      {"markers", markers},
   });
 
   fs::path infoFile = outFile / "mapinfo.json";
@@ -54,7 +64,7 @@ bool writeMapInfo(fs::path outFile, const Canvas &finalImage,
 }
 
 int render(const Settings::WorldOptions &options, const Colors::Palette &colors,
-           Progress::Callback cb) {
+           std::vector<Markers::Marker> &markers, Progress::Callback cb) {
   logger::debug("Rendering {} with {}", options.save.name,
                 options.boundaries.to_string());
 
@@ -104,7 +114,6 @@ int render(const Settings::WorldOptions &options, const Colors::Palette &colors,
       // Draw the terrain fragment
       canvas.shading = options.shading;
       canvas.lighting = options.lighting;
-      canvas.setMarkers(options.totalMarkers, options.markers);
       canvas.renderTerrain(world);
 
       if (!canvas.empty()) {
@@ -145,12 +154,11 @@ int render(const Settings::WorldOptions &options, const Colors::Palette &colors,
   }
 
   begin = std::chrono::high_resolution_clock::now();
-
   bool save_status;
 
   if (options.tile_size &&
       writeMapInfo(options.outFile, merged, options.tile_size,
-                   options.zoom_levels)) {
+                   options.zoom_levels, markers)) {
     save_status = merged.tile(options.outFile, options.tile_size,
                               options.zoom_levels, cb);
   } else {

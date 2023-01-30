@@ -57,6 +57,19 @@ struct Canvas {
     return 0;
   }
 
+  bool block_pos(const int32_t x, const int16_t y, const int32_t z,
+                 int32_t &final_x, int32_t &final_y) const {
+    if (x > map.maxX || x < map.minX || z > map.maxZ || z < map.minZ ||
+        y > map.maxY || y < map.minY) {
+      return false;
+    }
+    World::Coordinates block(x, y, z, x, y, z);
+    final_x = block.offsetX(map);
+    final_y = block.offsetY(map) + (map.maxY - y) * BLOCKHEIGHT;
+
+    return true;
+  }
+
   virtual size_t getLine(uint8_t *buffer, size_t size, uint64_t line) const {
     switch (type) {
     case BYTES:

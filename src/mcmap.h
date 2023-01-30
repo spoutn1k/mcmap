@@ -10,6 +10,7 @@
 namespace mcmap {
 
 int render(const Settings::WorldOptions &, const Colors::Palette &,
+           std::vector<Markers::Marker> &,
            Progress::Callback = Progress::Status::quiet);
 
 std::string version();

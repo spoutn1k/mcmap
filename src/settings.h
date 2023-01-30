@@ -3,6 +3,7 @@
 
 #include "./colors.h"
 #include "./helper.h"
+#include "./marker.h"
 #include "./savefile.h"
 #include <cstdint>
 #include <filesystem>
@@ -25,7 +26,7 @@ struct WorldOptions {
   Action mode;
 
   // Files to use
-  fs::path outFile, colorFile;
+  fs::path outFile, colorFile, markerFile;
 
   // Map boundaries
   SaveFile save;
@@ -37,10 +38,6 @@ struct WorldOptions {
   bool hideWater, hideBeacons, shading, lighting;
   size_t tile_size; // 0 means no tiling
   uint8_t zoom_levels;
-
-  // Marker storage
-  uint8_t totalMarkers;
-  std::array<Colors::Marker, 256> markers;
 
   // Memory limits
   size_t mem_limit;
@@ -58,8 +55,6 @@ struct WorldOptions {
     padding = PADDING_DEFAULT;
     tile_size = TILE_SIZE_DEFAULT;
     zoom_levels = ZOOM_LEVELS_DEFAULT;
-
-    totalMarkers = 0;
 
     // Default 3.5G of memory maximum
     mem_limit = 3500 * uint64_t(1024 * 1024);

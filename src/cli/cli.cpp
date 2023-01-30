@@ -39,6 +39,7 @@ void printHelp(char *binary) {
 int main(int argc, char **argv) {
   Settings::WorldOptions options;
   Colors::Palette colors;
+  std::vector<Markers::Marker> markers;
 
   auto logger = spdlog::stderr_color_mt("mcmap_cli");
   spdlog::set_default_logger(logger);
@@ -55,6 +56,10 @@ int main(int argc, char **argv) {
   if (!options.colorFile.empty())
     Colors::load(&colors, options.colorFile);
 
+  // If requested, load markers from file
+  if (!options.markerFile.empty())
+    Markers::load(markers, options.markerFile);
+
   if (options.mode == Settings::DUMPCOLORS) {
     fmt::print("{}", json(colors).dump());
     return SUCCESS;
@@ -69,7 +74,7 @@ int main(int argc, char **argv) {
   if (options.hideBeacons)
     colors["mcmap:beacon_beam"] = Colors::Block();
 
-  if (!mcmap::render(options, colors, Progress::Status::ascii)) {
+  if (!mcmap::render(options, colors, markers, Progress::Status::ascii)) {
     logger::error("Error rendering terrain.");
     return ERROR;
   }

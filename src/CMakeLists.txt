@@ -9,21 +9,22 @@ ADD_CUSTOM_COMMAND(OUTPUT ${BSON}
 
 SET(SOURCES ${SOURCES}
     ${BSON}
-    blocktypes.def
     block_drawers.cpp
+    blocktypes.def
     canvas.cpp
     chunk.cpp
+    chunk_format_versions/assert.cpp
+    chunk_format_versions/get_section.cpp
+    chunk_format_versions/section_format.cpp
     colors.cpp
     helper.cpp
+    marker.cpp
     mcmap.cpp
     png.cpp
     savefile.cpp
     section.cpp
     settings.cpp
     worldloader.cpp
-    chunk_format_versions/assert.cpp
-    chunk_format_versions/get_section.cpp
-    chunk_format_versions/section_format.cpp
     VERSION)
 
 ADD_LIBRARY(mcmap_core STATIC ${SOURCES})
