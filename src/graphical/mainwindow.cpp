@@ -33,6 +33,7 @@ World::Coordinates current_dim_bounds = World::Coordinates();
 Map::Orientation selected_orientation = Map::NW;
 extern Colors::Palette default_palette;
 Colors::Palette custom_palette, file_colors;
+std::vector<Markers::Marker> markers;
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
@@ -533,7 +534,7 @@ void Renderer::render() {
   };
 
   emit startRender();
-  mcmap::render(options, custom_palette, update);
+  mcmap::render(options, custom_palette, markers, update);
   emit resultReady();
 }
 
