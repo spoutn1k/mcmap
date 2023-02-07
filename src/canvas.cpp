@@ -10,7 +10,7 @@ Terrain::Data::ChunkCoordinates sum(Terrain::Data::ChunkCoordinates lhs,
 size_t Canvas::_get_line(const uint8_t *data, uint8_t *buffer, size_t bufSize,
                          uint64_t y) const {
   const uint8_t *start = data + y * width() * BYTESPERPIXEL;
-  uint8_t tmpPixel[4];
+  // uint8_t tmpPixel[4];
 
   if (y > height())
     return 0;
@@ -21,12 +21,15 @@ size_t Canvas::_get_line(const uint8_t *data, uint8_t *buffer, size_t bufSize,
     const uint8_t *data = start + i * BYTESPERPIXEL;
 
     // If the subCanvas is empty here, or the canvas already has a pixel
-    if (!data[3] || (buffer + i * BYTESPERPIXEL)[3] == 0xff)
+    if (!data[3])
       continue;
 
-    memcpy(tmpPixel, buffer + i * BYTESPERPIXEL, BYTESPERPIXEL);
+    if ((buffer + i * BYTESPERPIXEL)[3] == 0xff)
+      continue;
+
+    // memcpy(tmpPixel, buffer + i * BYTESPERPIXEL, BYTESPERPIXEL);
     memcpy(buffer + i * BYTESPERPIXEL, data, BYTESPERPIXEL);
-    blend(buffer + i * BYTESPERPIXEL, tmpPixel);
+    // blend(buffer + i * BYTESPERPIXEL, tmpPixel);
   }
 
   return boundary;
@@ -44,7 +47,7 @@ size_t Canvas::_get_line(PNG::PNGReader *data, uint8_t *buffer, size_t bufSize,
   size_t requested = std::min(bufSize, width() * data->_bytesPerPixel);
 
   read_bytes.reserve(requested);
-  uint8_t tmpPixel[4];
+  // uint8_t tmpPixel[4];
   data->getLine(&read_bytes[0], requested);
 
   for (size_t i = 0; i < width(); i++) {
@@ -54,9 +57,9 @@ size_t Canvas::_get_line(PNG::PNGReader *data, uint8_t *buffer, size_t bufSize,
     if (!read_pixel[3] || (buffer + i * BYTESPERPIXEL)[3] == 0xff)
       continue;
 
-    memcpy(tmpPixel, buffer + i * BYTESPERPIXEL, BYTESPERPIXEL);
+    // memcpy(tmpPixel, buffer + i * BYTESPERPIXEL, BYTESPERPIXEL);
     memcpy(buffer + i * BYTESPERPIXEL, read_pixel, BYTESPERPIXEL);
-    blend(buffer + i * BYTESPERPIXEL, tmpPixel);
+    // blend(buffer + i * BYTESPERPIXEL, tmpPixel);
   }
 
   return requested;

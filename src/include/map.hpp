@@ -132,17 +132,17 @@ struct Coordinates {
 #undef BYTESPERPIXEL
   }
 
-  void fragment(std::vector<Coordinates<Integer>> &fragments,
-                size_t size) const {
+  void fragment(std::vector<Coordinates<Integer>> &fragments, size_t size,
+                size_t margin = 64) const {
     for (Integer x = minX; x <= maxX; x += size) {
       for (Integer z = minZ; z <= maxZ; z += size) {
         Coordinates<Integer> fragment = *this;
 
         fragment.minX = x;
-        fragment.maxX = std::min(Integer(x + size - 1), maxX);
+        fragment.maxX = std::min(Integer(x + size + margin - 1), maxX);
 
         fragment.minZ = z;
-        fragment.maxZ = std::min(Integer(z + size - 1), maxZ);
+        fragment.maxZ = std::min(Integer(z + size + margin - 1), maxZ);
 
         fragments.push_back(fragment);
       }
