@@ -97,6 +97,8 @@ void Data::loadChunk(const ChunkCoordinates coords) {
 
   if (!nbt::parse(chunkBuffer, length, data) || !Chunk::assert_chunk(data)) {
     fclose(regionHandle);
+    logger::trace("Chunk parsing failed for chunk {} {} in {}", coords.x,
+                  coords.z, regionFile.c_str());
     return;
   }
 
@@ -121,8 +123,10 @@ const Data::Chunk &Data::chunkAt(const ChunkCoordinates coords,
   }
 
   auto query = chunks.find(coords);
-  if (query == chunks.end())
+  if (query == chunks.end()) {
+    logger::trace("Chunk loading failed for {} {}", coords.x, coords.z);
     return empty_chunk;
+  }
 
   return query->second;
 }

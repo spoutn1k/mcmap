@@ -8,7 +8,7 @@ namespace mcmap {
 
 namespace versions {
 std::map<int, std::function<bool(const nbt::NBT &)>> assert = {
-    {2844, assert_versions::v2844},
+    {3465, assert_versions::v3465}, {2844, assert_versions::v2844},
 #ifdef SNAPSHOT_SUPPORT
     {2840, assert_versions::v2840},
 #endif
@@ -68,14 +68,19 @@ Chunk &Chunk::operator=(Chunk &&other) {
 bool Chunk::assert_chunk(const nbt::NBT &chunk) {
   if (chunk.is_end()                     // Catch uninitialized chunks
       || !chunk.contains("DataVersion")) // Dataversion is required
+  {
+    logger::trace("Chunk is empty or invalid");
     return false;
+  }
 
   const int version = chunk["DataVersion"].get<int>();
 
   auto assert_it = compatible(versions::assert, version);
 
-  if (assert_it == versions::assert.end())
+  if (assert_it == versions::assert.end()) {
+    logger::trace("Unsupported chunk version: {}", version);
     return false;
+  }
 
   return assert_it->second(chunk);
 }
