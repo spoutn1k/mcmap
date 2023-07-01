@@ -1,6 +1,10 @@
 # `mcmap` - Isometric map visualizer
 
-![](https://img.shields.io/badge/version-1.16.5-success) ![](https://img.shields.io/badge/version-1.17-success) ![](https://img.shields.io/badge/version-1.18.1-success)
+![](https://img.shields.io/badge/version-1.16.5-success)
+![](https://img.shields.io/badge/version-1.17-success)
+![](https://img.shields.io/badge/version-1.18.1-success)
+![](https://img.shields.io/badge/version-1.19.4-success)
+![](https://img.shields.io/badge/version-1.20.1-success)
 
 *Original project by Simon Rettberg. All the credit goes to him for the idea and vision.*
 
