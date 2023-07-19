@@ -3,13 +3,9 @@
 namespace mcmap {
 namespace versions {
 namespace assert_versions {
-bool v3465(const nbt::NBT &chunk);
+bool v3458(const nbt::NBT &chunk);
 
 bool v2844(const nbt::NBT &chunk);
-
-#ifdef SNAPSHOT_SUPPORT
-bool v2840(const nbt::NBT &chunk);
-#endif
 
 bool v1976(const nbt::NBT &chunk);
 

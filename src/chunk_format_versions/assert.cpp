@@ -3,8 +3,8 @@
 namespace mcmap {
 namespace versions {
 namespace assert_versions {
-bool v3465(const nbt::NBT &chunk) {
-  // Snapshot 21w43a
+bool v3458(const nbt::NBT &chunk) {
+  // Minecraft 1.20-pre5, randomly changing things
   return chunk.contains("sections")  // No sections mean no blocks
          && chunk.contains("Status") // Ensure the status is `minecraft:full`
          && chunk["Status"].get<nbt::NBT::tag_string_t>() == "minecraft:full";
@@ -16,16 +16,6 @@ bool v2844(const nbt::NBT &chunk) {
          && chunk.contains("Status") // Ensure the status is `full`
          && chunk["Status"].get<nbt::NBT::tag_string_t>() == "full";
 }
-
-#ifdef SNAPSHOT_SUPPORT
-bool v2840(const nbt::NBT &chunk) {
-  // Snapshot 21w42a
-  return chunk.contains("Level") &&           // Level data is required
-         chunk["Level"].contains("Sections")  // No sections mean no blocks
-         && chunk["Level"].contains("Status") // Ensure the status is `full`
-         && chunk["Level"]["Status"].get<nbt::NBT::tag_string_t>() == "full";
-}
-#endif
 
 bool v1976(const nbt::NBT &chunk) {
   // From 1.14 onwards
