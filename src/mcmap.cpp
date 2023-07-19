@@ -185,9 +185,6 @@ std::map<std::string, std::string> compilation_options() {
 #ifdef DEBUG_BUILD
       {"Debug", "Enabled"},
 #endif
-#ifdef SNAPSHOT_SUPPORT
-      {"Snapshot compatibility", "Enabled"},
-#endif
   };
 
   return enabled;

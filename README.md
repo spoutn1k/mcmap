@@ -222,18 +222,6 @@ cmake .. -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release -DSTATIC_BUILD=1^
 
 You can also download and set up [Ubuntu on windows](https://ubuntu.com/tutorials/tutorial-ubuntu-on-windows#1-overview) then the steps are the same as Linux/Ubuntu.
 
-### Snapshot support
-
-Snapshots are unsupported by default. One can enable support by using the `SNAPSHOT` `CMake` option. In linux/macOS:
-```
-git clone https://github.com/spoutn1k/mcmap
-mkdir -p mcmap/build && cd mcmap/build
-cmake .. -DSNAPSHOT=1
-make -j
-```
-
-On Windows, this will depend on the software you are using to compile `mcmap`.
-
 ## Troubleshooting
 
 ### Compilation fails

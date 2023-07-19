@@ -8,10 +8,7 @@ namespace mcmap {
 
 namespace versions {
 std::map<int, std::function<bool(const nbt::NBT &)>> assert = {
-    {3465, assert_versions::v3465}, {2844, assert_versions::v2844},
-#ifdef SNAPSHOT_SUPPORT
-    {2840, assert_versions::v2840},
-#endif
+    {3458, assert_versions::v3458}, {2844, assert_versions::v2844},
     {1976, assert_versions::v1976}, {1628, assert_versions::v1628},
     {0, assert_versions::catchall},
 };
