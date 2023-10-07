@@ -76,7 +76,7 @@ Use `-fragment` with a lower value to increase performance. Fragments of 256x256
 `mcmap` supports changing the colors of blocks. To do so, prepare a custom color file by editing the output of `mcmap -dumpcolors`, and pass it as an argument using the `-colors` argument.
 
 The accepted format is a `json` file, with a specific structure.
-The root contains a list of [block IDs](https://minecraft.gamepedia.com/Java_Edition_data_values#Blocks) to modify, with the namespace prefix, such as `namespace:block`.
+The root contains a list of [block IDs](https://minecraft.wiki/w/Java_Edition_data_values#Blocks) to modify, with the namespace prefix, such as `namespace:block`.
 
 #### Simple block
 
