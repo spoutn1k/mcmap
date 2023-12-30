@@ -812,6 +812,7 @@
   "minecraft:sea_lantern": "#90b8ad",
   "minecraft:sea_pickle": { "color": "#4e531dfe", "type": "Head" },
   "minecraft:seagrass": { "color": "#389306fe", "type": "UnderwaterPlant" },
+  "minecraft:short_grass": { "color": "#426539fe", "type": "Plant" },
   "minecraft:shroomlight": "#f2974c",
   "minecraft:shulker_box": "#8535c3",
   "minecraft:skeleton_skull": { "color": "#969696fe", "type": "Head" },
