@@ -11,7 +11,6 @@ src/include/fmt/format.h
 src/include/fmt/format-inl.h
 src/include/fmt/color.h
 src/include/fmt/format.cc
-extracted_blocks/
 
 # Tools byproducts
 .gdb_history
