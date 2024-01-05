@@ -5,7 +5,7 @@
 
 set -eo pipefail
 
-SYSTEM=$(uname)
+SYSTEM="$(uname)"
 EXTRACTDIR=/tmp/extracted_blocks
 
 macos::install_deps() {
@@ -18,11 +18,11 @@ macos::install_deps() {
 }
 
 macos::mc_home() {
-  echo "$HOME/Library/Application Support/minecraft/versions"
+  echo $HOME/Library/Application Support/minecraft/versions
 }
 
 linux::mc_home() {
-  echo "$HOME/.minecraft/versions"
+  echo $HOME/.minecraft/versions
 }
 
 unpack_assets() {
@@ -50,7 +50,7 @@ unpack_assets() {
 }
 
 average() {
-  FILE=$1
+  FILE="$1"
   EXTRACTED="$EXTRACTDIR/$MINECRAFT_VER/assets/minecraft/textures/block/$1.png"
   if [[ -f "$EXTRACTED" ]] ; then
       FILE="$EXTRACTED"
@@ -73,4 +73,4 @@ if [[ "$SYSTEM" == Darwin ]] ; then
   fi
 fi
 
-average $1
+average "$1"
