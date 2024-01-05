@@ -5,39 +5,72 @@
 
 set -eo pipefail
 
-install_imagemagick() {
+SYSTEM=$(uname)
+EXTRACTDIR=/tmp/extracted_blocks
+
+macos::install_deps() {
+  # Script requires imagemagick
   if ! command -v convert &>/dev/null; then
-    if [[ "${UNAME}" == "Darwin" ]] && command -v brew &>/dev/null; then
+    if [[ "$SYSTEM" == "Darwin" ]] && command -v brew &>/dev/null; then
       brew install imagemagick
     fi
   fi
 }
 
-unpack_minecraft_jar() {
-  if [[ -z "${MINECRAFT_VER}" ]]; then
+macos::mc_home() {
+  echo "$HOME/Library/Application Support/minecraft/versions"
+}
+
+linux::mc_home() {
+  echo "$HOME/.minecraft/versions"
+}
+
+unpack_assets() {
+  case "$SYSTEM" in
+      Darwin)
+          MC_HOME="$(macos::mc_home)"
+          ;;
+      Linux)
+          MC_HOME="$(linux::mc_home)"
+          ;;
+  esac
+
+  if [[ -z "$MINECRAFT_VER" ]]; then
     return
   fi
 
-  if [[ -f "extracted_blocks/${MINECRAFT_VER}/assets/minecraft/textures/block/dirt.png" ]]; then
-    return
-  fi
+  JAR="$MC_HOME/$MINECRAFT_VER/$MINECRAFT_VER.jar"
 
-  if [[ "${UNAME}" == "Darwin" ]]; then
-    jar_file="${HOME}/Library/Application Support/minecraft/versions/${MINECRAFT_VER}/${MINECRAFT_VER}.jar"
-  fi
-
-  if [[ -n "${jar_file}" ]]; then
-    mkdir -p "extracted_blocks/${MINECRAFT_VER}"
-    pushd "extracted_blocks/${MINECRAFT_VER}"
-    jar xf "${jar_file}" assets/minecraft/textures/block
+  if [[ -n "$JAR" ]]; then
+    mkdir -p "$EXTRACTDIR/$MINECRAFT_VER"
+    pushd "$EXTRACTDIR/$MINECRAFT_VER"
+    jar xf "$JAR" assets/minecraft/textures/block
     popd
   fi
 }
 
-install_imagemagick
-unpack_minecraft_jar
+average() {
+  FILE=$1
+  EXTRACTED="$EXTRACTDIR/$MINECRAFT_VER/assets/minecraft/textures/block/$1.png"
+  if [[ -f "$EXTRACTED" ]] ; then
+      FILE="$EXTRACTED"
+  fi
 
-printf '%s\t%s\n' \
-  "$(basename "extracted_blocks/${MINECRAFT_VER}/assets/minecraft/textures/block/${1}.png")" \
-  "$(convert "extracted_blocks/${MINECRAFT_VER}/assets/minecraft/textures/block/${1}.png" -resize 1x1 txt:- \
-    | grep -o "#[[:xdigit:]]\{6\}" | tr A-F a-f)"
+  COLOR="$(convert "$FILE" -resize 1x1 txt:-     \
+      | grep -o "#[[:xdigit:]]\{6\}"            \
+      | tr A-F a-f)"
+
+  printf '%s\t%s\n' \
+    "$(basename "$FILE")" \
+    "$COLOR"
+}
+
+if [[ "$SYSTEM" == Darwin ]] ; then
+  macos::install_deps
+
+  if [[ ! -d "$EXTRACTDIR/assets/minecraft/textures/" ]] ; then
+    unpack_assets
+  fi
+fi
+
+average $1
