@@ -98,7 +98,7 @@ void Data::loadChunk(const ChunkCoordinates coords) {
   if (!nbt::parse(chunkBuffer, length, data) || !Chunk::assert_chunk(data)) {
     fclose(regionHandle);
     logger::trace("Chunk parsing failed for chunk {} {} in {}", coords.x,
-                  coords.z, regionFile.c_str());
+                  coords.z, regionFile.string());
     return;
   }
 

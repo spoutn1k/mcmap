@@ -8,6 +8,7 @@
 #include <logger.hpp>
 #include <map>
 #include <string>
+#include <fmt/core.h>
 
 using nlohmann::json;
 using std::list;
@@ -220,7 +221,7 @@ void from_json(const json &j, Palette &p);
 
 } // namespace Colors
 
-template <> struct fmt::formatter<Colors::Color> {
+template <> struct fmt::formatter<Colors::Color> : formatter<string_view> {
   char presentation = 'c';
   constexpr auto parse(format_parse_context &ctx) {
     auto it = ctx.begin(), end = ctx.end();
@@ -236,8 +237,7 @@ template <> struct fmt::formatter<Colors::Color> {
     return it;
   }
 
-  template <typename FormatContext>
-  auto format(const Colors::Color &c, FormatContext &ctx) {
+  auto format(const Colors::Color &c, format_context &ctx) const {
     if (c.ALPHA == 0xff)
       return format_to(ctx.out(), "#{:02x}{:02x}{:02x}", c.R, c.G, c.B);
     else
