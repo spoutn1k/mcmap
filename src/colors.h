@@ -3,12 +3,12 @@
 
 #include "./helper.h"
 #include <filesystem>
+#include <fmt/core.h>
 #include <json.hpp>
 #include <list>
 #include <logger.hpp>
 #include <map>
 #include <string>
-#include <fmt/core.h>
 
 using nlohmann::json;
 using std::list;
