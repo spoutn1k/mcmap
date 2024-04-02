@@ -1,6 +1,6 @@
 SET(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-IF(Qt5_FOUND)
+IF(Qt6_FOUND)
     SET(CMAKE_AUTOUIC ON)
     SET(CMAKE_AUTOMOC ON)
     SET(CMAKE_AUTORCC ON)
@@ -33,7 +33,7 @@ IF(Qt5_FOUND)
 
     TARGET_LINK_LIBRARIES(mcmap-gui
         PRIVATE
-        Qt5::Widgets
+        Qt6::Widgets
         ZLIB::ZLIB
         PNG::PNG
         fmt::fmt-header-only
