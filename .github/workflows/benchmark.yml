@@ -6,16 +6,16 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Install dependencies
-      run: sudo apt-get install -y libfmt-dev libspdlog-dev
+      run: sudo apt-get install -y libfmt-dev libspdlog-dev libpng-dev
     - name: Compilation and execution
       uses: spoutn1k/mcmap-benchmark@cmake
     - name: Upload time data
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v4
       with:
         name: results.log
         path: time.log
     - name: Upload results
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v4
       with:
         name: images.tgz
         path: images.tgz

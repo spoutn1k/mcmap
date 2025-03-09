@@ -7,9 +7,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Install dependencies
-      run: sudo apt-get install -y libgtest-dev libfmt-dev libspdlog-dev
+      run: sudo apt-get install -y libgtest-dev libfmt-dev libspdlog-dev libpng-dev
         && cd /usr/src/gtest
-        && CXX=g++-10 sudo cmake CMakeLists.txt
+        && CXX=g++ sudo cmake CMakeLists.txt
         && sudo make -j
         && sudo cp lib/*a /usr/lib
         && sudo ln -s /usr/lib/libgtest.a /usr/local/lib/libgtest.a
@@ -18,7 +18,7 @@ jobs:
     - name: Configure project
       run: mkdir build
         && cd build
-        && CXX=g++-10 cmake ..
+        && CXX=g++ cmake ..
     - name: Build project
       run: cd build
         && make -j run_tests
