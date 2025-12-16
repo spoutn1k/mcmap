@@ -149,7 +149,7 @@
   "minecraft:bubble_coral_fan": { "color": "#a91ea5", "type": "Plant" },
   "minecraft:bubble_coral_wall_fan": { "color": "#a91ea5", "type": "Plant" },
   "minecraft:budding_amethyst": "#8d68c0",
-  "minecraft:bush": { "color": "#614691", "type": "P;ant" },
+  "minecraft:bush": { "color": "#614691", "type": "Plant" },
   "minecraft:cactus": "#59862d",
   "minecraft:cactus_flower": { "color": "#614691", "type": "Plant" },
   "minecraft:cake": { "color": "#e4cdce", "type": "Slab" },
