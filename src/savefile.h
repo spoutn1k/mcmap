@@ -19,6 +19,7 @@ struct Dimension {
   bool operator==(const Dimension &) const;
 
   fs::path suffix() const;
+  fs::path special_suffix() const;
 
   std::string to_string() { return fmt::format("{}:{}", ns, id); };
 };

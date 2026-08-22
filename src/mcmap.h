@@ -4,7 +4,9 @@
 #include "./VERSION"
 #include "./canvas.h"
 #include "./settings.h"
+#ifdef _OPENMP
 #include <omp.h>
+#endif
 #include <progress.hpp>
 
 namespace mcmap {

@@ -18,14 +18,17 @@ bool Dimension::operator==(const Dimension &other) const {
 }
 
 fs::path Dimension::suffix() const {
+  return fs::path(fmt::format("dimensions/{}/{}/region", ns, id));
+}
+
+fs::path Dimension::special_suffix() const {
   if (id == "overworld")
     return "region";
   else if (id == "the_nether")
     return fs::path("DIM-1/region");
   else if (id == "the_end")
     return fs::path("DIM1/region");
-  else
-    return fs::path(fmt::format("dimensions/{}/{}/region", ns, id));
+  return "";
 }
 
 bool assert_save(const fs::path &root) {
@@ -67,36 +70,40 @@ SaveFile::SaveFile(const fs::path &_folder) : folder(_folder) {
   getDimensions();
 }
 
+#define VALID(path) (fs::exists((path)) && !fs::is_empty((path)))
 void SaveFile::getDimensions() {
-#define VALID(path) fs::exists((path)) && !fs::is_empty((path))
-  if (VALID(folder / "region"))
-    dimensions.push_back(Dimension("overworld"));
+  if VALID (folder / "region")
+    dimensions.push_back(Dimension("minecraft", "overworld"));
 
-  if (VALID(folder / "DIM1/region"))
-    dimensions.push_back(Dimension("the_end"));
+  if VALID (folder / "DIM1/region")
+    dimensions.push_back(Dimension("minecraft", "the_end"));
 
-  if (VALID(folder / "DIM-1/region"))
-    dimensions.push_back(Dimension("the_nether"));
+  if VALID (folder / "DIM-1/region")
+    dimensions.push_back(Dimension("minecraft", "the_nether"));
 
   fs::path dim_folder = folder / "dimensions";
 
-  if (VALID(dim_folder))
+  if VALID (dim_folder)
     for (auto &ns : fs::directory_iterator(dim_folder))
       for (auto &id : fs::directory_iterator(ns.path()))
         dimensions.push_back(Dimension(ns.path().filename().string(),
                                        id.path().filename().string()));
-#undef VALID
 }
 
-fs::path
-SaveFile::region(const Dimension &dim = std::string("overworld")) const {
+fs::path SaveFile::region(const Dimension &dim) const {
   auto found = std::find(dimensions.begin(), dimensions.end(), dim);
 
   if (found == dimensions.end())
     return "";
 
+  // Check now for the old region/DIM1/DIM-1
+  if VALID (folder / dim.special_suffix()) {
+    return folder / dim.special_suffix();
+  }
+
   return folder / dim.suffix();
 }
+#undef VALID
 
 void to_json(json &j, const Dimension &d) {
   j = fmt::format("{}:{}", d.ns, d.id);
