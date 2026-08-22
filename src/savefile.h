@@ -13,12 +13,13 @@ namespace fs = std::filesystem;
 struct Dimension {
   std::string ns, id;
 
-  Dimension(std::string ns, std::string id) : ns(ns), id(id){};
+  Dimension(std::string ns, std::string id) : ns(ns), id(id) {};
   Dimension(std::string _id);
 
   bool operator==(const Dimension &) const;
 
   fs::path suffix() const;
+  fs::path special_suffix() const;
 
   std::string to_string() { return fmt::format("{}:{}", ns, id); };
 };
