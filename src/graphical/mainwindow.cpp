@@ -115,6 +115,9 @@ MainWindow::MainWindow(QWidget *parent)
   connect(renderer, SIGNAL(sendProgress(int, int, int)), this,
           SLOT(updateProgress(int, int, int)));
 
+  // Chunk loading uses large stack buffers; secondary threads only get 512K
+  // of stack on macOS, so match the 8M of the main thread
+  renderThread.setStackSize(8 * 1024 * 1024);
   renderThread.start();
 }
 

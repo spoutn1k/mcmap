@@ -96,6 +96,9 @@ fs::path getSaveDir() {
 
 #ifndef _WINDOWS
   prefix = getHome();
+#ifdef __APPLE__
+  suffix = "Library/Application Support/minecraft/saves";
+#endif
 #else
   char target[] = "APPDATA";
 

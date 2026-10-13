@@ -32,16 +32,18 @@ fs::path Dimension::special_suffix() const {
 }
 
 bool assert_save(const fs::path &root) {
-  fs::path level = root / "level.dat", region = root / "region";
+  fs::path level = root / "level.dat", region = root / "region",
+           dimensions = root / "dimensions";
 
-  std::map<fs::path, fs::file_type> requirements = {
-      {root, fs::file_type::directory}, {region, fs::file_type::directory}};
+  if (!fs::is_directory(root)) {
+    logger::debug("File '{}' is of an unexpected format", root.string());
+    return false;
+  }
 
-  for (auto &r : requirements) {
-    if (fs::status(r.first).type() != r.second) {
-      logger::debug("File '{}' is of an unexpected format", r.first.string());
-      return false;
-    }
+  // Terrain is either in `region` (old layout) or under `dimensions`
+  if (!fs::is_directory(region) && !fs::is_directory(dimensions)) {
+    logger::debug("No terrain folder found in '{}'", root.string());
+    return false;
   }
 
   if (!nbt::assert_NBT(level))
