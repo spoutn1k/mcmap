@@ -6,7 +6,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Install dependencies
-      run: sudo apt-get install -y libfmt-dev libspdlog-dev libpng-dev
+      run: sudo apt-get update && sudo apt-get install -y libfmt-dev libspdlog-dev libpng-dev
     - name: Compilation and execution
       uses: spoutn1k/mcmap-benchmark@cmake
     - name: Upload time data

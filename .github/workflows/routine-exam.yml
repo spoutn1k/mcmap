@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Install dependencies
-      run: sudo apt-get install -y libgtest-dev libfmt-dev libspdlog-dev libpng-dev
+      run: sudo apt-get update && sudo apt-get install -y libgtest-dev libfmt-dev libspdlog-dev libpng-dev
         && cd /usr/src/gtest
         && CXX=g++ sudo cmake CMakeLists.txt
         && sudo make -j
