@@ -22,7 +22,7 @@ uint32_t _ntohi(uint8_t *val) {
          (uint32_t(val[2]) << 8) + (uint32_t(val[3]));
 }
 
-bool decompressChunk(FILE *regionHandle, uint8_t *chunkBuffer, uint64_t *length,
+bool decompressChunk(FILE *regionHandle, uint8_t *chunkBuffer, size_t *length,
                      const std::filesystem::path &filename) {
   uint8_t zData[COMPRESSED_BUFFER];
 
