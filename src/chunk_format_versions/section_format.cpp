@@ -206,6 +206,42 @@ void v3100(Section *target, const nbt::NBT &raw_section) {
     logger::trace("Section {} does not contain a palette, aborting", target->Y);
 }
 
+void v5009(Section *target, const nbt::NBT &raw_section) {
+  // NEW in 26.3-snapshot-7, the palette entries changed shape:
+  // - `Name` and `Properties` were renamed to `id` and `properties`;
+  // - a block in its default state is stored as a bare string id;
+  // - in a palette mixing both, bare ids are wrapped in a compound under the
+  //   empty key (`{"": "minecraft:stone"}`).
+  // The data array is unchanged, so parse as before then convert the palette
+  // back to the legacy layout expected by the rest of the code.
+  v3100(target, raw_section);
+
+  for (nbt::NBT &entry : target->palette) {
+    nbt::NBT::tag_compound_t legacy;
+
+    if (entry.is_string()) {
+      legacy["Name"] = nbt::NBT(entry.get<nbt::NBT::tag_string_t>(), "Name");
+    } else if (entry.contains("id")) {
+      legacy["Name"] =
+          nbt::NBT(entry["id"].get<nbt::NBT::tag_string_t>(), "Name");
+
+      if (entry.contains("properties")) {
+        legacy["Properties"] = entry["properties"];
+        legacy["Properties"].set_name("Properties");
+      }
+    } else if (entry.contains("")) {
+      legacy["Name"] =
+          nbt::NBT(entry[""].get<nbt::NBT::tag_string_t>(), "Name");
+    } else {
+      logger::trace("Section {}: unrecognized palette entry", target->Y);
+      legacy["Name"] =
+          nbt::NBT(nbt::NBT::tag_string_t("minecraft:air"), "Name");
+    }
+
+    entry = nbt::NBT(legacy);
+  }
+}
+
 void catchall(Section *, const nbt::NBT &) {
   logger::trace("Unsupported DataVersion");
 }
