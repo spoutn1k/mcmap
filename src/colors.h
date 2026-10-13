@@ -28,13 +28,20 @@ inline void blend(uint8_t *const destination, const uint8_t *const source) {
     memcpy(destination, source, 4);
     return;
   }
-#define BLEND(ca, aa, cb)                                                      \
-  uint8_t(((size_t(ca) * size_t(aa)) + (size_t(255 - aa) * size_t(cb))) / 255)
-  destination[0] = BLEND(source[0], source[PALPHA], destination[0]);
-  destination[1] = BLEND(source[1], source[PALPHA], destination[1]);
-  destination[2] = BLEND(source[2], source[PALPHA], destination[2]);
-  destination[PALPHA] +=
-      (size_t(source[PALPHA]) * size_t(255 - destination[PALPHA])) / 255;
+  // Porter-Duff "over" with straight (non-premultiplied) alpha. The
+  // destination's color must be weighted by its own alpha, otherwise blending
+  // is not associative and compositing partially transparent fragments (see
+  // Canvas::_get_line) gives a different result than drawing in one canvas.
+  const uint32_t ws = uint32_t(source[PALPHA]) * 255;
+  const uint32_t wd =
+      uint32_t(destination[PALPHA]) * uint32_t(255 - source[PALPHA]);
+  const uint32_t wo = ws + wd;
+#define BLEND(cs, cd)                                                          \
+  uint8_t((uint32_t(cs) * ws + uint32_t(cd) * wd + wo / 2) / wo)
+  destination[0] = BLEND(source[0], destination[0]);
+  destination[1] = BLEND(source[1], destination[1]);
+  destination[2] = BLEND(source[2], destination[2]);
+  destination[PALPHA] = uint8_t((wo + 127) / 255);
 #undef BLEND
 }
 
