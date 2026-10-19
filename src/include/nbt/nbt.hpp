@@ -5,6 +5,7 @@
 #include <logger.hpp>
 #include <map>
 #include <nbt/iterators.hpp>
+#include <nbt/ordered_map.hpp>
 #include <nbt/tag_types.hpp>
 #include <stdexcept>
 #include <stdint.h>
@@ -28,7 +29,7 @@ public:
   using tag_byte_array_t = std::vector<int8_t>;
   using tag_string_t = std::string;
   using tag_list_t = std::vector<NBT>;
-  using tag_compound_t = std::map<std::string, NBT>;
+  using tag_compound_t = ordered_map<std::string, NBT>;
   using tag_int_array_t = std::vector<int32_t>;
   using tag_long_array_t = std::vector<int64_t>;
 
