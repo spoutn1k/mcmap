@@ -41,8 +41,7 @@ void to_json(json &j, const NBT &nbt) {
   case tag_type::tag_compound: {
     json contents({});
 
-    const std::map<std::string, NBT> *subs =
-        nbt.get<const NBT::tag_compound_t *>();
+    const NBT::tag_compound_t *subs = nbt.get<const NBT::tag_compound_t *>();
 
     for (auto el : *subs)
       contents.update(json(el.second));

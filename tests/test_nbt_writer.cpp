@@ -51,3 +51,40 @@ TEST(TestNBTWriter, TestBufferTooSmall) {
 
   ASSERT_FALSE(nbt::put(output, chunk));
 }
+
+TEST(TestNBTWriter, TestIdenticalBytes) {
+  // Compounds keep their keys in order, so the output matches the source
+  nbt::NBT chunk;
+  nbt::parse(chunk_nbt, chunk_nbt_len, chunk);
+
+  std::vector<uint8_t> buffer(chunk_nbt_len * 2);
+  nbt::io::ByteStreamWriter output(buffer.data(), buffer.size());
+
+  ASSERT_TRUE(nbt::put(output, chunk));
+  ASSERT_EQ(output.total_written, chunk_nbt_len);
+  ASSERT_TRUE(std::equal(chunk_nbt, chunk_nbt + chunk_nbt_len, buffer.begin()));
+}
+
+TEST(TestNBTWriter, TestCompoundOrder) {
+  nbt::NBT compound(nbt::NBT::tag_compound_t({
+      {"zebra", nbt::NBT(int8_t(1), "zebra")},
+      {"apple", nbt::NBT(int8_t(2), "apple")},
+  }));
+  compound["mango"] = nbt::NBT(int8_t(3), "mango");
+  // Assigning an existing key keeps its position
+  compound["zebra"] = nbt::NBT(int8_t(4), "zebra");
+  // Duplicates are ignored on insertion, like std::map
+  compound.insert({"apple", nbt::NBT(int8_t(5), "apple")});
+
+  std::vector<std::string> keys;
+  for (const auto &element : *compound.get<const nbt::NBT::tag_compound_t *>())
+    keys.push_back(element.first);
+
+  ASSERT_EQ(keys, std::vector<std::string>({"zebra", "apple", "mango"}));
+  ASSERT_EQ(compound["zebra"].get<int8_t>(), 4);
+  ASSERT_EQ(compound["apple"].get<int8_t>(), 2);
+
+  compound.erase("apple");
+  ASSERT_FALSE(compound.contains("apple"));
+  ASSERT_EQ(compound.size(), 2);
+}

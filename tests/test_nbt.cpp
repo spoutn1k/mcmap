@@ -120,7 +120,7 @@ TEST(TestNBT, TestCreateList) {
 
 TEST(TestNBT, TestCreateCompound) {
   std::vector<std::string> elements = {"This", "is", "a", "test"};
-  std::map<std::string, nbt::NBT> compound;
+  nbt::NBT::tag_compound_t compound;
 
   for (auto &value : elements)
     compound[value] = (nbt::NBT(value));
