@@ -11,9 +11,10 @@
 
 namespace nbt {
 
-bool put(io::ByteStreamWriter &output, const NBT &data) {
+// Serialize `data` to `output`. Returns true on success, like `parse`.
+inline bool put(io::ByteStreamWriter &output, const NBT &data) {
   bool error = false;
-  uint8_t buffer[65025]; // max size of an element
+  uint8_t buffer[8]; // big enough for the largest scalar
 
   std::stack<std::pair<const NBT &, NBT::const_iterator>> parsing;
 
@@ -83,21 +84,21 @@ bool put(io::ByteStreamWriter &output, const NBT &data) {
       break;
 
     case nbt::tag_type::tag_short: {
-      uint16_t value = current.get<short>();
+      uint16_t value = current.get<int16_t>();
       translate(buffer, value);
       output.write(2, buffer, &error);
       break;
     }
 
     case nbt::tag_type::tag_int: {
-      uint32_t value = current.get<int>();
+      uint32_t value = current.get<int32_t>();
       translate(buffer, value);
       output.write(4, buffer, &error);
       break;
     }
 
     case nbt::tag_type::tag_long: {
-      uint64_t value = current.get<long>();
+      uint64_t value = current.get<int64_t>();
       translate(buffer, value);
       output.write(8, buffer, &error);
       break;
@@ -170,7 +171,7 @@ bool put(io::ByteStreamWriter &output, const NBT &data) {
     }
   }
 
-  return error;
+  return !error;
 }
 
 } // namespace nbt

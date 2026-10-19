@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
 #include <cstring>
 #include <logger.hpp>
@@ -72,11 +73,12 @@ struct ByteStreamWriter : ByteStream {
   size_type total_written;
 
   size_type write(size_t num, const uint8_t *buffer, bool *error) {
-    size_type written;
+    size_type written = 0;
 
     switch (type) {
     case GZFILE: {
-      written = gzwrite(source.file, buffer, num);
+      // gzwrite returns 0 (or -1 on older zlib) on error
+      written = std::max(gzwrite(source.file, buffer, num), 0);
 
       if (written < num) {
         logger::error("Write error: not enough bytes written");

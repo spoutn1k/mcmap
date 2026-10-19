@@ -82,7 +82,9 @@ struct Section {
     return palette[blocks[x + 16 * z + 16 * 16 * y]];
   }
 
-  void to_nbt(nbt::NBT &);
+  // Write the blocks and palette to a raw section, in the format of the given
+  // DataVersion. Returns false if the format is not supported.
+  bool to_nbt(nbt::NBT &, const int) const;
 
   void loadPalette(const Colors::Palette &, Diagnostics::Report * = nullptr);
 
