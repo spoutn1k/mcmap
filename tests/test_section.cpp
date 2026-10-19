@@ -2,6 +2,7 @@
 #include "../src/section.h"
 #include "./samples.h"
 #include <gtest/gtest.h>
+#include <nbt/hash.hpp>
 
 class TestSection : public ::testing::Test {
 protected:
@@ -131,4 +132,119 @@ TEST_F(TestSection, TestBiomeLegacy) {
   Section s(sections[1], dataVersion);
 
   ASSERT_TRUE(s.biome_palette.empty());
+}
+
+namespace {
+nbt::NBT block(const std::string &name) {
+  return nbt::NBT(nbt::NBT::tag_compound_t({{"Name", nbt::NBT(name, "Name")}}));
+}
+
+nbt::NBT empty_section() {
+  return nbt::NBT(nbt::NBT::tag_compound_t({{"Y", nbt::NBT(int8_t(0), "Y")}}));
+}
+
+// Compare two sections block by block, as their palettes may be ordered differently
+void expect_same_blocks(const Section &a, const Section &b) {
+  for (uint8_t x = 0; x < 16; x++)
+    for (uint8_t y = 0; y < 16; y++)
+      for (uint8_t z = 0; z < 16; z++)
+        ASSERT_EQ(nbt::hash(a.state_at(x, y, z)),
+                  nbt::hash(b.state_at(x, y, z)));
+}
+
+const int versions[] = {1628, 2534, 2840, 3100, 5009};
+} // namespace
+
+TEST_F(TestSection, TestToNbtRoundTrip) {
+  for (const auto &raw : sections) {
+    Section original(raw, dataVersion);
+    if (original.palette.empty())
+      continue;
+
+    for (const int version : versions) {
+      nbt::NBT written = empty_section();
+      ASSERT_TRUE(original.to_nbt(written, version));
+
+      Section result(written, version);
+      expect_same_blocks(original, result);
+    }
+  }
+}
+
+TEST_F(TestSection, TestToNbtWideIndexes) {
+  // 40 entries need 6 bits, which do not divide 64, and 4096 blocks do not fill the last long exactly
+  Section original;
+  for (int i = 0; i < 40; i++)
+    original.palette.push_back(block("minecraft:block_" + std::to_string(i)));
+  for (size_t i = 0; i < original.blocks.size(); i++)
+    original.blocks[i] = (i * 7) % 40;
+
+  for (const int version : versions) {
+    nbt::NBT written = empty_section();
+    ASSERT_TRUE(original.to_nbt(written, version));
+
+    Section result(written, version);
+    expect_same_blocks(original, result);
+  }
+}
+
+TEST_F(TestSection, TestToNbtDropsUnused) {
+  Section original;
+  original.palette = {block("minecraft:air"), block("minecraft:stone"),
+                      block("minecraft:dirt")};
+  original.blocks.fill(2);
+
+  nbt::NBT written = empty_section();
+  ASSERT_TRUE(original.to_nbt(written, 2840));
+  ASSERT_EQ(written["block_states"]["palette"].size(), 1);
+  ASSERT_TRUE(written["block_states"].contains("data"));
+
+  // Since 1.19, single block sections have no data
+  written = empty_section();
+  ASSERT_TRUE(original.to_nbt(written, 3100));
+  ASSERT_FALSE(written["block_states"].contains("data"));
+
+  Section result(written, 3100);
+  expect_same_blocks(original, result);
+}
+
+TEST_F(TestSection, TestToNbtUnsupported) {
+  Section original(sections[1], dataVersion);
+  nbt::NBT written = empty_section();
+
+  ASSERT_FALSE(original.to_nbt(written, 1000));
+}
+
+TEST_F(TestSection, TestToNbtPost5009Palette) {
+  Section original;
+  original.palette = {block("minecraft:air"), block("minecraft:stone")};
+  original.blocks[1] = 1;
+
+  // Blocks without properties are bare ids
+  nbt::NBT written = empty_section();
+  ASSERT_TRUE(original.to_nbt(written, 5009));
+  for (const auto &entry : written["block_states"]["palette"])
+    ASSERT_TRUE(entry.is_string());
+
+  // Mixed with blocks with properties, they are wrapped under the empty key
+  nbt::NBT slab = block("minecraft:stone_slab");
+  slab["Properties"] = nbt::NBT(
+      nbt::NBT::tag_compound_t(
+          {{"type", nbt::NBT(std::string("top"), "type")}}),
+      "Properties");
+  original.palette.push_back(slab);
+  original.blocks[2] = 2;
+
+  written = empty_section();
+  ASSERT_TRUE(original.to_nbt(written, 5009));
+  const auto &palette = written["block_states"]["palette"];
+  ASSERT_EQ(palette.size(), 3);
+  for (const auto &entry : palette)
+    ASSERT_TRUE(entry.is_compound());
+  ASSERT_EQ(palette[0][""].get<std::string>(), "minecraft:air");
+  ASSERT_EQ(palette[2]["id"].get<std::string>(), "minecraft:stone_slab");
+  ASSERT_EQ(palette[2]["properties"]["type"].get<std::string>(), "top");
+
+  Section result(written, 5009);
+  expect_same_blocks(original, result);
 }

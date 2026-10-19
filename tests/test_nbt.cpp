@@ -146,7 +146,7 @@ TEST(TestNBT, TestCreateIntArray) {
 }
 
 TEST(TestNBT, TestCreateLongArray) {
-  std::vector<long> array = {98, 97, 10, 99};
+  std::vector<int64_t> array = {98, 97, 10, 99};
 
   nbt::NBT test(array);
   ASSERT_FALSE(test.empty());

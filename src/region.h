@@ -25,17 +25,25 @@ struct Location {
 struct Region {
   static std::pair<int32_t, int32_t> coordinates(const fs::path &);
 
+  // Index of a chunk in the header; accepts absolute chunk coordinates
+  static size_t index(const mcmap::Chunk::coordinates &);
+
   fs::path file;
   std::array<Location, REGIONSIZE * REGIONSIZE> locations;
+  std::array<uint32_t, REGIONSIZE * REGIONSIZE> timestamps;
 
-  Region() { locations.fill(Location()); }
+  Region() {
+    locations.fill(Location());
+    timestamps.fill(0);
+  }
 
   Region(const fs::path &);
 
-  void write_header();
+  bool write_header();
 
-  void get_chunk(const mcmap::Chunk::coordinates &, nbt::NBT &);
-  void add_chunk(const mcmap::Chunk::coordinates &, const nbt::NBT &);
+  // Both return true on success
+  bool get_chunk(const mcmap::Chunk::coordinates &, nbt::NBT &);
+  bool add_chunk(const mcmap::Chunk::coordinates &, const nbt::NBT &);
 
 private:
   size_t get_offset(uint8_t);
