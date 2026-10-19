@@ -16,6 +16,7 @@ void Settings::to_json(json &j, const Settings::WorldOptions &o) {
   j["hideBeacons"] = o.hideBeacons;
   j["shading"] = o.shading;
   j["lighting"] = o.lighting;
+  j["structures"] = o.structures;
 
   j["memory"] = o.mem_limit;
   j["tile"] = o.tile_size;

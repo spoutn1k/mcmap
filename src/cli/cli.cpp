@@ -22,6 +22,7 @@ void printHelp(char *binary) {
       "  -nobeacons            do not render beacon beams\n"
       "  -shading              toggle shading (brightens depending on height)\n"
       "  -lighting             toggle lighting (brightens depending on light)\n"
+      "  -structures           only render blocks inside structures\n"
       "  -mb int (=3500)       use the specified amount of memory (in MB)\n"
       "  -fragment int (=1024) render terrain in tiles of the specified size\n"
       "  -tile int (=0)        if not 0, will create split output of the "

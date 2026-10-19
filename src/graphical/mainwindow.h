@@ -74,6 +74,7 @@ private slots:
 
   void on_shading_stateChanged(int);
   void on_lighting_stateChanged(int);
+  void on_structures_stateChanged(int);
 
   void startRender();
   void stopRender();

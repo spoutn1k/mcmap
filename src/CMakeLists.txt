@@ -24,6 +24,7 @@ SET(SOURCES ${SOURCES}
     worldloader.cpp
     chunk_format_versions/assert.cpp
     chunk_format_versions/get_section.cpp
+    chunk_format_versions/get_structures.cpp
     chunk_format_versions/section_format.cpp
     VERSION)
 

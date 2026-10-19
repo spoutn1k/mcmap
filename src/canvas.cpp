@@ -1,6 +1,7 @@
 #include "./canvas.h"
 #include "./VERSION"
 #include "./png.h"
+#include <algorithm>
 
 Terrain::Data::ChunkCoordinates sum(Terrain::Data::ChunkCoordinates lhs,
                                     Terrain::Data::ChunkCoordinates rhs) {
@@ -330,6 +331,13 @@ void IsometricCanvas::renderChunk(Terrain::Data &terrain) {
   if (!chunk.valid())
     return;
 
+  if (structures && chunk.structures.empty()) {
+    terrain.free_chunk({worldX, worldZ});
+    return;
+  }
+
+  chunk_structures = &chunk.structures;
+
   // Setup the markers
   for (uint8_t i = 0; i < totalMarkers; i++)
     if (CHUNK(markers[i].x) == worldX && CHUNK(markers[i].z) == worldZ)
@@ -401,6 +409,20 @@ void IsometricCanvas::renderSection(const Section &section) {
   // We need the real position of the section for bounds checking
   orientChunk(worldX, worldZ);
 
+  // Structure boxes overlapping this section, and the ones overlapping the
+  // column being drawn
+  Chunk::box_array section_boxes, column_boxes;
+
+  if (structures) {
+    for (const auto &box : *chunk_structures)
+      if (box.overlaps_height((section.Y << 4) + minY,
+                              (section.Y << 4) + maxY - 1))
+        section_boxes.push_back(box);
+
+    if (section_boxes.empty())
+      return;
+  }
+
   // Main drawing loop, for every block of the section
   for (uint8_t x = 0; x < 16; x++) {
     for (uint8_t z = 0; z < 16; z++) {
@@ -425,6 +447,17 @@ void IsometricCanvas::renderSection(const Section &section) {
       if (px > map.maxX || px < map.minX || pz > map.maxZ || pz < map.minZ)
         continue;
 
+      if (structures) {
+        column_boxes.clear();
+        for (const auto &box : section_boxes)
+          if (box.minX <= px && px <= box.maxX && box.minZ <= pz &&
+              pz <= box.maxZ)
+            column_boxes.push_back(box);
+
+        if (column_boxes.empty())
+          continue;
+      }
+
       for (uint8_t index = 0; index < beamNo; index++) {
         if (beams[index].column(orientedX, orientedZ)) {
           currentBeam = index;
@@ -439,6 +472,13 @@ void IsometricCanvas::renderSection(const Section &section) {
         if (beamColumn)
           renderBlock(beams[currentBeam].color, (chunkX << 4) + x,
                       (chunkZ << 4) + z, (section.Y << 4) + y, nbt::NBT());
+
+        if (structures &&
+            std::none_of(column_boxes.begin(), column_boxes.end(),
+                         [&](const mcmap::BoundingBox &box) {
+                           return box.contains(px, (section.Y << 4) + y, pz);
+                         }))
+          continue;
 
         renderBlock(section.color_at(orientedX, y, orientedZ),
                     (chunkX << 4) + x, (chunkZ << 4) + z, (section.Y << 4) + y,

@@ -372,6 +372,10 @@ void MainWindow::on_lighting_stateChanged(int checked) {
   options.lighting = checked;
 }
 
+void MainWindow::on_structures_stateChanged(int checked) {
+  options.structures = checked;
+}
+
 void MainWindow::on_renderButton_clicked() {
   custom_palette.clear();
   custom_palette.merge(Colors::Palette(file_colors));

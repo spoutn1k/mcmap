@@ -78,10 +78,12 @@ int render(const Settings::WorldOptions &options, const Colors::Palette &colors,
 
       // Load the minecraft terrain to render
       Terrain::Data world(options.regionDir(), colors, report);
+      world.structures = options.structures;
 
       // Draw the terrain fragment
       canvas.shading = options.shading;
       canvas.lighting = options.lighting;
+      canvas.structures = options.structures;
       canvas.setMarkers(options.totalMarkers, options.markers);
       canvas.renderTerrain(world);
 

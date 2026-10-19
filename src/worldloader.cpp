@@ -1,4 +1,5 @@
 #include "./worldloader.h"
+#include <algorithm>
 #include <nbt/parser.hpp>
 #include <translator.hpp>
 #include <zlib.h>
@@ -54,7 +55,7 @@ bool decompressChunk(const uint32_t offset, FILE *regionHandle,
   return true;
 }
 
-void Data::loadChunk(const ChunkCoordinates coords) {
+bool Data::readChunk(const ChunkCoordinates coords, nbt::NBT &data) {
   FILE *regionHandle;
   uint8_t regionHeader[REGION_HEADER_SIZE], chunkBuffer[DECOMPRESSED_BUFFER];
   int32_t regionX = REGION(coords.x), regionZ = REGION(coords.z),
@@ -67,13 +68,13 @@ void Data::loadChunk(const ChunkCoordinates coords) {
   if (!std::filesystem::exists(regionFile)) {
     logger::trace("Region file r.{}.{}.mca does not exist, skipping ..",
                   regionX, regionZ);
-    return;
+    return false;
   }
 
   if (!(regionHandle = fopen(regionFile.string().c_str(), "rb"))) {
     logger::error("Opening region file `{}` failed: {}", regionFile.string(),
                   strerror(errno));
-    return;
+    return false;
   }
 
   // Then, we read the header (of size 4K) storing the chunks locations
@@ -81,7 +82,7 @@ void Data::loadChunk(const ChunkCoordinates coords) {
       REGION_HEADER_SIZE) {
     logger::error("Region header too short in `{}`", regionFile.string());
     fclose(regionHandle);
-    return;
+    return false;
   }
 
   const uint32_t offset =
@@ -90,33 +91,76 @@ void Data::loadChunk(const ChunkCoordinates coords) {
   if (!offset || !decompressChunk(offset, regionHandle, chunkBuffer, &length,
                                   regionFile)) {
     fclose(regionHandle);
-    return;
-  }
-
-  nbt::NBT data;
-
-  if (!nbt::parse(chunkBuffer, length, data)) {
-    fclose(regionHandle);
-    logger::trace("Chunk parsing failed for chunk {} {} in {}", coords.x,
-                  coords.z, regionFile.string());
-    return;
-  }
-
-  if (!Chunk::assert_chunk(data)) {
-    fclose(regionHandle);
-    if (report && data.contains("DataVersion"))
-      report->chunk_rejected(data["DataVersion"].get<int>(), coords);
-    logger::trace("Chunk {} {} in {} was rejected", coords.x, coords.z,
-                  regionFile.string());
-    return;
+    return false;
   }
 
   fclose(regionHandle);
 
-  chunks[coords] = Chunk(data, palette, coords, report);
+  if (!nbt::parse(chunkBuffer, length, data)) {
+    logger::trace("Chunk parsing failed for chunk {} {} in {}", coords.x,
+                  coords.z, regionFile.string());
+    return false;
+  }
+
+  return true;
+}
+
+void Data::loadChunk(const ChunkCoordinates coords) {
+  nbt::NBT data;
+
+  if (!readChunk(coords, data))
+    return;
+
+  if (!Chunk::assert_chunk(data)) {
+    if (report && data.contains("DataVersion"))
+      report->chunk_rejected(data["DataVersion"].get<int>(), coords);
+    logger::trace("Chunk {} {} was rejected", coords.x, coords.z);
+    return;
+  }
+
+  Chunk chunk(data, palette, coords, report);
 
   if (report)
-    report->chunk_loaded(chunks[coords].data_version);
+    report->chunk_loaded(chunk.data_version);
+
+  if (structures) {
+    starts[coords] = chunk.starts;
+    resolveStructures(chunk);
+  }
+
+  chunks[coords] = std::move(chunk);
+}
+
+const Data::Chunk::box_array &Data::startsAt(const ChunkCoordinates coords) {
+  auto query = starts.find(coords);
+
+  if (query == starts.end()) {
+    // Only the structure data is needed, skip decoding the sections
+    nbt::NBT data;
+    Chunk::box_array boxes;
+    std::vector<ChunkCoordinates> unused;
+
+    if (readChunk(coords, data))
+      Chunk::read_structures(data, boxes, unused);
+
+    query = starts.emplace(coords, std::move(boxes)).first;
+  }
+
+  return query->second;
+}
+
+void Data::resolveStructures(Chunk &chunk) {
+  // The chunk's own starts are not always referenced by the chunk itself
+  std::vector<ChunkCoordinates> sources = chunk.references;
+  sources.push_back(chunk.position);
+
+  std::sort(sources.begin(), sources.end());
+  sources.erase(std::unique(sources.begin(), sources.end()), sources.end());
+
+  for (const auto &source : sources)
+    for (const auto &box : startsAt(source))
+      if (box.overlaps_chunk(chunk.position.x, chunk.position.z))
+        chunk.structures.push_back(box);
 }
 
 const Data::Chunk &Data::chunkAt(const ChunkCoordinates coords,

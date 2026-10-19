@@ -224,6 +224,7 @@ struct IsometricCanvas : Canvas {
   using marker_array_t = std::array<Colors::Marker, 256>;
 
   bool shading, lighting, beamColumn;
+  bool structures; // Only render the blocks inside structures
   size_t rendered;
 
   size_t width, height;
@@ -245,6 +246,9 @@ struct IsometricCanvas : Canvas {
   Chunk::section_array_t::const_iterator current_section, last_section,
       left_section, right_section;
 
+  // Bounding boxes of the structures in the chunk being rendered
+  const Chunk::box_array *chunk_structures = nullptr;
+
   // In-chunk variables
   uint32_t chunkX;
   uint32_t chunkZ;
@@ -258,7 +262,9 @@ struct IsometricCanvas : Canvas {
   // Section array with an empty section to return when a section is not available
   Chunk::section_array_t empty_section;
 
-  IsometricCanvas() : Canvas(BYTES), rendered(0) { empty_section.resize(1); }
+  IsometricCanvas() : Canvas(BYTES), structures(false), rendered(0) {
+    empty_section.resize(1);
+  }
 
   inline bool empty() const { return !rendered; }
 

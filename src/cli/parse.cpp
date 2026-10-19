@@ -67,6 +67,8 @@ bool parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
       opts->shading = true;
     } else if (strcmp(option, "-lighting") == 0) {
       opts->lighting = true;
+    } else if (strcmp(option, "-structures") == 0) {
+      opts->structures = true;
     } else if (strcmp(option, "-nether") == 0) {
       opts->dim = Dimension("the_nether");
     } else if (strcmp(option, "-end") == 0) {

@@ -428,6 +428,13 @@
           </widget>
          </item>
          <item>
+          <widget class="QCheckBox" name="structures">
+           <property name="text">
+            <string>Structures Only</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QCheckBox" name="hideBeacons">
            <property name="text">
             <string>Hide Beacons</string>
@@ -778,6 +785,7 @@
   <tabstop>paddingValue</tabstop>
   <tabstop>shading</tabstop>
   <tabstop>lighting</tabstop>
+  <tabstop>structures</tabstop>
   <tabstop>hideBeacons</tabstop>
   <tabstop>hideWater</tabstop>
   <tabstop>colorSelectButton</tabstop>

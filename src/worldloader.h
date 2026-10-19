@@ -13,9 +13,15 @@ struct Data {
   using Chunk = mcmap::Chunk;
   using ChunkCoordinates = mcmap::Chunk::coordinates;
   using ChunkStore = std::map<ChunkCoordinates, Chunk>;
+  using StartStore = std::map<ChunkCoordinates, Chunk::box_array>;
 
   // The loaded chunks, organized as a map of coordinatesxchunk
   ChunkStore chunks;
+
+  // Whether to resolve the structures overlapping the loaded chunks
+  bool structures = false;
+  // Structure starts read from the save, kept as they are shared by chunks
+  StartStore starts;
 
   fs::path regionDir;
   const Colors::Palette &palette;
@@ -31,9 +37,16 @@ struct Data {
   // Chunk pre-processing methods
   void stripChunk(std::vector<nbt::NBT> *);
   void inflateChunk(std::vector<nbt::NBT> *);
+  // Read and parse a chunk from its region file
+  bool readChunk(const ChunkCoordinates, nbt::NBT &);
 
   // Chunk loading - should never be used, called by chunkAt in case of chunk fault
   void loadChunk(const ChunkCoordinates);
+
+  // Bounding boxes of the structures starting in a chunk
+  const Chunk::box_array &startsAt(const ChunkCoordinates);
+  // Gather the bounding boxes of the structures overlapping a chunk
+  void resolveStructures(Chunk &);
 
   // Access a chunk from the save file
   const Chunk &chunkAt(const ChunkCoordinates, const Map::Orientation, bool);

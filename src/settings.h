@@ -33,7 +33,7 @@ struct WorldOptions {
 
   // Image settings
   uint16_t padding;
-  bool hideWater, hideBeacons, shading, lighting;
+  bool hideWater, hideBeacons, shading, lighting, structures;
   size_t tile_size; // 0 means no tiling
 
   // Marker storage
@@ -52,7 +52,7 @@ struct WorldOptions {
     boundaries.minY = mcmap::constants::min_y;
     boundaries.maxY = mcmap::constants::max_y;
 
-    hideWater = hideBeacons = shading = lighting = false;
+    hideWater = hideBeacons = shading = lighting = structures = false;
     padding = PADDING_DEFAULT;
     tile_size = TILE_SIZE_DEFAULT;
 

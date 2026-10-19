@@ -2,6 +2,7 @@
 
 #include "./diagnostics.h"
 #include "./section.h"
+#include "./structure.h"
 #include <2DCoordinates.hpp>
 #include <map.hpp>
 #include <nbt/nbt.hpp>
@@ -14,10 +15,18 @@ struct Chunk {
   using section_t = Section;
   using section_array_t = std::vector<section_t>;
   using coordinates = Coordinates;
+  using box_array = std::vector<BoundingBox>;
 
   coordinates position;
   version_t data_version;
   section_array_t sections;
+
+  // Bounding boxes of the pieces of the structures starting in this chunk
+  box_array starts;
+  // Chunks holding the starts of the structures overlapping this chunk
+  std::vector<coordinates> references;
+  // Bounding boxes overlapping this chunk, resolved by the world loader
+  box_array structures;
 
   Chunk();
   Chunk(const nbt_t &, const Colors::Palette &, const coordinates,
@@ -32,6 +41,10 @@ struct Chunk {
 
   // The most recent DataVersion with a known chunk format
   static version_t latest_version();
+
+  // Read the structure starts and references of a raw chunk
+  static void read_structures(const nbt_t &, box_array &,
+                              std::vector<coordinates> &);
 };
 
 } // namespace mcmap

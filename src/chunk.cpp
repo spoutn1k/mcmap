@@ -1,6 +1,7 @@
 #include "./chunk.h"
 #include "./chunk_format_versions/assert.hpp"
 #include "./chunk_format_versions/get_section.hpp"
+#include "./chunk_format_versions/get_structures.hpp"
 #include <compat.hpp>
 #include <functional>
 
@@ -17,6 +18,14 @@ std::map<int, std::function<nbt::NBT(const nbt::NBT &)>> sections = {
     {2844, sections_versions::v2844},
     {1628, sections_versions::v1628},
     {0, sections_versions::catchall},
+};
+
+std::map<int, std::function<void(const nbt::NBT &, std::vector<BoundingBox> &,
+                                 std::vector<Coordinates> &)>>
+    structures = {
+        {2844, structures_versions::v2844},
+        {1628, structures_versions::v1628},
+        {0, structures_versions::catchall},
 };
 
 } // namespace versions
@@ -48,6 +57,8 @@ Chunk::Chunk(const nbt::NBT &data, const Colors::Palette &palette,
       sections.push_back(std::move(section));
     }
   }
+
+  read_structures(data, starts, references);
 }
 
 Chunk::Chunk(Chunk &&other) { *this = std::move(other); }
@@ -56,6 +67,9 @@ Chunk &Chunk::operator=(Chunk &&other) {
   position = other.position;
   data_version = other.data_version;
   sections = std::move(other.sections);
+  starts = std::move(other.starts);
+  references = std::move(other.references);
+  structures = std::move(other.structures);
 
   return *this;
 }
@@ -82,6 +96,18 @@ bool Chunk::assert_chunk(const nbt::NBT &chunk) {
   }
 
   return assert_it->second(chunk);
+}
+
+void Chunk::read_structures(const nbt::NBT &chunk, box_array &boxes,
+                            std::vector<coordinates> &refs) {
+  if (chunk.is_end() || !chunk.contains("DataVersion"))
+    return;
+
+  auto structures_it =
+      compatible(versions::structures, chunk["DataVersion"].get<int>());
+
+  if (structures_it != versions::structures.end())
+    structures_it->second(chunk, boxes, refs);
 }
 
 } // namespace mcmap
