@@ -100,36 +100,103 @@ Section::Section(const nbt::NBT &raw_section, const int dataVersion,
   }
 }
 
-void Section::to_nbt(nbt::NBT &section) {
-  std::vector<uint64_t> blockstates;
+namespace {
+// Pack block indexes of `bits` bits into longs. Before 1.16, indexes are packed
+// back to back and can span two longs; since then, longs are padded with 0s
+// when an index cannot fit.
+std::vector<uint64_t> pack(const Section::block_array &indexes,
+                           const uint8_t bits, const bool spanning) {
+  std::vector<uint64_t> states;
 
-  if (!palette.size())
-    return;
+  if (spanning) {
+    states.resize((indexes.size() * bits + 63) / 64, 0);
 
-  section["Palette"] = nbt::NBT(this->palette, "Palette");
+    for (size_t i = 0; i < indexes.size(); i++) {
+      const size_t bit = i * bits;
+      const uint8_t padding = bit & 63;
+      const uint64_t value = indexes[i];
 
-  const uint8_t blockBitLength =
-      std::max(uint8_t(ceil(log2(this->palette.size()))), uint8_t(4));
+      states[bit >> 6] |= value << padding;
 
-  const std::vector<uint64_t>::size_type blocksPerLong =
-      sizeof(uint64_t) * 8 / blockBitLength;
-
-  const std::vector<uint64_t>::size_type states =
-      ceil(float(this->blocks.size()) / blocksPerLong);
-
-  blockstates.resize(states);
-
-  auto block_i = this->blocks.begin();
-
-  for (std::vector<uint64_t>::size_type index = 0; index < states; index++) {
-    uint64_t blockstate = 0;
-
-    for (std::vector<uint64_t>::size_type b = 0; b < blocksPerLong; b++) {
-      blockstate = blockstate | (uint64_t(*block_i++) << (blockBitLength * b));
+      // Write the overflowing bits at the start of the next long
+      if (padding + bits > 64)
+        states[(bit >> 6) + 1] |= value >> (64 - padding);
     }
+  } else {
+    const size_t blocksPerLong = 64 / bits;
+    states.resize((indexes.size() + blocksPerLong - 1) / blocksPerLong, 0);
 
-    blockstates[index] = blockstate;
+    for (size_t i = 0; i < indexes.size(); i++)
+      states[i / blocksPerLong] |= uint64_t(indexes[i])
+                                   << ((i % blocksPerLong) * bits);
   }
 
-  section["BlockStates"] = nbt::NBT(blockstates, "BlockStates");
+  return states;
+}
+} // namespace
+
+bool Section::to_nbt(nbt::NBT &section, const int dataVersion) const {
+  if (dataVersion < 1628 || dataVersion >= 5009) {
+    logger::error("Writing sections of DataVersion {} is not supported",
+                  dataVersion);
+    return false;
+  }
+
+  if (palette.empty())
+    return true;
+
+  // Drop the palette entries no block uses, keeping the order of the others
+  std::vector<bool> used(palette.size(), false);
+
+  for (const auto index : blocks) {
+    if (index >= palette.size()) {
+      logger::error("Section {}: block is undefined in palette", Y);
+      return false;
+    }
+
+    used[index] = true;
+  }
+
+  std::vector<block_array::value_type> remap(palette.size());
+  std::vector<nbt::NBT> compacted;
+
+  for (size_t i = 0; i < palette.size(); i++) {
+    if (used[i]) {
+      remap[i] = compacted.size();
+      compacted.push_back(palette[i]);
+    }
+  }
+
+  block_array indexes;
+  for (size_t i = 0; i < blocks.size(); i++)
+    indexes[i] = remap[blocks[i]];
+
+  // The length in bits of a block is the log2 of the palette's size or 4,
+  // whichever is greatest
+  uint8_t bits = 4;
+  while ((size_t(1) << bits) < compacted.size())
+    bits++;
+
+  if (dataVersion < 2840) {
+    section["Palette"] = nbt::NBT(compacted, "Palette");
+    section["BlockStates"] =
+        nbt::NBT(pack(indexes, bits, dataVersion < 2534), "BlockStates");
+    return true;
+  }
+
+  if (!section.contains("block_states") ||
+      !section["block_states"].is_compound())
+    section["block_states"] =
+        nbt::NBT(nbt::NBT::tag_compound_t(), "block_states");
+
+  nbt::NBT &block_states = section["block_states"];
+  block_states["palette"] = nbt::NBT(compacted, "palette");
+
+  // Since 1.19, a section filled with a single block has no data array
+  if (dataVersion >= 3100 && compacted.size() == 1)
+    block_states.erase("data");
+  else
+    block_states["data"] = nbt::NBT(pack(indexes, bits, false), "data");
+
+  return true;
 }

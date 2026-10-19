@@ -33,7 +33,7 @@ template <typename ArithmeticType,
                                   int>::type = 0>
 ArithmeticType translate(const uint8_t *_bytes) {
   uint8_t buffer[8];
-  std::size_t bytes_n = std::alignment_of<ArithmeticType>();
+  std::size_t bytes_n = sizeof(ArithmeticType);
 
   switch (bytes_n) {
   case 2:
@@ -57,7 +57,7 @@ template <typename ArithmeticType,
                                   int>::type = 0>
 void translate(uint8_t *_bytes, const ArithmeticType value) {
   const uint8_t *buffer = reinterpret_cast<const uint8_t *>(&value);
-  std::size_t bytes_n = std::alignment_of<ArithmeticType>();
+  std::size_t bytes_n = sizeof(ArithmeticType);
 
   switch (bytes_n) {
   case 2:
