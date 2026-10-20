@@ -3,9 +3,7 @@
 std::map<string, int> erroneous;
 
 namespace Colors {
-// Embedded colors, as a byte array. This array is created by compiling
-// `colors.json` into `colors.bson`, using `json2bson`, then included here. The
-// json library can then interpret it into a usable `Palette` object
+// Embedded colors, as a byte array. This array is created by compiling `colors.json` into `colors.bson`, using `json2bson`, then included here. The json library can then interpret it into a usable `Palette` object
 const std::vector<uint8_t> default_colors =
 #include "colors.bson"
     ;
@@ -88,8 +86,7 @@ void Colors::to_json(json &j, const Block &b) {
 void Colors::from_json(const json &data, Block &b) {
   string stype;
 
-  // If the definition is an array, the block is a full block with a single
-  // color
+  // If the definition is an array, the block is a full block with a single color
   if (data.is_string() || data.is_array()) {
     b = Block(BlockTypes::FULL, data);
     return;

@@ -6,8 +6,7 @@ namespace block_states_versions {
 void post116(const uint8_t index_length,
              const std::vector<int64_t> *blockStates,
              Section::block_array &buffer) {
-  // NEW in 1.16, longs are padded by 0s when a block cannot fit, so no more
-  // overflow to deal with !
+  // NEW in 1.16, longs are padded by 0s when a block cannot fit, so no more overflow to deal with !
 
   for (uint16_t index = 0; index < 4096; index++) {
     // Determine how many indexes each long holds
@@ -20,8 +19,7 @@ void post116(const uint8_t index_length,
     // the relevant block is located.
     const uint8_t padding = (index - longIndex * blocksPerLong) * index_length;
 
-    // Bring the data to the first bits of the long, then extract it by bitwise
-    // comparison
+    // Bring the data to the first bits of the long, then extract it by bitwise comparison
     const uint16_t blockIndex = ((*blockStates)[longIndex] >> padding) &
                                 ((uint64_t(1) << index_length) - 1);
 
@@ -31,41 +29,30 @@ void post116(const uint8_t index_length,
 
 void pre116(const uint8_t index_length, const std::vector<int64_t> *blockStates,
             Section::block_array &buffer) {
-  // The `BlockStates` array contains data on the section's blocks. You have to
-  // extract it by understanfing its structure.
+  // The `BlockStates` array contains data on the section's blocks. You have to extract it by understanfing its structure.
   //
-  // Although it is a array of long values, one must see it as an array of block
-  // indexes, whose element size depends on the size of the Palette. This
-  // routine locates the necessary long, extracts the block with bit
-  // comparisons.
+  // Although it is a array of long values, one must see it as an array of block indexes, whose element size depends on the size of the Palette. This routine locates the necessary long, extracts the block with bit comparisons.
   //
-  // The length of a block index has to be coded on the minimal possible size,
-  // which is the logarithm in base2 of the size of the palette, or 4 if the
-  // logarithm is smaller.
+  // The length of a block index has to be coded on the minimal possible size, which is the logarithm in base2 of the size of the palette, or 4 if the logarithm is smaller.
 
   for (uint16_t index = 0; index < 4096; index++) {
 
-    // We skip the `position` first blocks, of length `size`, then divide by 64
-    // to get the number of longs to skip from the array
+    // We skip the `position` first blocks, of length `size`, then divide by 64 to get the number of longs to skip from the array
     const uint16_t skip_longs = (index * index_length) >> 6;
 
-    // Once we located the data in a long, we have to know where in the 64 bits
-    // it is located. This is the remaining of the previous operation
+    // Once we located the data in a long, we have to know where in the 64 bits it is located. This is the remaining of the previous operation
     const int8_t padding = (index * index_length) & 63;
 
-    // Sometimes the data of an index does not fit entirely into a long, so we
-    // check if there is overflow
+    // Sometimes the data of an index does not fit entirely into a long, so we check if there is overflow
     const int8_t overflow =
         (padding + index_length > 64 ? padding + index_length - 64 : 0);
 
-    // This complicated expression extracts the necessary bits from the current
-    // long.
+    // This complicated expression extracts the necessary bits from the current long.
     //
     // Lets say we need the following bits in a long (not to scale):
     // 10011100111001110011100
     //    ^^^^^
-    // We do this by shifting (>>) the data by padding, to get the relevant bits
-    // on the end of the long:
+    // We do this by shifting (>>) the data by padding, to get the relevant bits on the end of the long:
     // ???????????????10011100
     //                   ^^^^^
     // We then apply a mask to get only the relevant bits:
@@ -73,12 +60,9 @@ void pre116(const uint8_t index_length, const std::vector<int64_t> *blockStates,
     // 00000000000000000011111 &
     // 00000000000000000011100 <- result
     //
-    // The mask is made at the size of the data, using the formula (1 << n) - 1,
-    // the resulting bitset is of the following shape: 0...01...1 with n 1s.
+    // The mask is made at the size of the data, using the formula (1 << n) - 1, the resulting bitset is of the following shape: 0...01...1 with n 1s.
     //
-    // If there is an overflow, the mask size is reduced, as not to catch noise
-    // from the padding (ie the interrogation points earlier) that appear on
-    // ARM32.
+    // If there is an overflow, the mask size is reduced, as not to catch noise from the padding (ie the interrogation points earlier) that appear on ARM32.
     uint16_t lower_data = ((*blockStates)[skip_longs] >> padding) &
                           ((uint64_t(1) << (index_length - overflow)) - 1);
 
@@ -109,8 +93,7 @@ void v1628(Section *target, const nbt::NBT &raw_section) {
     // Anticipate the color input from the palette's size
     target->colors.reserve(target->palette.size());
 
-    // The length in bits of a block is the log2 of the palette's size or 4,
-    // whichever is greatest. Ranges from 4 to 12.
+    // The length in bits of a block is the log2 of the palette's size or 4, whichever is greatest. Ranges from 4 to 12.
     const uint8_t blockBitLength =
         std::max(uint8_t(ceil(log2(target->palette.size()))), uint8_t(4));
 
@@ -133,8 +116,7 @@ void v2534(Section *target, const nbt::NBT &raw_section) {
     // Anticipate the color input from the palette's size
     target->colors.reserve(target->palette.size());
 
-    // The length in bits of a block is the log2 of the palette's size or 4,
-    // whichever is greatest. Ranges from 4 to 12.
+    // The length in bits of a block is the log2 of the palette's size or 4, whichever is greatest. Ranges from 4 to 12.
     const uint8_t blockBitLength =
         std::max(uint8_t(ceil(log2(target->palette.size()))), uint8_t(4));
 
@@ -160,8 +142,7 @@ void v2840(Section *target, const nbt::NBT &raw_section) {
     // Anticipate the color input from the palette's size
     target->colors.reserve(target->palette.size());
 
-    // The length in bits of a block is the log2 of the palette's size or 4,
-    // whichever is greatest. Ranges from 4 to 12.
+    // The length in bits of a block is the log2 of the palette's size or 4, whichever is greatest. Ranges from 4 to 12.
     const uint8_t blockBitLength =
         std::max(uint8_t(ceil(log2(target->palette.size()))), uint8_t(4));
 
@@ -173,9 +154,7 @@ void v2840(Section *target, const nbt::NBT &raw_section) {
 }
 
 void v3100(Section *target, const nbt::NBT &raw_section) {
-  // NEW in 1.19, some sections can omit the block_states array when only one
-  // block is present in the palette to signify that the whole section is
-  // filled with one block, so this checks for that special case
+  // NEW in 1.19, some sections can omit the block_states array when only one block is present in the palette to signify that the whole section is filled with one block, so this checks for that special case
 
   if (raw_section.contains("block_states") &&
       raw_section["block_states"].contains("palette")) {
@@ -191,8 +170,7 @@ void v3100(Section *target, const nbt::NBT &raw_section) {
           raw_section["block_states"]["data"]
               .get<const nbt::NBT::tag_long_array_t *>();
 
-      // The length in bits of a block is the log2 of the palette's size or 4,
-      // whichever is greatest. Ranges from 4 to 12.
+      // The length in bits of a block is the log2 of the palette's size or 4, whichever is greatest. Ranges from 4 to 12.
       const uint8_t blockBitLength =
           std::max(uint8_t(ceil(log2(target->palette.size()))), uint8_t(4));
 
@@ -212,8 +190,7 @@ void v5009(Section *target, const nbt::NBT &raw_section) {
   // - a block in its default state is stored as a bare string id;
   // - in a palette mixing both, bare ids are wrapped in a compound under the
   //   empty key (`{"": "minecraft:stone"}`).
-  // The data array is unchanged, so parse as before then convert the palette
-  // back to the legacy layout expected by the rest of the code.
+  // The data array is unchanged, so parse as before then convert the palette back to the legacy layout expected by the rest of the code.
   v3100(target, raw_section);
 
   for (nbt::NBT &entry : target->palette) {

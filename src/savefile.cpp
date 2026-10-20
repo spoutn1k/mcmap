@@ -131,9 +131,7 @@ World::Coordinates SaveFile::getWorld(const Dimension &dim) {
     return savedWorld;
 
   for (auto &region : fs::directory_iterator(region(dim))) {
-    // This loop parses files with name 'r.x.y.mca', extracting x and y. This is
-    // done by creating a string stream and using `getline` with '.' as a
-    // delimiter.
+    // This loop parses files with name 'r.x.y.mca', extracting x and y. This is done by creating a string stream and using `getline` with '.' as a delimiter.
     std::stringstream ss(region.path().filename().string());
     std::getline(ss, index, delimiter); // This removes the 'r.'
     std::getline(ss, index, delimiter);

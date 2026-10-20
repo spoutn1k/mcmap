@@ -28,8 +28,7 @@ void PNG::_close() {
 }
 
 bool PNG::error_callback() {
-  // libpng will issue a longjmp on error, so code flow will end up here if
-  // something goes wrong in the code below
+  // libpng will issue a longjmp on error, so code flow will end up here if something goes wrong in the code below
   if (setjmp(png_jmpbuf(pngPtr))) {
     logger::error("[PNG] libpng encountered an error");
     return true;

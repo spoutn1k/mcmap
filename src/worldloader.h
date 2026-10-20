@@ -38,8 +38,7 @@ struct Data {
   void stripChunk(std::vector<nbt::NBT> *);
   void inflateChunk(std::vector<nbt::NBT> *);
 
-  // Chunk loading - should never be used, called by chunkAt in case of chunk
-  // fault
+  // Chunk loading - should never be used, called by chunkAt in case of chunk fault
   void loadChunk(const ChunkCoordinates);
 
   // Access a chunk from the save file

@@ -44,8 +44,7 @@ size_t memory_capacity(size_t limit, size_t element_size, size_t elements,
     return 0;
   }
 
-  // Return the amount of canvasses that fit in memory - including the ones
-  // being rendered
+  // Return the amount of canvasses that fit in memory - including the ones being rendered
   return (limit - overhead - rendering) / element_size;
 }
 

@@ -46,8 +46,7 @@ int render(const Settings::WorldOptions &options, const Colors::Palette &colors,
   Progress::Status s =
       Progress::Status(fragment_coordinates.size(), cb, Progress::RENDERING);
 
-  // This value represents the amount of canvasses that can fit in memory at
-  // once to avoid going over the limit of RAM
+  // This value represents the amount of canvasses that can fit in memory at once to avoid going over the limit of RAM
   Counter<size_t> capacity =
       memory_capacity(options.mem_limit, fragment_coordinates[0].footprint(),
                       fragment_coordinates.size(), THREADS);
@@ -95,8 +94,7 @@ int render(const Settings::WorldOptions &options, const Colors::Palette &colors,
         } else
           fragments[i] = std::move(canvas);
       } else {
-        // If the canvas was empty, increase the capacity to reflect the free
-        // space
+        // If the canvas was empty, increase the capacity to reflect the free space
         if (i < capacity)
           ++capacity;
       }

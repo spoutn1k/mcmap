@@ -67,17 +67,12 @@ static bool matryoshka(io::ByteStreamReader &b, NBT &destination) {
   uint32_t elements, list_elements, name_size;
 
   // The stack with open containers. When a container is found, it is pushed
-  // on this stack; when an element is finished, it is pushed in the container
-  // on top of the stack, or returned if the stack is empty.
+  // on this stack; when an element is finished, it is pushed in the container on top of the stack, or returned if the stack is empty.
   std::stack<NBT> opened_elements = {};
 
   // The context stack. All was well until the NBT lists came along that
   // changed the element format (no type/name). This stack tracks every
-  // element on the stack. Its contents follow the format: <uint32_t
-  // content_left, tag_type list_type> If content left > 0, it is assumed to
-  // be a NBT list. This changes the behaviour of the parser accordingly. When
-  // pushing/popping containers, the second element gets the type of the
-  // current list.
+  // element on the stack. Its contents follow the format: <uint32_t content_left, tag_type list_type> If content left > 0, it is assumed to be a NBT list. This changes the behaviour of the parser accordingly. When pushing/popping containers, the second element gets the type of the current list.
   std::stack<std::pair<uint32_t, tag_type>> context = {};
 
   do {
@@ -115,8 +110,7 @@ static bool matryoshka(io::ByteStreamReader &b, NBT &destination) {
       // Remove its context
       context.pop();
 
-      // Continue to the end to merge the container to the previous element of
-      // the stack
+      // Continue to the end to merge the container to the previous element of the stack
       current_type = tag_type::tag_end;
     }
 
@@ -312,8 +306,7 @@ static bool assert_NBT(uint8_t *buffer, size_t size) {
   return status;
 }
 
-// This completely useless template gets rid of "Function defined but never
-// used" warnings.
+// This completely useless template gets rid of "Function defined but never used" warnings.
 template <
     typename NBT_Type = NBT,
     typename std::enable_if<std::is_same<NBT_Type, NBT>::value, int>::type = 0>

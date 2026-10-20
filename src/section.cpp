@@ -16,12 +16,9 @@ std::map<int, std::function<void(Section *, const nbt::NBT &)>> init = {
 const Colors::Block _void;
 
 Section::Section() : colors{&_void} {
-  // The `colors` array needs to contain at least a color to have a defined
-  // behavious when uninitialized. `color_at` is called 4096x per section, it is
-  // critical for it to avoid if-elses.
+  // The `colors` array needs to contain at least a color to have a defined behavious when uninitialized. `color_at` is called 4096x per section, it is critical for it to avoid if-elses.
 
-  // This is set to the maximum index available as not to trigger a beacon
-  // detection by error
+  // This is set to the maximum index available as not to trigger a beacon detection by error
   beaconIndex = std::numeric_limits<block_array::value_type>::max();
 
   // Make sure all the blocks are air - thanks to the default value in `colors`

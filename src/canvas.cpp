@@ -222,14 +222,8 @@ void IsometricCanvas::setColors(const Colors::Palette &colors) {
   // Set to true to use later on
   shading = lighting = false;
 
-  // Precompute the shading profile. The values are arbitrary, and will go
-  // through Colors::Color.modcolor further down the code. The 255 array
-  // represents the entire world height. This profile is linear, going from
-  // -100 at height 0 to 100 at height 255. This replaced a convoluted formula
-  // that did a much better job of higlighting overground terrain, but would
-  // look weird in other dimensions.
-  // Legacy formula: ((100.0f / (1.0f + exp(- (1.3f * (float(y) *
-  // MIN(g_MapsizeY, 200) / g_MapsizeY) / 16.0f) + 6.0f))) - 91)
+  // Precompute the shading profile. The values are arbitrary, and will go through Colors::Color.modcolor further down the code. The 255 array represents the entire world height. This profile is linear, going from -100 at height 0 to 100 at height 255. This replaced a convoluted formula that did a much better job of higlighting overground terrain, but would look weird in other dimensions.
+  // Legacy formula: ((100.0f / (1.0f + exp(- (1.3f * (float(y) * MIN(g_MapsizeY, 200) / g_MapsizeY) / 16.0f) + 6.0f))) - 91)
   for (int y = 0; y < mcmap::constants::terrain_height; ++y)
     brightnessLookup[y] =
         -100 + 200 * float(y) / mcmap::constants::terrain_height;
@@ -265,11 +259,9 @@ void IsometricCanvas::setMap(const World::Coordinates &_map) {
     std::swap(offsetX, offsetZ);
   }
 
-  // The isometrical view of the terrain implies that the width of each chunk
-  // equals 16 blocks per side. Each block is overlapped so is 2 pixels wide.
+  // The isometrical view of the terrain implies that the width of each chunk equals 16 blocks per side. Each block is overlapped so is 2 pixels wide.
   // => A chunk's width equals its size on each side times 2.
-  // By generalizing this formula, the entire map's size equals the sum of its
-  // length on both the horizontal axis times 2.
+  // By generalizing this formula, the entire map's size equals the sum of its length on both the horizontal axis times 2.
   width = (sizeX + sizeZ) * 2;
 
   height = sizeX + sizeZ + (map.maxY - map.minY + 1) * BLOCKHEIGHT - 1;
@@ -286,11 +278,7 @@ void IsometricCanvas::setMap(const World::Coordinates &_map) {
 //                                  |___/
 // The following methods are used to draw the map into the canvas' 2D buffer
 
-// Translate a chunk in the canvas to a chunk in the world. The canvas has nxm
-// chunks, ordered from 0,0 which are used to count and render chunks in
-// order, but which world chunk is at 0,0 ? It also changes depending on the
-// orientation. This helpers does everything at once: input the canvas' x and
-// y, they come out as the real coordinates.
+// Translate a chunk in the canvas to a chunk in the world. The canvas has nxm chunks, ordered from 0,0 which are used to count and render chunks in order, but which world chunk is at 0,0 ? It also changes depending on the orientation. This helpers does everything at once: input the canvas' x and y, they come out as the real coordinates.
 void IsometricCanvas::orientChunk(int32_t &x, int32_t &z) {
   switch (map.orientation) {
   case Map::NW:
@@ -373,8 +361,7 @@ void IsometricCanvas::renderChunk(Terrain::Data &terrain) {
   rendered++;
 }
 
-// A bit like the above: where do we begin rendering in the 16x16 horizontal
-// plane ?
+// A bit like the above: where do we begin rendering in the 16x16 horizontal plane ?
 inline void IsometricCanvas::orientSection(uint8_t &x, uint8_t &z) {
   switch (map.orientation) {
   case Map::NW:
@@ -546,24 +533,18 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
   // Calculate where in the canvas a block is supposed to go.
   // The canvas is a virtual terrain to order the rendering. The block x0 yY
   // z0 is always on top, so it is 'easier' to calculate where to put it.
-  // Methods before determine the real coordinates, so at this point those are
-  // "canvas" coordinates
+  // Methods before determine the real coordinates, so at this point those are "canvas" coordinates
   //
-  // The rendering is done by chunk, section and block column inside of those
-  // sections. On the horizontal plane, the general order is the following for
-  // both chunk and inside sections:
+  // The rendering is done by chunk, section and block column inside of those sections. On the horizontal plane, the general order is the following for both chunk and inside sections:
   //    0
   //   1 2
   //  3 4 5
   // .......
-  // This makes sure that blocks are overwritten naturally when going up, as 0
-  // represents the whole column.
+  // This makes sure that blocks are overwritten naturally when going up, as 0 represents the whole column.
 
   // The following methods translate coordinates to position in the image,
   // from 3D to 2D. The position is a tuple where (0, 0) represent THE TOP
-  // LEFT pixel. The max width is `width`, and 0 means on the left, and the
-  // maximum height is `height`, on the top. Thus, moving left or up is a
-  // subtraction, which looks weird later.
+  // LEFT pixel. The max width is `width`, and 0 means on the left, and the maximum height is `height`, on the top. Thus, moving left or up is a subtraction, which looks weird later.
 
   // First, the horizontal position.
 
@@ -571,8 +552,7 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
       2 * (sizeZ - 1)      // From the middle of the image
       + (x - z) * 2; // Calc the offset (greater x on the right, z to the left)
 
-  // To get the height of a pixel, we have to look at how a flat layer
-  // articulates:
+  // To get the height of a pixel, we have to look at how a flat layer articulates:
   //
   //       0000
   //    1111  2222
@@ -595,8 +575,7 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
       + x +
       z
       // Remove both sizes to cancel out the line before. Essentially, 0 0
-      // will be up -sizeX -sizeZ, and the last block will be on the bottom
-      // calculated just before.
+      // will be up -sizeX -sizeZ, and the last block will be on the bottom calculated just before.
       - sizeX -
       sizeZ
       // Finally move that position up y blocks
@@ -618,8 +597,7 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
         orientedX, (y + mcmap::constants::terrain_height) % 16, orientedZ);
 
     if (beamColumn) {
-      // Ignore the rest as a beam, as it most likely is rendered without a
-      // section
+      // Ignore the rest as a beam, as it most likely is rendered without a section
       localColor = localColor.shade(mcmap::constants::lighting_bright);
     } else if (self_light) {
       // For light-emitting blocks, no need to check left or right
@@ -627,20 +605,17 @@ inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
           localColor.shade(mcmap::constants::lighting_dark +
                            mcmap::constants::lighting_delta * self_light);
     } else {
-      // For the rest, we calculate the coordinates of the top, left and right
-      // adjacent blocks, lookup their light and modify the color accordingly
+      // For the rest, we calculate the coordinates of the top, left and right adjacent blocks, lookup their light and modify the color accordingly
 
       // Calculate the coordinates of the blocks on top/left/right, depending
-      // on the orientation of the map. This says chunk coordinates but really
-      // is section coordinates, as it belongs in [|0, 15|]^2
+      // on the orientation of the map. This says chunk coordinates but really is section coordinates, as it belongs in [|0, 15|]^2
       Chunk::coordinates offset = {16, 16}, current = {orientedX, orientedZ};
       Chunk::coordinates left_coords =
           (current + left_in(map.orientation) + offset) % 16;
       Chunk::coordinates right_coords =
           (current + right_in(map.orientation) + offset) % 16;
 
-      // Get pointers to the correct sections if the adjacent block is in a
-      // different one
+      // Get pointers to the correct sections if the adjacent block is in a different one
       auto top =
           ((y + mcmap::constants::terrain_height) % 16 == 15 ? section_up()
                                                              : current_section);
@@ -764,8 +739,7 @@ IsometricCanvas::section_right(const Terrain::Data &terrain) {
 }
 
 bool compare(const Canvas &p1, const Canvas &p2) {
-  // This method is used to order a list of maps. The ordering is done by the
-  // distance to the top-right corner of the map in North Western orientation.
+  // This method is used to order a list of maps. The ordering is done by the distance to the top-right corner of the map in North Western orientation.
   World::Coordinates c1 = p1.map.orient(Map::NW);
   World::Coordinates c2 = p2.map.orient(Map::NW);
 
@@ -778,8 +752,7 @@ CompositeCanvas::CompositeCanvas(std::vector<Canvas> &&parts)
   // From a set of canvasses, create a virtual sparse canvas to
   // compose an image
 
-  // Sort the canvasses, to render first the canvasses far from the edge to
-  // avoid overwriting too many blocks.
+  // Sort the canvasses, to render first the canvasses far from the edge to avoid overwriting too many blocks.
   std::sort(drawing.canvas_buffer->begin(), drawing.canvas_buffer->end(),
             compare);
 }

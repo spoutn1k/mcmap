@@ -218,9 +218,7 @@ struct ImageCanvas : Canvas {
 };
 
 // Isometric canvas
-// This structure holds the final bitmap data, a 2D array of pixels. It is
-// created with a set of 3D coordinates, and translate every block drawn
-// into a 2D position.
+// This structure holds the final bitmap data, a 2D array of pixels. It is created with a set of 3D coordinates, and translate every block drawn into a 2D position.
 struct IsometricCanvas : Canvas {
   using Chunk = mcmap::Chunk;
   using marker_array_t = std::array<Colors::Marker, 256>;
@@ -257,8 +255,7 @@ struct IsometricCanvas : Canvas {
 
   uint8_t orientedX, orientedZ, y;
 
-  // Section array with an empty section to return when a section is not
-  // available
+  // Section array with an empty section to return when a section is not available
   Chunk::section_array_t empty_section;
 
   IsometricCanvas() : Canvas(BYTES), rendered(0) { empty_section.resize(1); }
@@ -301,10 +298,7 @@ struct CompositeCanvas : public Canvas {
   // A sparse canvas made with smaller canvasses
   //
   // To render multiple canvasses made by threads, we compose an image from
-  // them directly. This object allows to do so. It is given a list of
-  // canvasses, and can be read as an image (made out of lines, with a
-  // height and width) that is composed of the canvasses, without actually
-  // using any more memory.
+  // them directly. This object allows to do so. It is given a list of canvasses, and can be read as an image (made out of lines, with a height and width) that is composed of the canvasses, without actually using any more memory.
   //
   // This is done by keeping track of the offset of each sub-canvas from the
   // top left of the image. When reading a line, it is composed of the lines

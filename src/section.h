@@ -5,12 +5,10 @@
 #include <nbt/nbt.hpp>
 
 struct Section {
-  // Each block is encoded on 16 bits as an index in the palette - where only 12
-  // bits are necessary
+  // Each block is encoded on 16 bits as an index in the palette - where only 12 bits are necessary
   using block_array = std::array<uint16_t, 4096>;
 
-  // Each index in the array above points to a block in the palette and a color
-  // in the following array
+  // Each index in the array above points to a block in the palette and a color in the following array
   using color_array = std::vector<const Colors::Block *>;
   using light_array = std::array<uint8_t, 2048>;
 
@@ -44,8 +42,7 @@ struct Section {
   }
 
   inline bool empty() const {
-    // Check the state of the section by looking at its palette: a section with
-    // only air does not need to be rendered
+    // Check the state of the section by looking at its palette: a section with only air does not need to be rendered
     return palette.empty() ||
            (palette.size() == 1 &&
             palette[0]["Name"].get<std::string>() == "minecraft:air");

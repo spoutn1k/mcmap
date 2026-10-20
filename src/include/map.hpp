@@ -149,18 +149,14 @@ struct Coordinates {
     }
   }
 
-  // The following methods are used to get the position of the map in an image
-  // made by another (englobing) map, called the referential
+  // The following methods are used to get the position of the map in an image made by another (englobing) map, called the referential
 
   inline Integer offsetX(const Coordinates<Integer> &referential) const {
     // This formula is thought around the top corner' position.
     //
-    // The top corner's postition of the sub-map is influenced by its distance
-    // to the full map's top corner => we compare the minX and minZ
-    // coordinates
+    // The top corner's postition of the sub-map is influenced by its distance to the full map's top corner => we compare the minX and minZ coordinates
     //
-    // From there, the map's top corner is sizeZ pizels from the edge, and the
-    // sub-canvasses' edge is at sizeZ' pixels from its top corner.
+    // From there, the map's top corner is sizeZ pizels from the edge, and the sub-canvasses' edge is at sizeZ' pixels from its top corner.
     //
     // By adding up those elements we get the delta between the edge of the
     // full image and the edge of the partial image.
@@ -172,8 +168,7 @@ struct Coordinates {
   }
 
   inline Integer offsetY(const Coordinates<Integer> &referential) const {
-    // This one is simpler, the vertical distance being equal to the distance
-    // between top corners.
+    // This one is simpler, the vertical distance being equal to the distance between top corners.
     Coordinates<Integer> oriented = this->orient(Orientation::NW);
 
     return oriented.minX - referential.minX + oriented.minZ - referential.minZ;

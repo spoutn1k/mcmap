@@ -14,8 +14,7 @@ typedef void (*drawer)(IsometricCanvas *, const uint32_t, const uint32_t,
 void drawFull(IsometricCanvas *, const uint32_t, const uint32_t,
               const nbt::NBT &, const Colors::Block *);
 
-// The other block types are loaded at compile-time from the `blocktypes.def`
-// file, with some macro manipulation
+// The other block types are loaded at compile-time from the `blocktypes.def` file, with some macro manipulation
 #define DEFINETYPE(STRING, CALLBACK)                                           \
   void CALLBACK(IsometricCanvas *, const uint32_t, const uint32_t,             \
                 const nbt::NBT &, const Colors::Block *);

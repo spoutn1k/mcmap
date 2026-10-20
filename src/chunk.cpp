@@ -32,9 +32,7 @@ Chunk::Chunk(const nbt::NBT &data, const Colors::Palette &palette,
   if (data.is_end() || !assert_chunk(data))
     return;
 
-  // This value is primordial: it states which version of minecraft the chunk
-  // was created under, and we use it to know which interpreter to use later
-  // in the sections
+  // This value is primordial: it states which version of minecraft the chunk was created under, and we use it to know which interpreter to use later in the sections
   data_version = data["DataVersion"].get<int>();
 
   nbt::NBT sections_list;

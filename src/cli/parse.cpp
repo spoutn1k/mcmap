@@ -157,16 +157,13 @@ bool parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
   }
 
   if (opts->mode == Settings::RENDER) {
-    // Check if the given save posesses the required dimension, must be done now
-    // as the world path can be given after the dimension name, which messes up
-    // regionDir()
+    // Check if the given save posesses the required dimension, must be done now as the world path can be given after the dimension name, which messes up regionDir()
     if (!opts->save.valid()) {
       logger::error("Given folder does not seem to be a save file");
       return false;
     }
 
-    // Scan the region directory and map the existing terrain in this set of
-    // coordinates
+    // Scan the region directory and map the existing terrain in this set of coordinates
     World::Coordinates existingWorld = opts->save.getWorld(opts->dim);
 
     if (opts->boundaries.isUndefined()) {

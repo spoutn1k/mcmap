@@ -28,10 +28,7 @@ inline void blend(uint8_t *const destination, const uint8_t *const source) {
     memcpy(destination, source, 4);
     return;
   }
-  // Porter-Duff "over" with straight (non-premultiplied) alpha. The
-  // destination's color must be weighted by its own alpha, otherwise blending
-  // is not associative and compositing partially transparent fragments (see
-  // Canvas::_get_line) gives a different result than drawing in one canvas.
+  // Porter-Duff "over" with straight (non-premultiplied) alpha. The destination's color must be weighted by its own alpha, otherwise blending is not associative and compositing partially transparent fragments (see Canvas::_get_line) gives a different result than drawing in one canvas.
   const uint32_t ws = uint32_t(source[PALPHA]) * 255;
   const uint32_t wd =
       uint32_t(destination[PALPHA]) * uint32_t(255 - source[PALPHA]);
