@@ -115,6 +115,10 @@ Chunk::State Chunk::assert_chunk(const nbt::NBT &chunk) {
   return assert_it->second(chunk);
 }
 
+nbt::NBT &Chunk::level(nbt::NBT &chunk) {
+  return chunk.contains("Level") ? chunk["Level"] : chunk;
+}
+
 void Chunk::read_structures(const nbt::NBT &chunk, box_array &boxes,
                             std::vector<coordinates> &refs) {
   if (chunk.is_end() || !chunk.contains("DataVersion"))

@@ -1,5 +1,6 @@
 #include "./section.h"
 #include "./chunk_format_versions/section_format.hpp"
+#include <algorithm>
 #include <compat.hpp>
 #include <functional>
 

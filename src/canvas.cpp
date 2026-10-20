@@ -422,8 +422,7 @@ void IsometricCanvas::renderSection(const Section &section) {
   // We need the real position of the section for bounds checking
   orientChunk(worldX, worldZ);
 
-  // Structure boxes overlapping this section, and the ones overlapping the
-  // column being drawn
+  // Structure boxes overlapping this section, and the ones overlapping the column being drawn
   Chunk::box_array section_boxes, column_boxes;
 
   if (structures) {
