@@ -4,37 +4,22 @@ namespace mcmap {
 namespace versions {
 namespace structures_versions {
 namespace {
-// Each structure start holds a list of pieces, each with a bounding box stored
-// as [minX, minY, minZ, maxX, maxY, maxZ] in block coordinates
 void read_starts(const nbt::NBT &starts, std::vector<BoundingBox> &boxes) {
   for (const auto &start : starts) {
-    if (!start.is_compound() || !start.contains("Children"))
-      continue;
-
-    for (const auto &piece : start["Children"]) {
-      if (!piece.is_compound() || !piece.contains("BB"))
-        continue;
-
-      const auto *bb = piece["BB"].get<const nbt::NBT::tag_int_array_t *>();
-      if (bb && bb->size() == 6)
-        boxes.push_back(
-            {(*bb)[0], (*bb)[1], (*bb)[2], (*bb)[3], (*bb)[4], (*bb)[5]});
-    }
+    const std::vector<BoundingBox> found = structure::pieces(start);
+    boxes.insert(boxes.end(), found.begin(), found.end());
   }
 }
 
-// References are lists of packed chunk positions pointing to the chunks
-// holding the structure starts: x on the low 32 bits, z on the high 32 bits
 void read_references(const nbt::NBT &references,
                      std::vector<Coordinates> &positions) {
-  for (const auto &structure : references) {
-    const auto *packed = structure.get<const nbt::NBT::tag_long_array_t *>();
+  for (const auto &list : references) {
+    const auto *packed = list.get<const nbt::NBT::tag_long_array_t *>();
     if (!packed)
       continue;
 
     for (const int64_t position : *packed)
-      positions.push_back(
-          {int32_t(position & 0xffffffff), int32_t(uint64_t(position) >> 32)});
+      positions.push_back(structure::unpack(position));
   }
 }
 

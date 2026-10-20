@@ -42,6 +42,9 @@ struct Chunk {
   // The most recent DataVersion with a known chunk format
   static version_t latest_version();
 
+  // Compound holding the chunk data, moved out of `Level` in 1.18
+  static nbt_t &level(nbt_t &);
+
   // Read the structure starts and references of a raw chunk
   static void read_structures(const nbt_t &, box_array &,
                               std::vector<coordinates> &);

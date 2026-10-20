@@ -1,5 +1,6 @@
 #include "./section.h"
 #include "./chunk_format_versions/section_format.hpp"
+#include <algorithm>
 #include <compat.hpp>
 #include <functional>
 
@@ -101,9 +102,7 @@ Section::Section(const nbt::NBT &raw_section, const int dataVersion,
 }
 
 namespace {
-// Pack block indexes of `bits` bits into longs. Before 1.16, indexes are packed
-// back to back and can span two longs; since then, longs are padded with 0s
-// when an index cannot fit.
+// Pack block indexes of `bits` bits into longs. Before 1.16, indexes are packed back to back and can span two longs; since then, longs are padded with 0s when an index cannot fit.
 std::vector<uint64_t> pack(const Section::block_array &indexes,
                            const uint8_t bits, const bool spanning) {
   std::vector<uint64_t> states;
@@ -133,10 +132,40 @@ std::vector<uint64_t> pack(const Section::block_array &indexes,
 
   return states;
 }
+
+// Since 26.3-snapshot-7, a block without properties is stored as its bare id, and the others as a compound with an `id` and `properties`. Lists cannot mix types, so in a palette with both the bare ids are wrapped in a compound under the empty key.
+std::vector<nbt::NBT> post5009(const std::vector<nbt::NBT> &legacy) {
+  const bool mixed =
+      std::any_of(legacy.begin(), legacy.end(), [](const nbt::NBT &entry) {
+        return entry.contains("Properties");
+      });
+
+  std::vector<nbt::NBT> entries;
+
+  for (const auto &entry : legacy) {
+    const nbt::NBT id(entry["Name"].get<nbt::NBT::tag_string_t>());
+
+    if (!entry.contains("Properties")) {
+      entries.push_back(mixed ? nbt::NBT(nbt::NBT::tag_compound_t({{"", id}}))
+                              : id);
+      continue;
+    }
+
+    nbt::NBT properties = entry["Properties"];
+    properties.set_name("properties");
+
+    nbt::NBT::tag_compound_t modern;
+    modern["id"] = nbt::NBT(id.get<nbt::NBT::tag_string_t>(), "id");
+    modern["properties"] = properties;
+    entries.push_back(nbt::NBT(modern));
+  }
+
+  return entries;
+}
 } // namespace
 
 bool Section::to_nbt(nbt::NBT &section, const int dataVersion) const {
-  if (dataVersion < 1628 || dataVersion >= 5009) {
+  if (dataVersion < 1628) {
     logger::error("Writing sections of DataVersion {} is not supported",
                   dataVersion);
     return false;
@@ -171,8 +200,7 @@ bool Section::to_nbt(nbt::NBT &section, const int dataVersion) const {
   for (size_t i = 0; i < blocks.size(); i++)
     indexes[i] = remap[blocks[i]];
 
-  // The length in bits of a block is the log2 of the palette's size or 4,
-  // whichever is greatest
+  // The length in bits of a block is the log2 of the palette's size or 4, whichever is greatest
   uint8_t bits = 4;
   while ((size_t(1) << bits) < compacted.size())
     bits++;
@@ -190,7 +218,8 @@ bool Section::to_nbt(nbt::NBT &section, const int dataVersion) const {
         nbt::NBT(nbt::NBT::tag_compound_t(), "block_states");
 
   nbt::NBT &block_states = section["block_states"];
-  block_states["palette"] = nbt::NBT(compacted, "palette");
+  block_states["palette"] = nbt::NBT(
+      dataVersion >= 5009 ? post5009(compacted) : compacted, "palette");
 
   // Since 1.19, a section filled with a single block has no data array
   if (dataVersion >= 3100 && compacted.size() == 1)

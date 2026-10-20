@@ -36,8 +36,7 @@ std::pair<int32_t, int32_t> Region::coordinates(const fs::path &_file) {
 }
 
 size_t Region::index(const mcmap::Chunk::coordinates &coords) {
-  // The header is ordered by z then x, using the coordinates of the chunk
-  // relative to the region
+  // The header is ordered by z then x, using the coordinates of the chunk relative to the region
   return (coords.x & (REGIONSIZE - 1)) +
          (coords.z & (REGIONSIZE - 1)) * REGIONSIZE;
 }
@@ -116,8 +115,7 @@ size_t Region::get_offset(uint8_t size) {
       break;
     }
 
-    // Put the sector at the end of the location's data. Overlapping locations
-    // in corrupted headers must not move it backwards.
+    // Put the sector at the end of the location's data. Overlapping locations in corrupted headers must not move it backwards.
     sector = std::max<size_t>(sector, location.offset() + location.size());
   }
 
@@ -202,8 +200,7 @@ bool Region::get_chunk(const mcmap::Chunk::coordinates &coords,
 
 bool Region::add_chunk(const mcmap::Chunk::coordinates &coords,
                        const nbt::NBT &data) {
-  // Serialize the NBT in memory. The buffer is the same size as the one used
-  // to read chunks, so any chunk written can be read back.
+  // Serialize the NBT in memory. The buffer is the same size as the one used to read chunks, so any chunk written can be read back.
   std::vector<uint8_t> chunk(DECOMPRESSED_BUFFER);
   nbt::io::ByteStreamWriter memory(chunk.data(), chunk.size());
 
@@ -235,8 +232,7 @@ bool Region::add_chunk(const mcmap::Chunk::coordinates &coords,
   logger::trace("Compressed chunk {} {}: compressed size {}", coords.x,
                 coords.z, compressed_size);
 
-  // The data is prefixed by its size (4 bytes) and compression type (1 byte),
-  // and the whole is padded to fill 4K sectors
+  // The data is prefixed by its size (4 bytes) and compression type (1 byte), and the whole is padded to fill 4K sectors
   const size_t sectors = (compressed_size + 5 + SECTOR_SIZE - 1) / SECTOR_SIZE;
 
   if (sectors > std::numeric_limits<Location::size_type>::max()) {
@@ -251,17 +247,14 @@ bool Region::add_chunk(const mcmap::Chunk::coordinates &coords,
   blob[4] = COMPRESSION_ZLIB;
   memcpy(blob.data() + 5, compressed.data(), compressed_size);
 
-  // Get the minimum available offset for this chunk in the file. The chunk's
-  // previous location is still marked as used, so if anything fails before the
-  // header is updated, the previous data is left intact.
+  // Get the minimum available offset for this chunk in the file. The chunk's previous location is still marked as used, so if anything fails before the header is updated, the previous data is left intact.
   const size_t offset = get_offset(sectors);
 
   // Make sure the file exists and has a header before writing data after it
   if (!fs::exists(file) && !write_header())
     return false;
 
-  // in | out as not to erase the contents of the file, as the changes made are
-  // localized
+  // in | out as not to erase the contents of the file, as the changes made are localized
   std::fstream out(file, std::ios::in | std::ios::out | std::ios::binary);
   out.seekp(offset * SECTOR_SIZE, std::ios::beg);
   out.write(reinterpret_cast<char *>(blob.data()), blob.size());

@@ -23,6 +23,7 @@ SET(SOURCES ${SOURCES}
     savefile.cpp
     section.cpp
     settings.cpp
+    structure.cpp
     worldloader.cpp
     chunk_format_versions/assert.cpp
     chunk_format_versions/get_section.cpp
