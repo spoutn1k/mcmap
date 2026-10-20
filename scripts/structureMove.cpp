@@ -2,6 +2,7 @@
 #include "../src/savefile.h"
 #include "../src/structure.h"
 #include <algorithm>
+#include <cmath>
 #include <logger.hpp>
 #include <nbt/hash.hpp>
 #include <set>
@@ -10,14 +11,16 @@ using mcmap::BoundingBox;
 using ChunkCoordinates = mcmap::Chunk::coordinates;
 using namespace mcmap::structure;
 
-// A world's chunks, read from and written back to its region files
+// A world's chunks, read from and written back to its region files; `terrain` is unset for the entity regions, whose chunks hold no blocks
 struct Save {
   fs::path directory;
+  bool terrain;
   std::map<std::pair<int32_t, int32_t>, Region> regions;
   std::map<ChunkCoordinates, nbt::NBT> chunks;
   std::set<ChunkCoordinates> modified;
 
-  explicit Save(const fs::path &dir) : directory(dir) {}
+  explicit Save(const fs::path &dir, bool terrain = true)
+      : directory(dir), terrain(terrain) {}
 
   Region &region(const ChunkCoordinates &pos) {
     const auto key = std::make_pair(REGION(pos.x), REGION(pos.z));
@@ -41,7 +44,7 @@ struct Save {
       nbt::NBT data;
 
       if (!region(pos).get_chunk(pos, data) ||
-          !mcmap::Chunk::assert_chunk(data))
+          (terrain ? !mcmap::Chunk::assert_chunk(data) : data.is_end()))
         return nullptr;
 
       query = chunks.emplace(pos, std::move(data)).first;
@@ -51,6 +54,15 @@ struct Save {
   }
 
   bool save() {
+    // The entity regions are only created once an entity is saved in the dimension
+    std::error_code error;
+    if (!modified.empty() && !fs::create_directories(directory, error) &&
+        error) {
+      logger::error("Creating `{}` failed: {}", directory.string(),
+                    error.message());
+      return false;
+    }
+
     for (const auto &pos : modified) {
       logger::debug("Writing chunk {} {}", pos.x, pos.z);
 
@@ -168,25 +180,98 @@ bool inside(const std::vector<BoundingBox> &boxes, int32_t x, int32_t y,
   return false;
 }
 
+// Replace the entries of the list `target` matching `selected` by the ones of the list `source`, which can be missing; returns whether `target` changed
+template <typename Predicate>
+bool replace(const nbt::NBT *source, nbt::NBT *target, Predicate selected) {
+  auto *entries = target->get<nbt::NBT::tag_list_t *>();
+  const size_t size = entries->size();
+
+  entries->erase(std::remove_if(entries->begin(), entries->end(), selected),
+                 entries->end());
+  bool changed = entries->size() != size;
+
+  if (source)
+    for (const auto &entry : *source->get<const nbt::NBT::tag_list_t *>())
+      if (selected(entry)) {
+        entries->push_back(entry);
+        changed = true;
+      }
+
+  return changed;
+}
+
 // Replace the positioned entries (block entities, ticks) of `target` inside the boxes by the ones of `source`
 void transfer(nbt::NBT *source, nbt::NBT *target,
               const std::vector<BoundingBox> &boxes) {
   if (!source || !target)
     return;
 
-  auto positioned = [&](const nbt::NBT &entry) {
+  replace(source, target, [&](const nbt::NBT &entry) {
     return entry.contains("x") && entry.contains("y") && entry.contains("z") &&
            inside(boxes, entry["x"].get<int32_t>(), entry["y"].get<int32_t>(),
                   entry["z"].get<int32_t>());
+  });
+}
+
+// Entity list of a chunk: in the terrain chunk before 1.17, then in a chunk of the entity regions, created if missing when `create` is set
+nbt::NBT *entity_list(Save &world, Save &entities, const ChunkCoordinates &pos,
+                      bool create) {
+  nbt::NBT &terrain = *world.chunk(pos);
+
+  if (nbt::NBT *legacy = chunk_list(terrain, "Entities", "Entities"))
+    return legacy;
+
+  nbt::NBT *chunk = entities.chunk(pos);
+
+  if (!chunk) {
+    if (!create)
+      return nullptr;
+
+    nbt::NBT created(nbt::NBT::tag_compound_t(), "");
+    created["DataVersion"] = terrain["DataVersion"];
+    created["Position"] =
+        nbt::NBT(std::vector<int32_t>({pos.x, pos.z}), "Position");
+    chunk = &entities.chunks.emplace(pos, std::move(created)).first->second;
+  }
+
+  if (!chunk->contains("Entities"))
+    (*chunk)["Entities"] = nbt::NBT(nbt::NBT::tag_list_t(), "Entities");
+
+  return &(*chunk)["Entities"];
+}
+
+// Replace the entities of the target chunk standing inside the boxes by the ones of the source chunk; riders are stored in their mount and move with it
+void copy_entities(Save &source, Save &source_entities, Save &destination,
+                   Save &destination_entities, const ChunkCoordinates &pos,
+                   const std::vector<BoundingBox> &boxes) {
+  auto standing = [&](const nbt::NBT &entity) {
+    if (!entity.contains("Pos"))
+      return false;
+
+    const auto *coordinates = entity["Pos"].get<const nbt::NBT::tag_list_t *>();
+
+    return coordinates && coordinates->size() == 3 &&
+           inside(boxes, int32_t(std::floor((*coordinates)[0].get<double>())),
+                  int32_t(std::floor((*coordinates)[1].get<double>())),
+                  int32_t(std::floor((*coordinates)[2].get<double>())));
   };
 
-  auto *entries = target->get<nbt::NBT::tag_list_t *>();
-  entries->erase(std::remove_if(entries->begin(), entries->end(), positioned),
-                 entries->end());
+  const nbt::NBT *from = entity_list(source, source_entities, pos, false);
+  const bool incoming =
+      from && std::any_of(from->begin(), from->end(), standing);
 
-  for (const auto &entry : *source->get<const nbt::NBT::tag_list_t *>())
-    if (positioned(entry))
-      entries->push_back(entry);
+  // Only create an entity chunk in the target if there is something to put in it
+  nbt::NBT *to = entity_list(destination, destination_entities, pos, incoming);
+
+  if (!to || !replace(from, to, standing))
+    return;
+
+  logger::debug("Chunk {} {}: copied entities", pos.x, pos.z);
+
+  if (mcmap::Chunk::level(*destination.chunk(pos)).contains("Entities"))
+    destination.modified.insert(pos);
+  else
+    destination_entities.modified.insert(pos);
 }
 
 bool copy_chunk(Save &source, Save &destination, const ChunkCoordinates &pos,
@@ -344,14 +429,15 @@ bool register_structure(Save &destination, const Structure &structure,
 void usage(const char *binary) {
   fmt::print(stderr,
              "Usage: {} [options] SOURCE TARGET X Z\n\n"
-             "Copy the structures in chunk X Z of the SOURCE world to the "
-             "same position in\nthe TARGET world, which is modified in "
-             "place.\n\n"
+             "Copy the structures in chunk X Z of the SOURCE world, with the "
+             "entities inside\nthem, to the same position in the TARGET "
+             "world, which is modified in place.\n\n"
              "  -dim[ension] NAME  dimension to use; default is overworld\n"
              "  -id ID             only copy the structure of this id\n"
              "  -n                 dry run, do not write anything\n"
              "  -noblocks          only register the structure, without "
              "copying its blocks\n"
+             "                     or entities\n"
              "  -v[erbose]         toggle debug mode\n",
              binary);
 }
@@ -406,7 +492,10 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  Save source(source_dir), destination(target_dir);
+  // Entities are stored in their own regions since 1.17, next to the terrain ones
+  Save source(source_dir), destination(target_dir),
+      source_entities(source_dir.parent_path() / "entities", false),
+      destination_entities(target_dir.parent_path() / "entities", false);
   const ChunkCoordinates pos = {atoi(positional[2].c_str()),
                                 atoi(positional[3].c_str())};
 
@@ -455,6 +544,9 @@ int main(int argc, char **argv) {
 
       if (!copy_chunk(source, destination, chunk, boxes))
         return 1;
+
+      copy_entities(source, source_entities, destination,
+                    destination_entities, chunk, boxes);
     }
 
     if (!register_structure(destination, structure, chunks))
@@ -462,16 +554,19 @@ int main(int argc, char **argv) {
   }
 
   if (dry_run) {
-    logger::info("Dry run: {} chunks would be written",
-                 destination.modified.size());
+    logger::info("Dry run: {} chunks and {} entity chunks would be written",
+                 destination.modified.size(),
+                 destination_entities.modified.size());
     return 0;
   }
 
-  if (!destination.save()) {
+  if (!destination.save() || !destination_entities.save()) {
     logger::error("Writing the target world failed");
     return 1;
   }
 
-  logger::info("Wrote {} chunks", destination.modified.size());
+  logger::info("Wrote {} chunks and {} entity chunks",
+               destination.modified.size(),
+               destination_entities.modified.size());
   return 0;
 }
