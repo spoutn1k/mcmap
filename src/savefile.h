@@ -36,6 +36,7 @@ struct SaveFile {
   bool valid() const { return last_played; }
   void getDimensions();
 
+  fs::path terrain(const Dimension &) const;
   fs::path region(const Dimension &) const;
   World::Coordinates getWorld(const Dimension &);
 };

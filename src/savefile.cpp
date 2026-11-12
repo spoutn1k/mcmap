@@ -74,14 +74,9 @@ SaveFile::SaveFile(const fs::path &_folder) : folder(_folder) {
 
 #define VALID(path) (fs::exists((path)) && !fs::is_empty((path)))
 void SaveFile::getDimensions() {
-  if VALID (folder / "region")
-    dimensions.push_back(Dimension("minecraft", "overworld"));
-
-  if VALID (folder / "DIM1/region")
-    dimensions.push_back(Dimension("minecraft", "the_end"));
-
-  if VALID (folder / "DIM-1/region")
-    dimensions.push_back(Dimension("minecraft", "the_nether"));
+  std::vector<Dimension> candidates = {
+      Dimension("minecraft", "overworld"), Dimension("minecraft", "the_end"),
+      Dimension("minecraft", "the_nether")};
 
   fs::path dim_folder = folder / "dimensions";
 
@@ -91,11 +86,34 @@ void SaveFile::getDimensions() {
       if (!ns.is_directory())
         continue;
 
-      for (auto &id : fs::directory_iterator(ns.path()))
-        if (id.is_directory())
-          dimensions.push_back(Dimension(ns.path().filename().string(),
-                                         id.path().filename().string()));
+      for (auto &id : fs::directory_iterator(ns.path())) {
+        if (!id.is_directory())
+          continue;
+
+        Dimension dim(ns.path().filename().string(),
+                      id.path().filename().string());
+
+        if (std::find(candidates.begin(), candidates.end(), dim) ==
+            candidates.end())
+          candidates.push_back(dim);
+      }
     }
+
+  // Only keep dimensions with terrain: a dimension folder can exist with only `data` in it, and selecting it would scan a missing region folder
+  for (auto &dim : candidates)
+    if (!terrain(dim).empty())
+      dimensions.push_back(dim);
+}
+
+fs::path SaveFile::terrain(const Dimension &dim) const {
+  // Check first for the old region/DIM1/DIM-1
+  if (!dim.special_suffix().empty() && VALID(folder / dim.special_suffix()))
+    return folder / dim.special_suffix();
+
+  if VALID (folder / dim.suffix())
+    return folder / dim.suffix();
+
+  return "";
 }
 
 fs::path SaveFile::region(const Dimension &dim) const {
@@ -104,12 +122,7 @@ fs::path SaveFile::region(const Dimension &dim) const {
   if (found == dimensions.end())
     return "";
 
-  // Check now for the old region/DIM1/DIM-1
-  if VALID (folder / dim.special_suffix()) {
-    return folder / dim.special_suffix();
-  }
-
-  return folder / dim.suffix();
+  return terrain(dim);
 }
 #undef VALID
 
