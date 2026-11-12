@@ -3,6 +3,7 @@
 
 #include "./VERSION"
 #include "./canvas.h"
+#include "./diagnostics.h"
 #include "./settings.h"
 #ifdef _OPENMP
 #include <omp.h>
@@ -11,8 +12,10 @@
 
 namespace mcmap {
 
+// Problems met while loading the world are recorded in the report, if one is given
 int render(const Settings::WorldOptions &, const Colors::Palette &,
-           Progress::Callback = Progress::Status::quiet);
+           Progress::Callback = Progress::Status::quiet,
+           Diagnostics::Report * = nullptr);
 
 std::string version();
 

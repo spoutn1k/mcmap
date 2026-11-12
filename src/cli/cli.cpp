@@ -69,7 +69,18 @@ int main(int argc, char **argv) {
   if (options.hideBeacons)
     colors["mcmap:beacon_beam"] = Colors::Block();
 
-  if (!mcmap::render(options, colors, Progress::Status::ascii)) {
+  Diagnostics::Report report;
+  const bool rendered =
+      mcmap::render(options, colors, Progress::Status::ascii, &report);
+
+  for (const auto &message : report.messages()) {
+    if (message.severity == Diagnostics::WARNING)
+      logger::warn("{}", message.text);
+    else
+      logger::info("{}", message.text);
+  }
+
+  if (!rendered) {
     logger::error("Error rendering terrain.");
     return ERROR;
   }

@@ -114,6 +114,8 @@ MainWindow::MainWindow(QWidget *parent)
   connect(renderer, SIGNAL(resultReady()), this, SLOT(stopRender()));
   connect(renderer, SIGNAL(sendProgress(int, int, int)), this,
           SLOT(updateProgress(int, int, int)));
+  connect(renderer, SIGNAL(sendReport(QStringList)), this,
+          SLOT(showReport(QStringList)));
 
   // Chunk loading uses large stack buffers; secondary threads only get 512K
   // of stack on macOS, so match the 8M of the main thread
@@ -513,6 +515,13 @@ void MainWindow::updateProgress(int prog, int total, int action) {
   ui->progressBar->setValue(prog);
 }
 
+void MainWindow::showReport(QStringList messages) {
+  for (const auto &message : messages)
+    logger::warn("{}", message.toStdString());
+
+  QMessageBox::warning(this, "Render issues", messages.join("\n\n"));
+}
+
 void MainWindow::startRender() {
   ui->progressBar->setEnabled(true);
   ui->progressBar->setTextVisible(true);
@@ -535,9 +544,23 @@ void Renderer::render() {
     emit sendProgress(d, t, a);
   };
 
+  Diagnostics::Report report;
+
   emit startRender();
-  mcmap::render(options, custom_palette, update);
+  mcmap::render(options, custom_palette, update, &report);
   emit resultReady();
+
+  // Only warnings are worth a dialog, the rest goes to the logs
+  QStringList warnings;
+  for (const auto &message : report.messages()) {
+    if (message.severity == Diagnostics::WARNING)
+      warnings << QString::fromStdString(message.text);
+    else
+      logger::info("{}", message.text);
+  }
+
+  if (!warnings.empty())
+    emit sendReport(warnings);
 }
 
 void MainWindow::on_actionToggleLogs_triggered() {

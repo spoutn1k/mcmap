@@ -1,6 +1,7 @@
 #pragma once
 
 #include "./colors.h"
+#include "./diagnostics.h"
 #include <2DCoordinates.hpp>
 #include <nbt/nbt.hpp>
 
@@ -69,5 +70,5 @@ struct Section {
     return palette[blocks[x + 16 * z + 16 * 16 * y]];
   }
 
-  void loadPalette(const Colors::Palette &);
+  void loadPalette(const Colors::Palette &, Diagnostics::Report * = nullptr);
 };

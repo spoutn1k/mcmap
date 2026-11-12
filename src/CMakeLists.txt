@@ -14,6 +14,7 @@ SET(SOURCES ${SOURCES}
     canvas.cpp
     chunk.cpp
     colors.cpp
+    diagnostics.cpp
     helper.cpp
     mcmap.cpp
     png.cpp

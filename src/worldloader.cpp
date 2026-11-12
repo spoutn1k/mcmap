@@ -95,16 +95,28 @@ void Data::loadChunk(const ChunkCoordinates coords) {
 
   nbt::NBT data;
 
-  if (!nbt::parse(chunkBuffer, length, data) || !Chunk::assert_chunk(data)) {
+  if (!nbt::parse(chunkBuffer, length, data)) {
     fclose(regionHandle);
     logger::trace("Chunk parsing failed for chunk {} {} in {}", coords.x,
                   coords.z, regionFile.string());
     return;
   }
 
+  if (!Chunk::assert_chunk(data)) {
+    fclose(regionHandle);
+    if (report && data.contains("DataVersion"))
+      report->chunk_rejected(data["DataVersion"].get<int>(), coords);
+    logger::trace("Chunk {} {} in {} was rejected", coords.x, coords.z,
+                  regionFile.string());
+    return;
+  }
+
   fclose(regionHandle);
 
-  chunks[coords] = Chunk(data, palette, coords);
+  chunks[coords] = Chunk(data, palette, coords, report);
+
+  if (report)
+    report->chunk_loaded(chunks[coords].data_version);
 }
 
 const Data::Chunk &Data::chunkAt(const ChunkCoordinates coords,

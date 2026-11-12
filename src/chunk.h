@@ -1,5 +1,6 @@
 #pragma once
 
+#include "./diagnostics.h"
 #include "./section.h"
 #include <2DCoordinates.hpp>
 #include <map.hpp>
@@ -19,7 +20,8 @@ struct Chunk {
   section_array_t sections;
 
   Chunk();
-  Chunk(const nbt_t &, const Colors::Palette &, const coordinates);
+  Chunk(const nbt_t &, const Colors::Palette &, const coordinates,
+        Diagnostics::Report * = nullptr);
   Chunk(Chunk &&);
 
   Chunk &operator=(Chunk &&);
@@ -27,6 +29,9 @@ struct Chunk {
   bool valid() const { return data_version != -1; }
 
   static bool assert_chunk(const nbt_t &);
+
+  // The most recent DataVersion with a known chunk format
+  static version_t latest_version();
 };
 
 } // namespace mcmap

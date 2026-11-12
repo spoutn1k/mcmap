@@ -33,7 +33,7 @@ bool writeMapInfo(fs::path outFile, const Canvas &finalImage,
 }
 
 int render(const Settings::WorldOptions &options, const Colors::Palette &colors,
-           Progress::Callback cb) {
+           Progress::Callback cb, Diagnostics::Report *report) {
   logger::debug("Rendering {} with {}", options.save.name,
                 options.boundaries.to_string());
 
@@ -77,7 +77,8 @@ int render(const Settings::WorldOptions &options, const Colors::Palette &colors,
       canvas.setColors(colors);
 
       // Load the minecraft terrain to render
-      Terrain::Data world(fragment_coordinates[i], options.regionDir(), colors);
+      Terrain::Data world(fragment_coordinates[i], options.regionDir(), colors,
+                          report);
 
       // Draw the terrain fragment
       canvas.shading = options.shading;
@@ -102,7 +103,9 @@ int render(const Settings::WorldOptions &options, const Colors::Palette &colors,
 #ifdef _OPENMP
 #pragma omp critical
 #endif
-      { s.increment(); }
+      {
+        s.increment();
+      }
     }
   }
 

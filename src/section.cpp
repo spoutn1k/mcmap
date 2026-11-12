@@ -26,14 +26,17 @@ Section::Section() : colors{&_void} {
   lights.fill(std::numeric_limits<light_array::value_type>::min());
 }
 
-void Section::loadPalette(const Colors::Palette &defined) {
+void Section::loadPalette(const Colors::Palette &defined,
+                          Diagnostics::Report *report) {
   // Pick the colors from the Palette
   for (const auto &color : palette) {
     const string namespacedId = color["Name"].get<string>();
     auto query = defined.find(namespacedId);
 
     if (query == defined.end()) {
-      logger::error("Color of block {} not found", namespacedId);
+      logger::debug("Color of block {} not found", namespacedId);
+      if (report)
+        report->missing_color(namespacedId);
       colors.push_back(&_void);
     } else {
       colors.push_back(&query->second);

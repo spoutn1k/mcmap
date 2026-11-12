@@ -24,10 +24,14 @@ struct Data {
   fs::path regionDir;
   const Colors::Palette &palette;
 
+  // Where to record loading problems, if anywhere
+  Diagnostics::Report *report;
+
   // Default constructor
   explicit Data(const World::Coordinates &coords,
-                const std::filesystem::path &dir, const Colors::Palette &p)
-      : regionDir(dir), palette(p) {
+                const std::filesystem::path &dir, const Colors::Palette &p,
+                Diagnostics::Report *r = nullptr)
+      : regionDir(dir), palette(p), report(r) {
     map.minX = CHUNK(coords.minX);
     map.minZ = CHUNK(coords.minZ);
     map.maxX = CHUNK(coords.maxX);

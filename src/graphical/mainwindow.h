@@ -24,6 +24,7 @@ signals:
   void startRender();
   void resultReady();
   void sendProgress(int, int, int);
+  void sendReport(QStringList);
 };
 
 class MainWindow : public QMainWindow {
@@ -77,6 +78,7 @@ private slots:
   void startRender();
   void stopRender();
   void updateProgress(int, int, int);
+  void showReport(QStringList);
 
   void on_actionToggleLogs_triggered();
   void on_actionDumpColors_triggered();
