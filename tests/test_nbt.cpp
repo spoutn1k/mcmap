@@ -1,4 +1,5 @@
 #include "./samples.h"
+#include <cstdint>
 #include <gtest/gtest.h>
 #include <nbt/parser.hpp>
 
@@ -151,7 +152,7 @@ TEST(TestNBT, TestCreateLongArray) {
   ASSERT_FALSE(test.empty());
   ASSERT_EQ(test.get_type(), nbt::tag_type::tag_long_array);
 
-  std::vector<long> *data = test.get<std::vector<long> *>();
+  std::vector<int64_t> *data = test.get<std::vector<int64_t> *>();
   for (size_t i = 0; i < array.size(); i++)
     ASSERT_EQ(array.at(i), data->at(i));
 }
