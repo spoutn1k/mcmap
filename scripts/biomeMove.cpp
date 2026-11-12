@@ -1,3 +1,4 @@
+#include "../src/biome.h"
 #include "./world.h"
 #include <optional>
 #include <queue>
@@ -186,8 +187,10 @@ int main(int argc, char **argv) {
 
     if ((option == "-dim" || option == "-dimension") && i + 1 < argc)
       dim = Dimension(argv[++i]);
-    else if (option == "-biome" && i + 1 < argc)
-      biomes.insert(argv[++i]);
+    else if (option == "-biome" && i + 1 < argc) {
+      mcmap::biomes::warn_if_unknown(argv[++i]);
+      biomes.insert(argv[i]);
+    }
     else if (option == "-n")
       dry_run = true;
     else if (option == "-v" || option == "-verbose")
