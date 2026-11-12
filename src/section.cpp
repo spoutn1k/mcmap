@@ -10,6 +10,11 @@ std::map<int, std::function<void(Section *, const nbt::NBT &)>> init = {
     {2840, init_versions::v2840}, {2534, init_versions::v2534},
     {1628, init_versions::v1628}, {0, init_versions::catchall},
 };
+
+std::map<int, std::function<void(Section *, const nbt::NBT &)>> biomes = {
+    {2836, biomes_versions::v2836},
+    {0, biomes_versions::catchall},
+};
 } // namespace versions
 } // namespace mcmap
 
@@ -24,6 +29,7 @@ Section::Section() : colors{&_void} {
   // Make sure all the blocks are air - thanks to the default value in `colors`
   blocks.fill(std::numeric_limits<block_array::value_type>::min());
   lights.fill(std::numeric_limits<light_array::value_type>::min());
+  biomes.fill(0);
 }
 
 void Section::loadPalette(const Colors::Palette &defined,
@@ -60,10 +66,22 @@ Section::Section(const nbt::NBT &raw_section, const int dataVersion,
     init_it->second(this, raw_section);
   }
 
+  auto biomes_it = compatible(mcmap::versions::biomes, dataVersion);
+
+  if (biomes_it != mcmap::versions::biomes.end())
+    biomes_it->second(this, raw_section);
+
   // Iron out potential corruption errors
   for (block_array::reference index : blocks) {
     if (index > palette.size() - 1) {
       logger::trace("Malformed section: block is undefined in palette");
+      index = 0;
+    }
+  }
+
+  for (biome_array::reference index : biomes) {
+    if (index >= biome_palette.size()) {
+      logger::trace("Malformed section: biome is undefined in palette");
       index = 0;
     }
   }

@@ -450,6 +450,27 @@
          </item>
         </layout>
        </item>
+       <item>
+        <layout class="QHBoxLayout" name="biomeFilter">
+         <item>
+          <widget class="QLabel" name="biomesLabel">
+           <property name="text">
+            <string>Biomes Only</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="biomes">
+           <property name="placeholderText">
+            <string>minecraft:plains, minecraft:forest</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="biomeSelect"/>
+         </item>
+        </layout>
+       </item>
       </layout>
      </widget>
     </item>
@@ -786,6 +807,8 @@
   <tabstop>shading</tabstop>
   <tabstop>lighting</tabstop>
   <tabstop>structures</tabstop>
+  <tabstop>biomes</tabstop>
+  <tabstop>biomeSelect</tabstop>
   <tabstop>hideBeacons</tabstop>
   <tabstop>hideWater</tabstop>
   <tabstop>colorSelectButton</tabstop>

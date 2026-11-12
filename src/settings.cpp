@@ -17,6 +17,7 @@ void Settings::to_json(json &j, const Settings::WorldOptions &o) {
   j["shading"] = o.shading;
   j["lighting"] = o.lighting;
   j["structures"] = o.structures;
+  j["biomes"] = o.biomes;
 
   j["memory"] = o.mem_limit;
   j["tile"] = o.tile_size;

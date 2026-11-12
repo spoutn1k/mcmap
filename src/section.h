@@ -12,6 +12,8 @@ struct Section {
   // Each index in the array above points to a block in the palette and a color in the following array
   using color_array = std::vector<const Colors::Block *>;
   using light_array = std::array<uint8_t, 2048>;
+  // Since 1.18, biomes are stored per cell of 4x4x4 blocks as an index in the biome palette
+  using biome_array = std::array<uint8_t, 64>;
 
   // The vertical index of the section
   int8_t Y;
@@ -22,6 +24,9 @@ struct Section {
   color_array colors;
   light_array lights;
   std::vector<nbt::NBT> palette;
+
+  biome_array biomes;
+  std::vector<std::string> biome_palette;
 
   block_array::value_type beaconIndex;
 
@@ -39,6 +44,8 @@ struct Section {
     lights = std::move(other.lights);
     colors = std::move(other.colors);
     palette = std::move(other.palette);
+    biomes = std::move(other.biomes);
+    biome_palette = std::move(other.biome_palette);
     return *this;
   }
 
@@ -64,6 +71,11 @@ struct Section {
     const uint16_t index = x + 16 * z + 16 * 16 * y;
 
     return (index % 2 ? lights[index / 2] >> 4 : lights[index / 2] & 0x0f);
+  }
+
+  inline biome_array::value_type biome_at(uint8_t x, uint8_t y,
+                                          uint8_t z) const {
+    return biomes[(x >> 2) + 4 * (z >> 2) + 4 * 4 * (y >> 2)];
   }
 
   inline const nbt::NBT &state_at(uint8_t x, uint8_t y, uint8_t z) const {

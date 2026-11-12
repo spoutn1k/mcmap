@@ -24,5 +24,11 @@ void v5009(Section *, const nbt::NBT &);
 
 void catchall(Section *, const nbt::NBT &);
 } // namespace init_versions
+
+namespace biomes_versions {
+void v2836(Section *, const nbt::NBT &);
+
+void catchall(Section *, const nbt::NBT &);
+} // namespace biomes_versions
 } // namespace versions
 } // namespace mcmap

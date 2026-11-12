@@ -75,6 +75,8 @@ private slots:
   void on_shading_stateChanged(int);
   void on_lighting_stateChanged(int);
   void on_structures_stateChanged(int);
+  void on_biomes_textEdited(const QString &);
+  void on_biomeSelect_activated(int);
 
   void startRender();
   void stopRender();

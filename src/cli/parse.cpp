@@ -1,4 +1,5 @@
 #include "./parse.h"
+#include "../biome.h"
 
 #define ISPATH(p) (!(p).empty() && std::filesystem::exists((p)))
 
@@ -69,6 +70,14 @@ bool parseArgs(int argc, char **argv, Settings::WorldOptions *opts) {
       opts->lighting = true;
     } else if (strcmp(option, "-structures") == 0) {
       opts->structures = true;
+    } else if (strcmp(option, "-biome") == 0) {
+      if (!MOREARGS(1)) {
+        logger::error("{} needs a biome name", option);
+        return false;
+      }
+      const char *biome = NEXTARG;
+      mcmap::biomes::warn_if_unknown(biome);
+      opts->biomes.insert(biome);
     } else if (strcmp(option, "-nether") == 0) {
       opts->dim = Dimension("the_nether");
     } else if (strcmp(option, "-end") == 0) {

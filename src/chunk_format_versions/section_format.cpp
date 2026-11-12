@@ -223,5 +223,49 @@ void catchall(Section *, const nbt::NBT &) {
   logger::trace("Unsupported DataVersion");
 }
 } // namespace init_versions
+
+namespace biomes_versions {
+void v2836(Section *target, const nbt::NBT &raw_section) {
+  // NEW in 1.18, biomes moved from the chunk to the sections, with a palette of namespaced ids like the blocks. The length in bits of an index is the log2 of the palette's size, with no minimum, and a section with a single biome has no data array.
+  if (!raw_section.contains("biomes") ||
+      !raw_section["biomes"].contains("palette"))
+    return;
+
+  const nbt::NBT &biomes = raw_section["biomes"];
+
+  for (const auto &biome : biomes["palette"])
+    target->biome_palette.push_back(biome.get<std::string>());
+
+  if (!biomes.contains("data"))
+    return;
+
+  const nbt::NBT::tag_long_array_t *data =
+      biomes["data"].get<const nbt::NBT::tag_long_array_t *>();
+
+  uint8_t bits = 0;
+  while ((size_t(1) << bits) < target->biome_palette.size())
+    bits++;
+
+  if (!bits)
+    return;
+
+  // Indexes do not span two longs, as in the block states since 1.16
+  const uint8_t perLong = 64 / bits;
+
+  if (data->size() < (target->biomes.size() + perLong - 1) / perLong) {
+    logger::trace("Section {}: biome data too short", target->Y);
+    return;
+  }
+
+  for (size_t index = 0; index < target->biomes.size(); index++)
+    target->biomes[index] =
+        (uint64_t((*data)[index / perLong]) >> ((index % perLong) * bits)) &
+        ((uint64_t(1) << bits) - 1);
+}
+
+void catchall(Section *, const nbt::NBT &) {
+  // Before 1.18, biomes are stored per chunk as numeric ids
+}
+} // namespace biomes_versions
 } // namespace versions
 } // namespace mcmap

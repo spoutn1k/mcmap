@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <map.hpp>
 #include <progress.hpp>
+#include <set>
 
 #define CHANSPERPIXEL 4
 #define BYTESPERCHAN 1
@@ -225,6 +226,7 @@ struct IsometricCanvas : Canvas {
 
   bool shading, lighting, beamColumn;
   bool structures; // Only render the blocks inside structures
+  std::set<std::string> biomes; // Only render the blocks in these biomes, if any
   size_t rendered;
 
   size_t width, height;

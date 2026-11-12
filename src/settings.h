@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <map.hpp>
+#include <set>
 #include <string>
 
 #define UNDEFINED 0x7FFFFFFF
@@ -34,6 +35,7 @@ struct WorldOptions {
   // Image settings
   uint16_t padding;
   bool hideWater, hideBeacons, shading, lighting, structures;
+  std::set<std::string> biomes; // Only render these biomes if not empty
   size_t tile_size; // 0 means no tiling
 
   // Marker storage

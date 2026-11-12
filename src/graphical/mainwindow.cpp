@@ -3,8 +3,10 @@
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QMessageBox>
+#include <QRegularExpression>
 #include <QStatusBar>
 
+#include "../biome.h"
 #include "../mcmap.h"
 
 const std::string WATER_ID = "minecraft:water";
@@ -82,6 +84,11 @@ MainWindow::MainWindow(QWidget *parent)
 
   ui->circularRadius->setValidator(
       new QIntValidator(0, std::numeric_limits<int>::max()));
+
+  // The first entry is a prompt, selecting a biome adds it to the filter
+  ui->biomeSelect->addItem("Add biome…");
+  for (const char *biome : mcmap::biomes::known)
+    ui->biomeSelect->addItem(biome);
 
   connect(ui->tiledOutputSizeSlider, &QAbstractSlider::valueChanged, this,
           [this](int val) {
@@ -374,6 +381,32 @@ void MainWindow::on_lighting_stateChanged(int checked) {
 
 void MainWindow::on_structures_stateChanged(int checked) {
   options.structures = checked;
+}
+
+void MainWindow::on_biomes_textEdited(const QString &text) {
+  options.biomes.clear();
+
+  for (const QString &biome :
+       text.split(QRegularExpression("[,\\s]+"), Qt::SkipEmptyParts))
+    options.biomes.insert(biome.toStdString());
+}
+
+void MainWindow::on_biomeSelect_activated(int index) {
+  ui->biomeSelect->setCurrentIndex(0);
+
+  if (!index)
+    return;
+
+  const QString biome = ui->biomeSelect->itemText(index);
+
+  if (!options.biomes.count(biome.toStdString())) {
+    QString text = ui->biomes->text().trimmed();
+    if (!text.isEmpty())
+      text += ", ";
+
+    ui->biomes->setText(text + biome);
+    on_biomes_textEdited(ui->biomes->text());
+  }
 }
 
 void MainWindow::on_renderButton_clicked() {

@@ -10,6 +10,7 @@ ADD_CUSTOM_COMMAND(OUTPUT ${BSON}
 SET(SOURCES ${SOURCES}
     ${BSON}
     blocktypes.def
+    biome.cpp
     block_drawers.cpp
     canvas.cpp
     chunk.cpp

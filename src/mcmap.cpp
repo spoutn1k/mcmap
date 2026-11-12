@@ -84,6 +84,7 @@ int render(const Settings::WorldOptions &options, const Colors::Palette &colors,
       canvas.shading = options.shading;
       canvas.lighting = options.lighting;
       canvas.structures = options.structures;
+      canvas.biomes = options.biomes;
       canvas.setMarkers(options.totalMarkers, options.markers);
       canvas.renderTerrain(world);
 

@@ -336,6 +336,19 @@ void IsometricCanvas::renderChunk(Terrain::Data &terrain) {
     return;
   }
 
+  if (!biomes.empty() &&
+      std::none_of(chunk.sections.begin(), chunk.sections.end(),
+                   [&](const Section &section) {
+                     return std::any_of(section.biome_palette.begin(),
+                                        section.biome_palette.end(),
+                                        [&](const std::string &biome) {
+                                          return biomes.count(biome);
+                                        });
+                   })) {
+    terrain.free_chunk({worldX, worldZ});
+    return;
+  }
+
   chunk_structures = &chunk.structures;
 
   // Setup the markers
@@ -423,6 +436,18 @@ void IsometricCanvas::renderSection(const Section &section) {
       return;
   }
 
+  // Which entries of the section's biome palette are rendered
+  std::vector<bool> wanted_biomes;
+
+  if (!biomes.empty()) {
+    for (const auto &biome : section.biome_palette)
+      wanted_biomes.push_back(biomes.count(biome));
+
+    if (std::find(wanted_biomes.begin(), wanted_biomes.end(), true) ==
+        wanted_biomes.end())
+      return;
+  }
+
   // Main drawing loop, for every block of the section
   for (uint8_t x = 0; x < 16; x++) {
     for (uint8_t z = 0; z < 16; z++) {
@@ -478,6 +503,10 @@ void IsometricCanvas::renderSection(const Section &section) {
                          [&](const mcmap::BoundingBox &box) {
                            return box.contains(px, (section.Y << 4) + y, pz);
                          }))
+          continue;
+
+        if (!biomes.empty() &&
+            !wanted_biomes[section.biome_at(orientedX, y, orientedZ)])
           continue;
 
         renderBlock(section.color_at(orientedX, y, orientedZ),
