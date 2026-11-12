@@ -46,7 +46,7 @@ const std::string cache_name = "mcmap_cache";
 }
 } // namespace mcmap
 
-#define REGION_HEADER_SIZE REGIONSIZE *REGIONSIZE * 4
+#define REGION_HEADER_SIZE REGIONSIZE * REGIONSIZE * 4
 #define DECOMPRESSED_BUFFER 1000 * 1024
 #define COMPRESSED_BUFFER 500 * 1024
 

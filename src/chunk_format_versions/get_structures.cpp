@@ -17,8 +17,8 @@ void read_starts(const nbt::NBT &starts, std::vector<BoundingBox> &boxes) {
 
       const auto *bb = piece["BB"].get<const nbt::NBT::tag_int_array_t *>();
       if (bb && bb->size() == 6)
-        boxes.push_back({(*bb)[0], (*bb)[1], (*bb)[2], (*bb)[3], (*bb)[4],
-                         (*bb)[5]});
+        boxes.push_back(
+            {(*bb)[0], (*bb)[1], (*bb)[2], (*bb)[3], (*bb)[4], (*bb)[5]});
     }
   }
 }
@@ -28,14 +28,13 @@ void read_starts(const nbt::NBT &starts, std::vector<BoundingBox> &boxes) {
 void read_references(const nbt::NBT &references,
                      std::vector<Coordinates> &positions) {
   for (const auto &structure : references) {
-    const auto *packed =
-        structure.get<const nbt::NBT::tag_long_array_t *>();
+    const auto *packed = structure.get<const nbt::NBT::tag_long_array_t *>();
     if (!packed)
       continue;
 
     for (const int64_t position : *packed)
-      positions.push_back({int32_t(position & 0xffffffff),
-                           int32_t(uint64_t(position) >> 32)});
+      positions.push_back(
+          {int32_t(position & 0xffffffff), int32_t(uint64_t(position) >> 32)});
   }
 }
 

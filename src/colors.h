@@ -100,7 +100,7 @@ struct Color {
       ALPHA = 255;
   }
 
-  Color(const char *code) : Color(std::string(code)){};
+  Color(const char *code) : Color(std::string(code)) {};
 
   Color(list<int> values) : Color() {
     uint8_t index = 0;

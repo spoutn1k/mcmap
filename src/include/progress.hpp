@@ -29,7 +29,7 @@ const std::map<Progress::Action, std::string> action_strings = {
 
 struct Status {
 
-  static void quiet(int, int, int){};
+  static void quiet(int, int, int) {};
   static void ascii(int d, int t, Progress::Action status) {
 #ifndef _WINDOWS
     // Only print progress bar if stderr is a tty

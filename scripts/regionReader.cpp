@@ -12,7 +12,7 @@ std::string info = "This program will output all the information present in a "
 #define REGIONSIZE 32
 #define COMPRESSED_BUFFER 500 * 1024
 #define DECOMPRESSED_BUFFER 1000 * 1024
-#define HEADER_SIZE REGIONSIZE *REGIONSIZE * 4
+#define HEADER_SIZE REGIONSIZE * REGIONSIZE * 4
 
 using std::filesystem::exists;
 using std::filesystem::path;

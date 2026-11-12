@@ -11,7 +11,7 @@ std::string info =
 #define BUFFERSIZE 2000000
 #define DECOMPRESSED_BUFFER BUFFERSIZE
 #define REGIONSIZE 32
-#define HEADER_SIZE REGIONSIZE *REGIONSIZE * 4
+#define HEADER_SIZE REGIONSIZE * REGIONSIZE * 4
 
 using std::filesystem::exists;
 using std::filesystem::path;

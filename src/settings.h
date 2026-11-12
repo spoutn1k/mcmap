@@ -36,7 +36,7 @@ struct WorldOptions {
   uint16_t padding;
   bool hideWater, hideBeacons, shading, lighting, structures;
   std::set<std::string> biomes; // Only render these biomes if not empty
-  size_t tile_size; // 0 means no tiling
+  size_t tile_size;             // 0 means no tiling
 
   // Marker storage
   uint8_t totalMarkers;

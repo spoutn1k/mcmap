@@ -13,7 +13,7 @@ struct Location {
 
   uint32_t raw_data;
 
-  Location() : raw_data(0){};
+  Location() : raw_data(0) {};
 
   offset_t offset() const { return raw_data >> 8; }
   size_t size() const { return raw_data & 0xff; }

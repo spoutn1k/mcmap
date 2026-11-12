@@ -17,8 +17,8 @@ size_t distance(const std::string &a, const std::string &b) {
 
     for (size_t j = 1; j <= b.size(); j++) {
       const size_t above = row[j];
-      row[j] = std::min({row[j] + 1, row[j - 1] + 1,
-                         diagonal + (a[i - 1] != b[j - 1])});
+      row[j] = std::min(
+          {row[j] + 1, row[j - 1] + 1, diagonal + (a[i - 1] != b[j - 1])});
       diagonal = above;
     }
   }

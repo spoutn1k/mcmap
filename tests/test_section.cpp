@@ -88,10 +88,10 @@ nbt::NBT biome_section(const std::vector<std::string> &names,
   if (!data.empty())
     biomes["data"] = nbt::NBT(data, "data");
 
-  return nbt::NBT(nbt::NBT::tag_compound_t(
-      {{"Y", nbt::NBT(int8_t(0), "Y")}, {"biomes", nbt::NBT(biomes, "biomes")}}));
-
-  }
+  return nbt::NBT(
+      nbt::NBT::tag_compound_t({{"Y", nbt::NBT(int8_t(0), "Y")},
+                                {"biomes", nbt::NBT(biomes, "biomes")}}));
+}
 } // namespace
 
 TEST_F(TestSection, TestBiomeSingle) {
@@ -110,14 +110,14 @@ TEST_F(TestSection, TestBiomeCells) {
   const auto set = [&](size_t cell, uint64_t value) {
     data[cell / 32] |= int64_t(value << ((cell % 32) * 2));
   };
-  set(0, 1);           // x 0-3, y 0-3, z 0-3
-  set(3 + 4 * 2, 2);   // x 12-15, y 0-3, z 8-11
-  set(1 + 16 * 3, 2);  // x 4-7, y 12-15, z 0-3
+  set(0, 1);          // x 0-3, y 0-3, z 0-3
+  set(3 + 4 * 2, 2);  // x 12-15, y 0-3, z 8-11
+  set(1 + 16 * 3, 2); // x 4-7, y 12-15, z 0-3
 
-  Section s(biome_section({"minecraft:plains", "minecraft:forest",
-                           "minecraft:desert"},
-                          data),
-            5009);
+  Section s(
+      biome_section(
+          {"minecraft:plains", "minecraft:forest", "minecraft:desert"}, data),
+      5009);
 
   ASSERT_EQ(s.biome_at(0, 0, 0), 1);
   ASSERT_EQ(s.biome_at(3, 3, 3), 1);

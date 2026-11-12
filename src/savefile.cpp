@@ -74,9 +74,9 @@ SaveFile::SaveFile(const fs::path &_folder) : folder(_folder) {
 
 #define VALID(path) (fs::exists((path)) && !fs::is_empty((path)))
 void SaveFile::getDimensions() {
-  std::vector<Dimension> candidates = {
-      Dimension("minecraft", "overworld"), Dimension("minecraft", "the_end"),
-      Dimension("minecraft", "the_nether")};
+  std::vector<Dimension> candidates = {Dimension("minecraft", "overworld"),
+                                       Dimension("minecraft", "the_end"),
+                                       Dimension("minecraft", "the_nether")};
 
   fs::path dim_folder = folder / "dimensions";
 

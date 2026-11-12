@@ -16,21 +16,22 @@ struct ByteStream {
     gzFile file;
     std::pair<uint8_t *, size_t> array;
 
-    Source(gzFile f) : file(f){};
-    Source(uint8_t *address, size_t size) : array({address, size}){};
+    Source(gzFile f) : file(f) {};
+    Source(uint8_t *address, size_t size) : array({address, size}) {};
   };
 
   BufferType type;
   Source source;
 
-  ByteStream(gzFile f) : type(GZFILE), source(f){};
+  ByteStream(gzFile f) : type(GZFILE), source(f) {};
   ByteStream(uint8_t *address, size_t size)
-      : type(MEMORY), source(address, size){};
+      : type(MEMORY), source(address, size) {};
 };
 
 struct ByteStreamReader : ByteStream {
-  ByteStreamReader(gzFile f) : ByteStream(f){};
-  ByteStreamReader(uint8_t *address, size_t size) : ByteStream(address, size){};
+  ByteStreamReader(gzFile f) : ByteStream(f) {};
+  ByteStreamReader(uint8_t *address, size_t size)
+      : ByteStream(address, size) {};
 
   void read(size_t num, uint8_t *buffer, bool *error) {
     switch (type) {
@@ -62,8 +63,9 @@ struct ByteStreamReader : ByteStream {
 };
 
 struct ByteStreamWriter : ByteStream {
-  ByteStreamWriter(gzFile f) : ByteStream(f){};
-  ByteStreamWriter(uint8_t *address, size_t size) : ByteStream(address, size){};
+  ByteStreamWriter(gzFile f) : ByteStream(f) {};
+  ByteStreamWriter(uint8_t *address, size_t size)
+      : ByteStream(address, size) {};
 
   void write(size_t num, const uint8_t *buffer, bool *error) {
     switch (type) {

@@ -20,9 +20,9 @@ struct Beam {
   uint8_t position;
   const Colors::Block *color;
 
-  Beam() : position(0), color(nullptr){};
+  Beam() : position(0), color(nullptr) {};
   Beam(uint8_t x, uint8_t z, const Colors::Block *c)
-      : position((x << 4) + z), color(c){};
+      : position((x << 4) + z), color(c) {};
 
   inline uint8_t x() const { return position >> 4; }
   inline uint8_t z() const { return position & 0x0f; }
@@ -226,7 +226,8 @@ struct IsometricCanvas : Canvas {
 
   bool shading, lighting, beamColumn;
   bool structures; // Only render the blocks inside structures
-  std::set<std::string> biomes; // Only render the blocks in these biomes, if any
+  std::set<std::string>
+      biomes; // Only render the blocks in these biomes, if any
   size_t rendered;
 
   size_t width, height;

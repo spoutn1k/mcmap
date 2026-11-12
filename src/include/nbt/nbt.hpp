@@ -46,9 +46,9 @@ public:
   using const_iterator = iter<const NBT>;
 
   NBT(const tag_type type, key_type name_ = "")
-      : type(type), content(type), name(name_){};
+      : type(type), content(type), name(name_) {};
 
-  NBT(std::nullptr_t = nullptr) : NBT(tag_type::tag_end){};
+  NBT(std::nullptr_t = nullptr) : NBT(tag_type::tag_end) {};
 
   template <
       typename Integer,
@@ -96,7 +96,7 @@ public:
   }
 
   NBT(const tag_string_t str, key_type name_ = "")
-      : type(tag_type::tag_string), content(str), name(name_){};
+      : type(tag_type::tag_string), content(str), name(name_) {};
 
   template <
       typename Integer,
@@ -123,10 +123,10 @@ public:
   }
 
   NBT(const tag_list_t &data, key_type name_ = "")
-      : type(tag_type::tag_list), content(data), name(name_){};
+      : type(tag_type::tag_list), content(data), name(name_) {};
 
   NBT(const tag_compound_t &data, key_type name_ = "")
-      : type(tag_type::tag_compound), content(data), name(name_){};
+      : type(tag_type::tag_compound), content(data), name(name_) {};
 
   NBT(const NBT &other) { *this = other; }
 
@@ -464,12 +464,12 @@ private:
     tag_long_array_t *long_array;
 
     tag_content() = default;
-    tag_content(tag_byte_t v) : byte(v){};
-    tag_content(tag_short_t v) : short_n(v){};
-    tag_content(tag_int_t v) : int_n(v){};
-    tag_content(tag_long_t v) : long_n(v){};
-    tag_content(tag_float_t v) : float_n(v){};
-    tag_content(tag_double_t v) : double_n(v){};
+    tag_content(tag_byte_t v) : byte(v) {};
+    tag_content(tag_short_t v) : short_n(v) {};
+    tag_content(tag_int_t v) : int_n(v) {};
+    tag_content(tag_long_t v) : long_n(v) {};
+    tag_content(tag_float_t v) : float_n(v) {};
+    tag_content(tag_double_t v) : double_n(v) {};
     tag_content(tag_type t) {
       switch (t) {
       case tag_type::tag_end: {

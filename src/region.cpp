@@ -59,7 +59,7 @@ void Region::write(const fs::path &_file) {
 
 size_t Region::get_offset(uint8_t max_size) {
   // Get an offset at which the first empty 4K bytes blocks are free
-  std::array<Location, REGIONSIZE *REGIONSIZE> sorted = locations;
+  std::array<Location, REGIONSIZE * REGIONSIZE> sorted = locations;
   std::sort(sorted.begin(), sorted.end(), Location::order);
 
   size_t block = 2;
