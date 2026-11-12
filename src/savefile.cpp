@@ -86,10 +86,16 @@ void SaveFile::getDimensions() {
   fs::path dim_folder = folder / "dimensions";
 
   if VALID (dim_folder)
-    for (auto &ns : fs::directory_iterator(dim_folder))
+    // Skip stray files such as `.DS_Store`; only folders are dimensions
+    for (auto &ns : fs::directory_iterator(dim_folder)) {
+      if (!ns.is_directory())
+        continue;
+
       for (auto &id : fs::directory_iterator(ns.path()))
-        dimensions.push_back(Dimension(ns.path().filename().string(),
-                                       id.path().filename().string()));
+        if (id.is_directory())
+          dimensions.push_back(Dimension(ns.path().filename().string(),
+                                         id.path().filename().string()));
+    }
 }
 
 fs::path SaveFile::region(const Dimension &dim) const {
@@ -131,8 +137,15 @@ World::Coordinates SaveFile::getWorld(const Dimension &dim) {
     return savedWorld;
 
   for (auto &region : fs::directory_iterator(region(dim))) {
+    const std::string filename = region.path().filename().string();
+
+    // Ignore anything that is not a region file, such as `.DS_Store`
+    if (!region.is_regular_file() || filename.rfind("r.", 0) != 0 ||
+        region.path().extension() != ".mca")
+      continue;
+
     // This loop parses files with name 'r.x.y.mca', extracting x and y. This is done by creating a string stream and using `getline` with '.' as a delimiter.
-    std::stringstream ss(region.path().filename().string());
+    std::stringstream ss(filename);
     std::getline(ss, index, delimiter); // This removes the 'r.'
     std::getline(ss, index, delimiter);
 
