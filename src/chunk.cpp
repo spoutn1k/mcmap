@@ -8,9 +8,9 @@ namespace mcmap {
 
 namespace versions {
 std::map<int, std::function<bool(const nbt::NBT &)>> assert = {
-    {3458, assert_versions::v3458}, {2844, assert_versions::v2844},
-    {1976, assert_versions::v1976}, {1628, assert_versions::v1628},
-    {0, assert_versions::catchall},
+    {5128, assert_versions::v5128}, {3458, assert_versions::v3458},
+    {2844, assert_versions::v2844}, {1976, assert_versions::v1976},
+    {1628, assert_versions::v1628}, {0, assert_versions::catchall},
 };
 
 std::map<int, std::function<nbt::NBT(const nbt::NBT &)>> sections = {

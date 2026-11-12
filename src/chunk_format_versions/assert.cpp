@@ -3,6 +3,13 @@
 namespace mcmap {
 namespace versions {
 namespace assert_versions {
+bool v5128(const nbt::NBT &chunk) {
+  // 26.4 snapshot, `Status` was renamed to `status`
+  return chunk.contains("sections")  // No sections mean no blocks
+         && chunk.contains("status") // Ensure the status is `minecraft:full`
+         && chunk["status"].get<nbt::NBT::tag_string_t>() == "minecraft:full";
+}
+
 bool v3458(const nbt::NBT &chunk) {
   // Minecraft 1.20-pre5, randomly changing things
   return chunk.contains("sections")  // No sections mean no blocks
