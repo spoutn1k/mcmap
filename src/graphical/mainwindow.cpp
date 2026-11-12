@@ -36,6 +36,13 @@ Map::Orientation selected_orientation = Map::NW;
 extern Colors::Palette default_palette;
 Colors::Palette custom_palette, file_colors;
 
+// The system fixed font renders smaller than the UI font, so bump it up
+static QFont monospaceFont() {
+  QFont font = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+  font.setPointSizeF(font.pointSizeF() + 2);
+  return font;
+}
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
   ui->setupUi(this);
@@ -59,6 +66,16 @@ MainWindow::MainWindow(QWidget *parent)
       (fs::current_path() / std::string("output.png")).string().c_str());
   ui->tiledOutputFileName->setText(
       (fs::current_path() / std::string("output")).string().c_str());
+
+  // File paths and identifiers read better in monospace
+  const QFont fixedFont = monospaceFont();
+  ui->dimensionSelectDropDown->setFont(fixedFont);
+  ui->biomeSelect->setFont(fixedFont);
+  ui->biomes->setFont(fixedFont);
+  ui->saveNameLabel->setFont(fixedFont);
+  ui->singlePNGFileName->setFont(fixedFont);
+  ui->tiledOutputFileName->setFont(fixedFont);
+  ui->colorFileLabel->setFont(fixedFont);
 
   for (auto element : DEFAULT_DISABLED_OPTIONS)
     element->setEnabled(false);
@@ -98,7 +115,6 @@ MainWindow::MainWindow(QWidget *parent)
 
   // Log window setup - might need to be moved to a cleaner spot
   log_messages = new QPlainTextEdit();
-  const QFont fixedFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
   const QFontMetrics fm(fixedFont);
 
   log_messages->setReadOnly(true);
@@ -639,8 +655,17 @@ void MainWindow::on_actionVersion_triggered() {
     out = fmt::format("{}\n{}: {}", out, it->first, it->second);
   }
 
-  QMessageBox::about(this, mcmap::version().c_str(),
-                     fmt::format("{}\n{}", out.c_str(), COMMENT).c_str());
+  // Rich text so the technical details render in monospace, and to override the bold font macOS applies to message box text
+  const QFont fixedFont = monospaceFont();
+  QMessageBox::about(
+      this, mcmap::version().c_str(),
+      QString("<div style=\"font-weight: normal\">"
+              "<pre style=\"font-family: '%1'; font-size: %2pt\">%3</pre>"
+              "<p>%4</p></div>")
+          .arg(fixedFont.family())
+          .arg(fixedFont.pointSizeF())
+          .arg(QString::fromStdString(out).toHtmlEscaped(),
+               QString(COMMENT).toHtmlEscaped()));
 }
 
 void MainWindow::on_actionSetMemoryLimit_triggered() {
