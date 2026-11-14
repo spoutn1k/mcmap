@@ -118,3 +118,63 @@ TEST_F(TestRegion, TestTimestamps) {
   ASSERT_EQ(reopened.timestamps[0], region.timestamps[0]);
   ASSERT_EQ(reopened.timestamps[5], 12345);
 }
+
+TEST_F(TestRegion, TestTooBigToReadBack) {
+  // Compresses to more than readers accept, while fitting in the sectors of a region
+  nbt::NBT payload = incompressible(COMPRESSED_BUFFER + 50000);
+
+  Region region(file);
+  ASSERT_TRUE(region.add_chunk({0, 0}, chunk));
+  ASSERT_FALSE(region.add_chunk({0, 0}, payload));
+
+  // The previous chunk is still there
+  Region reopened(file);
+  nbt::NBT data;
+  ASSERT_TRUE(reopened.get_chunk({0, 0}, data));
+  ASSERT_EQ(nbt::hash(data), nbt::hash(chunk));
+}
+
+TEST_F(TestRegion, TestNotACompound) {
+  // What a failed get_chunk leaves behind
+  nbt::NBT empty;
+
+  Region region(file);
+  ASSERT_TRUE(region.add_chunk({0, 0}, chunk));
+  ASSERT_FALSE(region.add_chunk({0, 0}, empty));
+  ASSERT_FALSE(region.add_chunk({0, 0}, nbt::NBT(int32_t(7))));
+
+  // The previous chunk is still there
+  Region reopened(file);
+  nbt::NBT data;
+  ASSERT_TRUE(reopened.get_chunk({0, 0}, data));
+  ASSERT_EQ(nbt::hash(data), nbt::hash(chunk));
+}
+
+TEST_F(TestRegion, TestUnreadableHeader) {
+  // A file too short to hold a header is not mistaken for an empty region
+  const std::vector<char> truncated(1000, 0x2a);
+  std::ofstream(file, std::ios::binary)
+      .write(truncated.data(), truncated.size());
+
+  Region region(file);
+  ASSERT_FALSE(region.header_valid);
+  ASSERT_FALSE(region.add_chunk({0, 0}, chunk));
+  ASSERT_FALSE(region.write_header());
+
+  // The file is left as it was
+  ASSERT_EQ(fs::file_size(file), truncated.size());
+}
+
+TEST_F(TestRegion, TestEmptyFile) {
+  // An empty file is a region without chunks
+  std::ofstream(file, std::ios::binary).close();
+
+  Region region(file);
+  ASSERT_TRUE(region.header_valid);
+  ASSERT_TRUE(region.add_chunk({0, 0}, chunk));
+
+  Region reopened(file);
+  nbt::NBT data;
+  ASSERT_TRUE(reopened.get_chunk({0, 0}, data));
+  ASSERT_EQ(nbt::hash(data), nbt::hash(chunk));
+}

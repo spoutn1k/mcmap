@@ -34,6 +34,13 @@ bool decompressChunk(const uint32_t offset, FILE *regionHandle,
   *length = translate<uint32_t>(zData);
   (*length)--; // Sometimes the data is 1 byte smaller
 
+  // The size comes from the file and is not to be trusted: reading more than the buffer holds would overflow it. A size of 0 wraps around and is caught here too.
+  if (*length > COMPRESSED_BUFFER) {
+    logger::debug("Invalid chunk size {} in region file {}", *length + 1,
+                  filename.string());
+    return false;
+  }
+
   if (fread(zData, sizeof(uint8_t), *length, regionHandle) != *length) {
     logger::debug("Not enough data for chunk: {}", strerror(errno));
     return false;

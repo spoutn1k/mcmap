@@ -211,8 +211,21 @@ bool Region::get_chunk(const mcmap::Chunk::coordinates &coords,
 
 bool Region::add_chunk(const mcmap::Chunk::coordinates &coords,
                        const nbt::NBT &data) {
-  // Serialize the NBT in memory. The buffer is the same size as the one used
-  // to read chunks, so any chunk written can be read back.
+  if (!header_valid) {
+    logger::error(
+        "Not writing chunk {} {} to `{}`: its header could not be read",
+        coords.x, coords.z, file.string());
+    return false;
+  }
+
+  // A chunk is a compound; anything else serializes to data readers cannot parse back, an empty NBT to no bytes at all
+  if (!data.is_compound()) {
+    logger::error("Not writing chunk {} {} to `{}`: its data is not a compound",
+                  coords.x, coords.z, file.string());
+    return false;
+  }
+
+  // Serialize the NBT in memory. The buffer is the same size as the one used to read chunks, so the decompressed data always fits when read back.
   std::vector<uint8_t> chunk(DECOMPRESSED_BUFFER);
   nbt::io::ByteStreamWriter memory(chunk.data(), chunk.size());
 
@@ -243,6 +256,14 @@ bool Region::add_chunk(const mcmap::Chunk::coordinates &coords,
 
   logger::trace("Compressed chunk {} {}: compressed size {}", coords.x,
                 coords.z, compressed_size);
+
+  // Readers refuse compressed data bigger than their buffer; writing it would replace a readable chunk with one that is not
+  if (compressed_size > COMPRESSED_BUFFER) {
+    logger::error("Chunk {} {} is too big once compressed ({} bytes, at most "
+                  "{} can be read back)",
+                  coords.x, coords.z, compressed_size, COMPRESSED_BUFFER);
+    return false;
+  }
 
   // The data is prefixed by its size (4 bytes) and compression type (1 byte),
   // and the whole is padded to fill 4K sectors
