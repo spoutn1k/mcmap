@@ -496,7 +496,7 @@ void IsometricCanvas::renderSection(const Section &section) {
       for (y = minY; y < maxY; y++) {
         if (beamColumn)
           renderBlock(beams[currentBeam].color, (chunkX << 4) + x,
-                      (chunkZ << 4) + z, (section.Y << 4) + y, nbt::NBT());
+                      (chunkZ << 4) + z, (section.Y << 4) + y, BlockState());
 
         if (structures &&
             std::none_of(column_boxes.begin(), column_boxes.end(),
@@ -557,7 +557,7 @@ void IsometricCanvas::renderBeamSection(const int64_t xPos, const int64_t zPos,
       for (uint8_t y = minY; y < maxY; y++) {
         if (beamColumn)
           renderBlock(beams[currentBeam].color, (xPos << 4) + x,
-                      (zPos << 4) + z, (yPos << 4) + y, nbt::NBT());
+                      (zPos << 4) + z, (yPos << 4) + y, BlockState());
       }
     }
   }
@@ -584,7 +584,7 @@ drawer blockRenderers[] = {
 
 inline void IsometricCanvas::renderBlock(const Colors::Block *color, uint32_t x,
                                          uint32_t z, const int32_t y,
-                                         const nbt::NBT &metadata) {
+                                         const BlockState &metadata) {
   // Pointer to the color to use, and local color buffer if changes are due
   const Colors::Block *colorPtr = color;
   Colors::Block localColor;

@@ -12,6 +12,7 @@ SET(SOURCES ${SOURCES}
     blocktypes.def
     biome.cpp
     block_drawers.cpp
+    block_state.cpp
     canvas.cpp
     chunk.cpp
     colors.cpp

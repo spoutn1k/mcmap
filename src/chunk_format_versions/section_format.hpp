@@ -20,7 +20,6 @@ void v2840(Section *, const nbt::NBT &);
 
 void v3100(Section *, const nbt::NBT &);
 
-void v5009(Section *, const nbt::NBT &);
 
 void catchall(Section *, const nbt::NBT &);
 } // namespace init_versions

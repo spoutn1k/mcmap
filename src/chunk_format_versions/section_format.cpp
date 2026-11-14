@@ -29,7 +29,7 @@ void post116(const uint8_t index_length,
 
 void pre116(const uint8_t index_length, const std::vector<int64_t> *blockStates,
             Section::block_array &buffer) {
-  // The `BlockStates` array contains data on the section's blocks. You have to extract it by understanfing its structure.
+  // The `BlockStates` array contains data on the section's blocks. You have to extract it by understanding its structure.
   //
   // Although it is a array of long values, one must see it as an array of block indexes, whose element size depends on the size of the Palette. This routine locates the necessary long, extracts the block with bit comparisons.
   //
@@ -80,11 +80,25 @@ void pre116(const uint8_t index_length, const std::vector<int64_t> *blockStates,
 }
 } // namespace block_states_versions
 
+namespace {
+// Read the palette entries of a section, whatever their layout
+void load_palette(Section *target, const nbt::NBT &raw_palette) {
+  target->palette.clear();
+  target->palette.reserve(raw_palette.size());
+
+  for (const auto &entry : raw_palette) {
+    target->palette.push_back(BlockState::from_nbt(entry));
+
+    if (!target->palette.back().recognized)
+      logger::trace("Section {}: unrecognized palette entry", target->Y);
+  }
+}
+} // namespace
+
 namespace init_versions {
 void v1628(Section *target, const nbt::NBT &raw_section) {
   if (raw_section.contains("BlockStates") && raw_section.contains("Palette")) {
-    target->palette =
-        *raw_section["Palette"].get<const std::vector<nbt::NBT> *>();
+    load_palette(target, raw_section["Palette"]);
     const nbt::NBT::tag_long_array_t *blockStates =
         raw_section["BlockStates"].get<const nbt::NBT::tag_long_array_t *>();
 
@@ -106,8 +120,7 @@ void v1628(Section *target, const nbt::NBT &raw_section) {
 
 void v2534(Section *target, const nbt::NBT &raw_section) {
   if (raw_section.contains("BlockStates") && raw_section.contains("Palette")) {
-    target->palette =
-        *raw_section["Palette"].get<const std::vector<nbt::NBT> *>();
+    load_palette(target, raw_section["Palette"]);
     const nbt::NBT::tag_long_array_t *blockStates =
         raw_section["BlockStates"].get<const nbt::NBT::tag_long_array_t *>();
 
@@ -131,8 +144,7 @@ void v2840(Section *target, const nbt::NBT &raw_section) {
   if (raw_section.contains("block_states") &&
       raw_section["block_states"].contains("data") &&
       raw_section["block_states"].contains("palette")) {
-    target->palette = *raw_section["block_states"]["palette"]
-                           .get<const std::vector<nbt::NBT> *>();
+    load_palette(target, raw_section["block_states"]["palette"]);
     const nbt::NBT::tag_long_array_t *blockStates =
         raw_section["block_states"]["data"]
             .get<const nbt::NBT::tag_long_array_t *>();
@@ -158,8 +170,7 @@ void v3100(Section *target, const nbt::NBT &raw_section) {
 
   if (raw_section.contains("block_states") &&
       raw_section["block_states"].contains("palette")) {
-    target->palette = *raw_section["block_states"]["palette"]
-                           .get<const std::vector<nbt::NBT> *>();
+    load_palette(target, raw_section["block_states"]["palette"]);
     // Remove the air that is default-constructed
     target->colors.clear();
     // Anticipate the color input from the palette's size
@@ -182,41 +193,6 @@ void v3100(Section *target, const nbt::NBT &raw_section) {
     }
   } else
     logger::trace("Section {} does not contain a palette, aborting", target->Y);
-}
-
-void v5009(Section *target, const nbt::NBT &raw_section) {
-  // NEW in 26.3-snapshot-7, the palette entries changed shape:
-  // - `Name` and `Properties` were renamed to `id` and `properties`;
-  // - a block in its default state is stored as a bare string id;
-  // - in a palette mixing both, bare ids are wrapped in a compound under the
-  //   empty key (`{"": "minecraft:stone"}`).
-  // The data array is unchanged, so parse as before then convert the palette back to the legacy layout expected by the rest of the code.
-  v3100(target, raw_section);
-
-  for (nbt::NBT &entry : target->palette) {
-    nbt::NBT::tag_compound_t legacy;
-
-    if (entry.is_string()) {
-      legacy["Name"] = nbt::NBT(entry.get<nbt::NBT::tag_string_t>(), "Name");
-    } else if (entry.contains("id")) {
-      legacy["Name"] =
-          nbt::NBT(entry["id"].get<nbt::NBT::tag_string_t>(), "Name");
-
-      if (entry.contains("properties")) {
-        legacy["Properties"] = entry["properties"];
-        legacy["Properties"].set_name("Properties");
-      }
-    } else if (entry.contains("")) {
-      legacy["Name"] =
-          nbt::NBT(entry[""].get<nbt::NBT::tag_string_t>(), "Name");
-    } else {
-      logger::trace("Section {}: unrecognized palette entry", target->Y);
-      legacy["Name"] =
-          nbt::NBT(nbt::NBT::tag_string_t("minecraft:air"), "Name");
-    }
-
-    entry = nbt::NBT(legacy);
-  }
 }
 
 void catchall(Section *, const nbt::NBT &) {

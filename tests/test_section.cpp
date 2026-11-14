@@ -2,7 +2,6 @@
 #include "../src/section.h"
 #include "./samples.h"
 #include <gtest/gtest.h>
-#include <nbt/hash.hpp>
 
 class TestSection : public ::testing::Test {
 protected:
@@ -72,10 +71,10 @@ TEST_F(TestSection, TestMetadata) {
   Section s(sections[1], dataVersion);
   s.loadPalette(colors);
 
-  const nbt::NBT &state = s.state_at(0, 0, 0);
+  const BlockState &state = s.state_at(0, 0, 0);
 
-  ASSERT_TRUE(state.contains("Name"));
-  ASSERT_EQ(state["Name"].get<string>(), "minecraft:bedrock");
+  ASSERT_TRUE(state.recognized);
+  ASSERT_EQ(state.id, "minecraft:bedrock");
 }
 
 namespace {
@@ -135,9 +134,7 @@ TEST_F(TestSection, TestBiomeLegacy) {
 }
 
 namespace {
-nbt::NBT block(const std::string &name) {
-  return nbt::NBT(nbt::NBT::tag_compound_t({{"Name", nbt::NBT(name, "Name")}}));
-}
+BlockState block(const std::string &name) { return BlockState(name); }
 
 nbt::NBT empty_section() {
   return nbt::NBT(nbt::NBT::tag_compound_t({{"Y", nbt::NBT(int8_t(0), "Y")}}));
@@ -148,8 +145,7 @@ void expect_same_blocks(const Section &a, const Section &b) {
   for (uint8_t x = 0; x < 16; x++)
     for (uint8_t y = 0; y < 16; y++)
       for (uint8_t z = 0; z < 16; z++)
-        ASSERT_EQ(nbt::hash(a.state_at(x, y, z)),
-                  nbt::hash(b.state_at(x, y, z)));
+        ASSERT_TRUE(a.state_at(x, y, z) == b.state_at(x, y, z));
 }
 
 const int versions[] = {1628, 2534, 2840, 3100, 5009};
@@ -227,11 +223,8 @@ TEST_F(TestSection, TestToNbtPost5009Palette) {
     ASSERT_TRUE(entry.is_string());
 
   // Mixed with blocks with properties, they are wrapped under the empty key
-  nbt::NBT slab = block("minecraft:stone_slab");
-  slab["Properties"] = nbt::NBT(
-      nbt::NBT::tag_compound_t(
-          {{"type", nbt::NBT(std::string("top"), "type")}}),
-      "Properties");
+  BlockState slab = block("minecraft:stone_slab");
+  slab.properties["type"] = nbt::NBT(std::string("top"), "type");
   original.palette.push_back(slab);
   original.blocks[2] = 2;
 
@@ -246,5 +239,37 @@ TEST_F(TestSection, TestToNbtPost5009Palette) {
   ASSERT_EQ(palette[2]["properties"]["type"].get<std::string>(), "top");
 
   Section result(written, 5009);
+  expect_same_blocks(original, result);
+}
+
+TEST_F(TestSection, TestToNbtKeepsUnknownData) {
+  // Keys and entries this code does not know about survive a conversion in both directions
+  Section original;
+  BlockState tagged = block("minecraft:stone");
+  tagged.extra["custom"] = nbt::NBT(int32_t(42), "custom");
+  original.palette = {block("minecraft:air"), tagged,
+                      BlockState::from_nbt(nbt::NBT(int8_t(7)))};
+  original.blocks[1] = 1;
+  original.blocks[2] = 2;
+  ASSERT_FALSE(original.palette[2].recognized);
+
+  for (const int version : {2840, 5009}) {
+    nbt::NBT written = empty_section();
+    ASSERT_TRUE(original.to_nbt(written, version));
+
+    Section result(written, version);
+    expect_same_blocks(original, result);
+    ASSERT_EQ(result.palette[1].extra.at("custom").get<int32_t>(), 42);
+    ASSERT_EQ(result.palette[2].raw.get<int8_t>(), 7);
+  }
+
+  // Converting from one format to the other keeps everything too
+  nbt::NBT modern = empty_section();
+  ASSERT_TRUE(original.to_nbt(modern, 5009));
+  Section read(modern, 5009);
+
+  nbt::NBT legacy = empty_section();
+  ASSERT_TRUE(read.to_nbt(legacy, 2840));
+  Section result(legacy, 2840);
   expect_same_blocks(original, result);
 }

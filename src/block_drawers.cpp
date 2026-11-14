@@ -13,7 +13,7 @@
 nbt::NBT empty;
 
 void drawHead(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
-              const nbt::NBT &, const Colors::Block *block) {
+              const BlockState &, const Colors::Block *block) {
   /* Small block centered
    * |    |
    * |    |
@@ -29,7 +29,7 @@ void drawHead(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
 }
 
 void drawThin(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
-              const nbt::NBT &, const Colors::Block *block) {
+              const BlockState &, const Colors::Block *block) {
   /* Overwrite the block below's top layer
    * |    |
    * |    |
@@ -45,12 +45,12 @@ void drawThin(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
 }
 
 void drawHidden(IsometricCanvas *, const uint32_t, const uint32_t,
-                const nbt::NBT &, const Colors::Block *) {
+                const BlockState &, const Colors::Block *) {
   return;
 }
 
 void drawTransparent(IsometricCanvas *canvas, const uint32_t x,
-                     const uint32_t y, const nbt::NBT &,
+                     const uint32_t y, const BlockState &,
                      const Colors::Block *color) {
   uint8_t top = 0;
 
@@ -70,7 +70,7 @@ void drawTransparent(IsometricCanvas *canvas, const uint32_t x,
 }
 
 void drawTorch(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
-               const nbt::NBT &, const Colors::Block *block) {
+               const BlockState &, const Colors::Block *block) {
   /* TODO Callback to handle the orientation
    * Print the secondary on top of two primary
    * |    |
@@ -83,7 +83,7 @@ void drawTorch(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
 }
 
 void drawPlant(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
-               const nbt::NBT &metadata, const Colors::Block *color) {
+               const BlockState &metadata, const Colors::Block *color) {
   /* Print a plant-like block
    * TODO Make that nicer ?
    * |    |
@@ -92,9 +92,10 @@ void drawPlant(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
    * | X  | */
   Colors::Block *fill = &canvas->air;
 
-  if (metadata.contains("UnderWater"))
-    if (metadata["UnderWater"].get<string>() == "true")
-      fill = &canvas->water;
+  const auto underwater = metadata.extra.find("UnderWater");
+  if (underwater != metadata.extra.end() && underwater->second.is_string() &&
+      underwater->second.get<string>() == "true")
+    fill = &canvas->water;
 
   const Colors::Color *sprite[3][4] = {{FILLD, PRIME, FILLL, PRIME},
                                        {FILLD, FILLD, PRIME, FILLL},
@@ -107,7 +108,7 @@ void drawPlant(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
 }
 
 void drawUnderwaterPlant(IsometricCanvas *canvas, const uint32_t x,
-                         const uint32_t y, const nbt::NBT &,
+                         const uint32_t y, const BlockState &,
                          const Colors::Block *color) {
   Colors::Block *fill = &canvas->water;
   uint8_t top = 0;
@@ -127,7 +128,7 @@ void drawUnderwaterPlant(IsometricCanvas *canvas, const uint32_t x,
 }
 
 void drawFire(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
-              const nbt::NBT &, const Colors::Block *const color) {
+              const BlockState &, const Colors::Block *const color) {
   // This basically just leaves out a few canvas->pixels
   // Top row
   uint8_t *pos = canvas->pixel(x, y);
@@ -146,7 +147,7 @@ void drawFire(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
 }
 
 void drawOre(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
-             const nbt::NBT &, const Colors::Block *color) {
+             const BlockState &, const Colors::Block *color) {
   /* Print a vein with the secondary in the block
    * |PSPP|
    * |DDSL|
@@ -172,7 +173,7 @@ void drawOre(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
 }
 
 void drawGrown(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
-               const nbt::NBT &, const Colors::Block *color) {
+               const BlockState &, const Colors::Block *color) {
   /* Print the secondary color on top
    * |SSSS|
    * |DSSL|
@@ -200,7 +201,7 @@ void drawGrown(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
 }
 
 void drawRod(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
-             const nbt::NBT &metadata, const Colors::Block *const color) {
+             const BlockState &metadata, const Colors::Block *const color) {
   /* A full fat rod
    * | PP |
    * | DL |
@@ -210,9 +211,7 @@ void drawRod(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
   Colors::Block *fill = &canvas->air;
   std::string waterlogged = "false";
 
-  if (metadata.contains("Properties"))
-    if (metadata["Properties"].contains("waterlogged"))
-      waterlogged = metadata["Properties"]["waterlogged"].get<string>();
+  waterlogged = metadata.property("waterlogged", waterlogged);
 
   if (waterlogged == "true")
     fill = &canvas->water;
@@ -229,7 +228,7 @@ void drawRod(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
 }
 
 void drawBeam(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
-              const nbt::NBT &, const Colors::Block *const color) {
+              const BlockState &, const Colors::Block *const color) {
   /* No top to make it look more continuous
    * |    |
    * | DL |
@@ -243,7 +242,7 @@ void drawBeam(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
 }
 
 void drawSlab(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
-              const nbt::NBT &metadata, const Colors::Block *color) {
+              const BlockState &metadata, const Colors::Block *color) {
   /* This one has a hack to make it look like a gradual step up:
    * The second layer has primary colors to make the height difference
    * less obvious.
@@ -255,13 +254,8 @@ void drawSlab(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
   Colors::Block *fill = &canvas->air;
   std::string waterlogged = "false", type = "bottom";
 
-  if (metadata.contains("Properties")) {
-    if (metadata["Properties"].contains("waterlogged"))
-      waterlogged = metadata["Properties"]["waterlogged"].get<string>();
-
-    if (metadata["Properties"].contains("type"))
-      type = metadata["Properties"]["type"].get<string>();
-  }
+  waterlogged = metadata.property("waterlogged", waterlogged);
+  type = metadata.property("type", type);
 
   // Draw a full block if it is a double slab
   if (type == "double") {
@@ -294,14 +288,14 @@ void drawSlab(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
 }
 
 void drawWire(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
-              const nbt::NBT &, const Colors::Block *color) {
+              const BlockState &, const Colors::Block *color) {
   uint8_t *pos = canvas->pixel(x + 1, y + 3);
   memcpy(pos, &color->primary, BYTESPERPIXEL);
   memcpy(pos + CHANSPERPIXEL, &color->primary, BYTESPERPIXEL);
 }
 
 void drawLog(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
-             const nbt::NBT &metadata, const Colors::Block *color) {
+             const BlockState &metadata, const Colors::Block *color) {
 
   string axis = "y";
   int sub = (float(color->primary.brightness()) / 323.0f + .21f);
@@ -328,23 +322,20 @@ void drawLog(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
 
   const Colors::Color *(*target)[4][4] = &spriteY;
 
-  if (metadata.contains("Properties") &&
-      metadata["Properties"].contains("axis")) {
-    axis = metadata["Properties"]["axis"].get<string>();
+  axis = metadata.property("axis", axis);
 
-    if (axis == "x") {
-      if (canvas->map.orientation == Map::NW ||
-          canvas->map.orientation == Map::SE)
-        target = &spriteZ;
-      else
-        target = &spriteX;
-    } else if (axis == "z") {
-      if (canvas->map.orientation == Map::NW ||
-          canvas->map.orientation == Map::SE)
-        target = &spriteX;
-      else
-        target = &spriteZ;
-    }
+  if (axis == "x") {
+    if (canvas->map.orientation == Map::NW ||
+        canvas->map.orientation == Map::SE)
+      target = &spriteZ;
+    else
+      target = &spriteX;
+  } else if (axis == "z") {
+    if (canvas->map.orientation == Map::NW ||
+        canvas->map.orientation == Map::SE)
+      target = &spriteX;
+    else
+      target = &spriteZ;
   }
 
   uint8_t *pos = canvas->pixel(x, y);
@@ -354,25 +345,16 @@ void drawLog(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
 }
 
 void drawStair(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
-               const nbt::NBT &metadata, const Colors::Block *color) {
+               const BlockState &metadata, const Colors::Block *color) {
 
   string facing = "north", half = "bottom", waterlogged = "false",
          shape = "straight";
   Colors::Block *fill = &canvas->air;
 
-  if (metadata.contains("Properties")) {
-    if (metadata["Properties"].contains("facing"))
-      facing = metadata["Properties"]["facing"].get<string>();
-
-    if (metadata["Properties"].contains("half"))
-      half = metadata["Properties"]["half"].get<string>();
-
-    if (metadata["Properties"].contains("waterlogged"))
-      waterlogged = metadata["Properties"]["waterlogged"].get<string>();
-
-    if (metadata["Properties"].contains("shape"))
-      shape = metadata["Properties"]["shape"].get<string>();
-  }
+  facing = metadata.property("facing", facing);
+  half = metadata.property("half", half);
+  waterlogged = metadata.property("waterlogged", waterlogged);
+  shape = metadata.property("shape", shape);
 
   if (waterlogged == "true")
     fill = &canvas->water;
@@ -443,7 +425,7 @@ void drawStair(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
 }
 
 void drawFull(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
-              const nbt::NBT &, const Colors::Block *color) {
+              const BlockState &, const Colors::Block *color) {
   // Sets canvas->pixels around x,y where A is the anchor
   // T = given color, D = darker, L = lighter
   // A T T T
@@ -471,7 +453,7 @@ void drawFull(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
 }
 
 void drawLamp(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
-              const nbt::NBT &metadata, const Colors::Block *color) {
+              const BlockState &metadata, const Colors::Block *color) {
   int sub = (float(color->primary.brightness()) / 323.0f + .21f);
 
   Colors::Color secondaryLight(color->secondary);
@@ -491,9 +473,7 @@ void drawLamp(IsometricCanvas *canvas, const uint32_t x, const uint32_t y,
 
   const Colors::Color *(*target)[4][4] = &off;
 
-  if (metadata.contains("Properties") &&
-      metadata["Properties"].contains("lit") &&
-      metadata["Properties"]["lit"].get<string>() == "true")
+  if (metadata.property("lit") == "true")
     target = &on;
 
   uint8_t *pos = canvas->pixel(x, y);

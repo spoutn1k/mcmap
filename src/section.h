@@ -1,5 +1,6 @@
 #pragma once
 
+#include "./block_state.h"
 #include "./colors.h"
 #include "./diagnostics.h"
 #include <2DCoordinates.hpp>
@@ -23,7 +24,7 @@ struct Section {
   block_array blocks;
   color_array colors;
   light_array lights;
-  std::vector<nbt::NBT> palette;
+  std::vector<BlockState> palette;
 
   biome_array biomes;
   std::vector<std::string> biome_palette;
@@ -53,7 +54,7 @@ struct Section {
     // Check the state of the section by looking at its palette: a section with only air does not need to be rendered
     return palette.empty() ||
            (palette.size() == 1 &&
-            palette[0]["Name"].get<std::string>() == "minecraft:air");
+            palette[0].id == "minecraft:air");
   }
 
   inline block_array::value_type block_at(uint8_t x, uint8_t y,
@@ -78,7 +79,7 @@ struct Section {
     return biomes[(x >> 2) + 4 * (z >> 2) + 4 * 4 * (y >> 2)];
   }
 
-  inline const nbt::NBT &state_at(uint8_t x, uint8_t y, uint8_t z) const {
+  inline const BlockState &state_at(uint8_t x, uint8_t y, uint8_t z) const {
     return palette[blocks[x + 16 * z + 16 * 16 * y]];
   }
 
