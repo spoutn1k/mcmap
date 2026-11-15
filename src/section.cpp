@@ -6,9 +6,8 @@
 namespace mcmap {
 namespace versions {
 std::map<int, std::function<void(Section *, const nbt::NBT &)>> init = {
-    {3100, init_versions::v3100}, {2840, init_versions::v2840},
-    {2534, init_versions::v2534}, {1628, init_versions::v1628},
-    {0, init_versions::catchall},
+    {2840, init_versions::v2840}, {2534, init_versions::v2534},
+    {1628, init_versions::v1628}, {0, init_versions::catchall},
 };
 
 std::map<int, std::function<void(Section *, const nbt::NBT &)>> biomes = {
@@ -101,9 +100,7 @@ Section::Section(const nbt::NBT &raw_section, const int dataVersion,
 }
 
 namespace {
-// Pack block indexes of `bits` bits into longs. Before 1.16, indexes are packed
-// back to back and can span two longs; since then, longs are padded with 0s
-// when an index cannot fit.
+// Pack block indexes of `bits` bits into longs. Before 1.16, indexes are packed back to back and can span two longs; since then, longs are padded with 0s when an index cannot fit.
 std::vector<uint64_t> pack(const Section::block_array &indexes,
                            const uint8_t bits, const bool spanning) {
   std::vector<uint64_t> states;
@@ -134,21 +131,24 @@ std::vector<uint64_t> pack(const Section::block_array &indexes,
   return states;
 }
 
-// Write palette entries in the layout of `dataVersion`. Since 26.3-snapshot-7, the entries are bare string ids only if none of them needs a compound.
-std::vector<nbt::NBT> serialize(const std::vector<BlockState> &palette,
-                                const int dataVersion) {
+// Write palette entries in the layout of `dataVersion`. Since 26.3-snapshot-7, the entries are bare string ids only if none of them needs a compound. Returns false if the entries are not all of the same type, which the list holding them requires: unrecognized entries are written back as they were read, whatever their type.
+bool serialize(const std::vector<BlockState> &palette, const int dataVersion,
+               std::vector<nbt::NBT> &entries) {
   const bool bare =
       std::all_of(palette.begin(), palette.end(),
                   [](const BlockState &state) { return state.can_be_bare(); });
 
-  std::vector<nbt::NBT> entries;
+  entries.clear();
   entries.reserve(palette.size());
 
   for (const auto &state : palette)
     entries.push_back(dataVersion >= 5009 ? state.to_nbt_post5009(bare)
                                           : state.to_nbt_pre5009());
 
-  return entries;
+  return std::all_of(entries.begin(), entries.end(),
+                     [&entries](const nbt::NBT &entry) {
+                       return entry.get_type() == entries.front().get_type();
+                     });
 }
 } // namespace
 
@@ -188,14 +188,21 @@ bool Section::to_nbt(nbt::NBT &section, const int dataVersion) const {
   for (size_t i = 0; i < blocks.size(); i++)
     indexes[i] = remap[blocks[i]];
 
-  // The length in bits of a block is the log2 of the palette's size or 4,
-  // whichever is greatest
+  // The length in bits of a block is the log2 of the palette's size or 4, whichever is greatest
   uint8_t bits = 4;
   while ((size_t(1) << bits) < compacted.size())
     bits++;
 
+  std::vector<nbt::NBT> entries;
+  if (!serialize(compacted, dataVersion, entries)) {
+    logger::error("Section {}: palette entries of different types cannot be "
+                  "written to a list",
+                  Y);
+    return false;
+  }
+
   if (dataVersion < 2840) {
-    section["Palette"] = nbt::NBT(serialize(compacted, dataVersion), "Palette");
+    section["Palette"] = nbt::NBT(entries, "Palette");
     section["BlockStates"] =
         nbt::NBT(pack(indexes, bits, dataVersion < 2534), "BlockStates");
     return true;
@@ -207,11 +214,10 @@ bool Section::to_nbt(nbt::NBT &section, const int dataVersion) const {
         nbt::NBT(nbt::NBT::tag_compound_t(), "block_states");
 
   nbt::NBT &block_states = section["block_states"];
-  block_states["palette"] =
-      nbt::NBT(serialize(compacted, dataVersion), "palette");
+  block_states["palette"] = nbt::NBT(entries, "palette");
 
-  // Since 1.19, a section filled with a single block has no data array
-  if (dataVersion >= 3100 && compacted.size() == 1)
+  // Since 1.18, a section filled with a single block has no data array
+  if (compacted.size() == 1)
     block_states.erase("data");
   else
     block_states["data"] = nbt::NBT(pack(indexes, bits, false), "data");

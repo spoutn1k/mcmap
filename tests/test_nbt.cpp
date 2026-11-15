@@ -225,6 +225,41 @@ TEST_F(TestNBTParse, TestListIterator) {
   ASSERT_NE(find(angles.begin(), angles.end(), 1), angles.end());
 }
 
+TEST_F(TestNBTParse, TestTruncated) {
+  // Data cut short is refused, without reading past its end
+  for (const size_t length : {size_t(0), size_t(1), size_t(3),
+                              size_t(level_nbt_len / 2),
+                              size_t(level_nbt_len - 1)}) {
+    std::vector<uint8_t> truncated(level_nbt, level_nbt + length);
+    nbt::NBT result;
+
+    ASSERT_FALSE(nbt::parse(truncated.data(), truncated.size(), result))
+        << "length " << length;
+  }
+}
+
+TEST_F(TestNBTParse, TestLoneEnd) {
+  // An end tag closes nothing at the root
+  uint8_t end = 0;
+  nbt::NBT result;
+
+  ASSERT_FALSE(nbt::parse(&end, 1, result));
+}
+
+TEST(TestNBTStream, TestShortRead) {
+  uint8_t data[3] = {1, 2, 3}, buffer[4] = {9, 9, 9, 9};
+  bool error = false;
+  nbt::io::ByteStreamReader reader(data, sizeof(data));
+
+  reader.read(4, buffer, &error);
+  ASSERT_TRUE(error);
+  for (const uint8_t byte : buffer)
+    ASSERT_EQ(byte, 0);
+
+  // What was left is consumed, like a file read to its end
+  ASSERT_EQ(reader.source.array.second, 0);
+}
+
 TEST(TestNBTIterator, TestEndIterator) {
   nbt::NBT end;
 

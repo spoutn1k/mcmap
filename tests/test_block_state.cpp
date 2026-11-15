@@ -75,3 +75,40 @@ TEST(TestBlockState, TestWriteLayouts) {
   ASSERT_EQ(BlockState::from_nbt(legacy), log);
   ASSERT_EQ(BlockState::from_nbt(modern), log);
 }
+
+TEST(TestBlockState, TestBareRefused) {
+  // Asking for a bare id does not drop the properties of an entry that cannot be bare
+  BlockState log("minecraft:oak_log");
+  log.properties["axis"] = string("x", "axis");
+
+  nbt::NBT entry = log.to_nbt_post5009(true);
+  ASSERT_TRUE(entry.is_compound());
+  ASSERT_EQ(BlockState::from_nbt(entry), log);
+}
+
+TEST(TestBlockState, TestEquality) {
+  BlockState stairs("minecraft:oak_stairs"), reordered("minecraft:oak_stairs");
+  stairs.properties["facing"] = string("north", "facing");
+  stairs.properties["half"] = string("top", "half");
+  reordered.properties["half"] = string("top", "half");
+  reordered.properties["facing"] = string("north", "facing");
+
+  // The order of the properties does not matter
+  ASSERT_EQ(stairs, reordered);
+
+  reordered.properties["half"] = string("bottom", "half");
+  ASSERT_NE(stairs, reordered);
+
+  // Extra keys whose hashes used to be equal
+  BlockState a("minecraft:stone"), b("minecraft:stone");
+  a.extra["a"] = nbt::NBT(int32_t(0), "a");
+  a.extra["b"] = nbt::NBT(int32_t(1), "b");
+  b.extra["a"] = nbt::NBT(int32_t(1), "a");
+  b.extra["b"] = nbt::NBT(int32_t(2), "b");
+  ASSERT_NE(a, b);
+
+  ASSERT_EQ(BlockState::from_nbt(nbt::NBT(int8_t(7))),
+            BlockState::from_nbt(nbt::NBT(int8_t(7))));
+  ASSERT_NE(BlockState::from_nbt(nbt::NBT(int8_t(7))),
+            BlockState::from_nbt(nbt::NBT(int8_t(8))));
+}

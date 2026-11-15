@@ -103,6 +103,12 @@ static bool matryoshka(io::ByteStreamReader &b, NBT &destination) {
     // If end tag -> Close the last compound
     if (current_type == tag_type::tag_end ||
         (LIST && context.top().first == 0)) {
+      // With no container open, the data is not NBT or ran out (reads past the end give 0, an end tag)
+      if (opened_elements.empty()) {
+        error = true;
+        break;
+      }
+
       // Grab the container from the stack
       current = std::move(opened_elements.top());
       opened_elements.pop();

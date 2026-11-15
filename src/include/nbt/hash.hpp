@@ -18,6 +18,20 @@ inline std::size_t combine(std::size_t seed, std::size_t h) noexcept {
   return static_cast<std::size_t>(mix(seed ^ (mix(h) + 0x9e3779b97f4a7c15ULL)));
 }
 
+template <typename NBTType> std::size_t hash(const NBTType &n);
+
+// Hash of a compound's contents, the same as the compound's, for contents held outside of an NBT. Entries are summed so that the order of the keys does not matter.
+inline std::size_t hash(const NBT::tag_compound_t &elements) {
+  auto seed = combine(static_cast<std::size_t>(tag_type::tag_compound),
+                      elements.size());
+  for (const auto &element : elements) {
+    auto h = std::hash<NBT::tag_string_t>{}(element.first);
+    h = combine(h, hash(element.second));
+    seed = seed + h;
+  }
+  return seed;
+}
+
 template <typename NBTType> std::size_t hash(const NBTType &n) {
   using string_t = typename NBTType::tag_string_t;
 
@@ -67,17 +81,8 @@ template <typename NBTType> std::size_t hash(const NBTType &n) {
     return seed;
   }
 
-  case tag_type::tag_compound: {
-    auto seed = combine(type, n.size());
-    const auto *elements =
-        n.template get<const typename NBTType::tag_compound_t *>();
-    for (const auto &element : *elements) {
-      auto h = std::hash<string_t>{}(element.first);
-      h = combine(h, hash(element.second));
-      seed = seed + h;
-    }
-    return seed;
-  }
+  case tag_type::tag_compound:
+    return hash(*n.template get<const typename NBTType::tag_compound_t *>());
 
   case tag_type::tag_byte_array: {
     auto seed = combine(type, n.size());

@@ -150,3 +150,14 @@ TEST(TestNBTHash, TestHashScalarTypes) {
 
   ASSERT_EQ(hashes.size(), 3 * 201);
 }
+
+TEST(TestNBTHash, TestHashCompoundContents) {
+  // The contents of a compound hash like the compound, in any order
+  const nbt::NBT x(int32_t(1), "x"), y(std::string("two"), "y");
+  const nbt::NBT::tag_compound_t contents({{"x", x}, {"y", y}}),
+      reordered({{"y", y}, {"x", x}}), other({{"x", x}});
+
+  ASSERT_EQ(nbt::hash(contents), nbt::hash(nbt::NBT(contents)));
+  ASSERT_EQ(nbt::hash(contents), nbt::hash(reordered));
+  ASSERT_NE(nbt::hash(contents), nbt::hash(other));
+}

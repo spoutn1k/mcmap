@@ -190,18 +190,21 @@ TEST_F(TestSection, TestToNbtDropsUnused) {
                       block("minecraft:dirt")};
   original.blocks.fill(2);
 
+  // Since 1.18, single block sections have no data
+  for (const int version : {2840, 3100}) {
+    nbt::NBT written = empty_section();
+    ASSERT_TRUE(original.to_nbt(written, version));
+    ASSERT_EQ(written["block_states"]["palette"].size(), 1);
+    ASSERT_FALSE(written["block_states"].contains("data"));
+
+    Section result(written, version);
+    expect_same_blocks(original, result);
+  }
+
+  // Before, the data is always there
   nbt::NBT written = empty_section();
-  ASSERT_TRUE(original.to_nbt(written, 2840));
-  ASSERT_EQ(written["block_states"]["palette"].size(), 1);
-  ASSERT_TRUE(written["block_states"].contains("data"));
-
-  // Since 1.19, single block sections have no data
-  written = empty_section();
-  ASSERT_TRUE(original.to_nbt(written, 3100));
-  ASSERT_FALSE(written["block_states"].contains("data"));
-
-  Section result(written, 3100);
-  expect_same_blocks(original, result);
+  ASSERT_TRUE(original.to_nbt(written, 2534));
+  ASSERT_TRUE(written.contains("BlockStates"));
 }
 
 TEST_F(TestSection, TestToNbtUnsupported) {
@@ -247,8 +250,10 @@ TEST_F(TestSection, TestToNbtKeepsUnknownData) {
   Section original;
   BlockState tagged = block("minecraft:stone");
   tagged.extra["custom"] = nbt::NBT(int32_t(42), "custom");
-  original.palette = {block("minecraft:air"), tagged,
-                      BlockState::from_nbt(nbt::NBT(int8_t(7)))};
+  original.palette = {
+      block("minecraft:air"), tagged,
+      BlockState::from_nbt(nbt::NBT(nbt::NBT::tag_compound_t(
+          {{"block", nbt::NBT(std::string("minecraft:stone"), "block")}})))};
   original.blocks[1] = 1;
   original.blocks[2] = 2;
   ASSERT_FALSE(original.palette[2].recognized);
@@ -260,7 +265,8 @@ TEST_F(TestSection, TestToNbtKeepsUnknownData) {
     Section result(written, version);
     expect_same_blocks(original, result);
     ASSERT_EQ(result.palette[1].extra.at("custom").get<int32_t>(), 42);
-    ASSERT_EQ(result.palette[2].raw.get<int8_t>(), 7);
+    ASSERT_EQ(result.palette[2].raw["block"].get<std::string>(),
+              "minecraft:stone");
   }
 
   // Converting from one format to the other keeps everything too
@@ -272,4 +278,19 @@ TEST_F(TestSection, TestToNbtKeepsUnknownData) {
   ASSERT_TRUE(read.to_nbt(legacy, 2840));
   Section result(legacy, 2840);
   expect_same_blocks(original, result);
+}
+
+TEST_F(TestSection, TestToNbtMixedPalette) {
+  // An unrecognized entry that is not a compound cannot share the palette's list with the others
+  Section original;
+  original.palette = {block("minecraft:air"),
+                      BlockState::from_nbt(nbt::NBT(int8_t(7)))};
+  original.blocks[1] = 1;
+
+  for (const int version : {2534, 2840, 5009}) {
+    nbt::NBT written = empty_section();
+    ASSERT_FALSE(original.to_nbt(written, version));
+    // The section is left as it was
+    ASSERT_EQ(written.size(), 1);
+  }
 }

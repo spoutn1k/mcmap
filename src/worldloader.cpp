@@ -1,4 +1,5 @@
 #include "./worldloader.h"
+#include "./region.h"
 #include <algorithm>
 #include <cstdlib>
 #include <nbt/parser.hpp>
@@ -12,104 +13,19 @@ Data::Chunk empty_chunk;
 // Debug mode: also load the chunks that are not fully generated, for them to be drawn as ghosts
 const bool ghost_chunks = std::getenv("MCMAP_GHOST_CHUNKS") != nullptr;
 
-bool decompressChunk(const uint32_t offset, FILE *regionHandle,
-                     uint8_t *chunkBuffer, uint64_t *length,
-                     const std::filesystem::path &filename) {
-  uint8_t zData[COMPRESSED_BUFFER];
-
-  if (0 != FSEEK(regionHandle, offset, SEEK_SET)) {
-    logger::debug("Accessing chunk data in file {} failed: {}",
-                  filename.string(), strerror(errno));
-    return false;
-  }
-
-  // Read the 5 bytes that give the size and type of data
-  if (5 != fread(zData, sizeof(uint8_t), 5, regionHandle)) {
-    logger::debug("Reading chunk size from region file {} failed: {}",
-                  filename.string(), strerror(errno));
-    return false;
-  }
-
-  // Read the size on the first 4 bytes, discard the type
-  *length = translate<uint32_t>(zData);
-  (*length)--; // Sometimes the data is 1 byte smaller
-
-  // The size comes from the file and is not to be trusted: reading more than the buffer holds would overflow it. A size of 0 wraps around and is caught here too.
-  if (*length > COMPRESSED_BUFFER) {
-    logger::debug("Invalid chunk size {} in region file {}", *length + 1,
-                  filename.string());
-    return false;
-  }
-
-  if (fread(zData, sizeof(uint8_t), *length, regionHandle) != *length) {
-    logger::debug("Not enough data for chunk: {}", strerror(errno));
-    return false;
-  }
-
-  z_stream zlibStream;
-  memset(&zlibStream, 0, sizeof(z_stream));
-  zlibStream.next_in = (Bytef *)zData;
-  zlibStream.next_out = (Bytef *)chunkBuffer;
-  zlibStream.avail_in = *length;
-  zlibStream.avail_out = DECOMPRESSED_BUFFER;
-  inflateInit2(&zlibStream, 32 + MAX_WBITS);
-
-  int status = inflate(&zlibStream, Z_FINISH); // decompress in one step
-  inflateEnd(&zlibStream);
-
-  if (status != Z_STREAM_END) {
-    logger::debug("Decompressing chunk data failed: {}", zError(status));
-    return false;
-  }
-
-  *length = zlibStream.total_out;
-  return true;
-}
-
 bool Data::readChunk(const ChunkCoordinates coords, nbt::NBT &data) {
-  FILE *regionHandle;
-  uint8_t regionHeader[REGION_HEADER_SIZE], chunkBuffer[DECOMPRESSED_BUFFER];
-  int32_t regionX = REGION(coords.x), regionZ = REGION(coords.z),
-          cX = coords.x & 0x1f, cZ = coords.z & 0x1f;
-  uint64_t length;
-
   std::filesystem::path regionFile = std::filesystem::path(regionDir) /=
-      fmt::format("r.{}.{}.mca", regionX, regionZ);
+      fmt::format("r.{}.{}.mca", REGION(coords.x), REGION(coords.z));
 
   if (!std::filesystem::exists(regionFile)) {
     logger::trace("Region file r.{}.{}.mca does not exist, skipping ..",
-                  regionX, regionZ);
+                  REGION(coords.x), REGION(coords.z));
     return false;
   }
 
-  if (!(regionHandle = fopen(regionFile.string().c_str(), "rb"))) {
-    logger::error("Opening region file `{}` failed: {}", regionFile.string(),
-                  strerror(errno));
-    return false;
-  }
-
-  // Then, we read the header (of size 4K) storing the chunks locations
-  if (fread(regionHeader, sizeof(uint8_t), REGION_HEADER_SIZE, regionHandle) !=
-      REGION_HEADER_SIZE) {
-    logger::error("Region header too short in `{}`", regionFile.string());
-    fclose(regionHandle);
-    return false;
-  }
-
-  const uint32_t offset =
-      (translate<uint32_t>(regionHeader + ((cZ << 5) + cX) * 4) >> 8) * 4096;
-
-  if (!offset || !decompressChunk(offset, regionHandle, chunkBuffer, &length,
-                                  regionFile)) {
-    fclose(regionHandle);
-    return false;
-  }
-
-  fclose(regionHandle);
-
-  if (!nbt::parse(chunkBuffer, length, data)) {
-    logger::trace("Chunk parsing failed for chunk {} {} in {}", coords.x,
-                  coords.z, regionFile.string());
+  if (!Region(regionFile).get_chunk(coords, data)) {
+    logger::trace("Reading chunk {} {} from {} failed", coords.x, coords.z,
+                  regionFile.string());
     return false;
   }
 

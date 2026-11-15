@@ -55,7 +55,7 @@ public:
       typename Integer,
       typename std::enable_if<std::is_integral<Integer>::value, int>::type = 0>
   NBT(const Integer value, key_type name_ = "") : name(name_) {
-    switch (std::alignment_of<Integer>()) {
+    switch (sizeof(Integer)) {
     case 1:
       type = tag_type::tag_byte;
       content = tag_content(tag_byte_t(value));
@@ -83,7 +83,7 @@ public:
             typename std::enable_if<std::is_floating_point<Float>::value,
                                     int>::type = 0>
   NBT(const Float value, key_type name_ = "") : name(name_) {
-    switch (std::alignment_of<Float>()) {
+    switch (sizeof(Float)) {
     case 4:
       type = tag_type::tag_float;
       content = tag_content(tag_float_t(value));
@@ -103,7 +103,7 @@ public:
       typename Integer,
       typename std::enable_if<std::is_integral<Integer>::value, int>::type = 0>
   NBT(const std::vector<Integer> &data, key_type name_ = "") : name(name_) {
-    switch (std::alignment_of<Integer>()) {
+    switch (sizeof(Integer)) {
     case 1:
       type = tag_type::tag_byte_array;
       content = tag_content(tag_byte_array_t(data.begin(), data.end()));

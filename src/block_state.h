@@ -29,7 +29,7 @@ struct BlockState {
   // Write the entry in the layout used before 26.3-snapshot-7 (DataVersion 5009)
   nbt::NBT to_nbt_pre5009() const;
 
-  // Write the entry in the layout used since 26.3-snapshot-7 (DataVersion 5009). `bare` asks for a string id, which the whole palette must agree on; see `can_be_bare`.
+  // Write the entry in the layout used since 26.3-snapshot-7 (DataVersion 5009). `bare` asks for a string id, which the whole palette must agree on; see `can_be_bare`. An entry that cannot be bare is written as a compound regardless.
   nbt::NBT to_nbt_post5009(const bool bare = false) const;
 
   // Whether the entry can be written as a bare string id without losing data

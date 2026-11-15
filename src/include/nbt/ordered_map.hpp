@@ -8,14 +8,9 @@
 
 namespace nbt {
 
-// A map keeping its elements in insertion order, with the subset of the
-// `std::map` interface used on compounds. NBT does not order the keys of a
-// compound, but keeping them as they were read makes the data written back
-// identical to its source. Lookups are linear, which suits compounds as they
-// hold a handful of keys.
+// A map keeping its elements in insertion order, with the subset of the `std::map` interface used on compounds. NBT does not order the keys of a compound, but keeping them as they were read makes the data written back identical to its source. Lookups are linear, which suits compounds as they hold a handful of keys.
 //
-// As elements are stored in a vector, inserting can invalidate references and
-// iterators to the other elements of the map.
+// As elements are stored in a vector, inserting can invalidate references and iterators to the other elements of the map.
 template <typename Key, typename T> class ordered_map {
 public:
   using key_type = Key;

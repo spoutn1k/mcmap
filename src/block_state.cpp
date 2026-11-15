@@ -88,7 +88,8 @@ nbt::NBT BlockState::to_nbt_post5009(const bool bare) const {
   if (!recognized)
     return raw;
 
-  if (bare)
+  // A bare id would lose the properties and extra keys of an entry that cannot be bare, which is written as a compound instead
+  if (bare && can_be_bare())
     return nbt::NBT(id);
 
   // In a palette that cannot be bare, the entries that could are wrapped under the empty key
@@ -117,7 +118,6 @@ bool BlockState::operator==(const BlockState &other) const {
 
   // Compound hashes do not depend on the order of the keys
   return id == other.id &&
-         nbt::hash(nbt::NBT(properties)) ==
-             nbt::hash(nbt::NBT(other.properties)) &&
-         nbt::hash(nbt::NBT(extra)) == nbt::hash(nbt::NBT(other.extra));
+         nbt::hash(properties) == nbt::hash(other.properties) &&
+         nbt::hash(extra) == nbt::hash(other.extra);
 }

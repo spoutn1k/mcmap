@@ -49,10 +49,14 @@ struct ByteStreamReader : ByteStream {
     }
 
     case MEMORY: {
+      // Like a file reaching its end, the rest of the buffer is consumed and nothing is read past it
       if (source.array.second < num) {
         logger::error("Not enough data in memory buffer");
         *error = true;
         memset(buffer, 0, num);
+        source.array.first += source.array.second;
+        source.array.second = 0;
+        break;
       }
 
       memcpy(buffer, source.array.first, num);
