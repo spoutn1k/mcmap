@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <limits>
 #include <nbt/nbt.hpp>
 #include <nbt/stream.hpp>
 #include <stack>
@@ -35,6 +36,23 @@ inline bool put(io::ByteStreamWriter &output, const NBT &data) {
   bool error = false;
   uint8_t buffer[8]; // big enough for the largest scalar
 
+  // Strings and names are prefixed by their length on 2 bytes: a longer one cannot be written, rather than be cut short
+  const auto write_string = [&](const std::string &value) {
+    if (value.size() > std::numeric_limits<uint16_t>::max()) {
+      logger::error("Cannot write a string of {} bytes, at most {} fit in NBT",
+                    value.size(), std::numeric_limits<uint16_t>::max());
+      error = true;
+      return;
+    }
+
+    uint16_t size = static_cast<uint16_t>(value.size());
+    translate(buffer, size);
+    output.write(2, buffer, &error);
+
+    output.write(size, reinterpret_cast<const uint8_t *>(value.data()),
+                 &error);
+  };
+
   // An element being written, the position reached in its contents, and the key it is written under. The key of an element in a compound is the one it has there, as the element's own name may differ; elements of a list have none.
   struct Frame {
     const NBT &element;
@@ -61,12 +79,7 @@ inline bool put(io::ByteStreamWriter &output, const NBT &data) {
       buffer[0] = static_cast<uint8_t>(current.get_type());
       output.write(1, buffer, &error);
 
-      uint16_t name_size = static_cast<uint16_t>(key->size());
-      translate(buffer, name_size);
-      output.write(2, buffer, &error);
-
-      output.write(name_size, reinterpret_cast<const uint8_t *>(key->c_str()),
-                   &error);
+      write_string(*key);
     }
 
     switch (current.get_type()) {
@@ -191,15 +204,9 @@ inline bool put(io::ByteStreamWriter &output, const NBT &data) {
       break;
     }
 
-    case nbt::tag_type::tag_string: {
-      auto value = current.get<std::string>();
-      uint16_t size = static_cast<uint16_t>(value.size());
-      translate(buffer, size);
-      output.write(2, buffer, &error);
-
-      output.write(size, (uint8_t *)value.c_str(), &error);
+    case nbt::tag_type::tag_string:
+      write_string(*current.get<const NBT::tag_string_t *>());
       break;
-    }
     }
   }
 

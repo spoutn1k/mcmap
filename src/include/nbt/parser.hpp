@@ -8,8 +8,8 @@
 #include <stack>
 #include <translator.hpp>
 
-// Max size of a single element to read in memory (string)
-#define MAXELEMENTSIZE 65025
+// Max size of a single element to read in memory: strings and names are prefixed by their length on 2 bytes, so hold at most 65535 bytes
+#define MAXELEMENTSIZE 65535
 
 // Check if the context indicates a being in a list
 #define LIST (context.size() && context.top().second < tag_type::tag_long_array)

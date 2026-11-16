@@ -118,6 +118,30 @@ TEST(TestNBTWriter, TestMixedList) {
   ASSERT_FALSE(nbt::put(output, data));
 }
 
+TEST(TestNBTWriter, TestLongStrings) {
+  // Lengths are written on 2 bytes: the longest string and name are read back whole
+  const std::string longest(65535, 'a'), name(65535, 'n');
+  nbt::NBT data(nbt::NBT::tag_compound_t(
+      {{"string", nbt::NBT(longest, "string")}, {name, nbt::NBT(int8_t(1))}}));
+  nbt::NBT result;
+
+  ASSERT_TRUE(round_trip(data, result));
+  ASSERT_EQ(result["string"].get<std::string>(), longest);
+  ASSERT_EQ(result[name].get<int8_t>(), 1);
+
+  // Longer ones are refused rather than cut short
+  std::vector<uint8_t> buffer(chunk_nbt_len * 2);
+  nbt::io::ByteStreamWriter value_output(buffer.data(), buffer.size());
+  ASSERT_FALSE(nbt::put(
+      value_output, nbt::NBT(nbt::NBT::tag_compound_t(
+                        {{"string", nbt::NBT(longest + "a", "string")}}))));
+
+  nbt::io::ByteStreamWriter name_output(buffer.data(), buffer.size());
+  ASSERT_FALSE(nbt::put(name_output,
+                        nbt::NBT(nbt::NBT::tag_compound_t(
+                            {{name + "n", nbt::NBT(int8_t(1))}}))));
+}
+
 TEST(TestNBTWriter, TestRoundTripArrays) {
   // Longer than the batches arrays are written in, with values of both signs
   std::vector<int8_t> bytes(10000);
