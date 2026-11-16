@@ -240,3 +240,20 @@ This disables the underlying threading code, so performance may drop.
 
 This is due to the merging algorithm.
 Try increasing the split size with the `-fragment` option, or change the color of the water block to use the `Full` block type to make it less noticeable.
+
+### Chunks are missing at the edge of the map
+
+`mcmap` only renders fully generated chunks.
+Minecraft also saves partly generated chunks around the explored area, and around chunks loaded on their own, by an ender pearl or a portal for example.
+Those are skipped, which can leave holes or isolated chunks at the edges of the map.
+
+To see them, set the `MCMAP_GHOST_CHUNKS` environment variable; chunks that are not fully generated are then drawn as see-through ghosts, in a single color:
+```
+MCMAP_GHOST_CHUNKS=1 mcmap <options> path/to/<your save>
+```
+
+On Windows, use `set MCMAP_GHOST_CHUNKS=1` (`cmd`) or `$env:MCMAP_GHOST_CHUNKS=1` (PowerShell) before running `mcmap`.
+The GUI also draws ghosts when started with the variable set.
+
+Any value enables ghosts, including `0`: unset the variable to disable them (`unset MCMAP_GHOST_CHUNKS`, `set MCMAP_GHOST_CHUNKS=` or `Remove-Item Env:MCMAP_GHOST_CHUNKS`).
+Chunks at an early stage of generation have no blocks yet, and stay invisible even as ghosts.

@@ -1,5 +1,6 @@
 #include "./worldloader.h"
 #include <algorithm>
+#include <cstdlib>
 #include <nbt/parser.hpp>
 #include <translator.hpp>
 #include <zlib.h>
@@ -7,6 +8,9 @@
 namespace Terrain {
 
 Data::Chunk empty_chunk;
+
+// Debug mode: also load the chunks that are not fully generated, for them to be drawn as ghosts
+const bool ghost_chunks = std::getenv("MCMAP_GHOST_CHUNKS") != nullptr;
 
 bool decompressChunk(const uint32_t offset, FILE *regionHandle,
                      uint8_t *chunkBuffer, uint64_t *length,
@@ -111,7 +115,19 @@ void Data::loadChunk(const ChunkCoordinates coords) {
   if (!readChunk(coords, data))
     return;
 
-  if (!Chunk::assert_chunk(data)) {
+  switch (Chunk::assert_chunk(data)) {
+  case Chunk::FULL:
+    break;
+
+  case Chunk::INCOMPLETE:
+    // Unfinished chunks surround every explored area, they are not a sign of an unsupported format
+    logger::trace("Chunk {} {} is not fully generated", coords.x, coords.z);
+
+    if (!ghost_chunks)
+      return;
+    break;
+
+  case Chunk::UNRECOGNISED:
     if (report && data.contains("DataVersion"))
       report->chunk_rejected(data["DataVersion"].get<int>(), coords);
     logger::trace("Chunk {} {} was rejected", coords.x, coords.z);
@@ -120,7 +136,8 @@ void Data::loadChunk(const ChunkCoordinates coords) {
 
   Chunk chunk(data, palette, coords, report);
 
-  if (report)
+  // Ghosts are left out for the diagnostics to be the same with or without them
+  if (report && !chunk.ghost)
     report->chunk_loaded(chunk.data_version);
 
   if (structures) {

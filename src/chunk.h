@@ -17,9 +17,22 @@ struct Chunk {
   using coordinates = Coordinates;
   using box_array = std::vector<BoundingBox>;
 
+  // Outcome of the format checks on raw chunk data
+  enum State {
+    // Fully generated, ready to be rendered
+    FULL,
+    // Understood, but still being generated: there is nothing to render yet
+    INCOMPLETE,
+    // Missing data the format requires, which hints at a change in the format
+    UNRECOGNISED,
+  };
+
   coordinates position;
   version_t data_version;
   section_array_t sections;
+
+  // Not fully generated: only loaded when debugging, to be drawn as a see-through ghost
+  bool ghost;
 
   // Bounding boxes of the pieces of the structures starting in this chunk
   box_array starts;
@@ -37,7 +50,7 @@ struct Chunk {
 
   bool valid() const { return data_version != -1; }
 
-  static bool assert_chunk(const nbt_t &);
+  static State assert_chunk(const nbt_t &);
 
   // The most recent DataVersion with a known chunk format
   static version_t latest_version();

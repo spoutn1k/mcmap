@@ -5,9 +5,25 @@
 
 TEST(TestChunkStatic, TestAssert) {
   nbt::NBT chunk;
-  ASSERT_FALSE(mcmap::Chunk::assert_chunk(chunk));
+  ASSERT_EQ(mcmap::Chunk::assert_chunk(chunk), mcmap::Chunk::UNRECOGNISED);
   nbt::parse(chunk_nbt, chunk_nbt_len, chunk);
-  ASSERT_TRUE(mcmap::Chunk::assert_chunk(chunk));
+  ASSERT_EQ(mcmap::Chunk::assert_chunk(chunk), mcmap::Chunk::FULL);
+}
+
+TEST(TestChunkStatic, TestAssertIncomplete) {
+  nbt::NBT chunk;
+  nbt::parse(chunk_nbt, chunk_nbt_len, chunk);
+
+  chunk["Level"]["Status"] = nbt::NBT(std::string("features"), "Status");
+  ASSERT_EQ(mcmap::Chunk::assert_chunk(chunk), mcmap::Chunk::INCOMPLETE);
+
+  // A status spelled differently than the full one is a change in the format
+  chunk["Level"]["Status"] =
+      nbt::NBT(std::string("minecraft:features"), "Status");
+  ASSERT_EQ(mcmap::Chunk::assert_chunk(chunk), mcmap::Chunk::UNRECOGNISED);
+
+  chunk["Level"].erase("Status");
+  ASSERT_EQ(mcmap::Chunk::assert_chunk(chunk), mcmap::Chunk::UNRECOGNISED);
 }
 
 class TestChunkCoordinates : public ::testing::Test {

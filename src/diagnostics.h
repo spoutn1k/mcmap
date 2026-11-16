@@ -26,7 +26,7 @@ struct Report {
   struct Version {
     // Number of chunk loads that succeeded; a chunk can be loaded more than once
     size_t loaded = 0;
-    // Chunks the format checks refused to load
+    // Chunks the format checks could not make sense of; chunks that are merely not fully generated are not counted
     std::set<Coordinates> rejected;
   };
 

@@ -23,7 +23,7 @@ std::vector<int> Report::unsupported_versions() const {
   std::lock_guard<std::mutex> lock(mutex);
   std::vector<int> unsupported;
 
-  // Some chunks are always rejected, for example the ones at the edge of the world that are not fully generated; a DataVersion is only suspicious if none of its chunks could be loaded
+  // A few chunks can be rejected for reasons unrelated to the format, for example corruption; a DataVersion is only suspicious if none of its chunks could be loaded
   for (const auto &[version, stats] : versions)
     if (!stats.loaded && !stats.rejected.empty())
       unsupported.push_back(version);
