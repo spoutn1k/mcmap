@@ -3,6 +3,7 @@
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QMessageBox>
+#include <QPixmap>
 #include <QRegularExpression>
 #include <QStatusBar>
 
@@ -79,6 +80,9 @@ MainWindow::MainWindow(QWidget *parent)
 
   for (auto element : DEFAULT_DISABLED_OPTIONS)
     element->setEnabled(false);
+
+  // Only shown once a save with an icon is loaded
+  ui->saveIconLabel->hide();
 
   // Validators - allow only correct values
   QValidator *horizontal = new QIntValidator(
@@ -196,6 +200,12 @@ void MainWindow::on_saveSelectButton_clicked() {
 
   lastSaveDir = filename;
   ui->saveNameLabel->setText(options.save.name.c_str());
+
+  // Worlds that were never joined in-game (e.g. generated externally) have no `icon.png`
+  QPixmap icon(
+      QString::fromStdString((options.save.folder / "icon.png").string()));
+  ui->saveIconLabel->setPixmap(icon);
+  ui->saveIconLabel->setVisible(!icon.isNull());
 
   for (auto element : DEFAULT_DISABLED_OPTIONS)
     element->setEnabled(true);
