@@ -173,7 +173,8 @@ inline void ok(QWidget *widget) {
 void MainWindow::on_saveSelectButton_clicked() {
   QString filename = QFileDialog::getExistingDirectory(
       this, tr("Open Save Folder"),
-      QString::fromStdString(getSaveDir().string()));
+      lastSaveDir.isEmpty() ? QString::fromStdString(getSaveDir().string())
+                            : lastSaveDir);
 
   if (filename.isEmpty()) {
     statusBar()->showMessage(tr("No directory selected"), 2000);
@@ -193,6 +194,7 @@ void MainWindow::on_saveSelectButton_clicked() {
     return;
   }
 
+  lastSaveDir = filename;
   ui->saveNameLabel->setText(options.save.name.c_str());
 
   for (auto element : DEFAULT_DISABLED_OPTIONS)

@@ -38,6 +38,9 @@ private:
   QThread renderThread;
   QPlainTextEdit *log_messages;
 
+  // Folder of the last save loaded successfully, to reopen the picker there
+  QString lastSaveDir;
+
   std::shared_ptr<spdlog::logger> logger = nullptr;
   void closeEvent(QCloseEvent *);
 
